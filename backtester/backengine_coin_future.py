@@ -3,13 +3,12 @@ import math
 import talib
 import sqlite3
 import datetime
-# noinspection PyUnresolvedReferences
 import numpy as np
 import pandas as pd
 from traceback import print_exc
 from utility.setting import DB_COIN_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
-from utility.static import strp_time, timedelta_sec, strf_time, timedelta_day, pickle_read, pickle_write, GetBinanceLongPgSgSp, GetBinanceShortPgSgSp
+from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, GetBinanceLongPgSgSp, GetBinanceShortPgSgSp
 from backtester.back_static import GetBuyStgFuture, GetSellStgFuture, GetBuyCondsFuture, GetSellCondsFuture, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData, GetTradeInfo
 
 
@@ -104,7 +103,7 @@ class CoinFutureBackEngine:
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
@@ -123,7 +122,7 @@ class CoinFutureBackEngine:
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[6], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
@@ -146,7 +145,7 @@ class CoinFutureBackEngine:
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_lists = data[1]
                         self.vars_count = 10
@@ -178,7 +177,7 @@ class CoinFutureBackEngine:
                         self.InitDivid()
                         self.InitTradeInfo()
                         if error:
-                            self.BackStop()
+                            self.BackStop(1)
                         else:
                             self.BackTest()
                 elif self.back_type == '백테스트':
@@ -195,7 +194,7 @@ class CoinFutureBackEngine:
                         self.InitDivid()
                         self.InitTradeInfo()
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                         else:
                             start = datetime.datetime.now()
                             self.BackTest()
@@ -212,7 +211,7 @@ class CoinFutureBackEngine:
                             self.buystg = compile(data[6], '<string>', 'exec')
                         except:
                             if self.gubun == 0: print_exc()
-                            self.BackStop()
+                            self.BackStop(1)
                         else:
                             self.BackTest()
             elif data[0] == '백테유형':
@@ -344,11 +343,15 @@ class CoinFutureBackEngine:
         if len(not_in_list) > 0 and self.gubun == 0:
             self.wq.put((ui_num['C백테스트'], '백테엔진 구동 시 포함되지 않은 평균값 틱수를 사용하여 중지되었습니다.'))
             self.wq.put((ui_num['C백테스트'], '누락된 평균값 틱수를 추가하여 백테엔진을 재시작하십시오.'))
-            self.BackStop()
+            self.BackStop(1)
 
-    def BackStop(self):
+    def BackStop(self, gubun):
         self.back_type = None
-        if self.gubun == 0: self.wq.put((ui_num['C백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'))
+        if self.gubun == 0:
+            if gubun:
+                self.wq.put((ui_num['C백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'))
+            else:
+                self.wq.put((ui_num['C백테스트'], '학습된 패턴 데이터가 없어 백테스트를 중지합니다.'))
 
     def BackTest(self):
         if self.profile:
@@ -600,7 +603,7 @@ class CoinFutureBackEngine:
                 exec(self.buystg, None, locals())
             except:
                 if self.gubun == 0: print_exc()
-                self.BackStop()
+                self.BackStop(1)
         else:
             self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
             self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -622,7 +625,7 @@ class CoinFutureBackEngine:
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.tick_count < self.vars[0]:
-                    break
+                    continue
 
                 try:
                     if not self.trade_info[j]['보유중']:
@@ -661,7 +664,7 @@ class CoinFutureBackEngine:
                             exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
-                    self.BackStop()
+                    self.BackStop(1)
                     break
 
     def Buy(self, gubun):

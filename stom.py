@@ -3935,7 +3935,7 @@ class Window(QMainWindow):
         for i, stock_stg in enumerate(stock_stg_list):
             df = pd.read_sql(f'SELECT * FROM {stock_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort(reverse=True)
+            stg_names.sort()
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_01.setRowCount(maxlow)
@@ -3951,7 +3951,7 @@ class Window(QMainWindow):
         for i, stock_stg in enumerate(stock_stg_list):
             df = pd.read_sql(f'SELECT * FROM {stock_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort(reverse=True)
+            stg_names.sort()
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_02.setRowCount(maxlow)
@@ -3967,7 +3967,7 @@ class Window(QMainWindow):
         for i, coin_stg in enumerate(coin_stg_list):
             df = pd.read_sql(f'SELECT * FROM {coin_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort(reverse=True)
+            stg_names.sort()
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_03.setRowCount(maxlow)
@@ -3983,7 +3983,7 @@ class Window(QMainWindow):
         for i, stock_stg in enumerate(stock_stg_list):
             df = pd.read_sql(f'SELECT * FROM {stock_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort(reverse=True)
+            stg_names.sort()
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_04.setRowCount(maxlow)
@@ -5950,7 +5950,7 @@ class Window(QMainWindow):
             df = pd.read_sql(f'SELECT * FROM {gubun2}buy', con).set_index('index')
             if len(df) > 0:
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.list_bcomboBoxxxxx[gubun].addItem(index)
 
@@ -5958,7 +5958,7 @@ class Window(QMainWindow):
             con.close()
             if len(df) > 0:
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.list_scomboBoxxxxx[gubun].addItem(index)
             self.list_alineEdittttt[gubun].setText('30')
@@ -5968,14 +5968,14 @@ class Window(QMainWindow):
                 df = pd.read_sql(f'SELECT * FROM {gubun2}buyconds', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort(reverse=True)
+                    indexs.sort()
                     for i, index in enumerate(indexs):
                         self.list_bcomboBoxxxxx[gubun].addItem(index)
 
                 df = pd.read_sql(f'SELECT * FROM {gubun2}sellconds', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort(reverse=True)
+                    indexs.sort()
                     for i, index in enumerate(indexs):
                         self.list_scomboBoxxxxx[gubun].addItem(index)
                 self.list_alineEdittttt[gubun].setText('30')
@@ -5983,14 +5983,14 @@ class Window(QMainWindow):
                 df = pd.read_sql(f'SELECT * FROM {gubun2}optibuy', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort(reverse=True)
+                    indexs.sort()
                     for i, index in enumerate(indexs):
                         self.list_bcomboBoxxxxx[gubun].addItem(index)
 
                 df = pd.read_sql(f'SELECT * FROM {gubun2}optisell', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort(reverse=True)
+                    indexs.sort()
                     for i, index in enumerate(indexs):
                         self.list_scomboBoxxxxx[gubun].addItem(index)
 
@@ -6000,7 +6000,7 @@ class Window(QMainWindow):
                     df = pd.read_sql(f'SELECT * FROM {gubun2}optivars', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort(reverse=True)
+                    indexs.sort()
                     for i, index in enumerate(indexs):
                         self.list_vcomboBoxxxxx[gubun].addItem(index)
                 self.list_alineEdittttt[gubun].setText('')
@@ -6459,7 +6459,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svjb_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.svjb_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -7626,13 +7626,14 @@ class Window(QMainWindow):
             endday    = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
             starttime = self.svjb_lineEditt_02.text()
             endtime   = self.svjb_lineEditt_03.text()
+            multi     = int(self.be_lineEdittttt_04.text())
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
                 bpq.put(('백테유형', '백테스트'))
 
-            backQ.put((startday, endday, starttime, endtime, self.back_count))
-            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S'))
+            backQ.put((startday, endday, starttime, endtime))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', multi))
             self.proc_backtester_bp.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
@@ -7686,6 +7687,9 @@ class Window(QMainWindow):
             self.ss_progressBar_01.setValue(0)
             self.ssicon_alert = True
 
+    def svjButtonClicked_36(self):
+        pass
+
     def svjsButtonClicked_01(self):
         if self.ss_textEditttt_02.isVisible():
             con = sqlite3.connect(DB_STRATEGY)
@@ -7694,7 +7698,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svjs_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.svjs_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -7780,7 +7784,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svc_comboBoxxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.svc_comboBoxxx_01.addItem(index)
                     if i == 0:
@@ -7866,7 +7870,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svc_comboBoxxx_02.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.svc_comboBoxxx_02.addItem(index)
                     if i == 0:
@@ -7898,7 +7902,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svc_comboBoxxx_08.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.svc_comboBoxxx_08.addItem(index)
                     if i == 0:
@@ -8042,7 +8046,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.sva_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort(reverse=True)
+            indexs.sort()
             for i, index in enumerate(indexs):
                 self.sva_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -8072,7 +8076,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.svo_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort(reverse=True)
+            indexs.sort()
             for i, index in enumerate(indexs):
                 self.svo_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -8102,7 +8106,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.svo_comboBoxxx_02.clear()
             indexs = list(df.index)
-            indexs.sort(reverse=True)
+            indexs.sort()
             for i, index in enumerate(indexs):
                 self.svo_comboBoxxx_02.addItem(index)
                 if i == 0:
@@ -8138,7 +8142,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvjb_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.cvjb_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -9301,13 +9305,14 @@ class Window(QMainWindow):
             endday    = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
             starttime = self.cvjb_lineEditt_02.text()
             endtime   = self.cvjb_lineEditt_03.text()
+            multi     = int(self.be_lineEdittttt_04.text())
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
                 bpq.put(('백테유형', '백테스트'))
 
-            backQ.put((startday, endday, starttime, endtime, self.back_count))
-            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S'))
+            backQ.put((startday, endday, starttime, endtime))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', multi))
             self.proc_backtester_bp.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
@@ -9369,7 +9374,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvjs_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.cvjs_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -9457,7 +9462,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvc_comboBoxxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.cvc_comboBoxxx_01.addItem(index)
                     if i == 0:
@@ -9543,7 +9548,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvc_comboBoxxx_02.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.cvc_comboBoxxx_02.addItem(index)
                     if i == 0:
@@ -9575,7 +9580,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvc_comboBoxxx_08.clear()
                 indexs = list(df.index)
-                indexs.sort(reverse=True)
+                indexs.sort()
                 for i, index in enumerate(indexs):
                     self.cvc_comboBoxxx_08.addItem(index)
                     if i == 0:
@@ -9719,7 +9724,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.cva_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort(reverse=True)
+            indexs.sort()
             for i, index in enumerate(indexs):
                 self.cva_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -9749,7 +9754,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.cvo_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort(reverse=True)
+            indexs.sort()
             for i, index in enumerate(indexs):
                 self.cvo_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -9779,7 +9784,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.cvo_comboBoxxx_02.clear()
             indexs = list(df.index)
-            indexs.sort(reverse=True)
+            indexs.sort()
             for i, index in enumerate(indexs):
                 self.cvo_comboBoxxx_02.addItem(index)
                 if i == 0:
@@ -9834,6 +9839,7 @@ class Window(QMainWindow):
 
     @thread_decorator
     def StartBacktestEngine(self, gubun):
+        self.backtest_engine = True
         self.startday  = int(self.be_dateEdittttt_01.date().toString('yyyyMMdd'))
         self.endday    = int(self.be_dateEdittttt_02.date().toString('yyyyMMdd'))
         self.starttime = int(self.be_lineEdittttt_01.text())
@@ -9951,10 +9957,12 @@ class Window(QMainWindow):
                     windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
             else:
                 windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
+            self.backtest_engine = False
             return
 
         if df_mt is None or df_mt.empty:
             windowQ.put((ui_num['백테엔진'], '시작 또는 종료일자가 잘못 선택되었거나 해당 일자에 데이터가 존재하지 않습니다.'))
+            self.backtest_engine = False
             return
 
         self.dict_mt = df_mt['거래대금순위'].to_dict()
@@ -9972,18 +9980,22 @@ class Window(QMainWindow):
 
         if divid_mode == '종목코드별 분류' and len(code_days) < multi:
             windowQ.put((ui_num['백테엔진'], '선택한 일자의 종목의 개수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
+            self.backtest_engine = False
             return
 
         if divid_mode == '일자별 분류' and len(day_codes) < multi:
             windowQ.put((ui_num['백테엔진'], '선택한 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
+            self.backtest_engine = False
             return
 
         if divid_mode == '한종목 로딩' and one_code not in code_days.keys():
             windowQ.put((ui_num['백테엔진'], f'{one_name} 종목은 선택한 일자에 데이터가 존재하지 않습니다.'))
+            self.backtest_engine = False
             return
 
         if divid_mode == '한종목 로딩' and len(code_days[one_code]) < multi:
             windowQ.put((ui_num['백테엔진'], f'{one_name} 선택한 종목의 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
+            self.backtest_engine = False
             return
 
         for i in range(multi):
@@ -10153,7 +10165,6 @@ class Window(QMainWindow):
             self.back_count += data
             windowQ.put((ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'))
         windowQ.put((ui_num['백테엔진'], '백테엔진 준비 완료'))
-        self.backtest_engine = True
 
     def BackCodeTest1(self, stg_code):
         print('전략 코드 오류 테스트 시작')
@@ -10443,13 +10454,13 @@ class Window(QMainWindow):
             self.sj_stock_cbBox_04.addItem('사용안함')
             if len(dfb) > 0:
                 stg_list = list(dfb.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_stock_cbBox_01.addItem(stg)
                     self.sj_stock_cbBox_03.addItem(stg)
             if len(dfob) > 0:
                 stg_list = list(dfob.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_stock_cbBox_01.addItem(stg)
                     self.sj_stock_cbBox_03.addItem(stg)
@@ -10459,13 +10470,13 @@ class Window(QMainWindow):
                 self.sj_stock_cbBox_03.setCurrentText(df['주식장중매수전략'][0])
             if len(dfs) > 0:
                 stg_list = list(dfs.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_stock_cbBox_02.addItem(stg)
                     self.sj_stock_cbBox_04.addItem(stg)
             if len(dfos) > 0:
                 stg_list = list(dfos.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_stock_cbBox_02.addItem(stg)
                     self.sj_stock_cbBox_04.addItem(stg)
@@ -10521,13 +10532,13 @@ class Window(QMainWindow):
             self.sj_coin_comBox_04.addItem('사용안함')
             if len(dfb) > 0:
                 stg_list = list(dfb.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_coin_comBox_01.addItem(stg)
                     self.sj_coin_comBox_03.addItem(stg)
             if len(dfob) > 0:
                 stg_list = list(dfob.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_coin_comBox_01.addItem(stg)
                     self.sj_coin_comBox_03.addItem(stg)
@@ -10537,13 +10548,13 @@ class Window(QMainWindow):
                 self.sj_coin_comBox_03.setCurrentText(df['코인장중매수전략'][0])
             if len(dfs) > 0:
                 stg_list = list(dfs.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_coin_comBox_02.addItem(stg)
                     self.sj_coin_comBox_04.addItem(stg)
             if len(dfos) > 0:
                 stg_list = list(dfos.index)
-                stg_list.sort(reverse=True)
+                stg_list.sort()
                 for stg in stg_list:
                     self.sj_coin_comBox_02.addItem(stg)
                     self.sj_coin_comBox_04.addItem(stg)

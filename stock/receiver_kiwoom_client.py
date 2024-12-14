@@ -64,7 +64,7 @@ class ReceiverKiwoomClient:
         self.dict_name   = {}
         self.dict_code   = {}
         self.dict_sgbn   = {}
-        self.tuple_janng = ()
+        self.tuple_jang  = ()
         self.tuple_order = ()
         self.tuple_kosd  = ()
         self.operation   = 1
@@ -108,7 +108,7 @@ class ReceiverKiwoomClient:
     def UpdateTuple(self, data):
         gubun, data = data
         if gubun == '잔고목록':
-            self.tuple_janng = data
+            self.tuple_jang = data
         elif gubun == '주문목록':
             self.tuple_order = data
         elif gubun == '호가종목코드':
@@ -119,7 +119,7 @@ class ReceiverKiwoomClient:
     def UpdateTickData(self, data):
         code, c = data[-3], data[1]
         self.sstgQs[self.dict_sgbn[code]].put(data)
-        if code in self.tuple_janng or code in self.tuple_order:
+        if code in self.tuple_jang or code in self.tuple_order:
             self.straderQ.put((code, c))
         if self.hoga_code == code:
             name = data[-2]

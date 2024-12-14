@@ -727,11 +727,11 @@ class Optimize:
                 for i in range(len_vars):
                     len_vars_turn = len(vars_[i][0])
                     if i < last and 7 <= len_vars_turn:
-                        first = vars_[i][0][0]
+                        first  = vars_[i][0][0]
                         second = vars_[i][0][1]
-                        last = vars_[i][0][-1]
-                        high = vars_[i][1]
-                        gap = second - first
+                        last   = vars_[i][0][-1]
+                        high   = vars_[i][1]
+                        gap    = second - first
                         if high == first:
                             new = (first - gap) if type(gap) == int else round(first - gap, 2)
                             if new not in total_del_vars_list[i]:
@@ -828,8 +828,7 @@ class Optimize:
             self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize')
         else:
             self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize', sampler=sampler)
-        self.study.optimize(objective, n_trials=10000, callbacks=[
-            StopWhenNotUpdateBestCallBack(self.wq, self.tq, back_count, optuna_count, self.ui_gubun, len(self.vars))])
+        self.study.optimize(objective, n_trials=10000, callbacks=[StopWhenNotUpdateBestCallBack(self.wq, self.tq, back_count, optuna_count, self.ui_gubun, len(self.vars))])
         for i, var in enumerate(list(self.study.best_params.values())):
             vars_[i][1] = var
 

@@ -3,14 +3,13 @@ import math
 import talib
 import sqlite3
 import datetime
-# noinspection PyUnresolvedReferences
 import numpy as np
 import pandas as pd
 from traceback import print_exc
 from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData, GetTradeInfo
 from utility.setting import DB_STOCK_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
-from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, strf_time, timedelta_day, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit
+from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit
 
 
 class StockBackEngine:
@@ -86,12 +85,12 @@ class StockBackEngine:
         self.tick_count   = 0
         self.divid        = 0
 
-        self.pattern           = False
-        self.pm_ticks          = 0
-        self.sc_ticks          = 0
-        self.unit              = 0
-        self.arry_pattern_buy  = None
-        self.arry_pattern_sell = None
+        self.pattern      = False
+        self.pm_ticks     = 0
+        self.sc_ticks     = 0
+        self.dict_pattern = {}
+        self.pattern_buy  = None
+        self.pattern_sell = None
 
         self.Start()
 
@@ -203,7 +202,7 @@ class StockBackEngine:
                         self.InitTradeInfo()
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop(1)
-                        elif self.pattern and self.arry_pattern_buy is None:
+                        elif self.pattern and self.pattern_buy is None:
                             self.BackStop(0)
                         else:
                             start = datetime.datetime.now()
@@ -216,13 +215,13 @@ class StockBackEngine:
                         self.endtime    = data[4]
                         self.pm_ticks   = data[5]
                         self.sc_ticks   = data[6]
-                        self.unit       = data[7]
-                        self.sell_count = 0
-                        self.divid      = 0
+                        self.dict_pattern = data[7]
+                        self.pattern_buy  = None
+                        self.pattern_sell = None
                         self.PatternBacktest()
                     elif data[0] == '모델정보':
-                        self.arry_pattern_buy  = data[1]
-                        self.arry_pattern_sell = data[2]
+                        self.pattern_buy  = data[1]
+                        self.pattern_sell = data[2]
                 elif self.back_type == '백파인더':
                     if data[0] == '백테정보':
                         self.avgtime    = data[1]
@@ -390,34 +389,94 @@ class StockBackEngine:
                 last = len_arry - 1
                 for i, index in enumerate(self.array_tick[:, 0]):
                     if self.back_type is None: return
-                    next_day_change = i != last and index + 500000 < self.array_tick[i + 1, 0]
+                    next_day_change = i != last and str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
                     self.total_count += 1
-                    self.index  = int(index)
                     self.indexn = i
                     if i != last and not next_day_change:
                         if self.total_count > self.pm_ticks:
-                            last_area_index = self.indexn + self.sc_ticks
+                            last_area_index = i + self.sc_ticks
                             if last_area_index <= last and str(index)[:8] == str(self.array_tick[last_area_index, 0])[:8]:
                                 self.PatternModeling()
                     else:
                         self.total_count = 0
-            self.tq.put('학습완료')
+        self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
 
     def PatternModeling(self):
-        curr_price     = self.array_tick[self.indexn, 1]
-        high_price     = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 1].max()
-        high_price_per = round((high_price / curr_price - 1) * 100, 2)
-        if high_price_per > 10:
-            self.stq_list[self.sell_count % 20].put(('매수패턴', self.GetPatternPer()))
+        """
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
+           0      1     2    3    4     5         6         7         8        9      10       11        12           13
+        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            14         15          16      17       18         19            20            21        22
+        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           23       24       25        26       27        28       29        30       31        32
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           33       34       35        36       37        38       39        40       41       42          43
+        """
+        self.dict_pattern = {
+            '등락율': 1, '체결강도': 1, '순매수금액': 0.00000001, '초당거래대금': 0.00000001, '고저평균대비등락율': 1,
+            '매도총잔량금액': 0.00000001, '매수총잔량금액': 0.00000001
+        }
+        curr_price = self.array_tick[self.indexn, 1]
+        high_price = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 1].max()
+        price_per  = round((high_price / curr_price - 1) * 100, 2)
+        if price_per >= 10:
+            pattern = self.GetPattern()
+            if self.pattern_buy is None:
+                self.pattern_buy = pattern
+            elif pattern not in self.pattern_buy:
+                if self.gubun == 0: print('buy np.r_')
+                self.pattern_buy = np.r_[self.pattern_buy, pattern]
         elif curr_price >= high_price:
-            self.stq_list[self.sell_count % 20].put(('매도패턴', self.GetPatternPer()))
-        self.sell_count += 1
+            pattern = self.GetPattern()
+            if self.pattern_sell is None:
+                self.pattern_sell = pattern
+            elif pattern not in self.pattern_sell:
+                if self.gubun == 0: print('sell np.r_')
+                self.pattern_sell = np.r_[self.pattern_sell, pattern]
 
-    def GetPatternPer(self):
-        pattern = self.array_tick[self.indexn + 1 - self.pm_ticks:self.indexn + 1, 5]
-        pattern = pattern * self.unit
-        pattern = pattern.astype(int)
-        return pattern
+    def GetPattern(self):
+        """
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
+           0      1     2    3    4     5         6         7         8        9      10       11        12           13
+        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            14         15          16      17       18         19            20            21        22
+        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           23       24       25        26       27        28       29        30       31        32
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           33       34       35        36       37        38       39        40       41       42          43
+        """
+        arry_tick = self.array_tick[self.indexn + 1 - self.pm_ticks:self.indexn + 1, :]
+        pattern = None
+        for factor, unit in self.dict_pattern.items():
+            pattern_ = None
+            if factor == '등락율':
+                pattern_ = arry_tick[:, 5]
+            elif factor == '체결강도':
+                pattern_ = arry_tick[:, 7]
+            elif factor == '순매수금액':
+                bids     = arry_tick[:, 14]
+                asks     = arry_tick[:, 15]
+                price    = arry_tick[:, 1]
+                pattern_ = (bids - asks) * price
+            elif factor == '초당거래대금':
+                pattern_ = arry_tick[:, 19]
+            elif factor == '고저평균대비등락율':
+                pattern_ = arry_tick[:, 20]
+            elif factor == '매도총잔량금액':
+                tasks    = arry_tick[:, 21]
+                price    = arry_tick[:, 1]
+                pattern_ = tasks * price
+            elif factor == '매수총잔량금액':
+                tbids    = arry_tick[:, 22]
+                price    = arry_tick[:, 1]
+                pattern_ = tbids * price
+            pattern_ = pattern_ * unit
+            pattern_ = pattern_.astype(int)
+            if pattern is None:
+                pattern = pattern_
+            else:
+                pattern = np.r_[pattern, pattern_]
+        return np.array([pattern])
 
     def BackTest(self):
         if self.profile:
@@ -453,7 +512,7 @@ class StockBackEngine:
                 last = len(self.array_tick) - 1
                 for i, index in enumerate(self.array_tick[:, 0]):
                     if self.back_type is None: break
-                    next_day_change = i != last and index + 500000 < self.array_tick[i + 1, 0]
+                    next_day_change = i != last and str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
                     self.tick_count += 1
                     self.index  = int(index)
                     self.indexn = i
@@ -714,6 +773,8 @@ class StockBackEngine:
             for j in range(self.vars_count):
                 self.vars_key = j
                 if self.back_type in ('백테스트', '조건최적화'):
+                    if self.pattern and self.tick_count < self.pm_ticks:
+                        break
                     if self.tick_count < self.avgtime:
                         break
                 elif self.back_type == 'GA최적화':
@@ -728,7 +789,7 @@ class StockBackEngine:
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.tick_count < self.vars[0]:
-                    break
+                    continue
 
                 try:
                     if not self.trade_info[j]['보유중']:
@@ -739,22 +800,22 @@ class StockBackEngine:
                             continue
 
                         if self.pattern:
-                            pattern = self.GetPatternPer()
-                            if pattern not in self.arry_pattern_buy:
-                                continue
-
-                        self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
-                        매수 = True
-                        if self.back_type != '조건최적화':
-                            exec(self.buystg, None, locals())
+                            매수 = True
+                            pattern = self.GetPattern()
+                            if pattern not in self.pattern_buy:
+                                매수 = False
+                                break
+                            if 매수:
+                                self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
+                                self.Buy()
                         else:
-                            exec(self.dict_buystg[j], None, locals())
+                            self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
+                            매수 = True
+                            if self.back_type != '조건최적화':
+                                exec(self.buystg, None, locals())
+                            else:
+                                exec(self.dict_buystg[j], None, locals())
                     else:
-                        if self.pattern:
-                            pattern = self.GetPatternPer()
-                            if pattern not in self.arry_pattern_sell:
-                                continue
-
                         _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
@@ -765,12 +826,22 @@ class StockBackEngine:
                             self.trade_info[j]['최저수익률'] = 최저수익률 = 수익률
                         보유시간 = (now() - 매수시간).total_seconds()
 
-                        self.trade_info[j]['주문수량'] = 보유수량
-                        매도 = False
-                        if self.back_type != '조건최적화':
-                            exec(self.sellstg, None, locals())
+                        if self.pattern:
+                            매도 = True
+                            pattern = self.GetPattern()
+                            if pattern not in self.pattern_sell:
+                                매도 = False
+                                break
+                            if 매도:
+                                self.trade_info[j]['주문수량'] = 보유수량
+                                self.Sell(300)
                         else:
-                            exec(self.dict_sellstg[j], None, locals())
+                            self.trade_info[j]['주문수량'] = 보유수량
+                            매도 = False
+                            if self.back_type != '조건최적화':
+                                exec(self.sellstg, None, locals())
+                            else:
+                                exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop(1)

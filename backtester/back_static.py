@@ -206,7 +206,7 @@ def GetSellConds(sell_conds, gubun):
 def SetSellCond(selllist):
     count     = 1
     sellstg   = ''
-    dict_cond = {0: '전략종료청산', 100: '분할매도', 200: '손절청산'}
+    dict_cond = {0: '전략종료청산', 100: '분할매도', 200: '손절청산', 300: '패턴매도'}
     for i, text in enumerate(selllist):
         if '#' not in text and ('매도 = True' in text or '매도= True' in text or '매도 =True' in text or '매도=True' in text):
             dict_cond[count] = selllist[i - 1]
@@ -229,7 +229,7 @@ def GetBuyStgFuture(buystg, gubun):
 
 def GetSellStgFuture(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split("if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):")[0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell('SELL_LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell('BUY_SHORT', sell_cond)"
-    sellstg, dict_cond = SetSellCond(sellstg.split('\n'))
+    sellstg, dict_cond = SetSellCondFuture(sellstg.split('\n'))
     try:
         sellstg = compile(sellstg, '<string>', 'exec')
     except:
@@ -268,7 +268,7 @@ def GetSellCondsFuture(is_long, sell_conds, gubun):
 def SetSellCondFuture(selllist):
     count     = 1
     sellstg   = ''
-    dict_cond = {0: '전략종료청산', 100: '분할매도', 200: '손절청산'}
+    dict_cond = {0: '전략종료청산', 100: '분할매도', 200: '손절청산', 300: '패턴매도'}
     for i, text in enumerate(selllist):
         if '#' not in text:
             if 'SELL_LONG = True' in text or 'SELL_LONG= True' in text or 'SELL_LONG =True' in text or 'SELL_LONG=True' in text:
@@ -751,10 +751,7 @@ class SubTotal:
         self.betting    = None
         self.complete1  = False
         self.complete2  = False
-        self.complete3  = False
         self.separation = None
-        self.arry_pattern_buy  = None
-        self.arry_pattern_sell = None
         self.Start()
 
     def Start(self):
@@ -783,13 +780,6 @@ class SubTotal:
                 self.dict_bct = {}
                 self.list_tsg = None
                 self.arry_bct = None
-            elif data == '학습시작':
-                self.arry_pattern_buy  = None
-                self.arry_pattern_sell = None
-            elif '패턴' in data[0]:
-                self.CollectPattern(data)
-            elif data == '학습완료':
-                self.complete3 = True
 
             if self.complete1 and self.stq.empty():
                 if self.separation == '분리집계':
@@ -801,10 +791,6 @@ class SubTotal:
             if self.complete2 and self.stq.empty():
                 self.tq.put(('백테결과', self.vars_key, self.list_tsg, self.arry_bct))
                 self.complete2 = False
-
-            if self.complete3 and self.stq.empty():
-                self.tq.put(('학습결과', self.arry_pattern_buy, self.arry_pattern_sell))
-                self.complete3 = False
 
     def CollectData(self, data):
         _, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, vars_key = data
@@ -884,17 +870,3 @@ class SubTotal:
             daycnt, vars_key = data[4:]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, daycnt)
             self.tq.put(('ALL', 0, result, vars_key))
-
-    def CollectPattern(self, data):
-        gubun, new_arry = data
-        insert_arry = np.array([new_arry])
-        if gubun == '매수패턴':
-            if self.arry_pattern_buy is None:
-                self.arry_pattern_buy = insert_arry
-            elif new_arry not in self.arry_pattern_buy:
-                self.arry_pattern_buy = np.r_[self.arry_pattern_buy, insert_arry]
-        elif gubun == '매도패턴':
-            if self.arry_pattern_sell is None:
-                self.arry_pattern_sell = insert_arry
-            elif new_arry not in self.arry_pattern_sell:
-                self.arry_pattern_sell = np.r_[self.arry_pattern_sell, insert_arry]

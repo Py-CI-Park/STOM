@@ -602,7 +602,7 @@ class CoinUpbitBackEngine4(CoinUpbitBackEngine2):
                 exec(self.buystg, None, locals())
             except:
                 if self.gubun == 0: print_exc()
-                self.BackStop()
+                self.BackStop(1)
         else:
             bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
             shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -778,5 +778,5 @@ class CoinUpbitBackEngine4(CoinUpbitBackEngine2):
                                     exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
-                    self.BackStop()
+                    self.BackStop(1)
                     break
