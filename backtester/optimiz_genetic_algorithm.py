@@ -69,25 +69,11 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for ctq in self.stq_list:
-                            ctq.put('백테완료')
+                        for stq in self.stq_list:
+                            stq.put(('백테완료', '미분리집계'))
                     else:
                         for vars_key in range(10):
                             self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
-
-            elif data == '집계완료':
-                sc += 1
-                if sc == 20:
-                    sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과분리')
-
-            elif data == '분리완료':
-                sc += 1
-                if sc == 20:
-                    sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과전송')
 
             elif data[0] == '백테결과':
                 _, vars_key, list_tsg, arry_bct = data
@@ -102,6 +88,7 @@ class Total:
                                '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
                     k  = 0
                     for vars_key, list_tsg in dict_tsg.items():
+                        print('결과집계', vars_key, len(list_tsg[0]))
                         data = ('결과집계', columns, list_tsg, dict_bct[vars_key])
                         if self.valid_days is not None:
                             for i, vdays in enumerate(self.valid_days):
@@ -289,7 +276,7 @@ class OptimizeGeneticAlgorithm:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ('백테정보', arry_bct, betting, optistandard)
+        data = ('백테정보', arry_bct, betting)
         for q in self.stq_list:
             q.put(data)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))

@@ -78,8 +78,8 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for ctq in self.stq_list:
-                            ctq.put('백테완료')
+                        for stq in self.stq_list:
+                            stq.put(('백테완료', '분리집계'))
                     else:
                         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'))
                         self.mq.put('백테스트 완료')
@@ -174,11 +174,10 @@ class Total:
         if self.buystg_name == '벤치전략':
             self.mq.put('벤치테스트 완료')
         else:
-            self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, '', self.day_count)
+            self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, self.day_count)
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
             save_time = strf_time('%Y%m%d%H%M%S')
-            # self.df_tsg.to_csv(f'{save_time}.csv')
             startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
             startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
             endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
@@ -280,6 +279,7 @@ class BackTest:
         df_kp         = data[12]
         df_kq         = data[13]
         back_club     = data[14]
+        pattern       = data[15]
         if buystg_name == '벤치전략':
             betting   = 20000000
             avgtime   = 30
@@ -301,7 +301,7 @@ class BackTest:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ('백테정보', arry_bct, betting, None)
+        data = ('백테정보', arry_bct, betting)
         for q in self.stq_list:
             q.put(data)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
@@ -325,7 +325,7 @@ class BackTest:
 
         self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
                      dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
-        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None)
+        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, pattern)
         for q in self.stq_list:
             q.put('백테시작')
         for q in self.pq_list:

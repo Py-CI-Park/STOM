@@ -297,18 +297,18 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
 
     stdp_ = 0
     if dict_valid is not None:
-        duple_train = sorted(dict_train.items(), key=operator.itemgetter(0))
-        duple_valid = sorted(dict_valid.items(), key=operator.itemgetter(0))
+        tuple_train = sorted(dict_train.items(), key=operator.itemgetter(0))
+        tuple_valid = sorted(dict_valid.items(), key=operator.itemgetter(0))
         train_text = []
         valid_text = []
         train_data = []
         valid_data = []
 
-        for k, v in duple_train:
+        for k, v in tuple_train:
             text2, std = GetText2(f'TRAIN{k + 1}', optistd, std_list, betting, v)
             train_text.append(text2)
             train_data.append(std)
-        for k, v in duple_valid:
+        for k, v in tuple_valid:
             text2, std = GetText2(f'VALID{k + 1}', optistd, std_list, betting, v)
             valid_text.append(text2)
             valid_data.append(std)
@@ -471,52 +471,52 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     return std, text
 
 
-def GetBackResult(df_tsg, df_bct, betting, optistd, day_count):
-    tc = len(df_tsg)
-    if tc > 0:
-        atc = round(tc / day_count, 1)
-        pc  = len(df_tsg[df_tsg['수익률'] >= 0])
-        mc  = len(df_tsg[df_tsg['수익률'] < 0])
-        wr  = round(pc / tc * 100, 2)
-        ah  = round(df_tsg['보유시간'].sum() / tc, 2)
-        ap  = round(df_tsg['수익률'].sum() / tc, 2)
-        tsg = int(df_tsg['수익금'].sum())
-        df_plus  = df_tsg[df_tsg['수익률'] >= 0]
-        df_minus = df_tsg[df_tsg['수익률'] < 0]
-        tpg = df_plus['수익률'].mean()
-        tmg = abs(df_minus['수익률'].mean()) if len(df_minus) > 0 else tpg
+def GetBackResult(df_tsg, df_bct, betting, day_count):
+    tc  = len(df_tsg)
+    atc = round(tc / day_count, 1)
+    pc  = len(df_tsg[df_tsg['수익률'] >= 0])
+    mc  = len(df_tsg[df_tsg['수익률'] < 0])
+    wr  = round(pc / tc * 100, 2)
+    ah  = round(df_tsg['보유시간'].sum() / tc, 2)
+    ap  = round(df_tsg['수익률'].sum() / tc, 2)
+    tsg = int(df_tsg['수익금'].sum())
+    df_plus  = df_tsg[df_tsg['수익률'] >= 0]
+    df_minus = df_tsg[df_tsg['수익률'] < 0]
+    tpg = df_plus['수익률'].mean()
+    tmg = abs(df_minus['수익률'].mean()) if len(df_minus) > 0 else tpg
 
-        df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
-        mhct   = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
-        try:
-            onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
-        except:
-            onegm = betting
-        tsp    = round(tsg / onegm * 100, 2)
-        cname  = df_tsg['종목명'].iloc[0]
-        cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
-        tpi    = round(wr / 100 * (1 + tpg / tmg), 2)
+    df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
+    mhct   = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
+    try:
+        onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
+    except:
+        onegm = betting
+    tsp    = round(tsg / onegm * 100, 2)
+    cname  = df_tsg['종목명'].iloc[0]
+    cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
+    tpi    = round(wr / 100 * (1 + tpg / tmg), 2)
 
-        df_bct.index = df_bct.index.astype(str)
-        df_bct.sort_index(inplace=True)
-        df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
-        df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
+    df_bct.index = df_bct.index.astype(str)
+    df_bct.sort_index(inplace=True)
+    df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
+    df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
 
-        columns = columns_btf if '포지션' in df_tsg.columns else columns_bt
-        df_tsg = df_tsg[columns]
+    columns = columns_btf if '포지션' in df_tsg.columns else columns_bt
+    df_tsg = df_tsg[columns]
 
-        try:
-            array = np.array(df_tsg['수익금합계'], dtype=np.float64)
-            lower = np.argmax(np.maximum.accumulate(array) - array)
-            upper = np.argmax(array[:lower])
-            mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
-            mdd_  = int(abs(array[upper] - array[lower]))
-        except:
-            mdd, mdd_ = 0, 0
-    else:
-        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    try:
+        array = np.array(df_tsg['수익금합계'], dtype=np.float64)
+        lower = np.argmax(np.maximum.accumulate(array) - array)
+        upper = np.argmax(array[:lower])
+        # noinspection PyTypeChecker
+        mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
+        mdd_  = int(abs(array[upper] - array[lower]))
+    except:
+        mdd, mdd_ = 0, 0
 
-    if mdd == 0: mdd = round((tsg if 'G' in optistd else tsp) / 100, 2)
+    if mdd  == 0: mdd  = abs(tsp)
+    if mdd_ == 0: mdd_ = abs(tsg)
+
     return df_tsg, df_bct, [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_]
 
 
@@ -737,21 +737,24 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
 
 class SubTotal:
     def __init__(self, vk, tq, stqs, buystd, gubun):
-        self.vars_key  = vk
-        self.tq        = tq
-        self.stqs      = stqs
-        self.stq       = self.stqs[self.vars_key]
-        self.buystd    = buystd
-        self.gubun     = gubun
-        self.dict_tsg  = {}
-        self.dict_bct  = {}
-        self.list_tsg  = None
-        self.arry_bct  = None
-        self.arry_bct_ = None
-        self.betting   = None
-        self.optistd   = None
-        self.complete1 = False
-        self.complete2 = False
+        self.vars_key   = vk
+        self.tq         = tq
+        self.stqs       = stqs
+        self.stq        = self.stqs[self.vars_key]
+        self.buystd     = buystd
+        self.gubun      = gubun
+        self.dict_tsg   = {}
+        self.dict_bct   = {}
+        self.list_tsg   =  None
+        self.arry_bct   = None
+        self.arry_bct_  = None
+        self.betting    = None
+        self.complete1  = False
+        self.complete2  = False
+        self.complete3  = False
+        self.separation = None
+        self.arry_pattern_buy  = None
+        self.arry_pattern_sell = None
         self.Start()
 
     def Start(self):
@@ -759,8 +762,9 @@ class SubTotal:
             data = self.stq.get()
             if data[0] == '백테결과':
                 self.CollectData(data)
-            elif data == '백테완료':
+            elif data[0] == '백테완료':
                 self.complete1 = True
+                self.separation = data[1]
             elif data == '결과분리':
                 self.DivideData()
             elif data[0] == '분리결과':
@@ -772,7 +776,6 @@ class SubTotal:
             elif data[0] == '백테정보':
                 self.arry_bct_ = data[1]
                 self.betting   = data[2]
-                self.optistd   = data[3]
             elif data == '백테시작':
                 self.complete1 = False
                 self.complete2 = False
@@ -780,14 +783,28 @@ class SubTotal:
                 self.dict_bct = {}
                 self.list_tsg = None
                 self.arry_bct = None
+            elif data == '학습시작':
+                self.arry_pattern_buy  = None
+                self.arry_pattern_sell = None
+            elif '패턴' in data[0]:
+                self.CollectPattern(data)
+            elif data == '학습완료':
+                self.complete3 = True
 
             if self.complete1 and self.stq.empty():
-                self.tq.put('집계완료')
+                if self.separation == '분리집계':
+                    self.tq.put('집계완료')
+                else:
+                    self.tq.put(('백테결과', self.vars_key, self.dict_tsg[self.vars_key] if self.dict_tsg else None, self.dict_bct[self.vars_key] if self.dict_bct else None))
                 self.complete1 = False
 
             if self.complete2 and self.stq.empty():
                 self.tq.put(('백테결과', self.vars_key, self.list_tsg, self.arry_bct))
                 self.complete2 = False
+
+            if self.complete3 and self.stq.empty():
+                self.tq.put(('학습결과', self.arry_pattern_buy, self.arry_pattern_sell))
+                self.complete3 = False
 
     def CollectData(self, data):
         _, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, vars_key = data
@@ -796,8 +813,6 @@ class SubTotal:
             self.dict_bct[vars_key] = self.arry_bct_.copy()
 
         index = str(매수시간) if self.buystd else str(매도시간)
-        # while index in self.dict_tsg[vars_key][0]:
-        #     index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
         self.dict_tsg[vars_key][0].append(index)
         self.dict_tsg[vars_key][1].append(종목명)
         self.dict_tsg[vars_key][2].append(시가총액또는포지션)
@@ -836,14 +851,6 @@ class SubTotal:
             self.arry_bct[:, 1] += arry_bct[:, 1]
         for i, list_ in enumerate(list_tsg):
             self.list_tsg[i] += list_
-            # if i == 0:
-            #     for index in list_:
-            #         index_ = index
-            #         while index_ in self.list_tsg[i]:
-            #             index_ = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index_)))
-            #         self.list_tsg[i].append(index_)
-            # else:
-            #     self.list_tsg[i] += list_
 
     def SendSubTotal(self, data):
         _, columns, list_data, arry_bct = data[:4]
@@ -861,19 +868,33 @@ class SubTotal:
             else:
                 df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
                 df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
+            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(('TRAIN' if self.gubun else 'VALID', index, result, vars_key))
         elif len(data) == 10:
             vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
-                df_tsg = df_tsg[(vsday * 1000000 < df_tsg['매도시간']) | (df_tsg['매도시간'] > veday * 1000000 + 240000)]
+                df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | (veday * 1000000 + 240000 < df_tsg['매도시간'])]
                 df_bct = df_bct[(vsday * 1000000 < df_bct.index) | (df_bct.index > veday * 1000000 + 240000)]
             else:
                 df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
                 df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
+            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(('TRAIN' if self.gubun else 'VALID', index, result, vars_key))
         else:
             daycnt, vars_key = data[4:]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
+            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, daycnt)
             self.tq.put(('ALL', 0, result, vars_key))
+
+    def CollectPattern(self, data):
+        gubun, new_arry = data
+        insert_arry = np.array([new_arry])
+        if gubun == '매수패턴':
+            if self.arry_pattern_buy is None:
+                self.arry_pattern_buy = insert_arry
+            elif new_arry not in self.arry_pattern_buy:
+                self.arry_pattern_buy = np.r_[self.arry_pattern_buy, insert_arry]
+        elif gubun == '매도패턴':
+            if self.arry_pattern_sell is None:
+                self.arry_pattern_sell = insert_arry
+            elif new_arry not in self.arry_pattern_sell:
+                self.arry_pattern_sell = np.r_[self.arry_pattern_sell, insert_arry]

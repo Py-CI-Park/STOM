@@ -86,8 +86,10 @@ class StockBackEngine:
         self.tick_count   = 0
         self.divid        = 0
 
-        self.pm_ticks          = 30
-        self.sc_ticks          = 600
+        self.pattern           = False
+        self.pm_ticks          = 0
+        self.sc_ticks          = 0
+        self.unit              = 0
         self.arry_pattern_buy  = None
         self.arry_pattern_sell = None
 
@@ -109,7 +111,7 @@ class StockBackEngine:
                         self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
@@ -118,13 +120,6 @@ class StockBackEngine:
                         self.InitDivid()
                         self.InitTradeInfo()
                         self.BackTest()
-                    elif data[0] == '패턴학습':
-                        self.startday   = data[1]
-                        self.endday     = data[2]
-                        self.PatternBacktest()
-                    elif data[0] == '패턴모델':
-                        self.arry_pattern_buy  = data[1]
-                        self.arry_pattern_sell = data[2]
                 elif self.back_type == '전진분석':
                     if data[0] == '백테정보':
                         self.betting    = data[1]
@@ -135,7 +130,7 @@ class StockBackEngine:
                         self.sellstg, self.dict_sconds = GetSellStg(data[6], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
@@ -158,7 +153,7 @@ class StockBackEngine:
                         self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_lists = data[1]
                         self.vars_count = 10
@@ -189,7 +184,7 @@ class StockBackEngine:
                         self.InitDivid()
                         self.InitTradeInfo()
                         if error:
-                            self.BackStop()
+                            self.BackStop(1)
                         else:
                             self.BackTest()
                 elif self.back_type == '백테스트':
@@ -202,15 +197,32 @@ class StockBackEngine:
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStg(data[7], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
+                        self.pattern    = data[9]
                         self.vars_count = 1
                         self.InitDivid()
                         self.InitTradeInfo()
                         if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
+                            self.BackStop(1)
+                        elif self.pattern and self.arry_pattern_buy is None:
+                            self.BackStop(0)
                         else:
                             start = datetime.datetime.now()
                             self.BackTest()
                             self.total_secds = (datetime.datetime.now() - start).total_seconds()
+                    elif data[0] == '학습정보':
+                        self.startday   = data[1]
+                        self.endday     = data[2]
+                        self.starttime  = data[3]
+                        self.endtime    = data[4]
+                        self.pm_ticks   = data[5]
+                        self.sc_ticks   = data[6]
+                        self.unit       = data[7]
+                        self.sell_count = 0
+                        self.divid      = 0
+                        self.PatternBacktest()
+                    elif data[0] == '모델정보':
+                        self.arry_pattern_buy  = data[1]
+                        self.arry_pattern_sell = data[2]
                 elif self.back_type == '백파인더':
                     if data[0] == '백테정보':
                         self.avgtime    = data[1]
@@ -223,7 +235,7 @@ class StockBackEngine:
                             self.buystg = compile(data[6], '<string>', 'exec')
                         except:
                             if self.gubun == 0: print_exc()
-                            self.BackStop()
+                            self.BackStop(1)
                         else:
                             self.BackTest()
             elif data[0] == '백테유형':
@@ -243,10 +255,8 @@ class StockBackEngine:
         self.sell_count = 0
         if self.vars_count < 5:
             self.divid = 5
-        elif self.vars_count < 20:
-            self.divid = self.vars_count
         else:
-            self.divid = 20
+            self.divid = 0
 
     def InitTradeInfo(self):
         self.tick_count = 0
@@ -358,46 +368,54 @@ class StockBackEngine:
         if len(not_in_list) > 0 and self.gubun == 0:
             self.wq.put((ui_num['S백테스트'], '백테엔진 구동 시 포함되지 않은 평균값 틱수를 사용하여 중지되었습니다.'))
             self.wq.put((ui_num['S백테스트'], '누락된 평균값 틱수를 추가하여 백테엔진을 재시작하십시오.'))
-            self.BackStop()
+            self.BackStop(1)
 
-    def BackStop(self):
+    def BackStop(self, gubun):
         self.back_type = None
-        if self.gubun == 0: self.wq.put((ui_num['S백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'))
+        if self.gubun == 0:
+            if gubun:
+                self.wq.put((ui_num['S백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'))
+            else:
+                self.wq.put((ui_num['S백테스트'], '학습된 패턴 데이터가 없어 백테스트를 중지합니다.'))
 
     def PatternBacktest(self):
         for code in self.code_list:
+            self.total_count = 0
             self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] >= self.startday * 1000000) &
-                                                     (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000)]
-            if len(self.array_tick) > 0:
-                last = len(self.array_tick) - 1
+                                                     (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000) &
+                                                     (self.dict_tik_ar[code][:, 0] % 1000000 >= self.starttime) &
+                                                     (self.dict_tik_ar[code][:, 0] % 1000000 <= self.endtime)]
+            len_arry = len(self.array_tick)
+            if len_arry > 0:
+                last = len_arry - 1
                 for i, index in enumerate(self.array_tick[:, 0]):
                     if self.back_type is None: return
                     next_day_change = i != last and index + 500000 < self.array_tick[i + 1, 0]
-                    self.tick_count += 1
+                    self.total_count += 1
                     self.index  = int(index)
                     self.indexn = i
-                    if not next_day_change:
-                        if str(self.index)[:8] == str(self.array_tick[self.indexn + self.sc_ticks, 0])[:8]:
-                            self.PatternModeling()
+                    if i != last and not next_day_change:
+                        if self.total_count > self.pm_ticks:
+                            last_area_index = self.indexn + self.sc_ticks
+                            if last_area_index <= last and str(index)[:8] == str(self.array_tick[last_area_index, 0])[:8]:
+                                self.PatternModeling()
                     else:
-                        self.tick_count = 0
-
+                        self.total_count = 0
             self.tq.put('학습완료')
 
     def PatternModeling(self):
         curr_price     = self.array_tick[self.indexn, 1]
-        uplimit_per    = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 5].max() >= 29.5
         high_price     = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 1].max()
-        low_price      = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 1].min()
         high_price_per = round((high_price / curr_price - 1) * 100, 2)
-        low_price_per  = round((low_price / curr_price - 1) * 100, 2)
-        if high_price_per > 10 or uplimit_per:
-            self.tq.put(['매수패턴', self.GetPatternPer()])
-        elif low_price_per < -10 or curr_price >= high_price:
-            self.tq.put(['매도패턴', self.GetPatternPer()])
+        if high_price_per > 10:
+            self.stq_list[self.sell_count % 20].put(('매수패턴', self.GetPatternPer()))
+        elif curr_price >= high_price:
+            self.stq_list[self.sell_count % 20].put(('매도패턴', self.GetPatternPer()))
+        self.sell_count += 1
 
     def GetPatternPer(self):
         pattern = self.array_tick[self.indexn + 1 - self.pm_ticks:self.indexn + 1, 5]
+        pattern = pattern * self.unit
         pattern = pattern.astype(int)
         return pattern
 
@@ -686,7 +704,7 @@ class StockBackEngine:
                     exec(self.buystg, None, locals())
                 except:
                     if self.gubun == 0: print_exc()
-                    self.BackStop()
+                    self.BackStop(1)
         else:
             bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
             shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -720,6 +738,11 @@ class StockBackEngine:
                         except:
                             continue
 
+                        if self.pattern:
+                            pattern = self.GetPatternPer()
+                            if pattern not in self.arry_pattern_buy:
+                                continue
+
                         self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
                         매수 = True
                         if self.back_type != '조건최적화':
@@ -727,6 +750,11 @@ class StockBackEngine:
                         else:
                             exec(self.dict_buystg[j], None, locals())
                     else:
+                        if self.pattern:
+                            pattern = self.GetPatternPer()
+                            if pattern not in self.arry_pattern_sell:
+                                continue
+
                         _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
@@ -745,7 +773,7 @@ class StockBackEngine:
                             exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
-                    self.BackStop()
+                    self.BackStop(1)
                     break
 
     def Buy(self):
@@ -830,6 +858,6 @@ class StockBackEngine:
         sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
         abt, bcx = '', True
         data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
-        self.stq_list[self.sell_count % self.divid].put(data)
+        self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
         self.trade_info[self.vars_key] = GetTradeInfo(1)
         self.sell_count += 1

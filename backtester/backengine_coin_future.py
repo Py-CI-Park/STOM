@@ -231,10 +231,8 @@ class CoinFutureBackEngine:
         self.sell_count = 0
         if self.vars_count < 5:
             self.divid = 5
-        elif self.vars_count < 20:
-            self.divid = self.vars_count
         else:
-            self.divid = 20
+            self.divid = 0
 
     def InitTradeInfo(self):
         self.tick_count = 0
@@ -758,6 +756,6 @@ class CoinFutureBackEngine:
         sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
         abt, bcx = '', True
         data = ('백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
-        self.stq_list[self.sell_count % self.divid].put(data)
+        self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
         self.trade_info[self.vars_key] = GetTradeInfo(1)
         self.sell_count += 1

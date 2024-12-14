@@ -78,7 +78,9 @@ class SetCoinBack:
 
         self.ui.cvj_pushButton_01 = self.wc.setPushbutton('백테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_11, color=2, tip='(Alt+Enter) 기본전략을 백테스팅한다.\nCtrl키와 함께 누르면 백테스트 엔진을 재시작할 수 있습니다.\nCtrl + Alt 키와 함계 누르면 백테 완료 후 변수목록이 포함된 그래프가 저장됩니다.')
         self.ui.cvj_pushButton_02 = self.wc.setPushbutton('백파인더', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_12, color=2, tip='구간등락율을 기준으로 변수를 탐색한다.')
-        self.ui.cvj_pushButton_03 = self.wc.setPushbutton('백파인더 예제', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_13, color=3)
+        self.ui.cvj_pushButton_03 = self.wc.setPushbutton('패턴 테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_35, color=2, tip='선택한 전략과 패턴을 테스트한다.\n패턴 학습한 일자 외의 기간을 테스트해야합니다.')
+        self.ui.cvj_pushButton_04 = self.wc.setPushbutton('패턴 학습', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_34, color=2, tip='선택한 일자에서 패턴을 학습시킨다.\n패턴 테스트할 일자와 중복되지 않게 일자를 선택해야합니다.')
+        self.ui.cvj_pushButton_05 = self.wc.setPushbutton('백파인더 예제', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_13, color=3)
 
         self.ui.cvjs_comboBoxx_01 = self.wc.setCombobox(self.ui.cs_tab, font=qfont14, activated=self.ui.cActivated_02)
         self.ui.cvjs_lineEditt_01 = self.wc.setLineedit(self.ui.cs_tab, font=qfont14, aleft=True, ltext='F6, F7', style=style_bc_dk)
@@ -102,7 +104,7 @@ class SetCoinBack:
             self.ui.cvjb_pushButon_03, self.ui.cvjb_pushButon_04, self.ui.cvjb_pushButon_05, self.ui.cvjb_pushButon_06,
             self.ui.cvjb_pushButon_07, self.ui.cvjb_pushButon_08, self.ui.cvjb_pushButon_09, self.ui.cvjb_pushButon_10,
             self.ui.cvjb_pushButon_11, self.ui.cvjb_pushButon_12, self.ui.cvj_pushButton_01, self.ui.cvj_pushButton_02,
-            self.ui.cvj_pushButton_03, self.ui.cvjs_comboBoxx_01, self.ui.cvjs_lineEditt_01, self.ui.cvjs_pushButon_01,
+            self.ui.cvj_pushButton_05, self.ui.cvjs_comboBoxx_01, self.ui.cvjs_lineEditt_01, self.ui.cvjs_pushButon_01,
             self.ui.cvjs_pushButon_02, self.ui.cvjs_pushButon_03, self.ui.cvjs_pushButon_04, self.ui.cvjs_pushButon_05,
             self.ui.cvjs_pushButon_06, self.ui.cvjs_pushButon_07, self.ui.cvjs_pushButon_08, self.ui.cvjs_pushButon_09,
             self.ui.cvjs_pushButon_10, self.ui.cvjs_pushButon_11, self.ui.cvjs_pushButon_12, self.ui.cvjs_pushButon_13,
@@ -128,21 +130,21 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvj_pushButton_04 = self.wc.setPushbutton('전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_02, color=4, tip='단축키(Ctrl+4)')
-        self.ui.cvj_pushButton_05 = self.wc.setPushbutton('GA 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_03, color=4, tip='단축키(Ctrl+5)')
-        self.ui.cvj_pushButton_06 = self.wc.setPushbutton('테스트 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_01, color=4, tip='단축키(Ctrl+3)')
-        self.ui.cvj_pushButton_07 = self.wc.setPushbutton('조건 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_10, color=4, tip='단축키(Ctrl+6)')
-        self.ui.cvj_pushButton_08 = self.wc.setPushbutton('최적화 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_05, color=4, tip='단축키(Ctrl+2)')
-        self.ui.cvj_pushButton_09 = self.wc.setPushbutton('범위 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_04, color=4, tip='단축키(Ctrl+7)')
-        self.ui.cvj_pushButton_10 = self.wc.setPushbutton('백테스트 로그', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_07, color=4, tip='단축키(Ctrl+9)')
-        self.ui.cvj_pushButton_11 = self.wc.setPushbutton('상세기록', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_08, color=4, tip='단축키(Ctrl+0)')
-        self.ui.cvj_pushButton_12 = self.wc.setPushbutton('전략 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_09, color=5, tip='단축키(Ctrl+1)')
-        self.ui.cvj_pushButton_13 = self.wc.setPushbutton('변수 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_06, color=4, tip='단축키(Ctrl+8)')
+        self.ui.cvj_pushButton_06 = self.wc.setPushbutton('전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_02, color=4, tip='단축키(Ctrl+4)')
+        self.ui.cvj_pushButton_07 = self.wc.setPushbutton('GA 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_03, color=4, tip='단축키(Ctrl+5)')
+        self.ui.cvj_pushButton_08 = self.wc.setPushbutton('테스트 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_01, color=4, tip='단축키(Ctrl+3)')
+        self.ui.cvj_pushButton_09 = self.wc.setPushbutton('조건 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_10, color=4, tip='단축키(Ctrl+6)')
+        self.ui.cvj_pushButton_10 = self.wc.setPushbutton('최적화 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_05, color=4, tip='단축키(Ctrl+2)')
+        self.ui.cvj_pushButton_11 = self.wc.setPushbutton('범위 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_04, color=4, tip='단축키(Ctrl+7)')
+        self.ui.cvj_pushButton_12 = self.wc.setPushbutton('백테스트 로그', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_07, color=4, tip='단축키(Ctrl+9)')
+        self.ui.cvj_pushButton_13 = self.wc.setPushbutton('상세기록', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_08, color=4, tip='단축키(Ctrl+0)')
+        self.ui.cvj_pushButton_14 = self.wc.setPushbutton('전략 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_09, color=5, tip='단축키(Ctrl+1)')
+        self.ui.cvj_pushButton_15 = self.wc.setPushbutton('변수 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_06, color=4, tip='단축키(Ctrl+8)')
 
         self.ui.coin_editer_list = [
-            self.ui.cvj_pushButton_04, self.ui.cvj_pushButton_05, self.ui.cvj_pushButton_06, self.ui.cvj_pushButton_07,
-            self.ui.cvj_pushButton_08, self.ui.cvj_pushButton_09, self.ui.cvj_pushButton_10, self.ui.cvj_pushButton_11,
-            self.ui.cvj_pushButton_12, self.ui.cvj_pushButton_13
+            self.ui.cvj_pushButton_06, self.ui.cvj_pushButton_07, self.ui.cvj_pushButton_08, self.ui.cvj_pushButton_09,
+            self.ui.cvj_pushButton_10, self.ui.cvj_pushButton_11, self.ui.cvj_pushButton_12, self.ui.cvj_pushButton_13,
+            self.ui.cvj_pushButton_14, self.ui.cvj_pushButton_15
         ]
 
     # =================================================================================================================
@@ -363,9 +365,11 @@ class SetCoinBack:
         self.ui.cvjb_pushButon_11.setGeometry(1012, 215, 165, 30)
         self.ui.cvjb_pushButon_12.setGeometry(1182, 215, 165, 30)
 
-        self.ui.cvj_pushButton_01.setGeometry(1012, 335, 165, 30)
-        self.ui.cvj_pushButton_02.setGeometry(1012, 370, 165, 30)
-        self.ui.cvj_pushButton_03.setGeometry(1012, 405, 165, 30)
+        self.ui.cvj_pushButton_01.setGeometry(1012, 335, 80, 30)
+        self.ui.cvj_pushButton_02.setGeometry(1012, 370, 80, 30)
+        self.ui.cvj_pushButton_03.setGeometry(1097, 335, 80, 30)
+        self.ui.cvj_pushButton_04.setGeometry(1097, 370, 80, 30)
+        self.ui.cvj_pushButton_05.setGeometry(1012, 405, 165, 30)
 
         self.ui.cvjs_comboBoxx_01.setGeometry(1012, 478, 165, 25)
         self.ui.cvjs_lineEditt_01.setGeometry(1182, 478, 165, 25)
@@ -395,16 +399,16 @@ class SetCoinBack:
         self.ui.cvjb_lineEditt_04.setGeometry(1167, 305, 60, 20)
         self.ui.cvjb_lineEditt_05.setGeometry(1287, 305, 60, 20)
 
-        self.ui.cvj_pushButton_04.setGeometry(1182, 335, 80, 30)
-        self.ui.cvj_pushButton_05.setGeometry(1267, 335, 80, 30)
-        self.ui.cvj_pushButton_06.setGeometry(1182, 370, 80, 30)
-        self.ui.cvj_pushButton_07.setGeometry(1267, 370, 80, 30)
-        self.ui.cvj_pushButton_08.setGeometry(1182, 405, 80, 30)
-        self.ui.cvj_pushButton_09.setGeometry(1267, 405, 80, 30)
-        self.ui.cvj_pushButton_10.setGeometry(1012, 440, 80, 30)
-        self.ui.cvj_pushButton_11.setGeometry(1097, 440, 80, 30)
-        self.ui.cvj_pushButton_12.setGeometry(1182, 440, 80, 30)
-        self.ui.cvj_pushButton_13.setGeometry(1267, 440, 80, 30)
+        self.ui.cvj_pushButton_06.setGeometry(1182, 335, 80, 30)
+        self.ui.cvj_pushButton_07.setGeometry(1267, 335, 80, 30)
+        self.ui.cvj_pushButton_08.setGeometry(1182, 370, 80, 30)
+        self.ui.cvj_pushButton_09.setGeometry(1267, 370, 80, 30)
+        self.ui.cvj_pushButton_10.setGeometry(1182, 405, 80, 30)
+        self.ui.cvj_pushButton_11.setGeometry(1267, 405, 80, 30)
+        self.ui.cvj_pushButton_12.setGeometry(1012, 440, 80, 30)
+        self.ui.cvj_pushButton_13.setGeometry(1097, 440, 80, 30)
+        self.ui.cvj_pushButton_14.setGeometry(1182, 440, 80, 30)
+        self.ui.cvj_pushButton_15.setGeometry(1267, 440, 80, 30)
 
         self.ui.cvc_comboBoxxx_01.setGeometry(1012, 45, 165, 30)
         self.ui.cvc_lineEdittt_01.setGeometry(1182, 45, 165, 30)

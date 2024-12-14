@@ -134,25 +134,25 @@ class ReceiverBinanceFuture:
                         data = data[1]['data']
                         code = data['s']
                         dt   = int(strf_time('%Y%m%d%H%M%S', from_timestamp(int(data['T']) / 1000 - 32400)))
-                        hoga_seprice = [
+                        hoga_seprice = (
                             float(data['a'][9][0]), float(data['a'][8][0]), float(data['a'][7][0]), float(data['a'][6][0]), float(data['a'][5][0]),
                             float(data['a'][4][0]), float(data['a'][3][0]), float(data['a'][2][0]), float(data['a'][1][0]), float(data['a'][0][0])
-                        ]
-                        hoga_buprice = [
+                        )
+                        hoga_buprice = (
                             float(data['b'][0][0]), float(data['b'][1][0]), float(data['b'][2][0]), float(data['b'][3][0]), float(data['b'][4][0]),
                             float(data['b'][5][0]), float(data['b'][6][0]), float(data['b'][7][0]), float(data['b'][8][0]), float(data['b'][9][0])
-                        ]
-                        hoga_samount = [
+                        )
+                        hoga_samount = (
                             float(data['a'][9][1]), float(data['a'][8][1]), float(data['a'][7][1]), float(data['a'][6][1]), float(data['a'][5][1]),
                             float(data['a'][4][1]), float(data['a'][3][1]), float(data['a'][2][1]), float(data['a'][1][1]), float(data['a'][0][1])
-                        ]
-                        hoga_bamount = [
+                        )
+                        hoga_bamount = (
                             float(data['b'][0][1]), float(data['b'][1][1]), float(data['b'][2][1]), float(data['b'][3][1]), float(data['b'][4][1]),
                             float(data['b'][5][1]), float(data['b'][6][1]), float(data['b'][7][1]), float(data['b'][8][1]), float(data['b'][9][1])
-                        ]
-                        hoga_tamount = [
+                        )
+                        hoga_tamount = (
                             round(sum(hoga_samount), 8), round(sum(hoga_bamount), 8)
-                        ]
+                        )
                     except Exception as e:
                         self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 depth {e}'))
                     else:

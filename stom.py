@@ -18,6 +18,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer, pyqtSlot, QEvent, QUrl,  Qt, QDate, QSize, QPropertyAnimation, QEasingCurve
 from PyQt5.QtWidgets import QMainWindow, QCompleter, QMessageBox, QTableWidgetItem, QApplication, QVBoxLayout, QLineEdit, QPushButton
 
+from backtester.pattern_modeling import PatternModeling
 from ui.set_text import *
 from ui.set_style import *
 from ui.set_icon import SetIcon
@@ -343,6 +344,8 @@ class Window(QMainWindow):
 
         self.proc_backtester_bb    = None
         self.proc_backtester_bf    = None
+        self.proc_backtester_bc    = None
+        self.proc_backtester_bp    = None
         self.proc_backtester_o     = None
         self.proc_backtester_ov    = None
         self.proc_backtester_ovc   = None
@@ -736,6 +739,14 @@ class Window(QMainWindow):
         self.svj_pushButton_02.setStyleSheet(style_)
         self.cvj_pushButton_02.setStyleSheet(style_)
 
+        style_ = style_bc_bt if self.proc_backtester_bc is not None and self.proc_backtester_bc.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svj_pushButton_03.setStyleSheet(style_)
+        self.cvj_pushButton_03.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_bp is not None and self.proc_backtester_bp.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svj_pushButton_04.setStyleSheet(style_)
+        self.cvj_pushButton_04.setStyleSheet(style_)
+
         style_ = style_bc_bt if self.proc_backtester_ovc is not None and self.proc_backtester_ovc.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.svc_pushButton_06.setStyleSheet(style_)
         self.cvc_pushButton_06.setStyleSheet(style_)
@@ -915,7 +926,7 @@ class Window(QMainWindow):
                 self.ss_textEditttt_09.setTextColor(color)
                 self.ss_textEditttt_09.append(text)
                 self.log6.info(re.sub('(<([^>]+)>)', '', text))
-                if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.back_condition: self.BacktestProcessKill()
+                if '백테스트를 중지합니다' in data[1] and self.back_condition: self.BacktestProcessKill()
                 if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
                                '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
@@ -4135,7 +4146,7 @@ class Window(QMainWindow):
                 for bpq in self.back_pques:
                     bpq.put(('백테유형', '백테스트'))
 
-                backQ.put((betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', self.dict_cn, self.back_count, bl, False, self.df_kp, self.df_kd, False))
+                backQ.put((betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', self.dict_cn, self.back_count, bl, False, self.df_kp, self.df_kd, False, False))
                 self.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S'))
                 self.proc_backtester_bb.start()
                 self.svjButtonClicked_07()
@@ -4591,10 +4602,10 @@ class Window(QMainWindow):
                         bpq.put(('백테유형', '백테스트'))
 
                     if bt_gubun == '주식':
-                        backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.dict_cn, self.back_count, bl, True, self.df_kp, self.df_kd, False))
+                        backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.dict_cn, self.back_count, bl, True, self.df_kp, self.df_kd, False, False))
                         gubun = 'S'
                     else:
-                        backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, self.back_count, bl, True, None, None, False))
+                        backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, self.back_count, bl, True, None, None, False, False))
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
                     self.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, gubun))
@@ -7130,7 +7141,7 @@ class Window(QMainWindow):
 
             backQ.put((
                 betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.dict_cn, self.back_count,
-                bl, False, self.df_kp, self.df_kd, back_club
+                bl, False, self.df_kp, self.df_kd, back_club, False
             ))
             self.proc_backtester_bb = Process(
                 target=BackTest,
@@ -7599,6 +7610,81 @@ class Window(QMainWindow):
         self.ss_textEditttt_04.clear()
         self.ss_textEditttt_03.append(buystg_str)
         self.ss_textEditttt_04.append(sellstg_str)
+
+    def svjButtonClicked_34(self):
+        if self.BacktestProcessAlive():
+            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        else:
+            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+                self.BackengineShow('주식')
+                return
+            if not self.back_condition:
+                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
+                return
+
+            startday  = self.svjb_dateEditt_01.date().toString('yyyyMMdd')
+            endday    = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
+            starttime = self.svjb_lineEditt_02.text()
+            endtime   = self.svjb_lineEditt_03.text()
+
+            self.ClearBacktestQ()
+            for bpq in self.back_pques:
+                bpq.put(('백테유형', '백테스트'))
+
+            backQ.put((startday, endday, starttime, endtime, self.back_count))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S'))
+            self.proc_backtester_bp.start()
+            self.svjButtonClicked_07()
+            self.ss_progressBar_01.setValue(0)
+            self.ssicon_alert = True
+
+    def svjButtonClicked_35(self):
+        if self.BacktestProcessAlive():
+            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        else:
+            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+                self.BackengineShow('주식')
+                return
+            if not self.back_condition:
+                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
+                return
+
+            startday  = self.svjb_dateEditt_01.date().toString('yyyyMMdd')
+            endday    = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
+            starttime = self.svjb_lineEditt_02.text()
+            endtime   = self.svjb_lineEditt_03.text()
+            betting   = self.svjb_lineEditt_04.text()
+            avgtime   = self.svjb_lineEditt_05.text()
+            buystg    = self.svjb_comboBoxx_01.currentText()
+            sellstg   = self.svjs_comboBoxx_01.currentText()
+            bl        = True if self.dict_set['블랙리스트추가'] else False
+
+            if int(avgtime) not in self.avg_list:
+                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                return
+            if '' in (startday, endday, starttime, endtime, betting, avgtime):
+                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
+                return
+            if '' in (buystg, sellstg):
+                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
+                return
+
+            self.ClearBacktestQ()
+            for bpq in self.back_pques:
+                bpq.put(('백테유형', '백테스트'))
+
+            backQ.put((
+                betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.dict_cn, self.back_count,
+                bl, False, self.df_kp, self.df_kd, False, True
+            ))
+            self.proc_backtester_bc = Process(
+                target=BackTest,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S')
+            )
+            self.proc_backtester_bc.start()
+            self.svjButtonClicked_07()
+            self.ss_progressBar_01.setValue(0)
+            self.ssicon_alert = True
 
     def svjsButtonClicked_01(self):
         if self.ss_textEditttt_02.isVisible():
@@ -8736,7 +8822,7 @@ class Window(QMainWindow):
 
             backQ.put((
                 betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, self.back_count,
-                bl, False, None, None, back_club
+                bl, False, None, None, back_club, False
             ))
             self.proc_backtester_bb = Process(
                 target=BackTest,
@@ -9199,6 +9285,81 @@ class Window(QMainWindow):
         self.cs_textEditttt_04.clear()
         self.cs_textEditttt_03.append(buystg_str)
         self.cs_textEditttt_04.append(sellstg_str)
+
+    def cvjButtonClicked_34(self):
+        if self.BacktestProcessAlive():
+            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        else:
+            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+                self.BackengineShow('코인')
+                return
+            if not self.back_condition:
+                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
+                return
+
+            startday  = self.cvjb_dateEditt_01.date().toString('yyyyMMdd')
+            endday    = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
+            starttime = self.cvjb_lineEditt_02.text()
+            endtime   = self.cvjb_lineEditt_03.text()
+
+            self.ClearBacktestQ()
+            for bpq in self.back_pques:
+                bpq.put(('백테유형', '백테스트'))
+
+            backQ.put((startday, endday, starttime, endtime, self.back_count))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S'))
+            self.proc_backtester_bp.start()
+            self.cvjButtonClicked_07()
+            self.cs_progressBar_01.setValue(0)
+            self.csicon_alert = True
+
+    def cvjButtonClicked_35(self):
+        if self.BacktestProcessAlive():
+            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        else:
+            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+                self.BackengineShow('주식')
+                return
+            if not self.back_condition:
+                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
+                return
+
+            startday  = self.cvjb_dateEditt_01.date().toString('yyyyMMdd')
+            endday    = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
+            starttime = self.cvjb_lineEditt_02.text()
+            endtime   = self.cvjb_lineEditt_03.text()
+            betting   = self.cvjb_lineEditt_04.text()
+            avgtime   = self.cvjb_lineEditt_05.text()
+            buystg    = self.cvjb_comboBoxx_01.currentText()
+            sellstg   = self.cvjs_comboBoxx_01.currentText()
+            bl        = True if self.dict_set['블랙리스트추가'] else False
+
+            if int(avgtime) not in self.avg_list:
+                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                return
+            if '' in (startday, endday, starttime, endtime, betting, avgtime):
+                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
+                return
+            if '' in (buystg, sellstg):
+                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
+                return
+
+            self.ClearBacktestQ()
+            for bpq in self.back_pques:
+                bpq.put(('백테유형', '백테스트'))
+
+            backQ.put((
+                betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.dict_cn, self.back_count,
+                bl, False, self.df_kp, self.df_kd, False, True
+            ))
+            self.proc_backtester_bc = Process(
+                target=BackTest,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'C')
+            )
+            self.proc_backtester_bc.start()
+            self.cvjButtonClicked_07()
+            self.cs_progressBar_01.setValue(0)
+            self.csicon_alert = True
 
     def cvjsButtonClicked_01(self):
         if self.cs_textEditttt_02.isVisible():

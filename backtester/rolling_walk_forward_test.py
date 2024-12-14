@@ -94,8 +94,13 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for stq in self.stq_list:
-                            stq.put('백테완료')
+                        len_vars_turn = len(self.vars_list[self.vars_turn][0])
+                        if self.vars_turn < 0 or len_vars_turn < 5:
+                            for stq in self.stq_list:
+                                stq.put(('백테완료', '분리집계'))
+                        else:
+                            for stq in self.stq_list:
+                                stq.put(('백테완료', '미분리집계'))
                     else:
                         if self.vars_turn != -1:
                             for vars_key in range(len(self.vars_list[self.vars_turn][0])):
@@ -134,8 +139,8 @@ class Total:
                             data = ('결과집계', columns, list_tsg, dict_bct[vars_key])
                             train_days, valid_days, test_days = self.list_days[self.in_out_count]
                             if valid_days is not None:
-                                for j, vdays in enumerate(valid_days):
-                                    data_ = data + (vdays[0], vdays[1], test_days[0], train_days[2] - vdays[2], vdays[2], j, vars_key)
+                                for i, vdays in enumerate(valid_days):
+                                    data_ = data + (vdays[0], vdays[1], test_days[0], train_days[2] - vdays[2], vdays[2], i, vars_key)
                                     self.tdq_list[k % 10].put(data_)
                                     self.vdq_list[k % 10].put(data_)
                                     k += 1
@@ -279,7 +284,7 @@ class Total:
         df_ttsg['index'] = df_ttsg['index'].apply(lambda x: x[:8])
         out_day_count = len(list(set(df_ttsg['index'].to_list())))
 
-        self.df_ttsg, self.df_tbct, result = GetBackResult(self.df_ttsg, self.df_tbct, self.betting, self.optistandard, out_day_count)
+        self.df_ttsg, self.df_tbct, result = GetBackResult(self.df_ttsg, self.df_tbct, self.betting, out_day_count)
         tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
         startday, endday, starttime, endtime = str(self.startday_), str(self.endday_), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
@@ -434,7 +439,102 @@ class RollingWalkForwardTest:
         day_list.sort()
 
         if 'V' not in self.backname: weeks_valid = 0
+        list_days = self.GetListDays(startday, endday, weeks_train, weeks_valid, weeks_test, day_list)
+        for i, data in enumerate(list_days):
+            train_days, valid_days, test_days = data
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 학습기간 {i + 1} : {train_days[0]} ~ {train_days[1]}'))
+            if 'V' in self.backname:
+                for vsday, veday, _ in valid_days:
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증기간 {i + 1} : {vsday} ~ {veday}'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 확인기간 {i + 1} : {test_days[0]} ~ {test_days[1]}'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 일자 추출 완료'))
 
+        arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
+        arry_bct[:, 0] = df_mt['index'].values
+        data = ('백테정보', arry_bct, betting, optistandard)
+        for q in self.stq_list:
+            q.put(data)
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
+
+        con = sqlite3.connect(DB_STRATEGY)
+        df = pd.read_sql(f'SELECT * FROM {self.gubun}optibuy', con).set_index('index')
+        buystg = df['전략코드'][buystg_name]
+        df = pd.read_sql(f'SELECT * FROM {self.gubun}optisell', con).set_index('index')
+        sellstg = df['전략코드'][sellstg_name]
+        df = pd.read_sql(f'SELECT * FROM {self.gubun}optivars', con).set_index('index')
+        optivars = df['전략코드'][optivars_name]
+        con.close()
+
+        optivars_ = compile(optivars, '<string>', 'exec')
+        try:
+            exec(optivars_, None, locals())
+        except Exception as e:
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - 최적화 변수설정 1단계 {e}'))
+            self.SysExit(True)
+
+        total_count, vars_type, vars_ = self.GetOptomizeVarsList(random_optivars)
+
+        out_count   = len(list_days)
+        len_vars    = len(vars_)
+        avg_list    = vars_[0][0]
+        total_count *= ccount if ccount != 0 else 1
+        total_count += 1
+        total_count *= out_count
+        total_count += out_count
+        total_count *= back_count
+        text = f'{self.backname} 매도수전략 및 변수 설정 완료' if not random_optivars else f'{self.backname} 매도수전략 및 변수 최적값 랜덤 설정 완료'
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text))
+
+        mq = Queue()
+        tdq_list = self.stq_list[:10]
+        vdq_list = self.stq_list[10:]
+        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
+
+        self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,
+                     dict_cn, list_days, std_text, optistandard, schedul, df_kp, df_kd, weeks_train, weeks_valid, weeks_test))
+
+        data = ('백테정보', betting, avg_list, starttime, endtime, buystg, sellstg)
+        for q in self.pq_list:
+            q.put(data)
+
+        if 'B' in self.backname:
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'))
+
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 시작'))
+
+        hstd_list = []
+        hvar_list = []
+        for t, day_data in enumerate(list_days):
+            train_days, _, _ = day_data
+            startday, endday = train_days[0], train_days[1]
+
+            if 'B' not in self.backname:
+                vars_ = self.OptimizeGrid(mq, total_count, back_count, len_vars, ccount, vars_type, vars_, startday, endday, t)
+            else:
+                vars_ = self.OptimizeOptuna(mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name, sampler, vars_, startday, endday, t)
+
+            hvar_list.append(vars_)
+            hstd_list.append([startday, endday, self.htsd])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 완료'))
+
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스터 시작'))
+        self.tq.put(('최적화정보', hstd_list))
+        for i, data in enumerate(list_days):
+            startday, endday = data[2]
+            self.tq.put(('경우의수', total_count, back_count, startday, endday, out_count))
+            self.tq.put(('변수정보', hvar_list[i], -2))
+            for q in self.stq_list:
+                q.put('백테시작')
+            for q in self.pq_list:
+                q.put(('변수정보', hvar_list[i], -2, startday, endday))
+            _ = mq.get()
+
+        mq.close()
+        if self.dict_set['스톰라이브']: self.lq.put(self.backname.replace('O', '').replace('B', ''))
+        self.SysExit(False)
+
+    def GetListDays(self, startday, endday, weeks_train, weeks_valid, weeks_test, day_list):
         k = 0
         list_days_ = []
         dt_endday  = strp_time('%Y%m%d', str(endday))
@@ -480,39 +580,9 @@ class RollingWalkForwardTest:
             test_days = [test_days_list[0], test_days_list[-1]]
             list_days.append([train_days, valid_days, test_days])
 
-        list_days = list_days[::-1]
-        for i, data in enumerate(list_days):
-            train_days, valid_days, test_days = data
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 학습기간 {i + 1} : {train_days[0]} ~ {train_days[1]}'))
-            if 'V' in self.backname:
-                for vsday, veday, _ in valid_days:
-                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증기간 {i + 1} : {vsday} ~ {veday}'))
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 확인기간 {i + 1} : {test_days[0]} ~ {test_days[1]}'))
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 일자 추출 완료'))
+        return list_days[::-1]
 
-        arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
-        arry_bct[:, 0] = df_mt['index'].values
-        data = ('백테정보', arry_bct, betting, optistandard)
-        for q in self.stq_list:
-            q.put(data)
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
-
-        con = sqlite3.connect(DB_STRATEGY)
-        df = pd.read_sql(f'SELECT * FROM {self.gubun}optibuy', con).set_index('index')
-        buystg = df['전략코드'][buystg_name]
-        df = pd.read_sql(f'SELECT * FROM {self.gubun}optisell', con).set_index('index')
-        sellstg = df['전략코드'][sellstg_name]
-        df = pd.read_sql(f'SELECT * FROM {self.gubun}optivars', con).set_index('index')
-        optivars = df['전략코드'][optivars_name]
-        con.close()
-
-        optivars_ = compile(optivars, '<string>', 'exec')
-        try:
-            exec(optivars_, None, locals())
-        except Exception as e:
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - 최적화 변수설정 1단계 {e}'))
-            self.SysExit(True)
-
+    def GetOptomizeVarsList(self, random_optivars):
         total_count = 0
         vars_type = []
         vars_ = []
@@ -543,7 +613,10 @@ class RollingWalkForwardTest:
             else:
                 total_count += 1
                 for k in range(1000):
-                    next_var = (low + gap * k) if varint else round(low + gap * k, 2)
+                    if varint:
+                        next_var = low + gap * k
+                    else:
+                        next_var = round(low + gap * k, 2)
                     if (lowhigh and next_var <= high) or (not lowhigh and next_var >= high):
                         vars_list[0].append(next_var)
                     else:
@@ -552,195 +625,152 @@ class RollingWalkForwardTest:
                 vars_list[1] = random.choice(vars_list[0])
             vars_.append(vars_list)
 
-        out_count   = len(list_days)
-        len_vars    = len(vars_)
-        avg_list    = vars_[0][0]
-        total_count *= ccount if ccount != 0 else 1
-        total_count += 1
-        total_count *= out_count
-        total_count += out_count
-        total_count *= back_count
-        text = f'{self.backname} 매도수전략 및 변수 설정 완료' if not random_optivars else f'{self.backname} 매도수전략 및 변수 최적값 랜덤 설정 완료'
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text))
+        return total_count, vars_type, vars_
 
-        mq = Queue()
-        tdq_list = self.stq_list[:10]
-        vdq_list = self.stq_list[10:]
-        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
-
-        self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars, dict_cn,
-                     list_days, std_text, optistandard, schedul, df_kp, df_kd, weeks_train, weeks_valid, weeks_test))
-        data = ('백테정보', betting, avg_list, starttime, endtime, buystg, sellstg)
+    def OptimizeGrid(self, mq, total_count, back_count, len_vars, ccount, vars_type, vars_, startday, endday, t):
+        self.tq.put(('경우의수', total_count, back_count, startday, endday, t))
+        self.tq.put(('변수정보', vars_, -1))
+        for q in self.stq_list:
+            q.put('백테시작')
         for q in self.pq_list:
-            q.put(data)
+            q.put(('변수정보', vars_, -1, startday, endday))
+        self.htsd, _ = mq.get()
 
-        if 'B' in self.backname:
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'))
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 시작'))
+        k = 1
+        change_var_count = None
+        last_change_turn = 1000
+        for _ in range(ccount if ccount != 0 else 100):
+            if ccount == 0:
+                if change_var_count == 0:
+                    break
+                if k > 1:
+                    self.tq.put('재최적화')
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'))
 
-        hstd_list = []
-        hvar_list = []
-        for t, day_data in enumerate(list_days):
-            train_days, _, _ = day_data
-            startday, endday = train_days[0], train_days[1]
-            self.dict_simple_vars = {}
+            change_var_count = 0
+            for i in range(len_vars):
+                if change_var_count == 0 and last_change_turn == i:
+                    break
 
-            if 'B' in self.backname:
-                self.htsd = 0
-                if optuna_count == 0:
-                    total_count = back_count * (len_vars + 1)
-                else:
-                    total_count = back_count * optuna_count
-                self.tq.put(('경우의수', total_count, back_count, startday, endday, t))
+                len_vars_ = len(vars_[i][0]) - 1
+                if len_vars_ > 0:
+                    start = now()
+                    print('========================================================================')
+                    print(
+                        f'rwf_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}, high_std : {self.htsd}')
+                    print(f'rwf_vars_list : {vars_[i][0]}')
+                    self.tq.put(('변수정보', vars_, i))
+                    for q in self.stq_list:
+                        q.put('백테시작')
+                    for q in self.pq_list:
+                        q.put(('변수정보', vars_, i, startday, endday))
 
-                def objective(trial):
-                    simple_vars = []
-                    optuna_vars = []
-                    for j, var_ in enumerate(list(self.vars.values())):
-                        if j < 10:
-                            trial_name = f'00{j}'
-                        elif j < 100:
-                            trial_name = f'0{j}'
-                        else:
-                            trial_name = f'{j}'
-
-                        varsint = type(var_[0][2]) == int
-                        if not (var_[0][2] == 0 or j in optuna_fixvars):
-                            if optuna_autostep:
-                                if varsint:
-                                    if var_[0][0] < var_[0][1]:
-                                        trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1])
-                                    else:
-                                        trial_ = trial.suggest_int(trial_name, var_[0][1], var_[0][0])
-                                else:
-                                    if var_[0][0] < var_[0][1]:
-                                        trial_ = trial.suggest_float(trial_name, var_[0][0], var_[0][1])
-                                    else:
-                                        trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0])
-                            else:
-                                if varsint:
-                                    if var_[0][0] < var_[0][1]:
-                                        trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1], step=var_[0][2])
-                                    else:
-                                        trial_ = trial.suggest_int(trial_name, var_[0][1], var_[0][0], step=-var_[0][2])
-                                else:
-                                    if var_[0][0] < var_[0][1]:
-                                        trial_ = trial.suggest_float(trial_name, var_[0][0], var_[0][1], step=var_[0][2])
-                                    else:
-                                        trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0], step=-var_[0][2])
-                        else:
-                            if varsint:
-                                trial_ = trial.suggest_int(trial_name, var_[1], var_[1])
-                            else:
-                                trial_ = trial.suggest_float(trial_name, var_[1], var_[1])
-
-                        simple_vars.append(trial_)
-                        optuna_vars.append(['', trial_])
-
-                    str_simple_vars = str(simple_vars)
-                    if str_simple_vars not in self.dict_simple_vars.keys():
-                        self.tq.put(('변수정보', optuna_vars, -1))
-                        for stq in self.stq_list:
-                            stq.put('백테시작')
-                        for pq in self.pq_list:
-                            pq.put(('변수정보', optuna_vars, -1, startday, endday))
-                        data_ = mq.get()
-                        if type(data_) == str:
-                            ostd = 0
+                    for _ in range(len_vars_):
+                        data = mq.get()
+                        if type(data) == str:
                             self.SysExit(True)
                         else:
-                            ostd = data_[0]
-                            self.dict_simple_vars[str_simple_vars] = ostd
-                            if data_[0] > self.htsd: self.htsd = ostd
-                    else:
-                        ostd = self.dict_simple_vars[str_simple_vars]
-                    return ostd
+                            std, vars_key = data
+                            curr_typ = vars_type[i]
+                            curr_var = vars_[i][0][vars_key]
+                            preh_var = vars_[i][1]
+                            print('{:>16} = {:>6}, {:>9} : {:>15,.2f}'.format(f'self.vars[{i}]', curr_var, 'std_point',
+                                                                              std))
+                            if std > self.htsd or (std == self.htsd and (
+                                    (curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
+                                print('{:>16} : {:>50}'.format('update_std', f'{preh_var} -> {curr_var}'))
+                                self.htsd = std
+                                vars_[i][1] = curr_var
+                                change_var_count += 1
+                                last_change_turn = i
+                    print('{:>16} : {:>55}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
+            k += 1
 
-                total_change = 1
-                study_name = f'{self.backname}_{buystg_name}_{strf_time("%Y%m%d%H%M%S")}'
-                optuna.logging.disable_default_handler()
-                if sampler is None:
-                    self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize')
+        return vars_
+
+    def OptimizeOptuna(self, mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name, sampler, vars_, startday, endday, t):
+        self.dict_simple_vars = {}
+        self.htsd = 0
+        if optuna_count == 0:
+            total_count = back_count * (len_vars + 1)
+        else:
+            total_count = back_count * optuna_count
+        self.tq.put(('경우의수', total_count, back_count, startday, endday, t))
+
+        def objective(trial):
+            simple_vars = []
+            optuna_vars = []
+            for j, var_ in enumerate(list(self.vars.values())):
+                if j < 10:
+                    trial_name = f'00{j}'
+                elif j < 100:
+                    trial_name = f'0{j}'
                 else:
-                    self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize', sampler=sampler)
-                self.study.optimize(objective, n_trials=10000, callbacks=[StopWhenNotUpdateBestCallBack(self.wq, self.tq, back_count, optuna_count, self.ui_gubun, len(self.vars))])
-                for i, var in enumerate(list(self.study.best_params.values())):
-                    vars_[i][1] = var
+                    trial_name = f'{j}'
+
+                varsint = type(var_[0][2]) == int
+                if not (var_[0][2] == 0 or j in optuna_fixvars):
+                    if optuna_autostep:
+                        if varsint:
+                            if var_[0][0] < var_[0][1]:
+                                trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1])
+                            else:
+                                trial_ = trial.suggest_int(trial_name, var_[0][1], var_[0][0])
+                        else:
+                            if var_[0][0] < var_[0][1]:
+                                trial_ = trial.suggest_float(trial_name, var_[0][0], var_[0][1])
+                            else:
+                                trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0])
+                    else:
+                        if varsint:
+                            if var_[0][0] < var_[0][1]:
+                                trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1], step=var_[0][2])
+                            else:
+                                trial_ = trial.suggest_int(trial_name, var_[0][1], var_[0][0], step=-var_[0][2])
+                        else:
+                            if var_[0][0] < var_[0][1]:
+                                trial_ = trial.suggest_float(trial_name, var_[0][0], var_[0][1], step=var_[0][2])
+                            else:
+                                trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0], step=-var_[0][2])
+                else:
+                    if varsint:
+                        trial_ = trial.suggest_int(trial_name, var_[1], var_[1])
+                    else:
+                        trial_ = trial.suggest_float(trial_name, var_[1], var_[1])
+
+                simple_vars.append(trial_)
+                optuna_vars.append(['', trial_])
+
+            str_simple_vars = str(simple_vars)
+            if str_simple_vars not in self.dict_simple_vars.keys():
+                self.tq.put(('변수정보', optuna_vars, -1))
+                for stq in self.stq_list:
+                    stq.put('백테시작')
+                for pq in self.pq_list:
+                    pq.put(('변수정보', optuna_vars, -1, startday, endday))
+                data_ = mq.get()
+                if type(data_) == str:
+                    ostd = 0
+                    self.SysExit(True)
+                else:
+                    ostd = data_[0]
+                    self.dict_simple_vars[str_simple_vars] = ostd
+                    if data_[0] > self.htsd: self.htsd = ostd
             else:
-                self.tq.put(('경우의수', total_count, back_count, startday, endday, t))
-                self.tq.put(('변수정보', vars_, -1))
-                for q in self.stq_list:
-                    q.put('백테시작')
-                for q in self.pq_list:
-                    q.put(('변수정보', vars_, -1, startday, endday))
-                self.htsd, _ = mq.get()
+                ostd = self.dict_simple_vars[str_simple_vars]
+            return ostd
 
-                k = 1
-                change_var_count = None
-                last_change_turn = 1000
-                for _ in range(ccount if ccount != 0 else 100):
-                    if ccount == 0:
-                        if change_var_count == 0:
-                            break
-                        if k > 1:
-                            self.tq.put('재최적화')
-                            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'))
+        study_name = f'{self.backname}_{buystg_name}_{strf_time("%Y%m%d%H%M%S")}'
+        optuna.logging.disable_default_handler()
+        if sampler is None:
+            self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize')
+        else:
+            self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize', sampler=sampler)
+        self.study.optimize(objective, n_trials=10000, callbacks=[StopWhenNotUpdateBestCallBack(self.wq, self.tq, back_count, optuna_count, self.ui_gubun, len(self.vars))])
+        for i, var in enumerate(list(self.study.best_params.values())):
+            vars_[i][1] = var
 
-                    change_var_count = 0
-                    for i in range(len_vars):
-                        if change_var_count == 0 and last_change_turn == i:
-                            break
-
-                        len_vars_ = len(vars_[i][0]) - 1
-                        if len_vars_ > 0:
-                            start = now()
-                            print('========================================================================')
-                            print(f'rwf_vars_turn : {i}  len_vars : {len_vars_ + 1}  high_vars : {vars_[i][1]}')
-                            print(f'rwf_vars_list : {vars_[i][0]}')
-                            self.tq.put(('변수정보', vars_, i))
-                            for q in self.stq_list:
-                                q.put('백테시작')
-                            for q in self.pq_list:
-                                q.put(('변수정보', vars_, i, startday, endday))
-
-                            for _ in range(len_vars_):
-                                data = mq.get()
-                                if type(data) == str:
-                                    self.SysExit(True)
-                                else:
-                                    std, vars_key = data
-                                    curr_typ = vars_type[i]
-                                    curr_var = vars_[i][0][vars_key]
-                                    preh_var = vars_[i][1]
-                                    print('{:>16} = {:>6}, {:>9} : {:>15,.2f}'.format(f'self.vars[{i}]', curr_var, 'std_point', std))
-                                    if std > self.htsd or (std == self.htsd and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
-                                        print('{:>16} : {:>50}'.format('update_std', f'{preh_var} -> {curr_var}'))
-                                        self.htsd = std
-                                        vars_[i][1] = curr_var
-                                        change_var_count += 1
-                                        last_change_turn = i
-                            print('{:>16} : {:>55}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
-                k += 1
-
-            hvar_list.append(vars_)
-            hstd_list.append([startday, endday, self.htsd])
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 완료'))
-
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스터 시작'))
-        self.tq.put(('최적화정보', hstd_list))
-        for i, data in enumerate(list_days):
-            startday, endday = data[2]
-            self.tq.put(('경우의수', total_count, back_count, startday, endday, out_count))
-            self.tq.put(('변수정보', hvar_list[i], -2))
-            for q in self.stq_list:
-                q.put('백테시작')
-            for q in self.pq_list:
-                q.put(('변수정보', hvar_list[i], -2, startday, endday))
-            _ = mq.get()
-
-        mq.close()
-        if self.dict_set['스톰라이브']: self.lq.put(self.backname.replace('O', '').replace('B', ''))
+        return vars_
 
     def SysExit(self, cancel):
         if cancel:

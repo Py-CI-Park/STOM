@@ -610,7 +610,7 @@ class StockBackEngine2(StockBackEngine):
         sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
         abt, bcx = '^'.join(abt), bc - oc == 0
         data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
-        self.stq_list[self.sell_count % self.divid].put(data)
+        self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
         if pp < 0:
             self.day_info[self.vars_key]['손절횟수'] += 1
             self.day_info[self.vars_key]['손절매도시간'] = timedelta_sec(self.dict_set['주식매수금지손절간격초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
