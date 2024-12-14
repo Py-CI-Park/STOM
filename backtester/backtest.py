@@ -91,7 +91,7 @@ class Total:
                             # else:
                             #     total_dict_tsg[vars_key][j] += tsg_data
                 sc += 1
-                if sc < 10:
+                if sc < 20:
                     continue
 
                 columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',

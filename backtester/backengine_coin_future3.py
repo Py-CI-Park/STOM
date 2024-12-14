@@ -270,7 +270,6 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                         self.Strategy()
                     else:
                         self.LastSell()
-                        self.InitDayInfo()
                         self.InitTradeInfo()
 
             self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
@@ -621,12 +620,12 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.vars_turn >= 0:
-                    self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
+                    curr_var = self.vars_list[self.vars_turn][0][j]
+                    if curr_var == self.vars_list[self.vars_turn][1]:
+                        continue
+                    self.vars[self.vars_turn] = curr_var
                     if self.tick_count < self.vars[0]:
-                        if self.vars_turn != 0:
-                            break
-                        else:
-                            continue
+                        continue
                 elif self.tick_count < self.vars[0]:
                     break
 

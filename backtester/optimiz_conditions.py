@@ -78,7 +78,7 @@ class Total:
                             # else:
                             #     total_dict_tsg[vars_key][j] += tsg_data
                 sc += 1
-                if sc < 10:
+                if sc < 20:
                     continue
 
                 sc = 0
@@ -90,13 +90,18 @@ class Total:
                     if self.valid_days is not None:
                         for i, vdays in enumerate(self.valid_days):
                             data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key)
-                            self.tdq_list[k % 5].put(data_)
-                            self.vdq_list[k % 5].put(data_)
+                            self.tdq_list[k % 10].put(data_)
+                            self.vdq_list[k % 10].put(data_)
                             k += 1
                     else:
                         data_ = data + (self.day_count, vars_key)
-                        self.stq_list[k % 10].put(data_)
+                        self.stq_list[k % 20].put(data_)
                         k += 1
+
+                if len(total_dict_tsg) < 10:
+                    zero_key_list = [x for x in range(10) if x not in total_dict_tsg.keys()]
+                    for vars_key in zero_key_list:
+                        self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
                 total_dict_tsg = {}
                 total_dict_bct = {}
 
@@ -113,7 +118,8 @@ class Total:
                         for ctq in self.stq_list:
                             ctq.put('백테완료')
                     else:
-                        self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
+                        for vars_key in range(10):
+                            self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
 
             elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
@@ -314,8 +320,8 @@ class OptimizeConditions:
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 전체 경우의 수 계산 완료 [{total_count:,.0f}]'))
 
         mq = Queue()
-        tdq_list = self.stq_list[:5]
-        vdq_list = self.stq_list[5:]
+        tdq_list = self.stq_list[:10]
+        vdq_list = self.stq_list[10:]
         Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.ui_gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 

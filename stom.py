@@ -830,8 +830,8 @@ class Window(QMainWindow):
                 if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.back_condition: self.BacktestProcessKill()
                 if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
-                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석O 완료', '전진분석OV 완료', '전진분석OVC 완료',
-                               '전진분석B 완료', '전진분석BV 완료', '전진분석BVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
+                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
+                               '전진분석BR 완료', '전진분석BRV 완료', '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
                                '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
                     if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료'):
                         self.sActivated_04()
@@ -859,8 +859,8 @@ class Window(QMainWindow):
                 if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.back_condition: self.BacktestProcessKill()
                 if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
-                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석O 완료', '전진분석OV 완료', '전진분석OVC 완료',
-                               '전진분석B 완료', '전진분석BV 완료', '전진분석BVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
+                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
+                               '전진분석BR 완료', '전진분석BRV 완료', '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
                                '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
                     if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료'):
                         self.cActivated_04()
@@ -4655,6 +4655,7 @@ class Window(QMainWindow):
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
                     optunasampl = self.op_comboBoxxxx_01.currentText()
                     optunafixv  = self.op_lineEditttt_01.text()
+                    optunacount = self.op_lineEditttt_02.text()
                     optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
                     for bpq in self.back_pques:
@@ -4665,51 +4666,52 @@ class Window(QMainWindow):
                             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn,
                             ccount, self.dict_set['최적화기준값제한'], optistd, self.back_count, True, self.df_kp,
                             self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl,
-                            optunafixv, optunaautos
+                            optunafixv, optunacount, optunaautos, False
                         ))
                         gubun = 'S'
                     else:
                         backQ.put((
                             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount,
                             self.dict_set['최적화기준값제한'], optistd, self.back_count, True, None, None, weeks_train,
-                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
+                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunacount,
+                            optunaautos, False
                         ))
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
                     if back_name == '그리드 최적화 전진분석':
                         self.proc_backtester_or = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석O', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석OR', gubun)
                         )
                         self.proc_backtester_or.start()
                     elif back_name == '그리드 검증 최적화 전진분석':
                         self.proc_backtester_orv = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석OV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석ORV', gubun)
                         )
                         self.proc_backtester_orv.start()
                     elif back_name == '그리드 교차검증 최적화 전진분석':
                         self.proc_backtester_orvc = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석OVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석ORVC', gubun)
                         )
                         self.proc_backtester_orvc.start()
                     elif back_name == '베이지안 최적화 전진분석':
                         self.proc_backtester_br = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석B', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BR', gubun)
                         )
                         self.proc_backtester_br.start()
                     elif back_name == '베이지안 검증 최적화 전진분석':
                         self.proc_backtester_brv = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BRV', gubun)
                         )
                         self.proc_backtester_brv.start()
                     elif back_name == '베이지안 교차검증 최적화 전진분석':
                         self.proc_backtester_brvc = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BRVC', gubun)
                         )
                         self.proc_backtester_brvc.start()
 
@@ -4738,6 +4740,7 @@ class Window(QMainWindow):
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
                     optunasampl = self.op_comboBoxxxx_01.currentText()
                     optunafixv  = self.op_lineEditttt_01.text()
+                    optunacount = self.op_lineEditttt_02.text()
                     optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
                     for bpq in self.back_pques:
@@ -4747,14 +4750,16 @@ class Window(QMainWindow):
                         backQ.put((
                             betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount,
                             self.dict_set['최적화기준값제한'], optistd, self.back_count, True, self.df_kp, self.df_kd,
-                            weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
+                            weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv,
+                            optunacount, optunaautos, False
                         ))
                         gubun = 'S'
                     else:
                         backQ.put((
                             betting, starttime, endtime, buystg, sellstg, optivars, None, ccount,
                             self.dict_set['최적화기준값제한'], optistd, self.back_count, True, None, None, weeks_train,
-                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
+                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunacount,
+                            optunaautos, False
                         ))
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
@@ -5024,17 +5029,7 @@ class Window(QMainWindow):
                 con.close()
                 table_list = df['name'].to_list()
                 for table_name in table_list:
-                    if table_name == 'back_vc_list':
-                        pass
-                    elif '_bt_' in table_name or '_bf_' in table_name or \
-                            '_oc_' in table_name or '_ocv_' in table_name or '_ocvc_' in table_name or \
-                            '_og_' in table_name or '_ogv_' in table_name or '_ogvc_' in table_name or \
-                            '_ov_' in table_name or '_ovt_' in table_name or '_ovc_' in table_name or '_ovct_' in table_name or \
-                            '_oh_' in table_name or '_oht_' in table_name or \
-                            '_rv_' in table_name or '_rvc_' in table_name or '_rh_' in table_name:
-                        queryQ.put(('백테디비', f'DROP TABLE {table_name}'))
-                    else:
-                        queryQ.put(('백테디비', f'DELETE FROM {table_name}'))
+                    queryQ.put(('백테디비', f'DROP TABLE {table_name}'))
                 queryQ.put(('백테디비', 'VACUUM'))
             QMessageBox.information(self, '알림', '백테그래프 및 기록DB가 삭제되었습니다.')
 
@@ -5147,7 +5142,7 @@ class Window(QMainWindow):
         df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
         self.ss_comboBoxxxx_02.clear()
         for table in df['name'].to_list()[::-1]:
-            if 'stock' in table and ('ov_' in table or 'ovc_' in table or 'oh_' in table):
+            if 'stock' in table and ('o_' in table or 'ov_' in table or 'ovc_' in table or 'b_' in table or 'bv_' in table or 'bvc_' in table):
                 self.ss_comboBoxxxx_02.addItem(table)
         try:
             df = pd.read_sql(f"SELECT * FROM '{self.ss_comboBoxxxx_02.currentText()}'", con).set_index('index')
@@ -5162,7 +5157,7 @@ class Window(QMainWindow):
         df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
         self.ss_comboBoxxxx_03.clear()
         for table in df['name'].to_list()[::-1]:
-            if 'stock' in table and '_bt_' not in table and ('t_' in table or 'rh_' in table or 'rv_' in table or 'rvc_' in table):
+            if 'stock' in table and '_bt_' not in table and ('t_' in table or 'or_' in table or 'orv_' in table or 'orvc_' in table or 'br_' in table or 'brv_' in table or 'brvc_' in table):
                 self.ss_comboBoxxxx_03.addItem(table)
         try:
             df = pd.read_sql(f"SELECT * FROM '{self.ss_comboBoxxxx_03.currentText()}'", con).set_index('index')
@@ -5203,7 +5198,7 @@ class Window(QMainWindow):
             con.close()
 
             if len(df) > 0:
-                self.backdetail_list = [x for x in df['name'].to_list()[::-1] if 'stock' in x and ('t_' in x or 'v_' in x or 'c_' in x or 'h_' in x)]
+                self.backdetail_list = [x for x in df['name'].to_list()[::-1] if 'stock' in x and ('t_' in x or 'v_' in x or 'c_' in x or 'vc_' in x)]
                 if len(self.backdetail_list) > 0:
                     self.backcheckbox_list = []
                     count = len(self.backdetail_list)
@@ -5253,7 +5248,7 @@ class Window(QMainWindow):
         df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
         self.cs_comboBoxxxx_02.clear()
         for table in df['name'].to_list()[::-1]:
-            if 'coin' in table and ('ov_' in table or 'ovc_' in table or 'oh_' in table):
+            if 'coin' in table and ('o_' in table or 'ov_' in table or 'ovc_' in table or 'b_' in table or 'bv_' in table or 'bvc_' in table):
                 self.cs_comboBoxxxx_02.addItem(table)
         try:
             df = pd.read_sql(f"SELECT * FROM '{self.cs_comboBoxxxx_02.currentText()}'", con).set_index('index')
@@ -5268,7 +5263,7 @@ class Window(QMainWindow):
         df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
         self.cs_comboBoxxxx_03.clear()
         for table in df['name'].to_list()[::-1]:
-            if 'coin' in table and '_bt_' not in table and ('t_' in table or 'rh_' in table or 'rv_' in table or 'rvc_' in table):
+            if 'coin' in table and '_bt_' not in table and ('t_' in table or 'or_' in table or 'orv_' in table or 'orvc_' in table or 'br_' in table or 'brv_' in table or 'brvc_' in table):
                 self.cs_comboBoxxxx_03.addItem(table)
         try:
             df = pd.read_sql(f"SELECT * FROM '{self.cs_comboBoxxxx_03.currentText()}'", con).set_index('index')
@@ -5963,6 +5958,8 @@ class Window(QMainWindow):
                 list_comboBox = self.list_p1comboBoxxxx
             elif self.dialog_scheduler.focusWidget() in self.list_p2comboBoxxxx:
                 list_comboBox = self.list_p2comboBoxxxx
+            elif self.dialog_scheduler.focusWidget() in self.list_p3comboBoxxxx:
+                list_comboBox = self.list_p3comboBoxxxx
             elif self.dialog_scheduler.focusWidget() in self.list_p4comboBoxxxx:
                 list_comboBox = self.list_p4comboBoxxxx
             elif self.dialog_scheduler.focusWidget() in self.list_tcomboBoxxxxx:
@@ -7142,6 +7139,7 @@ class Window(QMainWindow):
                 QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
 
+            randomopti  = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
             starttime   = self.svjb_lineEditt_02.text()
             endtime     = self.svjb_lineEditt_03.text()
             betting     = self.svjb_lineEditt_04.text()
@@ -7157,6 +7155,7 @@ class Window(QMainWindow):
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
             optunasampl = self.op_comboBoxxxx_01.currentText()
             optunafixv  = self.op_lineEditttt_01.text()
+            optunacount = self.op_lineEditttt_02.text()
             optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
             if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
@@ -7179,7 +7178,7 @@ class Window(QMainWindow):
             backQ.put((
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
                 optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday,
-                bengineeday, optunasampl, optunafixv, optunaautos
+                bengineeday, optunasampl, optunafixv, optunacount, optunaautos, randomopti
             ))
             if back_name == '최적화O':
                 self.proc_backtester_o = Process(
@@ -7268,6 +7267,7 @@ class Window(QMainWindow):
                 QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
 
+            randomopti  = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
             startday    = self.svjb_dateEditt_01.date().toString('yyyyMMdd')
             endday      = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
             starttime   = self.svjb_lineEditt_02.text()
@@ -7285,6 +7285,7 @@ class Window(QMainWindow):
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
             optunasampl = self.op_comboBoxxxx_01.currentText()
             optunafixv  = self.op_lineEditttt_01.text()
+            optunacount = self.op_lineEditttt_02.text()
             optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
             if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
@@ -7310,33 +7311,34 @@ class Window(QMainWindow):
             backQ.put((
                 betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount,
                 self.dict_set['최적화기준값제한'], optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train,
-                weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
+                weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunacount, optunaautos,
+                randomopti
             ))
-            if back_name == '전진분석O':
+            if back_name == '전진분석OR':
                 self.proc_backtester_or = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
                 )
                 self.proc_backtester_or.start()
-            elif back_name == '전진분석OV':
+            elif back_name == '전진분석ORV':
                 self.proc_backtester_orv = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
                 )
                 self.proc_backtester_orv.start()
-            elif back_name == '전진분석OVC':
+            elif back_name == '전진분석ORVC':
                 self.proc_backtester_orvc = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
                 )
                 self.proc_backtester_orvc.start()
-            elif back_name == '전진분석B':
+            elif back_name == '전진분석BR':
                 self.proc_backtester_br = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
                 )
                 self.proc_backtester_br.start()
-            elif back_name == '전진분석BV':
+            elif back_name == '전진분석BRV':
                 self.proc_backtester_brv = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
@@ -7875,6 +7877,7 @@ class Window(QMainWindow):
         if not self.dialog_optuna.isVisible():
             if not self.optuna_window_open:
                 self.op_lineEditttt_01.setText(self.dict_set['옵튜나고정변수'])
+                self.op_lineEditttt_02.setText(str(self.dict_set['옵튜나실행횟수']))
                 self.op_checkBoxxxx_01.setChecked(True) if self.dict_set['옵튜나자동스탭'] else self.op_checkBoxxxx_01.setChecked(False)
                 self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
             self.dialog_optuna.show()
@@ -8734,6 +8737,7 @@ class Window(QMainWindow):
                 QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
 
+            randomopti  = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
             starttime   = self.cvjb_lineEditt_02.text()
             endtime     = self.cvjb_lineEditt_03.text()
             betting     = self.cvjb_lineEditt_04.text()
@@ -8749,6 +8753,7 @@ class Window(QMainWindow):
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
             optunasampl = self.op_comboBoxxxx_01.currentText()
             optunafixv  = self.op_lineEditttt_01.text()
+            optunacount = self.op_lineEditttt_02.text()
             optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
             if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
@@ -8771,7 +8776,7 @@ class Window(QMainWindow):
             backQ.put((
                 betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
                 optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday,
-                optunasampl, optunafixv, optunaautos
+                optunasampl, optunafixv, optunacount, optunaautos, randomopti
             ))
             if back_name == '최적화O':
                 self.proc_backtester_o = Process(
@@ -8860,6 +8865,7 @@ class Window(QMainWindow):
                 QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
 
+            randomopti  = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
             startday    = self.cvjb_dateEditt_01.date().toString('yyyyMMdd')
             endday      = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
             starttime   = self.cvjb_lineEditt_02.text()
@@ -8898,33 +8904,33 @@ class Window(QMainWindow):
 
             backQ.put((
                 betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, randomopti
             ))
-            if back_name == '전진분석O':
+            if back_name == '전진분석OR':
                 self.proc_backtester_or = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
                 )
                 self.proc_backtester_or.start()
-            elif back_name == '전진분석OV':
+            elif back_name == '전진분석ORV':
                 self.proc_backtester_orv = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
                 )
                 self.proc_backtester_orv.start()
-            elif back_name == '전진분석OVC':
+            elif back_name == '전진분석ORVC':
                 self.proc_backtester_orvc = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
                 )
                 self.proc_backtester_orvc.start()
-            elif back_name == '전진분석B':
+            elif back_name == '전진분석BR':
                 self.proc_backtester_br = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
                 )
                 self.proc_backtester_br.start()
-            elif back_name == '전진분석BV':
+            elif back_name == '전진분석BRV':
                 self.proc_backtester_brv = Process(
                     target=RollingWalkForwardTest,
                     args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
@@ -9465,6 +9471,7 @@ class Window(QMainWindow):
         if not self.dialog_optuna.isVisible():
             if not self.optuna_window_open:
                 self.op_lineEditttt_01.setText(self.dict_set['옵튜나고정변수'])
+                self.op_lineEditttt_02.setText(str(self.dict_set['옵튜나실행횟수']))
                 self.op_checkBoxxxx_01.setChecked(True) if self.dict_set['옵튜나자동스탭'] else self.op_checkBoxxxx_01.setChecked(False)
                 self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
             self.dialog_optuna.show()
@@ -9605,9 +9612,9 @@ class Window(QMainWindow):
         one_code       = self.dict_code[one_name] if one_name in self.dict_code.keys() else one_name
 
         wdzservQ.put(('manager', '백테엔진구동'))
-        for i in range(10):
+        for i in range(20):
             stq = Queue()
-            if i < 5:
+            if i < 10:
                 proc = Process(target=SubTotal, args=(totalQ, stq, self.dict_set['백테매수시간기준'], 1), daemon=True)
             else:
                 proc = Process(target=SubTotal, args=(totalQ, stq, self.dict_set['백테매수시간기준'], 0), daemon=True)
@@ -12281,8 +12288,9 @@ class Window(QMainWindow):
         divid_mode      = self.be_comboBoxxxxx_01.currentText()
         optuna_sampler  = self.op_comboBoxxxx_01.currentText()
         optuna_fixvars  = self.op_lineEditttt_01.text()
+        optuna_count    = int(self.op_lineEditttt_02.text())
         optuna_autostep = 1 if self.op_checkBoxxxx_01.isChecked() else 0
-        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}', '옵튜나샘플러' = '{optuna_sampler}', '옵튜나고정변수' = '{optuna_fixvars}', '옵튜나자동스탭' = {optuna_autostep}"
+        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}', '옵튜나샘플러' = '{optuna_sampler}', '옵튜나고정변수' = '{optuna_fixvars}', '옵튜나실행횟수' = {optuna_count}, '옵튜나자동스탭' = {optuna_autostep}"
         queryQ.put(('설정디비', query))
 
         if self.dict_set['창위치기억']:

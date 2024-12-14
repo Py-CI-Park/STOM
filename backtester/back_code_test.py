@@ -17,21 +17,6 @@ class BackCodeTest:
         else:
             try:
                 exec(compile(var, '<string>', 'exec'), None, locals())
-                max_len_var = 0
-                vars_number = 0
-                for i, v in enumerate(list(self.vars.values())):
-                    len_var = 0
-                    if ga:
-                        len_var = len(v[0])
-                    elif v[0][2] != 0:
-                        len_var = (v[0][1] - v[0][0]) / v[0][2] + 1
-                    if len_var > max_len_var:
-                        max_len_var = len_var
-                        vars_number = i
-                if max_len_var > 20:
-                    print('경고 :: 변수 범위의 최대개수는 20개입니다.')
-                    print(f'경고 :: self.vars[{vars_number}]의 범위를 수정하십시오.')
-                    error = True
             except:
                 print_exc()
                 error = True

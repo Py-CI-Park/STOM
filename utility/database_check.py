@@ -125,21 +125,22 @@ if 'back' not in table_list:
         "주식일봉데이터다운", "주식일봉다운컴종료", "일봉다운실행시간", "코인일봉데이터", "코인분봉데이터", "코인분봉기간",
         "코인일봉데이터다운", "그래프저장하지않기", "그래프띄우지않기", "디비자동관리", "교차검증가중치", "백테스케쥴실행", "백테스케쥴요일",
         "백테스케쥴시간", "백테스케쥴구분", "백테스케쥴명", "백테날짜고정", "백테날짜", "최적화기준값제한", "백테엔진분류방법",
-        "옵튜나샘플러", "옵튜나고정변수", "옵튜나자동스탭"
+        "옵튜나샘플러", "옵튜나고정변수", "옵튜나실행횟수", "옵튜나자동스탭"
     ]
     data = [0, 0, 0, 0, 1, 0, 0, 5, 0, 0, 154000, 0, 0, 5, 0, 0, 0, 1, 1, 0, 4, 160000, '', '', 1, '20220323',
-            '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;-10000.0;10000.0;0.0;10.0', '종목코드별 분류', 'BaseSampler', '', 0]
+            '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;-10000.0;10000.0;0.0;10.0', '종목코드별 분류', 'BaseSampler', '', 0, 0]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('back', con)
 else:
     df = pd.read_sql('SELECT * FROM back', con).set_index('index')
-    if '옵튜나자동스탭' not in df.columns:
+    if '옵튜나실행횟수' not in df.columns:
         df['백테엔진분류방법'] = '종목코드별 분류'
         df['백테스케쥴실행'] = 0
         df['백테스케쥴요일'] = 4
         df['백테스케쥴시간'] = 160000
         df['옵튜나샘플러'] = 'BaseSampler'
         df['옵튜나고정변수'] = ''
+        df['옵튜나실행횟수'] = 0
         df['옵튜나자동스탭'] = 0
         df.to_sql('back', con, if_exists='replace')
 
@@ -152,15 +153,13 @@ else:
     df = pd.read_sql('SELECT * FROM etc', con).set_index('index')
     if '주식틱자동저장' in df.columns:
         df.drop(columns=['주식틱자동저장'], inplace=True)
-        df.to_sql('etc', con, if_exists='replace')
     factor_text = df['팩터선택'][0]
     len_factor  = len(factor_text.split(';'))
     if len_factor < 18:
         df['팩터선택'] = '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1'
-        df.to_sql('etc', con, if_exists='replace')
     if '인트로숨김' not in df.columns:
         df['인트로숨김'] = 0
-        df.to_sql('etc', con, if_exists='replace')
+    df.to_sql('etc', con, if_exists='replace')
 
 if 'stockbuyorder' not in table_list:
     columns = [

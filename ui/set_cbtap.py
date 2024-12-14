@@ -234,12 +234,12 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_18 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OVC', color=2, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 교차검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_19 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OV', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_20 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석O', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_33 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BVC', color=3, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 교차검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_34 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BV', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_35 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석B', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_18 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석ORVC', color=2, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 교차검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_19 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석ORV', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_20 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OR', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_33 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BRVC', color=3, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 교차검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_34 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BRV', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_35 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BR', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 최적화 테스트를 전진분석한다.')
 
         self.ui.coin_rwftvd_list = [
             self.ui.cvc_pushButton_18, self.ui.cvc_pushButton_19, self.ui.cvc_pushButton_20, self.ui.cvc_comboBoxxx_02,

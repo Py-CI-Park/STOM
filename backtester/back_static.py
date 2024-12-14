@@ -767,7 +767,6 @@ class SubTotal:
         index = str(매수시간) if self.buystd else str(매도시간)
         # while index in self.dict_tsg[vars_key][0]:
         #     index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
-
         self.dict_tsg[vars_key][0].append(index)
         self.dict_tsg[vars_key][1].append(종목명)
         self.dict_tsg[vars_key][2].append(시가총액또는포지션)

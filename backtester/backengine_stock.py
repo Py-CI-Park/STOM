@@ -74,7 +74,6 @@ class StockBackEngine:
         self.vars_turn    = 0
         self.vars_count   = 0
         self.vars_key     = 0
-        self.high_var     = 0
 
         self.code         = ''
         self.name         = ''
@@ -86,6 +85,7 @@ class StockBackEngine:
         self.dindex       = 0
         self.mindex       = 0
         self.tick_count   = 0
+        self.divid        = 0
 
         self.Start()
 
@@ -109,12 +109,31 @@ class StockBackEngine:
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
-                        self.vars       = [var[-1] for var in self.vars_list]
-                        self.high_var   = self.vars[self.vars_turn]
-                        self.vars_count = 1 if self.vars_turn < 0 else len(self.vars_list[self.vars_turn]) - 1
-                        self.InitDayInfo()
+                        self.vars       = [var[1] for var in self.vars_list]
+                        self.vars_count = len(self.vars_list[self.vars_turn][0]) if self.vars_turn >= 0 else 1
+                        self.InitDivid()
                         self.InitTradeInfo()
-                        self.sell_count = 0
+                        self.BackTest()
+                elif self.back_type == '전진분석':
+                    if data[0] == '백테정보':
+                        self.betting    = data[1]
+                        avg_list        = data[2]
+                        self.starttime  = data[3]
+                        self.endtime    = data[4]
+                        self.buystg     = GetBuyStg(data[5], self.gubun)
+                        self.sellstg, self.dict_cond = GetSellStg(data[6], self.gubun)
+                        self.CheckAvglist(avg_list)
+                        if self.buystg is None or self.sellstg is None:
+                            self.BackStop()
+                    elif data[0] == '변수정보':
+                        self.vars_list  = data[1]
+                        self.vars_turn  = data[2]
+                        self.vars       = [var[1] for var in self.vars_list]
+                        self.vars_count = len(self.vars_list[self.vars_turn][0]) if self.vars_turn >= 0 else 1
+                        self.startday   = data[3]
+                        self.endday     = data[4]
+                        self.InitDivid()
+                        self.InitTradeInfo()
                         self.BackTest()
                 elif self.back_type == 'GA최적화':
                     if data[0] == '백테정보':
@@ -132,10 +151,8 @@ class StockBackEngine:
                     elif data[0] == '변수정보':
                         self.vars_lists = data[1]
                         self.vars_count = 10
-                        self.vars_turn  = 0
-                        self.InitDayInfo()
+                        self.InitDivid()
                         self.InitTradeInfo()
-                        self.sell_count = 0
                         self.BackTest()
                 elif self.back_type == '조건최적화':
                     if data[0] == '백테정보':
@@ -158,36 +175,12 @@ class StockBackEngine:
                             self.didict_cond[i]  = dict_cond
                             if buystg is None or sellstg is None: error = True
                         self.vars_count = 10
-                        self.InitDayInfo()
+                        self.InitDivid()
                         self.InitTradeInfo()
-                        self.sell_count = 0
                         if error:
                             self.BackStop()
                         else:
                             self.BackTest()
-                elif self.back_type == '전진분석':
-                    if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.starttime  = data[3]
-                        self.endtime    = data[4]
-                        self.buystg     = GetBuyStg(data[5], self.gubun)
-                        self.sellstg, self.dict_cond = GetSellStg(data[6], self.gubun)
-                        self.CheckAvglist(avg_list)
-                        if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
-                    elif data[0] == '변수정보':
-                        self.vars_list  = data[1]
-                        self.vars_turn  = data[2]
-                        self.vars       = [var[-1] for var in self.vars_list]
-                        self.high_var   = self.vars[self.vars_turn]
-                        self.vars_count = 1 if self.vars_turn < 0 else len(self.vars_list[self.vars_turn]) - 1
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        self.sell_count = 0
-                        self.BackTest()
                 elif self.back_type == '백테스트':
                     if data[0] == '백테정보':
                         self.betting    = data[1]
@@ -199,9 +192,8 @@ class StockBackEngine:
                         self.buystg     = GetBuyStg(data[7], self.gubun)
                         self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
                         self.vars_count = 1
-                        self.InitDayInfo()
+                        self.InitDivid()
                         self.InitTradeInfo()
-                        self.sell_count = 0
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
                         else:
@@ -215,9 +207,7 @@ class StockBackEngine:
                         self.endday     = data[3]
                         self.starttime  = data[4]
                         self.endtime    = data[5]
-                        self.vars_count = 1
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
+                        self.InitDivid()
                         try:
                             self.buystg = compile(data[6], '<string>', 'exec')
                         except:
@@ -238,10 +228,17 @@ class StockBackEngine:
             elif data[0] == '벤치점수요청':
                 self.bq.put((self.total_ticks, self.total_secds, round(self.total_ticks / self.total_secds, 2)))
 
-    def InitDayInfo(self):
-        self.tick_count = 0
+    def InitDivid(self):
+        self.sell_count = 0
+        if self.vars_count < 5:
+            self.divid = 5
+        elif self.vars_count < 20:
+            self.divid = self.vars_count
+        else:
+            self.divid = 20
 
     def InitTradeInfo(self):
+        self.tick_count = 0
         v = GetTradeInfo(1)
         if self.vars_count == 1:
             self.trade_info = {0: v}
@@ -399,7 +396,6 @@ class StockBackEngine:
                         self.Strategy()
                     else:
                         self.LastSell()
-                        self.InitDayInfo()
                         self.InitTradeInfo()
 
             self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
@@ -660,12 +656,12 @@ class StockBackEngine:
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.vars_turn >= 0:
-                    self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
+                    curr_var = self.vars_list[self.vars_turn][0][j]
+                    if curr_var == self.vars_list[self.vars_turn][1]:
+                        continue
+                    self.vars[self.vars_turn] = curr_var
                     if self.tick_count < self.vars[0]:
-                        if self.vars_turn != 0:
-                            break
-                        else:
-                            continue
+                        continue
                 elif self.tick_count < self.vars[0]:
                     break
 
@@ -793,6 +789,6 @@ class StockBackEngine:
         매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
         추가매수시간, 잔량없음 = '', True
         data = ('백테결과', self.name, 시가총액, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key)
-        self.stq_list[self.sell_count % 10].put(data)
+        self.stq_list[self.sell_count % self.divid].put(data)
         self.trade_info[self.vars_key] = GetTradeInfo(1)
         self.sell_count += 1

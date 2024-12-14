@@ -261,13 +261,29 @@ class SetDialogEtc:
         item_list = ['BaseSampler', 'BruteForceSampler', 'CmaEsSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
         self.ui.op_comboBoxxxx_01 = self.wc.setCombobox(self.ui.op_groupBoxxxx_01, items=item_list)
         text = '''
+        "optuna의 실행 횟수는 변수의
+        개수만큼 실행되어도 기준값이
+        변경되지 않으면 탐색을 종료하도록
+        설정되어 있습니다(0입력시적용).
+        설정을 무시하고 기준값 미변경 시
+        중단할 횟수를 빈칸에 입력하십시오.
+        20회 이하의 횟수로 최적값을 빠르게
+        랜덤하게 바꿀 수도 있으며
+        200회 이상의 횟수로 고강도 탐색을
+        유도할 수도 있습니다."
+        '''
+        self.ui.op_labelllllll_04 = QLabel(text, self.ui.op_groupBoxxxx_01)
+        self.ui.op_labelllllll_04.setAlignment(Qt.AlignCenter)
+        self.ui.op_lineEditttt_02 = self.wc.setLineedit(self.ui.op_groupBoxxxx_01, style=style_bc_dk)
+        self.ui.op_lineEditttt_02.setText('0')
+        text = '''
         "optuna로 실행된 최적화의 정보는
         별도의 데이터베이스에 저장됩니다
         해당 DB의 정보를 열람하려면
         아래 버튼을 클릭하십시오."
         '''
-        self.ui.op_labelllllll_04 = QLabel(text, self.ui.op_groupBoxxxx_01)
-        self.ui.op_labelllllll_04.setAlignment(Qt.AlignCenter)
+        self.ui.op_labelllllll_05 = QLabel(text, self.ui.op_groupBoxxxx_01)
+        self.ui.op_labelllllll_05.setAlignment(Qt.AlignCenter)
         self.ui.op_pushButtonn_01 = self.wc.setPushbutton('OPTUNA DASHBOARD', box=self.ui.op_groupBoxxxx_01, color=3, click=self.ui.opButtonClicked_01)
 
         self.ui.dialog_pass = self.wc.setDialog('STOM PASSWARD', tab=self.ui)
@@ -527,16 +543,18 @@ class SetDialogEtc:
         self.ui.od_pushButtonnn_07.setGeometry(10, 255, 100, 30)
         self.ui.od_pushButtonnn_08.setGeometry(115, 255, 100, 30)
 
-        self.ui.dialog_optuna.setFixedSize(220, 490)
-        self.ui.op_groupBoxxxx_01.setGeometry(5, -10, 210, 495)
+        self.ui.dialog_optuna.setFixedSize(220, 670)
+        self.ui.op_groupBoxxxx_01.setGeometry(5, -10, 210, 675)
         self.ui.op_labelllllll_01.setGeometry(-10, 10, 210, 130)
         self.ui.op_lineEditttt_01.setGeometry(10, 132, 190, 30)
         self.ui.op_labelllllll_02.setGeometry(-10, 160, 210, 100)
         self.ui.op_checkBoxxxx_01.setGeometry(25, 265, 190, 20)
         self.ui.op_labelllllll_03.setGeometry(-10, 277, 210, 70)
         self.ui.op_comboBoxxxx_01.setGeometry(10, 355, 190, 30)
-        self.ui.op_labelllllll_04.setGeometry(-10, 377, 200, 70)
-        self.ui.op_pushButtonn_01.setGeometry(10, 455, 190, 30)
+        self.ui.op_labelllllll_04.setGeometry(-10, 382, 210, 155)
+        self.ui.op_lineEditttt_02.setGeometry(10, 537, 190, 30)
+        self.ui.op_labelllllll_05.setGeometry(-10, 560, 200, 70)
+        self.ui.op_pushButtonn_01.setGeometry(10, 637, 190, 30)
 
         self.ui.dialog_pass.setFixedSize(200, 100)
         self.ui.pa_groupBoxxxx_01.setGeometry(5, -10, 190, 105)

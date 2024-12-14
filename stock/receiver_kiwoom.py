@@ -102,13 +102,13 @@ class ReceiverKiwoom:
             '거래대금순위기록': curr_time
         }
 
+        self.kw = Kiwoom(self, 'Receiver')
+        self.KiwoomLogin()
+
         self.recvservQ = Queue()
         if self.dict_set['리시버공유'] == 1:
             self.zmqserver = ZmqServ(self.recvservQ)
             self.zmqserver.start()
-
-        self.kw = Kiwoom(self, 'Receiver')
-        self.KiwoomLogin()
 
         self.updater = Updater(self.sreceivQ)
         # noinspection PyUnresolvedReferences
@@ -155,21 +155,19 @@ class ReceiverKiwoom:
         df['코스닥'] = [True if x in self.tuple_kosd else False for x in df.index]
         self.kwzservQ.put(('query', ('설정디비', df, 'codename', 'replace')))
 
-        self.list_cond = self.kw.GetConditionNamelist()  # [[0, '장초초단타'], [1, '감시종목']]
-        error = False
-        try:
-            if self.list_cond[0][0] == 0 and self.list_cond[1][0] == 1:
-                self.kwzservQ.put(('window', (ui_num['S단순텍스트'], self.list_cond)))
+        error = True
+        while error:
+            qtest_qwait(2)
+            self.list_cond = self.kw.GetConditionNamelist()
+            try:
+                if self.list_cond[0][0] == 0 and self.list_cond[1][0] == 1:
+                    self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 조건검색식 불러오기 완료')))
+            except:
+                print('조건검색식 불러오기 실패, 2초후 재시도합니다.')
             else:
-                error = True
-        except:
-            error = True
-        if error:
-            print('시스템 명령 오류 알림 - 조건검색식 불러오기 실패')
-            print('조건검색식은 두개가 필요합니다.')
-            print('첫번째는 트레이더가 사용할 관심종목용, 조건식 번호 0번')
-            print('두번째는 리시버가 사용할 감시종목용, 조건식 번호 1번이어야 합니다.')
-            print('HTS에서 보이는 번호와 API는 다를 수 있으니 조건식을 모두 지우고 새로 작성하십시오.')
+                error = False
+                self.kwzservQ.put(('window', (ui_num['S단순텍스트'], self.list_cond)))
+
         self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 실행 알림 - OpenAPI 로그인 완료')))
         text = '주식 리시버를 시작하였습니다.'
         if self.dict_set['주식알림소리']: self.kwzservQ.put(('sound', text))

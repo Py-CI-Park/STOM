@@ -14,15 +14,13 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
     def __init__(self, gubun, wq, pq, tq, bq, stq_list, profile=False):
         super().__init__(gubun, wq, pq, tq, bq, stq_list, profile)
 
-    def InitDayInfo(self):
+    def InitTradeInfo(self):
         self.tick_count = 0
         v = GetTradeInfo(3)
         if self.vars_count == 1:
             self.day_info = {0: v}
         else:
             self.day_info = {k: v for k in range(self.vars_count)}
-
-    def InitTradeInfo(self):
         v = GetTradeInfo(2)
         if self.vars_count == 1:
             self.trade_info = {0: v}
@@ -75,7 +73,6 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                         self.Strategy()
                     else:
                         self.LastSell()
-                        self.InitDayInfo()
                         self.InitTradeInfo()
 
             self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
@@ -311,12 +308,12 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.vars_turn >= 0:
-                    self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
+                    curr_var = self.vars_list[self.vars_turn][0][j]
+                    if curr_var == self.vars_list[self.vars_turn][1]:
+                        continue
+                    self.vars[self.vars_turn] = curr_var
                     if self.tick_count < self.vars[0]:
-                        if self.vars_turn != 0:
-                            break
-                        else:
-                            continue
+                        continue
                 elif self.tick_count < self.vars[0]:
                     break
 
@@ -672,7 +669,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
         추가매수시간, 잔량없음 = '^'.join(추가매수시간), 보유수량 - 주문수량 == 0
         data = ('백테결과', self.name, 포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key)
-        self.stq_list[self.sell_count % 10].put(data)
+        self.stq_list[self.sell_count % 20].put(data)
         if 수익률 < 0:
             self.day_info[self.vars_key]['손절횟수'] += 1
             self.day_info[self.vars_key]['손절매도시간'] = timedelta_sec(self.dict_set['코인매수금지손절간격초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
