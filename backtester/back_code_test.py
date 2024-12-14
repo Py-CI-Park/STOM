@@ -21,6 +21,21 @@ class BackCodeTest:
                 print_exc()
                 error = True
 
+            for i, var in enumerate(list(self.vars.values())):
+                if len(var) != 2:
+                    print(f'self.vars[{i}]의 범위 설정 갯수 오류')
+                    error = True
+                if not ga:
+                    if len(var[0]) != 3:
+                        print(f'self.vars[{i}]의 범위 설정 갯수 오류')
+                        error = True
+                    if var[0][0] < var[0][1] and var[0][2] < 0:
+                        print(f'self.vars[{i}]의 범위 간격 설정 오류')
+                        error = True
+                    if var[0][0] > var[0][1] and var[0][2] > 0:
+                        print(f'self.vars[{i}]의 범위 간격 설정 오류')
+                        error = True
+
         if not error:
             try:
                 self.stg = compile(stg, '<string>', 'exec')

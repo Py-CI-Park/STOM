@@ -179,9 +179,9 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_06 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVC', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 최적화는 1회만 검증을 하지만, 교차검증은\n검증기간을 학습기간 / 검증기간 + 1만큼 교차분류하여 그리드 최적화한다.')
-        self.ui.cvc_pushButton_07 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OV', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n데이터의 시계열 순서대로 학습, 검증기간을 분류하여 그리드 최적화한다.')
-        self.ui.cvc_pushButton_08 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화O', color=2, tip='학습기간만 선택하여 진행되며\n데이터 전체를 기반으로 그리드 최적화한다.')
+        self.ui.cvc_pushButton_06 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVC', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 최적화는 1회만 검증을 하지만, 교차검증은\n검증기간을 학습기간 / 검증기간 + 1만큼 교차분류하여 그리드 최적화한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
+        self.ui.cvc_pushButton_07 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OV', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n데이터의 시계열 순서대로 학습, 검증기간을 분류하여 그리드 최적화한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
+        self.ui.cvc_pushButton_08 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화O', color=2, tip='학습기간만 선택하여 진행되며\n데이터 전체를 기반으로 그리드 최적화한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
         self.ui.cvc_pushButton_27 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVC', color=3, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 최적화는 1회만 검증을 하지만, 교차검증은\n검증기간을 학습기간 / 검증기간 + 1만큼 교차분류하여 베이지안 최적화한다.')
         self.ui.cvc_pushButton_28 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BV', color=3, tip='학습기간과 검증기간을 선택하여 진행되며\n데이터의 시계열 순서대로 학습, 검증기간을 분류하여 베이지안 최적화한다.')
         self.ui.cvc_pushButton_29 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화B', color=3, tip='학습기간만 선택하여 진행되며\n데이터 전체를 기반으로 베이지안 최적화한다.')
@@ -216,9 +216,9 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_15 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVCT', color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n그리드 교차검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
-        self.ui.cvc_pushButton_16 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVT', color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n그리드 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
-        self.ui.cvc_pushButton_17 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OT', color=2, tip='학습기간, 확인기간을 선택하여 진행되며\n그리드 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_15 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVCT', color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n그리드 교차검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
+        self.ui.cvc_pushButton_16 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVT', color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n그리드 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
+        self.ui.cvc_pushButton_17 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OT', color=2, tip='학습기간, 확인기간을 선택하여 진행되며\n그리드 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
         self.ui.cvc_pushButton_30 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVCT', color=3, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n베이지안 교차검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
         self.ui.cvc_pushButton_31 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVT', color=3, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n베이지안 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
         self.ui.cvc_pushButton_32 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BT', color=3, tip='학습기간, 확인기간을 선택하여 진행되며\n베이지안 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
@@ -234,9 +234,9 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_18 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석ORVC', color=2, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 교차검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_19 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석ORV', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_20 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OR', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_18 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석ORVC', color=2, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 교차검증 최적화 테스트를 전진분석한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
+        self.ui.cvc_pushButton_19 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석ORV', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 검증 최적화 테스트를 전진분석한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
+        self.ui.cvc_pushButton_20 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OR', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 최적화 테스트를 전진분석한다.\nAlt키와 함께 누르면 모든 변수의 최적값을 랜덤 변경하여 시작힌다.')
         self.ui.cvc_pushButton_33 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BRVC', color=3, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 교차검증 최적화 테스트를 전진분석한다.')
         self.ui.cvc_pushButton_34 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BRV', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 검증 최적화 테스트를 전진분석한다.')
         self.ui.cvc_pushButton_35 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BR', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 최적화 테스트를 전진분석한다.')
@@ -275,13 +275,13 @@ class SetCoinBack:
 
         self.ui.cvc_pushButton_21 = self.wc.setPushbutton('최적화 > GA 범위 변환', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_26, color=2, visible=False, tip='최적화용 범위코드를 GA용으로 변환한다.')
         self.ui.cvc_pushButton_22 = self.wc.setPushbutton('GA > 최적화 범위 변환', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_27, color=2, visible=False, tip='GA용 범위코드를 최적화용으로 변환한다.')
-        self.ui.cvc_pushButton_23 = self.wc.setPushbutton('범위 변수 키값 재정렬', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_32, color=2, visible=False, tip='범위 변수 self.vars의 키값을 재정렬한다.')
+        self.ui.cvc_pushButton_23 = self.wc.setPushbutton('변수 키값 재정렬', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_32, color=2, visible=False, tip='범위 변수 self.vars의 키값을 재정렬한다.')
 
     # =================================================================================================================
 
         self.ui.cvc_pushButton_24 = self.wc.setPushbutton('최적화 변수 변환(매수우선)', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_28, color=2, visible=False, tip='일반 전략의 각종 변수를 매수우선 최적화용 변수로 변환한다.')
         self.ui.cvc_pushButton_25 = self.wc.setPushbutton('최적화 변수 변환(매도우선)', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_28, color=2, visible=False, tip='일반 전략의 각종 변수를 매도우선 최적화용 변수로 변환한다.')
-        self.ui.cvc_pushButton_26 = self.wc.setPushbutton('변수(self.vars) 키값 재정렬', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_33, color=2, visible=False, tip='변수 self.vars의 키값을 재정렬한다.')
+        self.ui.cvc_pushButton_26 = self.wc.setPushbutton('변수 키값 재정렬', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_33, color=2, visible=False, tip='변수 self.vars의 키값을 재정렬한다.\n매수, 매도 self.vars의 첫번째 키값을 비교해서\n매수가 빠르면 매수우선, 매도가 빠르면 매도우선으로 재정렬된다.')
         self.ui.cvc_labellllll_05 = QLabel('', self.ui.cs_tab)
         self.ui.cvc_labellllll_05.setVisible(False)
 
@@ -321,13 +321,13 @@ class SetCoinBack:
     # =================================================================================================================
 
         self.ui.cs_textEditttt_01.setGeometry(7, 10, 1000, 463)
-        self.ui.cs_textEditttt_02.setGeometry(7, 478, 1000, 270)
+        self.ui.cs_textEditttt_02.setGeometry(7, 480, 1000, 272)
         self.ui.cs_textEditttt_03.setGeometry(509, 10, 497, 463)
-        self.ui.cs_textEditttt_04.setGeometry(509, 478, 497, 270)
-        self.ui.cs_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.ui.cs_textEditttt_06.setGeometry(659, 10, 347, 738)
-        self.ui.cs_textEditttt_07.setGeometry(7, 10, 497, 738)
-        self.ui.cs_textEditttt_08.setGeometry(509, 10, 497, 738)
+        self.ui.cs_textEditttt_04.setGeometry(509, 480, 497, 272)
+        self.ui.cs_textEditttt_05.setGeometry(659, 10, 347, 740)
+        self.ui.cs_textEditttt_06.setGeometry(659, 10, 347, 740)
+        self.ui.cs_textEditttt_07.setGeometry(7, 10, 497, 740)
+        self.ui.cs_textEditttt_08.setGeometry(509, 10, 497, 740)
 
         self.ui.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
         self.ui.czoo_pushButon_02.setGeometry(952, 483, 50, 20)

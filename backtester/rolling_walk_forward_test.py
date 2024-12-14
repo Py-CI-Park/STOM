@@ -168,8 +168,11 @@ class Total:
                         for ctq in self.stq_list:
                             ctq.put('백테완료')
                     else:
-                        for vars_key in range(len(self.vars_list[self.vars_turn][0])):
-                            self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                        if self.vars_turn != -1:
+                            for vars_key in range(len(self.vars_list[self.vars_turn][0])):
+                                self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                        else:
+                            self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
 
             elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
@@ -356,6 +359,7 @@ class RollingWalkForwardTest:
         self.high_vars = []
         self.htsd      = -2_147_483_648
         self.study     = None
+        self.log       = None
         self.dict_simple_vars = {}
         self.Start()
 
@@ -517,28 +521,38 @@ class RollingWalkForwardTest:
         total_count = 0
         vars_type = []
         vars_ = []
-        for var in list(self.vars.values()):
+        for i, var in enumerate(list(self.vars.values())):
+            error = False
+            if len(var) != 2:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 설정 오류'))
+                error = True
+            if len(var[0]) != 3:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 설정 오류'))
+                error = True
+            if var[0][0] < var[0][1] and var[0][2] < 0:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 간격 설정 오류'))
+                error = True
+            if var[0][0] > var[0][1] and var[0][2] > 0:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 간격 설정 오류'))
+                error = True
+            if error:
+                self.SysExit(True)
             low, high, gap = var[0]
             opti = var[1]
-            vars_type.append(1 if low < high else 0)
-
-            varint = 1 if type(gap) == int else 0
+            varint = type(gap) == int
+            lowhigh = low < high
+            vars_type.append(lowhigh)
             vars_list = [[], opti]
             if gap == 0:
-                vars_list[0].append(low)
+                vars_list[0].append(opti)
             else:
                 total_count += 1
-                k = 0
-                while True:
-                    if varint:
-                        v = low + gap * k
-                    else:
-                        v = round(low + gap * k, 1)
-                    if (low < high and v <= high) or (low > high and v >= high):
-                        vars_list[0].append(v)
+                for k in range(1000):
+                    next_var = (low + gap * k) if varint else round(low + gap * k, 2)
+                    if (lowhigh and next_var <= high) or (not lowhigh and next_var >= high):
+                        vars_list[0].append(next_var)
                     else:
                         break
-                    k += 1
             if opti not in vars_list[0] or random_optivars:
                 vars_list[1] = random.choice(vars_list[0])
             vars_.append(vars_list)
@@ -580,7 +594,7 @@ class RollingWalkForwardTest:
             if 'B' in self.backname:
                 self.htsd = 0
                 if optuna_count == 0:
-                    total_count = back_count * (len(self.vars) + 1)
+                    total_count = back_count * (len_vars + 1)
                 else:
                     total_count = back_count * optuna_count
                 self.tq.put(('경우의수', total_count, back_count, startday, endday, t))
@@ -596,9 +610,10 @@ class RollingWalkForwardTest:
                         else:
                             trial_name = f'{j}'
 
+                        varsint = type(var_[0][2]) == int
                         if not (var_[0][2] == 0 or j in optuna_fixvars):
                             if optuna_autostep:
-                                if type(var_[0][2]) == int:
+                                if varsint:
                                     if var_[0][0] < var_[0][1]:
                                         trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1])
                                     else:
@@ -609,7 +624,7 @@ class RollingWalkForwardTest:
                                     else:
                                         trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0])
                             else:
-                                if type(var_[0][2]) == int:
+                                if varsint:
                                     if var_[0][0] < var_[0][1]:
                                         trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1], step=var_[0][2])
                                     else:
@@ -620,7 +635,7 @@ class RollingWalkForwardTest:
                                     else:
                                         trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0], step=-var_[0][2])
                         else:
-                            if type(var_[1]) == int:
+                            if varsint:
                                 trial_ = trial.suggest_int(trial_name, var_[1], var_[1])
                             else:
                                 trial_ = trial.suggest_float(trial_name, var_[1], var_[1])
@@ -682,8 +697,8 @@ class RollingWalkForwardTest:
                         if len_vars_ > 0:
                             start = now()
                             print('==================================================================')
-                            print('vars_list :', vars_[i][0])
-                            print('vars_turn :', i, 'len_vars :', len_vars_)
+                            print(f'rwf_vars_turn : {i} len_vars : {len_vars_}')
+                            print(f'rwf_vars_list : {vars_[i][0]}')
                             self.tq.put(('변수정보', vars_, i))
                             for q in self.stq_list:
                                 q.put('백테시작')
@@ -696,16 +711,16 @@ class RollingWalkForwardTest:
                                     self.SysExit(True)
                                 else:
                                     std, vars_key = data
-                                    print(' - vars_key_ :', vars_key, 'stdpoint :', std)
+                                    print('{:>13} : {:>2}, {:>9} : {:>16,.2f}'.format(' -   vars_key', vars_key, 'std_point', std))
                                     curr_typ = vars_type[i]
-                                    curh_var = vars_[i][0][vars_key]
+                                    curr_var = vars_[i][0][vars_key]
                                     preh_var = vars_[i][1]
-                                    if std > self.htsd or (std == self.htsd and ((curr_typ and curh_var > preh_var) or (not curr_typ and curh_var < preh_var))):
-                                        print(' * updatestd :', f'{preh_var} -> {curh_var}')
+                                    if std > self.htsd or (std == self.htsd and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
+                                        print(' * update_std :', f'{preh_var} -> {curr_var}')
                                         self.htsd = std
-                                        vars_[i][1] = curh_var
+                                        vars_[i][1] = curr_var
                                         change_var_count += 1
-                            print(' - time_left :', (now() - start).total_seconds(), 'seconds')
+                            print(f' -  time_left : {(now() - start).total_seconds()} seconds')
                 k += 1
 
             hvar_list.append(vars_)
@@ -726,7 +741,6 @@ class RollingWalkForwardTest:
 
         mq.close()
         if self.dict_set['스톰라이브']: self.lq.put(self.backname.replace('O', '').replace('B', ''))
-        self.SysExit(False)
 
     def SysExit(self, cancel):
         if cancel:

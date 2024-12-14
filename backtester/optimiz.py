@@ -157,8 +157,11 @@ class Total:
                         for stq in self.stq_list:
                             stq.put('백테완료')
                     else:
-                        for vars_key in range(len(self.vars_list[self.vars_turn][0])):
-                            self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                        if self.vars_turn != -1:
+                            for vars_key in range(len(self.vars_list[self.vars_turn][0])):
+                                self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                        else:
+                            self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
 
             elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
@@ -346,6 +349,7 @@ class Optimize:
         self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.vars      = {}
         self.study     = None
+        self.log       = None
         self.dict_simple_vars = {}
         self.Start()
 
@@ -510,28 +514,41 @@ class Optimize:
         total_count = 0
         vars_type = []
         vars_ = []
-        for var in list(self.vars.values()):
+        for i, var in enumerate(list(self.vars.values())):
+            error = False
+            if len(var) != 2:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 설정 오류'))
+                error = True
+            if len(var[0]) != 3:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 설정 오류'))
+                error = True
+            if var[0][0] < var[0][1] and var[0][2] < 0:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 간격 설정 오류'))
+                error = True
+            if var[0][0] > var[0][1] and var[0][2] > 0:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - self.vars[{i}]의 범위 간격 설정 오류'))
+                error = True
+            if error:
+                self.SysExit(True)
             low, high, gap = var[0]
             opti = var[1]
-            vars_type.append(1 if low < high else 0)
-
-            varint = 1 if type(gap) == int else 0
+            varint = type(gap) == int
+            lowhigh = low < high
+            vars_type.append(lowhigh)
             vars_list = [[], opti]
             if gap == 0:
-                vars_list[0].append(low)
+                vars_list[0].append(opti)
             else:
                 total_count += 1
-                k = 0
-                while True:
+                for k in range(1000):
                     if varint:
-                        v = low + gap * k
+                        next_var = low + gap * k
                     else:
-                        v = round(low + gap * k, 1)
-                    if (low < high and v <= high) or (low > high and v >= high):
-                        vars_list[0].append(v)
+                        next_var = round(low + gap * k, 2)
+                    if (lowhigh and next_var <= high) or (not lowhigh and next_var >= high):
+                        vars_list[0].append(next_var)
                     else:
                         break
-                    k += 1
             if opti not in vars_list[0] or random_optivars:
                 vars_list[1] = random.choice(vars_list[0])
             vars_.append(vars_list)
@@ -562,7 +579,7 @@ class Optimize:
 
         if 'B' in self.backname:
             if optuna_count == 0:
-                total_count = back_count * (len(self.vars) + 1)
+                total_count = back_count * (len_vars + 1)
             else:
                 total_count = back_count * optuna_count
             self.tq.put(('경우의수', total_count, back_count))
@@ -578,9 +595,10 @@ class Optimize:
                     else:
                         trial_name = f'{j}'
 
+                    varsint = type(var_[0][2]) == int
                     if not (var_[0][2] == 0 or j in optuna_fixvars):
                         if optuna_autostep:
-                            if type(var_[0][2]) == int:
+                            if varsint:
                                 if var_[0][0] < var_[0][1]:
                                     trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1])
                                 else:
@@ -591,7 +609,7 @@ class Optimize:
                                 else:
                                     trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0])
                         else:
-                            if type(var_[0][2]) == int:
+                            if varsint:
                                 if var_[0][0] < var_[0][1]:
                                     trial_ = trial.suggest_int(trial_name, var_[0][0], var_[0][1], step=var_[0][2])
                                 else:
@@ -602,7 +620,7 @@ class Optimize:
                                 else:
                                     trial_ = trial.suggest_float(trial_name, var_[0][1], var_[0][0], step=-var_[0][2])
                     else:
-                        if type(var_[1]) == int:
+                        if varsint:
                             trial_ = trial.suggest_int(trial_name, var_[1], var_[1])
                         else:
                             trial_ = trial.suggest_float(trial_name, var_[1], var_[1])
@@ -654,7 +672,7 @@ class Optimize:
                 hstd = data[0]
 
             k = 1
-            total_change = 0
+            total_change  = 0
             change_var_count = None
             for _ in range(ccount if ccount != 0 else 100):
                 if ccount == 0:
@@ -664,14 +682,16 @@ class Optimize:
                         self.tq.put(('재최적화',))
                         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'))
 
+                del_vars_list = []
                 change_var_count = 0
                 for i in range(len_vars):
+                    del_list  = []
                     len_vars_ = len(vars_[i][0]) - 1
                     if len_vars_ > 0:
                         start = now()
                         print('==================================================================')
-                        print('vars_list :', vars_[i][0])
-                        print('vars_turn :', i, 'len_vars :', len_vars_)
+                        print(f'opt_vars_turn : {i} len_vars : {len_vars_}')
+                        print(f'opt_vars_list : {vars_[i][0]}')
                         self.tq.put(('변수정보', vars_, i))
                         for q in self.stq_list:
                             q.put('백테시작')
@@ -686,18 +706,27 @@ class Optimize:
                                 self.SysExit(True)
                             else:
                                 std, vars_key = data
-                                print(' - vars_key_ :', vars_key, 'stdpoint :', std)
+                                print('{:>13} : {:>2}, {:>9} : {:>16,.2f}'.format(' -   vars_key', vars_key, 'std_point', std))
                                 curr_typ = vars_type[i]
-                                curh_var = vars_[i][0][vars_key]
+                                curr_var = vars_[i][0][vars_key]
                                 preh_var = vars_[i][1]
-                                if std > hstd or (std == hstd and ((curr_typ and curh_var > preh_var) or (not curr_typ and curh_var < preh_var))):
-                                    print(' * updatestd :', f'{preh_var} -> {curh_var}')
+                                if std == -2_147_483_648:
+                                    del_list.append(curr_var)
+                                if std > hstd or (std == hstd and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
+                                    print(' * update_std :', f'{preh_var} -> {curr_var}')
                                     hstd = std
-                                    vars_[i][1] = curh_var
+                                    vars_[i][1] = curr_var
                                     total_change += 1
                                     change_var_count += 1
-                        print(' - time_left :', (now() - start).total_seconds(), 'seconds')
+                        print(f' -  time_left : {(now() - start).total_seconds()} seconds')
+                    del_vars_list.append(del_list)
+
                 k += 1
+                for i in range(len_vars):
+                    if del_vars_list[i]:
+                        new_list = [x for x in vars_[i][0] if x not in del_vars_list[i]]
+                        vars_[i][0] = new_list
+                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 불필요한 범위 {del_vars_list[i]} 삭제'))
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '최적값 백테스트 시작'))
         self.tq.put(('변수정보', vars_, -2))
@@ -721,8 +750,7 @@ class Optimize:
                 curh_var = vars_[i][1]
                 if preh_var != curh_var:
                     self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 {preh_var} -> {curh_var}'))
-                    self.vars[i][1] = curh_var
-                optivars += f'self.vars[{i}] = {self.vars[i]}\n'
+                optivars += f'self.vars[{i}] = [[{vars_[i][0][0]}, {vars_[i][0][-1]}, {self.vars[i][0][2]}], {curh_var}]\n'
 
             if 'T' not in self.backname:
                 optivars = optivars[:-1]

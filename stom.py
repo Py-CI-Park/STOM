@@ -273,7 +273,6 @@ class Window(QMainWindow):
         else:
             self.mediaPlayer.play()
 
-
         con1 = sqlite3.connect(DB_SETTING)
         con2 = sqlite3.connect(DB_STOCK_BACK)
         try:
@@ -311,6 +310,7 @@ class Window(QMainWindow):
         self.tickdata_save    = False
         self.backtest_engine  = False
         self.time_sync        = False
+        self.extend_window    = False
         self.back_condition   = True
 
         self.animation        = None
@@ -482,10 +482,6 @@ class Window(QMainWindow):
         plt.rcParams['font.family'] = font_family
         plt.rcParams['axes.unicode_minus'] = False
 
-        self.bb_pushButton.setGeometry(0, 0, 0, 0)
-        self.od_pushButton.setGeometry(0, 0, 0, 0)
-        self.vv_pushButton.setGeometry(0, 0, 0, 0)
-
     def windowclose(self, state):
         if state == QMediaPlayer.StoppedState:
             self.videoWidget.setVisible(False)
@@ -493,6 +489,91 @@ class Window(QMainWindow):
     def ShowVideo(self):
         self.videoWidget.setVisible(True)
         self.mediaPlayer.play()
+
+    def ExtendWin(self):
+        if self.main_btn not in (2, 3):
+            QMessageBox.critical(self, '오류 알림', '전략탭 확장기능은 전략탭에서만 사용할 수 있습니다.')
+            return
+
+        if not self.extend_window:
+            self.extend_window = True
+            self.setFixedSize(1403, 1368)
+            self.image_label2.setVisible(True)
+            self.progressBarrr.setGeometry(5, 568, 35, 793)
+        else:
+            self.extend_window = False
+            self.setFixedSize(1403, 763)
+            self.image_label2.setVisible(False)
+            self.progressBarrr.setGeometry(5, 568, 35, 188)
+
+        if self.main_btn == 2:
+            self.ss_tab.setGeometry(45, 0, 1353, 1362 if self.extend_window else 757)
+            if self.ss_pushButtonn_08.isVisible():
+                self.ss_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
+                self.ss_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
+                self.ss_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+            elif self.ss_pushButtonn_01.isVisible():
+                self.ss_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
+                self.ss_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+            elif self.svj_pushButton_01.isVisible():
+                self.ss_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
+                self.ss_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 1000, 602 if self.extend_window else 272)
+                self.szoo_pushButon_02.setGeometry(952, 761 if self.extend_window else 483, 50, 20)
+            elif self.svc_pushButton_24.isVisible():
+                self.ss_textEditttt_01.setGeometry(7, 10, 497, 740 if self.extend_window else 463)
+                self.ss_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 497, 602 if self.extend_window else 272)
+                self.ss_textEditttt_03.setGeometry(509, 10, 497, 740 if self.extend_window else 463)
+                self.ss_textEditttt_04.setGeometry(509, 756 if self.extend_window else 480, 497, 602 if self.extend_window else 272)
+            elif self.svc_pushButton_21.isVisible():
+                self.ss_textEditttt_05.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+                self.ss_textEditttt_06.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
+            elif self.svo_pushButton_05.isVisible():
+                self.ss_textEditttt_07.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+                self.ss_textEditttt_08.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
+            elif self.sva_pushButton_01.isVisible():
+                self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+                self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 480, 647, 602 if self.extend_window else 272)
+                self.ss_textEditttt_06.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
+                self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
+            else:
+                self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+                self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 480, 647, 602 if self.extend_window else 272)
+                self.ss_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
+                self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
+        else:
+            self.cs_tab.setGeometry(45, 0, 1353, 1362 if self.extend_window else 757)
+            if self.cs_pushButtonn_08.isVisible():
+                self.cs_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
+                self.cs_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
+                self.cs_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+            elif self.cs_pushButtonn_01.isVisible():
+                self.cs_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
+                self.cs_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+            elif self.cvj_pushButton_01.isVisible():
+                self.cs_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
+                self.cs_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 1000, 602 if self.extend_window else 272)
+                self.czoo_pushButon_02.setGeometry(952, 761 if self.extend_window else 483, 50, 20)
+            elif self.cvc_pushButton_24.isVisible():
+                self.cs_textEditttt_01.setGeometry(7, 10, 497, 740 if self.extend_window else 463)
+                self.cs_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 497, 602 if self.extend_window else 272)
+                self.cs_textEditttt_03.setGeometry(509, 10, 497, 740 if self.extend_window else 463)
+                self.cs_textEditttt_04.setGeometry(509, 756 if self.extend_window else 480, 497, 602 if self.extend_window else 272)
+            elif self.cvc_pushButton_21.isVisible():
+                self.cs_textEditttt_05.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+                self.cs_textEditttt_06.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
+            elif self.cvo_pushButton_05.isVisible():
+                self.cs_textEditttt_07.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+                self.cs_textEditttt_08.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
+            elif self.cva_pushButton_01.isVisible():
+                self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+                self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 480, 647, 602 if self.extend_window else 272)
+                self.cs_textEditttt_06.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
+                self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
+            else:
+                self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+                self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 480, 647, 602 if self.extend_window else 272)
+                self.cs_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
+                self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
     def ProcessStarter(self):
         inthms    = int_hms()
@@ -766,16 +847,23 @@ class Window(QMainWindow):
             if self.counter % 5 == 0 and (self.dict_set['주식알림소리'] or self.dict_set['코인알림소리']):
                 soundQ.put('오류가 발생하였습니다. 로그탭을 확인하십시오.')
 
-        if not self.image_search or (self.counter % 60 == 0 and self.image_label.isVisible()):
+        if not self.image_search or (self.counter % 60 == 0 and (self.image_label1.isVisible() or self.image_label2.isVisible())):
             if not self.image_search: self.image_search = True
             webcQ.put(('풍경사진요청', ''))
 
     def ImageUpdate(self, data):
-        self.image_label.clear()
-        qpix = QPixmap()
-        qpix.loadFromData(data[1])
-        qpix = qpix.scaled(QSize(332, 105), Qt.IgnoreAspectRatio)
-        self.image_label.setPixmap(qpix)
+        if self.image_label1.isVisible():
+            self.image_label1.clear()
+            qpix = QPixmap()
+            qpix.loadFromData(data[1])
+            qpix = qpix.scaled(QSize(335, 105), Qt.IgnoreAspectRatio)
+            self.image_label1.setPixmap(qpix)
+        if self.image_label2.isVisible():
+            self.image_label2.clear()
+            qpix = QPixmap()
+            qpix.loadFromData(data[2])
+            qpix = qpix.scaled(QSize(335, 605), Qt.IgnoreAspectRatio)
+            self.image_label2.setPixmap(qpix)
 
     def UpdateSQsize(self, data):
         self.srqsize, self.stqsize, self.ssqsize = data
@@ -4916,9 +5004,12 @@ class Window(QMainWindow):
     # =================================================================================================================
 
     def mnButtonClicked_00(self, index):
+        if self.extend_window:
+            QMessageBox.critical(self, '오류 알림', '전략탭 확장 상태에서는 탭을 변경할 수 없습니다.')
+            return
         prev_main_btn = self.main_btn
         if prev_main_btn == index: return
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         if index == 3:
             if self.dict_set['거래소'] == '업비트':
                 self.cvjb_labelllll_03.setText('백테스트 기본설정   배팅(백만)                        평균틱수   self.vars[0]')
@@ -4942,7 +5033,7 @@ class Window(QMainWindow):
         self.main_btn_list[self.main_btn].setStyleSheet(style_bc_bt)
         self.main_box_list[prev_main_btn].setVisible(False)
         self.main_box_list[self.main_btn].setVisible(True)
-        QTimer.singleShot(400, lambda: self.image_label.setVisible(True if self.svc_labellllll_05.isVisible() or self.cvc_labellllll_05.isVisible() else False))
+        QTimer.singleShot(400, lambda: self.image_label1.setVisible(True if self.svc_labellllll_05.isVisible() or self.cvc_labellllll_05.isVisible() else False))
         self.animation = QPropertyAnimation(self.main_box_list[self.main_btn], b'size')
         self.animation.setEasingCurve(QEasingCurve.InCirc)
         self.animation.setDuration(300)
@@ -5339,91 +5430,73 @@ class Window(QMainWindow):
     def szooButtonClicked_01(self):
         if self.svj_pushButton_01.isVisible():
             if self.szoo_pushButon_01.text() == '확대(esc)':
-                self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
                 self.szoo_pushButon_01.setText('축소(esc)')
-                self.ss_textEditttt_01.setGeometry(7, 10, 1000, 738)
+                self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
+                self.ss_textEditttt_01.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.ss_textEditttt_02.setVisible(False)
                 self.szoo_pushButon_02.setVisible(False)
             else:
                 self.szoo_pushButon_01.setText('확대(esc)')
                 self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
-                self.ss_textEditttt_01.setGeometry(7, 10, 1000, 463)
+                self.ss_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
                 self.ss_textEditttt_02.setVisible(True)
-                self.szoo_pushButon_02.setVisible(True)
-        elif self.sva_pushButton_01.isVisible():
-            if self.szoo_pushButon_01.text() == '확대(esc)':
-                self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
-                self.szoo_pushButon_01.setText('축소(esc)')
-                self.ss_textEditttt_03.setGeometry(7, 10, 1000, 738)
-                self.ss_textEditttt_04.setVisible(False)
-                self.ss_textEditttt_06.setVisible(False)
-                self.szoo_pushButon_02.setVisible(False)
-            else:
-                self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
-                self.szoo_pushButon_01.setText('확대(esc)')
-                self.ss_textEditttt_03.setGeometry(7, 10, 647, 463)
-                self.ss_textEditttt_04.setVisible(True)
-                self.ss_textEditttt_06.setVisible(True)
                 self.szoo_pushButon_02.setVisible(True)
         else:
             if self.szoo_pushButon_01.text() == '확대(esc)':
-                self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
                 self.szoo_pushButon_01.setText('축소(esc)')
-                self.ss_textEditttt_03.setGeometry(7, 10, 1000, 738)
+                self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
+                self.ss_textEditttt_03.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.ss_textEditttt_04.setVisible(False)
-                self.ss_textEditttt_05.setVisible(False)
+                if self.sva_pushButton_01.isVisible():
+                    self.ss_textEditttt_06.setVisible(False)
+                else:
+                    self.ss_textEditttt_05.setVisible(False)
                 self.szoo_pushButon_02.setVisible(False)
             else:
-                self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
                 self.szoo_pushButon_01.setText('확대(esc)')
-                self.ss_textEditttt_03.setGeometry(7, 10, 647, 463)
+                self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
+                self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
                 self.ss_textEditttt_04.setVisible(True)
-                self.ss_textEditttt_05.setVisible(True)
+                if self.sva_pushButton_01.isVisible():
+                    self.ss_textEditttt_06.setVisible(True)
+                else:
+                    self.ss_textEditttt_05.setVisible(True)
                 self.szoo_pushButon_02.setVisible(True)
 
     def szooButtonClicked_02(self):
         if self.svj_pushButton_01.isVisible():
             if self.szoo_pushButon_02.text() == '확대(esc)':
-                self.szoo_pushButon_02.setGeometry(952, 15, 50, 20)
                 self.szoo_pushButon_02.setText('축소(esc)')
-                self.ss_textEditttt_02.setGeometry(7, 10, 1000, 738)
+                self.szoo_pushButon_02.setGeometry(952, 15, 50, 20)
+                self.ss_textEditttt_02.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.ss_textEditttt_01.setVisible(False)
                 self.szoo_pushButon_01.setVisible(False)
             else:
-                self.szoo_pushButon_02.setGeometry(952, 483, 50, 20)
                 self.szoo_pushButon_02.setText('확대(esc)')
-                self.ss_textEditttt_02.setGeometry(7, 478, 1000, 270)
+                self.szoo_pushButon_02.setGeometry(952, 761 if self.extend_window else 483, 50, 20)
+                self.ss_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 1000, 602 if self.extend_window else 272)
                 self.ss_textEditttt_01.setVisible(True)
-                self.szoo_pushButon_01.setVisible(True)
-        elif self.sva_pushButton_01.isVisible():
-            if self.szoo_pushButon_02.text() == '확대(esc)':
-                self.szoo_pushButon_02.setGeometry(952, 15, 50, 20)
-                self.szoo_pushButon_02.setText('축소(esc)')
-                self.ss_textEditttt_04.setGeometry(7, 10, 1000, 738)
-                self.ss_textEditttt_03.setVisible(False)
-                self.ss_textEditttt_06.setVisible(False)
-                self.szoo_pushButon_01.setVisible(False)
-            else:
-                self.szoo_pushButon_02.setGeometry(599, 483, 50, 20)
-                self.szoo_pushButon_02.setText('확대(esc)')
-                self.ss_textEditttt_04.setGeometry(7, 478, 647, 270)
-                self.ss_textEditttt_03.setVisible(True)
-                self.ss_textEditttt_06.setVisible(True)
                 self.szoo_pushButon_01.setVisible(True)
         else:
             if self.szoo_pushButon_02.text() == '확대(esc)':
-                self.szoo_pushButon_02.setGeometry(952, 15, 50, 20)
                 self.szoo_pushButon_02.setText('축소(esc)')
-                self.ss_textEditttt_04.setGeometry(7, 10, 1000, 738)
+                self.szoo_pushButon_02.setGeometry(952, 15, 50, 20)
+                self.ss_textEditttt_04.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.ss_textEditttt_03.setVisible(False)
-                self.ss_textEditttt_05.setVisible(False)
+                if self.sva_pushButton_01.isVisible():
+                    self.ss_textEditttt_06.setVisible(False)
+                else:
+                    self.ss_textEditttt_05.setVisible(False)
                 self.szoo_pushButon_01.setVisible(False)
             else:
-                self.szoo_pushButon_02.setGeometry(599, 483, 50, 20)
                 self.szoo_pushButon_02.setText('확대(esc)')
-                self.ss_textEditttt_04.setGeometry(7, 478, 647, 270)
+                self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
+                self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 480, 647, 602 if self.extend_window else 272)
                 self.ss_textEditttt_03.setVisible(True)
-                self.ss_textEditttt_05.setVisible(True)
+                if self.sva_pushButton_01.isVisible():
+                    self.ss_textEditttt_06.setVisible(True)
+                else:
+                    self.ss_textEditttt_05.setVisible(True)
                 self.szoo_pushButon_01.setVisible(True)
 
     # =================================================================================================================
@@ -5431,91 +5504,73 @@ class Window(QMainWindow):
     def czooButtonClicked_01(self):
         if self.cvj_pushButton_01.isVisible():
             if self.czoo_pushButon_01.text() == '확대(esc)':
-                self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
                 self.czoo_pushButon_01.setText('축소(esc)')
-                self.cs_textEditttt_01.setGeometry(7, 10, 1000, 738)
+                self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
+                self.cs_textEditttt_01.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.cs_textEditttt_02.setVisible(False)
                 self.czoo_pushButon_02.setVisible(False)
             else:
                 self.czoo_pushButon_01.setText('확대(esc)')
                 self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
-                self.cs_textEditttt_01.setGeometry(7, 10, 1000, 463)
+                self.cs_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
                 self.cs_textEditttt_02.setVisible(True)
-                self.czoo_pushButon_02.setVisible(True)
-        elif self.cva_pushButton_01.isVisible():
-            if self.czoo_pushButon_01.text() == '확대(esc)':
-                self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
-                self.czoo_pushButon_01.setText('축소(esc)')
-                self.cs_textEditttt_03.setGeometry(7, 10, 1000, 738)
-                self.cs_textEditttt_04.setVisible(False)
-                self.cs_textEditttt_06.setVisible(False)
-                self.czoo_pushButon_02.setVisible(False)
-            else:
-                self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
-                self.czoo_pushButon_01.setText('확대(esc)')
-                self.cs_textEditttt_03.setGeometry(7, 10, 647, 463)
-                self.cs_textEditttt_04.setVisible(True)
-                self.cs_textEditttt_06.setVisible(True)
                 self.czoo_pushButon_02.setVisible(True)
         else:
             if self.czoo_pushButon_01.text() == '확대(esc)':
-                self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
                 self.czoo_pushButon_01.setText('축소(esc)')
-                self.cs_textEditttt_03.setGeometry(7, 10, 1000, 738)
+                self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
+                self.cs_textEditttt_03.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.cs_textEditttt_04.setVisible(False)
-                self.cs_textEditttt_05.setVisible(False)
+                if self.cva_pushButton_01.isVisible():
+                    self.cs_textEditttt_06.setVisible(False)
+                else:
+                    self.cs_textEditttt_05.setVisible(False)
                 self.czoo_pushButon_02.setVisible(False)
             else:
-                self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
                 self.czoo_pushButon_01.setText('확대(esc)')
-                self.cs_textEditttt_03.setGeometry(7, 10, 647, 463)
+                self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
+                self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
                 self.cs_textEditttt_04.setVisible(True)
-                self.cs_textEditttt_05.setVisible(True)
+                if self.cva_pushButton_01.isVisible():
+                    self.cs_textEditttt_06.setVisible(True)
+                else:
+                    self.cs_textEditttt_05.setVisible(True)
                 self.czoo_pushButon_02.setVisible(True)
 
     def czooButtonClicked_02(self):
         if self.cvj_pushButton_01.isVisible():
             if self.czoo_pushButon_02.text() == '확대(esc)':
-                self.czoo_pushButon_02.setGeometry(952, 15, 50, 20)
                 self.czoo_pushButon_02.setText('축소(esc)')
-                self.cs_textEditttt_02.setGeometry(7, 10, 1000, 738)
+                self.czoo_pushButon_02.setGeometry(952, 15, 50, 20)
+                self.cs_textEditttt_02.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.cs_textEditttt_01.setVisible(False)
                 self.czoo_pushButon_01.setVisible(False)
             else:
-                self.czoo_pushButon_02.setGeometry(952, 483, 50, 20)
                 self.czoo_pushButon_02.setText('확대(esc)')
-                self.cs_textEditttt_02.setGeometry(7, 478, 1000, 270)
+                self.czoo_pushButon_02.setGeometry(952, 761 if self.extend_window else 483, 50, 20)
+                self.cs_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 1000, 602 if self.extend_window else 272)
                 self.cs_textEditttt_01.setVisible(True)
-                self.czoo_pushButon_01.setVisible(True)
-        elif self.cva_pushButton_01.isVisible():
-            if self.czoo_pushButon_02.text() == '확대(esc)':
-                self.czoo_pushButon_02.setGeometry(952, 15, 50, 20)
-                self.czoo_pushButon_02.setText('축소(esc)')
-                self.cs_textEditttt_04.setGeometry(7, 10, 1000, 738)
-                self.cs_textEditttt_03.setVisible(False)
-                self.cs_textEditttt_06.setVisible(False)
-                self.czoo_pushButon_01.setVisible(False)
-            else:
-                self.czoo_pushButon_02.setGeometry(599, 483, 50, 20)
-                self.czoo_pushButon_02.setText('확대(esc)')
-                self.cs_textEditttt_04.setGeometry(7, 478, 647, 270)
-                self.cs_textEditttt_03.setVisible(True)
-                self.cs_textEditttt_06.setVisible(True)
                 self.czoo_pushButon_01.setVisible(True)
         else:
             if self.czoo_pushButon_02.text() == '확대(esc)':
-                self.czoo_pushButon_02.setGeometry(952, 15, 50, 20)
                 self.czoo_pushButon_02.setText('축소(esc)')
-                self.cs_textEditttt_04.setGeometry(7, 10, 1000, 738)
+                self.czoo_pushButon_02.setGeometry(952, 15, 50, 20)
+                self.cs_textEditttt_04.setGeometry(7, 10, 1000, 1347 if self.extend_window else 740)
                 self.cs_textEditttt_03.setVisible(False)
-                self.cs_textEditttt_05.setVisible(False)
+                if self.cva_pushButton_01.isVisible():
+                    self.cs_textEditttt_06.setVisible(False)
+                else:
+                    self.cs_textEditttt_05.setVisible(False)
                 self.czoo_pushButon_01.setVisible(False)
             else:
-                self.czoo_pushButon_02.setGeometry(599, 483, 50, 20)
                 self.czoo_pushButon_02.setText('확대(esc)')
-                self.cs_textEditttt_04.setGeometry(7, 478, 647, 270)
+                self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
+                self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
                 self.cs_textEditttt_03.setVisible(True)
-                self.cs_textEditttt_05.setVisible(True)
+                if self.cva_pushButton_01.isVisible():
+                    self.cs_textEditttt_06.setVisible(True)
+                else:
+                    self.cs_textEditttt_05.setVisible(True)
                 self.czoo_pushButon_01.setVisible(True)
 
     # =================================================================================================================
@@ -6473,10 +6528,9 @@ class Window(QMainWindow):
             button.setStyleSheet(style_bc_dk if self.focusWidget() == button else style_bc_bs)
 
     def svjButtonClicked_01(self):
-        self.ss_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.ss_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.ss_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.ss_textEditttt_06.setGeometry(659, 10, 347, 738)
+        self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.ss_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.svc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.svc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -6484,7 +6538,7 @@ class Window(QMainWindow):
         self.svc_pushButton_04.setGeometry(1182, 150, 165, 30)
 
         self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.szoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.szoo_pushButon_01.setText('확대(esc)')
         self.szoo_pushButon_02.setText('확대(esc)')
@@ -6522,7 +6576,7 @@ class Window(QMainWindow):
         self.svc_pushButton_03.setText('최적화 변수범위 로딩(F9)')
         self.svc_pushButton_04.setText('최적화 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.svc_labellllll_04.setText(testtext)
         self.svc_labellllll_05.setVisible(False)
         self.svc_pushButton_21.setVisible(False)
@@ -6534,9 +6588,9 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_02(self):
-        self.ss_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.ss_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.ss_textEditttt_05.setGeometry(659, 10, 347, 738)
+        self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.ss_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.svc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.svc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -6544,7 +6598,7 @@ class Window(QMainWindow):
         self.svc_pushButton_04.setGeometry(1182, 150, 165, 30)
 
         self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.szoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.szoo_pushButon_01.setText('확대(esc)')
         self.szoo_pushButon_02.setText('확대(esc)')
@@ -6582,7 +6636,7 @@ class Window(QMainWindow):
         self.svc_pushButton_03.setText('최적화 변수범위 로딩(F9)')
         self.svc_pushButton_04.setText('최적화 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.svc_labellllll_01.setVisible(False)
         self.svc_labellllll_04.setText(rwfttext)
         self.svc_labellllll_05.setVisible(False)
@@ -6595,10 +6649,9 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_03(self):
-        self.ss_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.ss_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.ss_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.ss_textEditttt_06.setGeometry(659, 10, 347, 738)
+        self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.ss_textEditttt_06.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.svc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.svc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -6611,7 +6664,7 @@ class Window(QMainWindow):
         self.sva_pushButton_05.setGeometry(1182, 150, 165, 30)
 
         self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.szoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.szoo_pushButon_01.setText('확대(esc)')
         self.szoo_pushButon_02.setText('확대(esc)')
@@ -6649,7 +6702,7 @@ class Window(QMainWindow):
         self.sva_pushButton_04.setText('GA 변수범위 로딩(F9)')
         self.sva_pushButton_05.setText('GA 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.svc_labellllll_04.setText(gaoptext)
         self.svc_labellllll_05.setVisible(False)
         self.svc_pushButton_21.setVisible(False)
@@ -6661,8 +6714,8 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_04(self):
-        self.ss_textEditttt_05.setGeometry(7, 10, 497, 738)
-        self.ss_textEditttt_06.setGeometry(509, 10, 497, 738)
+        self.ss_textEditttt_05.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+        self.ss_textEditttt_06.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
 
         self.svc_comboBoxxx_02.setGeometry(1012, 10, 165, 30)
         self.svc_lineEdittt_02.setGeometry(1182, 10, 165, 30)
@@ -6727,7 +6780,7 @@ class Window(QMainWindow):
 
         self.svc_pushButton_11.setVisible(True)
 
-        self.image_label.setVisible(True)
+        self.image_label1.setVisible(True)
         self.svc_labellllll_05.setVisible(True)
         self.svc_labellllll_04.setText(gaoptext)
         self.svc_labellllll_05.setText(vedittxt)
@@ -6740,10 +6793,9 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_05(self):
-        self.ss_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.ss_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.ss_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.ss_textEditttt_06.setGeometry(659, 10, 347, 738)
+        self.ss_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.ss_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.ss_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.svc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.svc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -6751,7 +6803,7 @@ class Window(QMainWindow):
         self.svc_pushButton_04.setGeometry(1182, 150, 165, 30)
 
         self.szoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.szoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.szoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.szoo_pushButon_01.setText('확대(esc)')
         self.szoo_pushButon_02.setText('확대(esc)')
@@ -6789,7 +6841,7 @@ class Window(QMainWindow):
         self.svc_pushButton_03.setText('최적화 변수범위 로딩(F9)')
         self.svc_pushButton_04.setText('최적화 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.svc_labellllll_04.setText(optitext)
         self.svc_labellllll_05.setVisible(False)
         self.svc_pushButton_21.setVisible(False)
@@ -6801,10 +6853,10 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_06(self):
-        self.ss_textEditttt_01.setGeometry(7, 10, 497, 463)
-        self.ss_textEditttt_02.setGeometry(7, 478, 497, 270)
-        self.ss_textEditttt_03.setGeometry(509, 10, 497, 463)
-        self.ss_textEditttt_04.setGeometry(509, 478, 497, 270)
+        self.ss_textEditttt_01.setGeometry(7, 10, 497, 740 if self.extend_window else 463)
+        self.ss_textEditttt_02.setGeometry(7, 756 if self.extend_window else 478, 497, 602 if self.extend_window else 272)
+        self.ss_textEditttt_03.setGeometry(509, 10, 497, 740 if self.extend_window else 463)
+        self.ss_textEditttt_04.setGeometry(509, 756 if self.extend_window else 478, 497, 602 if self.extend_window else 272)
 
         self.svjb_comboBoxx_01.setGeometry(1012, 10, 165, 30)
         self.svjb_pushButon_01.setGeometry(1182, 10, 165, 30)
@@ -6859,7 +6911,7 @@ class Window(QMainWindow):
         self.svc_lineEdittt_05.setVisible(False)
         self.svc_pushButton_14.setVisible(False)
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.svc_labellllll_04.setText(optitext)
         self.svc_labellllll_05.setVisible(False)
         self.svc_pushButton_21.setVisible(False)
@@ -6880,6 +6932,10 @@ class Window(QMainWindow):
         self.ss_textEditttt_07.setVisible(False)
         self.ss_textEditttt_08.setVisible(False)
 
+        self.ss_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
+        self.ss_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
+        self.ss_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+
         for item in self.stock_esczom_list:
             item.setVisible(False)
         for item in self.stock_detail_list:
@@ -6899,6 +6955,9 @@ class Window(QMainWindow):
         self.ss_textEditttt_07.setVisible(False)
         self.ss_textEditttt_08.setVisible(False)
 
+        self.ss_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
+        self.ss_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+
         for item in self.stock_esczom_list:
             item.setVisible(False)
         for item in self.stock_baklog_list:
@@ -6908,8 +6967,8 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_09(self):
-        self.ss_textEditttt_01.setGeometry(7, 10, 1000, 463)
-        self.ss_textEditttt_02.setGeometry(7, 478, 1000, 270)
+        self.ss_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
+        self.ss_textEditttt_02.setGeometry(7, 756 if self.extend_window else 478, 1000, 602 if self.extend_window else 272)
 
         self.svjb_comboBoxx_01.setGeometry(1012, 10, 165, 25)
         self.svjb_pushButon_01.setGeometry(1012, 40, 165, 30)
@@ -6917,7 +6976,7 @@ class Window(QMainWindow):
         self.svjs_pushButon_01.setGeometry(1012, 508, 165, 30)
 
         self.szoo_pushButon_01.setGeometry(952, 15, 50, 20)
-        self.szoo_pushButon_02.setGeometry(952, 483, 50, 20)
+        self.szoo_pushButon_02.setGeometry(952, 761 if self.extend_window else 483, 50, 20)
 
         self.szoo_pushButon_01.setText('확대(esc)')
         self.szoo_pushButon_02.setText('확대(esc)')
@@ -6955,7 +7014,7 @@ class Window(QMainWindow):
         self.svjb_pushButon_01.setText('매수전략 로딩(F1)')
         self.svjs_pushButon_01.setText('매도전략 로딩(F5)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.svc_labellllll_05.setVisible(False)
         self.svc_pushButton_21.setVisible(False)
         self.svc_pushButton_22.setVisible(False)
@@ -6966,6 +7025,9 @@ class Window(QMainWindow):
         self.sChangeSvjButtonColor()
 
     def svjButtonClicked_10(self):
+        self.ss_textEditttt_07.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+        self.ss_textEditttt_08.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
+
         self.ss_textEditttt_01.setVisible(False)
         self.ss_textEditttt_02.setVisible(False)
         self.ss_textEditttt_03.setVisible(False)
@@ -7011,7 +7073,7 @@ class Window(QMainWindow):
         self.svc_pushButton_03.setVisible(False)
         self.svc_pushButton_04.setVisible(False)
 
-        self.image_label.setVisible(True)
+        self.image_label1.setVisible(True)
         self.svc_labellllll_01.setVisible(False)
         self.svc_labellllll_04.setVisible(True)
         self.svc_labellllll_05.setVisible(True)
@@ -8071,10 +8133,9 @@ class Window(QMainWindow):
             button.setStyleSheet(style_bc_dk if self.focusWidget() == button else style_bc_bs)
 
     def cvjButtonClicked_01(self):
-        self.cs_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.cs_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.cs_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.cs_textEditttt_06.setGeometry(659, 10, 347, 738)
+        self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.cs_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.cvc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.cvc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -8082,7 +8143,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_04.setGeometry(1182, 150, 165, 30)
 
         self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.czoo_pushButon_02.setGeometry(599, 482, 50, 20)
+        self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.czoo_pushButon_01.setText('확대(esc)')
         self.czoo_pushButon_02.setText('확대(esc)')
@@ -8120,7 +8181,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_03.setText('최적화 변수범위 로딩(F9)')
         self.cvc_pushButton_04.setText('최적화 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.cvc_labellllll_04.setText(testtext)
         self.cvc_labellllll_05.setVisible(False)
         self.cvc_pushButton_21.setVisible(False)
@@ -8132,9 +8193,9 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_02(self):
-        self.cs_textEditttt_03.setGeometry(7, 5, 647, 463)
-        self.cs_textEditttt_04.setGeometry(7, 473, 647, 270)
-        self.cs_textEditttt_05.setGeometry(659, 5, 347, 738)
+        self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.cs_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.cvc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.cvc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -8142,7 +8203,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_04.setGeometry(1182, 150, 165, 30)
 
         self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.czoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.czoo_pushButon_01.setText('확대(esc)')
         self.czoo_pushButon_02.setText('확대(esc)')
@@ -8180,7 +8241,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_03.setText('최적화 변수범위 로딩(F9)')
         self.cvc_pushButton_04.setText('최적화 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.cvc_labellllll_01.setVisible(False)
         self.cvc_labellllll_04.setText(rwfttext)
         self.cvc_labellllll_05.setVisible(False)
@@ -8193,10 +8254,9 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_03(self):
-        self.cs_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.cs_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.cs_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.cs_textEditttt_06.setGeometry(659, 10, 347, 738)
+        self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.cs_textEditttt_06.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.cvc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.cvc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -8209,7 +8269,7 @@ class Window(QMainWindow):
         self.cva_pushButton_05.setGeometry(1182, 150, 165, 30)
 
         self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.czoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.czoo_pushButon_01.setText('확대(esc)')
         self.czoo_pushButon_02.setText('확대(esc)')
@@ -8247,7 +8307,7 @@ class Window(QMainWindow):
         self.cva_pushButton_04.setText('GA 변수범위 로딩(F9)')
         self.cva_pushButton_05.setText('GA 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.cvc_labellllll_04.setText(gaoptext)
         self.cvc_labellllll_05.setVisible(False)
         self.cvc_pushButton_21.setVisible(False)
@@ -8259,8 +8319,8 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_04(self):
-        self.cs_textEditttt_05.setGeometry(7, 10, 497, 738)
-        self.cs_textEditttt_06.setGeometry(509, 10, 497, 738)
+        self.cs_textEditttt_05.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+        self.cs_textEditttt_06.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
 
         self.cvc_comboBoxxx_02.setGeometry(1012, 10, 165, 30)
         self.cvc_lineEdittt_02.setGeometry(1182, 10, 165, 30)
@@ -8325,7 +8385,7 @@ class Window(QMainWindow):
 
         self.cvc_pushButton_11.setVisible(True)
 
-        self.image_label.setVisible(True)
+        self.image_label1.setVisible(True)
         self.cvc_labellllll_05.setVisible(True)
         self.cvc_labellllll_04.setText(gaoptext)
         self.cvc_labellllll_05.setText(vedittxt)
@@ -8338,10 +8398,9 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_05(self):
-        self.cs_textEditttt_03.setGeometry(7, 10, 647, 463)
-        self.cs_textEditttt_04.setGeometry(7, 478, 647, 270)
-        self.cs_textEditttt_05.setGeometry(659, 10, 347, 738)
-        self.cs_textEditttt_06.setGeometry(659, 10, 347, 738)
+        self.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if self.extend_window else 463)
+        self.cs_textEditttt_04.setGeometry(7, 756 if self.extend_window else 478, 647, 602 if self.extend_window else 272)
+        self.cs_textEditttt_05.setGeometry(659, 10, 347, 1347 if self.extend_window else 740)
 
         self.cvc_comboBoxxx_02.setGeometry(1012, 115, 165, 30)
         self.cvc_lineEdittt_02.setGeometry(1182, 115, 165, 30)
@@ -8349,7 +8408,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_04.setGeometry(1182, 150, 165, 30)
 
         self.czoo_pushButon_01.setGeometry(599, 15, 50, 20)
-        self.czoo_pushButon_02.setGeometry(599, 483, 50, 20)
+        self.czoo_pushButon_02.setGeometry(599, 761 if self.extend_window else 483, 50, 20)
 
         self.czoo_pushButon_01.setText('확대(esc)')
         self.czoo_pushButon_02.setText('확대(esc)')
@@ -8387,7 +8446,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_03.setText('최적화 변수범위 로딩(F9)')
         self.cvc_pushButton_04.setText('최적화 변수범위 저장(F12)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.cvc_labellllll_04.setText(optitext)
         self.cvc_labellllll_05.setVisible(False)
         self.cvc_pushButton_21.setVisible(False)
@@ -8399,10 +8458,10 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_06(self):
-        self.cs_textEditttt_01.setGeometry(7, 10, 497, 463)
-        self.cs_textEditttt_02.setGeometry(7, 478, 497, 270)
-        self.cs_textEditttt_03.setGeometry(509, 10, 497, 463)
-        self.cs_textEditttt_04.setGeometry(509, 478, 497, 270)
+        self.cs_textEditttt_01.setGeometry(7, 10, 497, 740 if self.extend_window else 463)
+        self.cs_textEditttt_02.setGeometry(7, 756 if self.extend_window else 478, 497, 602 if self.extend_window else 272)
+        self.cs_textEditttt_03.setGeometry(509, 10, 497, 740 if self.extend_window else 463)
+        self.cs_textEditttt_04.setGeometry(509, 756 if self.extend_window else 478, 497, 602 if self.extend_window else 272)
 
         self.cvjb_comboBoxx_01.setGeometry(1012, 10, 165, 30)
         self.cvjb_pushButon_01.setGeometry(1182, 10, 165, 30)
@@ -8457,7 +8516,7 @@ class Window(QMainWindow):
         self.cvc_lineEdittt_05.setVisible(False)
         self.cvc_pushButton_14.setVisible(False)
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.cvc_labellllll_04.setText(optitext)
         self.cvc_labellllll_05.setVisible(False)
         self.cvc_pushButton_21.setVisible(False)
@@ -8478,6 +8537,10 @@ class Window(QMainWindow):
         self.cs_textEditttt_07.setVisible(False)
         self.cs_textEditttt_08.setVisible(False)
 
+        self.cs_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
+        self.cs_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
+        self.cs_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+
         for item in self.coin_esczom_list:
             item.setVisible(False)
         for item in self.coin_detail_list:
@@ -8497,6 +8560,9 @@ class Window(QMainWindow):
         self.cs_textEditttt_07.setVisible(False)
         self.cs_textEditttt_08.setVisible(False)
 
+        self.cs_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
+        self.cs_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+
         for item in self.coin_esczom_list:
             item.setVisible(False)
         for item in self.coin_baklog_list:
@@ -8506,8 +8572,8 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_09(self):
-        self.cs_textEditttt_01.setGeometry(7, 10, 1000, 463)
-        self.cs_textEditttt_02.setGeometry(7, 478, 1000, 270)
+        self.cs_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
+        self.cs_textEditttt_02.setGeometry(7, 756 if self.extend_window else 478, 1000, 602 if self.extend_window else 272)
 
         self.cvjb_comboBoxx_01.setGeometry(1012, 10, 165, 25)
         self.cvjb_pushButon_01.setGeometry(1012, 40, 165, 30)
@@ -8515,7 +8581,7 @@ class Window(QMainWindow):
         self.cvjs_pushButon_01.setGeometry(1012, 508, 165, 30)
 
         self.czoo_pushButon_01.setGeometry(952, 15, 50, 20)
-        self.czoo_pushButon_02.setGeometry(952, 483, 50, 20)
+        self.czoo_pushButon_02.setGeometry(952, 761 if self.extend_window else 483, 50, 20)
 
         self.czoo_pushButon_01.setText('확대(esc)')
         self.czoo_pushButon_02.setText('확대(esc)')
@@ -8553,7 +8619,7 @@ class Window(QMainWindow):
         self.cvjb_pushButon_01.setText('매수전략 로딩(F1)')
         self.cvjs_pushButon_01.setText('매도전략 로딩(F5)')
 
-        self.image_label.setVisible(False)
+        self.image_label1.setVisible(False)
         self.cvc_labellllll_05.setVisible(False)
         self.cvc_pushButton_21.setVisible(False)
         self.cvc_pushButton_22.setVisible(False)
@@ -8564,6 +8630,9 @@ class Window(QMainWindow):
         self.cChangeSvjButtonColor()
 
     def cvjButtonClicked_10(self):
+        self.cs_textEditttt_07.setGeometry(7, 10, 497, 1347 if self.extend_window else 740)
+        self.cs_textEditttt_08.setGeometry(509, 10, 497, 1347 if self.extend_window else 740)
+
         self.cs_textEditttt_01.setVisible(False)
         self.cs_textEditttt_02.setVisible(False)
         self.cs_textEditttt_03.setVisible(False)
@@ -8609,7 +8678,7 @@ class Window(QMainWindow):
         self.cvc_pushButton_03.setVisible(False)
         self.cvc_pushButton_04.setVisible(False)
 
-        self.image_label.setVisible(True)
+        self.image_label1.setVisible(True)
         self.cvc_labellllll_01.setVisible(False)
         self.cvc_labellllll_04.setVisible(True)
         self.cvc_labellllll_05.setVisible(True)
