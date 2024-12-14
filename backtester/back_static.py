@@ -1,3 +1,4 @@
+import math
 import sys
 import random
 import pyupbit
@@ -125,6 +126,25 @@ def AddAvgData(df, r, avg_list):
         df[f'누적초당매수수량{avg}'] = df['초당매수수량'].rolling(window=avg).sum()
         df[f'누적초당매도수량{avg}'] = df['초당매도수량'].rolling(window=avg).sum()
         df[f'초당거래대금평균{avg}'] = df['초당거래대금'].rolling(window=avg).mean()
+        if r == 3:
+            df2 = df[['등락율', '당일거래대금', '전일비']].copy()
+            df2[f'등락율N{avg}'] = df2['등락율'].shift(avg - 1)
+            df2['등락율차이'] = df2['등락율'] - df2[f'등락율N{avg}']
+            df2[f'당일거래대금N{avg}'] = df2['당일거래대금'].shift(avg - 1)
+            df2['당일거래대금차이'] = df2['당일거래대금'] - df2[f'당일거래대금N{avg}']
+            df2[f'전일비N{avg}'] = df2['전일비'].shift(avg - 1)
+            df2['전일비차이'] = df2['전일비'] - df2[f'전일비N{avg}']
+            df['등락율각도'] = df2['등락율차이'].apply(lambda x: round(math.atan2(x * 5, avg) / (2 * math.pi) * 360, 2))
+            df['당일거래대금각도'] = df2['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100, avg) / (2 * math.pi) * 360, 2))
+            df['전일비각도'] = df2['전일비차이'].apply(lambda x: round(math.atan2(x, avg) / (2 * math.pi) * 360, 2))
+        else:
+            df2 = df[['등락율', '당일거래대금']].copy()
+            df2[f'등락율N{avg}'] = df2['등락율'].shift(avg - 1)
+            df2['등락율차이'] = df2['등락율'] - df2[f'등락율N{avg}']
+            df2[f'당일거래대금N{avg}'] = df2['당일거래대금'].shift(avg - 1)
+            df2['당일거래대금차이'] = df2['당일거래대금'] - df2[f'당일거래대금N{avg}']
+            df['등락율각도'] = df2['등락율차이'].apply(lambda x: round(math.atan2(x * 10, avg) / (2 * math.pi) * 360, 2))
+            df['당일거래대금각도'] = df2['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100_000_000, avg) / (2 * math.pi) * 360, 2))
 
 def LoadOrderSetting(gubun):
     con = sqlite3.connect(DB_SETTING)
@@ -312,7 +332,7 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
             text3, stdp_ = GetText3(False, std, stdp)
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'])
     else:
-        std = -100_000_000_000
+        std = -2_147_483_648
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
 
@@ -390,30 +410,31 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     std_true = mdd_low <= mdd <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and \
         ap_low <= ap <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high
     std, pm, p2m, pam, pwm, gm, g2m, gam, gwm, text = 0, 0, 0, 0, 0, 0, 0, 0, 0, ''
+    std_false_point = -2147483648
     if tc > 0:
         if 'TRAIN' in pre_text:
             if 'P' in optistd:
                 if optistd == 'TP':
-                    std = tsp if std_true else 0
+                    std = tsp if std_true else std_false_point
                 elif optistd == 'PM':
-                    std = pm = round(tsp / mdd, 2) if std_true else 0
+                    std = pm = round(tsp / mdd, 2) if std_true else std_false_point
                 elif optistd == 'P2M':
-                    std = p2m = round(tsp * tsp / mdd / 100, 2) if std_true else 0
+                    std = p2m = round(tsp * tsp / mdd / 100, 2) if std_true else std_false_point
                 elif optistd == 'PAM':
-                    std = pam = round(tsp * ap / mdd, 2) if std_true else 0
+                    std = pam = round(tsp * ap / mdd, 2) if std_true else std_false_point
                 elif optistd == 'PWM':
-                    std = pwm = round(tsp * wr / mdd / 100, 2) if std_true else 0
+                    std = pwm = round(tsp * wr / mdd / 100, 2) if std_true else std_false_point
             elif 'G' in optistd:
                 if optistd == 'TG':
-                    std = tsg if std_true else 0
+                    std = tsg if std_true else std_false_point
                 elif optistd == 'GM':
-                    std = gm = round(tsg / mdd_, 2) if std_true else 0
+                    std = gm = round(tsg / mdd_, 2) if std_true else std_false_point
                 elif optistd == 'G2M':
-                    std = g2m = round(tsg * tsg / mdd_ / betting, 2) if std_true else 0
+                    std = g2m = round(tsg * tsg / mdd_ / betting, 2) if std_true else std_false_point
                 elif optistd == 'GAM':
-                    std = gam = round(tsg * ap / mdd_, 2) if std_true else 0
+                    std = gam = round(tsg * ap / mdd_, 2) if std_true else std_false_point
                 elif optistd == 'GWM':
-                    std = gwm = round(tsg * wr / mdd_ / 100, 2) if std_true else 0
+                    std = gwm = round(tsg * wr / mdd_ / 100, 2) if std_true else std_false_point
         else:
             if 'P' in optistd:
                 if optistd == 'TP':
@@ -704,93 +725,90 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
         plt.show()
 
 
-class CollectTotal:
-    def __init__(self, tq, ctq, buystd, gubun):
-        self.tq        = tq
-        self.ctq       = ctq
-        self.buystd    = buystd
-        self.gubun     = gubun
-        self.arry_bct  = None
-        self.list_data = [[], [], [], [], [], [], [], [], [], [], [], [], [], []]
-        self.Start()
-
-    def Start(self):
-        while True:
-            data = self.ctq.get()
-            if data[0] == '백테결과':
-                self.Collect(data)
-            elif data == '백테완료':
-                if self.list_data[0]:
-                    data = ['백테결과', self.gubun, self.list_data, self.arry_bct]
-                else:
-                    data = ['백테결과', None, None, None]
-                self.tq.put(data)
-            elif data == '백테시작':
-                self.InitData()
-            elif data[0] == '보유종목수어레이':
-                self.arry_bct = data[1]
-            else:
-                break
-        sys.exit()
-
-    def Collect(self, data):
-        index = str(data[3]) if self.buystd else str(data[4])
-        while index in self.list_data[0]:
-            index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
-
-        self.list_data[0].append(index)
-        self.list_data[1].append(data[1])
-        self.list_data[2].append(data[2])
-        self.list_data[3].append(data[3])
-        self.list_data[4].append(data[4])
-        self.list_data[5].append(data[5])
-        self.list_data[6].append(data[6])
-        self.list_data[7].append(data[7])
-        self.list_data[8].append(data[8])
-        self.list_data[9].append(data[9])
-        self.list_data[10].append(data[10])
-        self.list_data[11].append(data[11])
-        self.list_data[12].append(data[12])
-        self.list_data[13].append(data[13])
-
-        if data[14]:
-            arry_bct = self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])]
-            arry_bct[:, 1] += 1
-            self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])] = arry_bct
-
-    def InitData(self):
-        self.arry_bct[:, 1] = 0
-        self.list_data = [[], [], [], [], [], [], [], [], [], [], [], [], [], []]
-
-
 class SubTotal:
-    def __init__(self, tq, stq, betting, optistd, gubun):
-        self.tq      = tq
-        self.stq     = stq
-        self.betting = betting
-        self.optistd = optistd
-        self.gubun   = gubun
+    def __init__(self, tq, stq, buystd, gubun):
+        self.tq       = tq
+        self.stq      = stq
+        self.buystd   = buystd
+        self.gubun    = gubun
+        self.dict_tsg = {}
+        self.dict_bct = {}
+        self.arry_bct = None
+        self.betting  = None
+        self.optistd  = None
+        self.complete = False
         self.Start()
 
     def Start(self):
         while True:
             data = self.stq.get()
-            if type(data) == list:
+            if data[0] == '백테결과':
+                self.CollectData(data)
+            elif data[0] == '결과집계':
                 self.SendSubTotal(data)
+            elif data[0] == '백테정보':
+                self.arry_bct = data[1]
+                self.betting  = data[2]
+                self.optistd  = data[3]
+            elif data == '백테시작':
+                self.complete = False
+                self.InitData()
+            elif data == '백테완료':
+                self.complete = True
             else:
                 break
+
+            if self.complete and self.stq.empty():
+                self.tq.put(['백테결과', self.dict_tsg, self.dict_bct])
+                self.complete = False
+
         sys.exit()
 
+    def InitData(self):
+        self.dict_tsg = {}
+        self.dict_bct = {}
+
+    def CollectData(self, data):
+        _, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, vars_key = data
+        if vars_key not in self.dict_tsg.keys():
+            self.dict_tsg[vars_key] = [[] for _ in range(14)]
+            self.dict_bct[vars_key] = self.arry_bct
+
+        index = str(매수시간) if self.buystd else str(매도시간)
+        while index in self.dict_tsg[vars_key][0]:
+            index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
+
+        self.dict_tsg[vars_key][0].append(index)
+        self.dict_tsg[vars_key][1].append(종목명)
+        self.dict_tsg[vars_key][2].append(시가총액또는포지션)
+        self.dict_tsg[vars_key][3].append(매수시간)
+        self.dict_tsg[vars_key][4].append(매도시간)
+        self.dict_tsg[vars_key][5].append(보유시간)
+        self.dict_tsg[vars_key][6].append(매수가)
+        self.dict_tsg[vars_key][7].append(매도가)
+        self.dict_tsg[vars_key][8].append(매수금액)
+        self.dict_tsg[vars_key][9].append(매도금액)
+        self.dict_tsg[vars_key][10].append(수익률)
+        self.dict_tsg[vars_key][11].append(수익금)
+        self.dict_tsg[vars_key][12].append(매도조건)
+        self.dict_tsg[vars_key][13].append(추가매수시간)
+
+        if 잔량없음:
+            arry_bct = self.dict_bct[vars_key]
+            array_bct = arry_bct[(arry_bct[:, 0] >= data[3]) & (arry_bct[:, 0] <= data[4])]
+            array_bct[:, 1] += 1
+            self.dict_bct[vars_key][(self.dict_bct[vars_key][:, 0] >= data[3]) & (self.dict_bct[vars_key][:, 0] <= data[4])] = array_bct
+
     def SendSubTotal(self, data):
-        columns, list_data, arry_bct = data[:3]
+        _, columns, list_data, arry_bct = data[:4]
         df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
         df_tsg.set_index('index', inplace=True)
         df_tsg.sort_index(inplace=True)
         arry_bct = arry_bct[arry_bct[:, 1] > 0]
         df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
 
-        if len(data) == 10:
-            vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_key = data[3:]
+        if len(data) == 11:
+            vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | ((df_tsg['매도시간'] > veday * 1000000 + 240000) & (df_tsg['매도시간'] < tsday * 1000000))]
                 df_bct = df_bct[(df_bct.index < vsday * 1000000) | ((df_bct.index > veday * 1000000 + 240000) & (df_bct.index < tsday * 1000000))]
@@ -799,8 +817,8 @@ class SubTotal:
                 df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
-        elif len(data) == 9:
-            vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[3:]
+        elif len(data) == 10:
+            vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | (df_tsg['매도시간'] > veday * 1000000 + 240000)]
                 df_bct = df_bct[(df_bct.index < vsday * 1000000) | (df_bct.index > veday * 1000000 + 240000)]
@@ -810,6 +828,6 @@ class SubTotal:
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
         else:
-            daycnt, vars_key = data[3:]
+            daycnt, vars_key = data[4:]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
             self.tq.put(['ALL', 0, result, vars_key])

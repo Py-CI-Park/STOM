@@ -34,7 +34,17 @@ class Total:
         index = 0
         while True:
             data = self.tq.get()
-            if data[0] == '백테정보':
+            if data[0] == '백파결과':
+                data = data[1:]
+                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], data])
+                self.df_back.loc[index] = data
+                index += 1
+            elif data[0] == '백테완료':
+                bc += 1
+                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start])
+                if bc == self.back_count:
+                    break
+            elif data[0] == '백테정보':
                 self.avgtime     = data[1]
                 self.startday    = data[2]
                 self.endday      = data[3]
@@ -50,15 +60,6 @@ class Total:
                     pass
                 time.sleep(1)
                 sys.exit()
-            elif data != '백테완료':
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], data])
-                self.df_back.loc[index] = data
-                index += 1
-            else:
-                bc += 1
-                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start])
-                if bc == self.back_count:
-                    break
 
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'백파인더 소요시간 {now() - self.start}'])
         if len(self.df_back) > 0:

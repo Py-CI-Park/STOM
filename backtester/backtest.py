@@ -12,14 +12,14 @@ from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, co
 
 
 class Total:
-    def __init__(self, wq, sq, tq, mq, lq, bq, ctq_list, backname, ui_gubun, gubun):
+    def __init__(self, wq, sq, tq, mq, lq, bq, stq_list, backname, ui_gubun, gubun):
         self.wq           = wq
         self.sq           = sq
         self.tq           = tq
         self.mq           = mq
         self.lq           = lq
         self.bq           = bq
-        self.ctq_list     = ctq_list
+        self.stq_list     = stq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
         self.gubun        = gubun
@@ -50,6 +50,7 @@ class Total:
 
         self.df_tsg       = None
         self.df_bct       = None
+        self.arry_bct     = None
 
         self.df_kp        = None
         self.df_kd        = None
@@ -62,22 +63,44 @@ class Total:
         self.Start()
 
     def Start(self):
-        tc  = 0
-        bc  = 0
+        tc = 0
+        bc = 0
+        sc = 0
+        total_dict_tsg = {}
+        total_dict_bct = {}
         while True:
             data = self.tq.get()
             if data[0] == '백테결과':
-                _, vars_key, list_data, arry_bct = data
-                if vars_key is not None:
-                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    self.df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
-                    self.df_tsg.set_index('index', inplace=True)
-                    self.df_tsg.sort_index(inplace=True)
-                    arry_bct = arry_bct[arry_bct[:, 1] > 0]
-                    self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
-                    if self.blacklist: self.InsertBlacklist()
-                    self.Report()
+                _, dict_tsg, dict_bct = data
+                if dict_tsg:
+                    for vars_key in list(dict_tsg.keys()):
+                        if vars_key not in total_dict_tsg.keys():
+                            total_dict_tsg[vars_key] = [[] for _ in range(14)]
+                            total_dict_bct[vars_key] = self.arry_bct
+                        for j in range(14):
+                            if j == 0:
+                                for index in dict_tsg[vars_key][j]:
+                                    index_ = index
+                                    while index_ in total_dict_tsg[vars_key][j]:
+                                        index_ = str(int(index_) + 1)
+                                    total_dict_tsg[vars_key][j].append(index_)
+                            else:
+                                total_dict_tsg[vars_key][j] += dict_tsg[vars_key][j]
+                        total_dict_bct[vars_key][:, 1] += dict_bct[vars_key][:, 1]
+                sc += 1
+                if sc < 10:
+                    continue
+
+                columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+                           '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
+                self.df_tsg = pd.DataFrame(dict(zip(columns, total_dict_tsg[0])))
+                self.df_tsg.set_index('index', inplace=True)
+                self.df_tsg.sort_index(inplace=True)
+                arry_bct = total_dict_bct[0]
+                arry_bct = arry_bct[arry_bct[:, 1] > 0]
+                self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
+                if self.blacklist: self.InsertBlacklist()
+                self.Report()
 
             elif data[0] == '백테완료':
                 bc  += 1
@@ -88,7 +111,7 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for ctq in self.ctq_list:
+                        for ctq in self.stq_list:
                             ctq.put('백테완료')
                     else:
                         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'])
@@ -109,9 +132,10 @@ class Total:
                 self.day_count   = data[12]
                 self.blacklist   = data[13]
                 self.schedul     = data[14]
-                self.df_kp       = data[15]
-                self.df_kd       = data[16]
-                self.back_club   = data[17]
+                self.arry_bct    = data[15]
+                self.df_kp       = data[16]
+                self.df_kd       = data[17]
+                self.back_club   = data[18]
 
             elif data == '백테중지':
                 self.mq.put('백테중지')
@@ -155,6 +179,7 @@ class Total:
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
             save_time = strf_time('%Y%m%d%H%M%S')
+            # self.df_tsg.to_csv(f'{save_time}.csv')
             startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
             startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
             endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
@@ -222,14 +247,14 @@ class Total:
 
 
 class BackTest:
-    def __init__(self, wq, bq, sq, tq, lq, pq_list, ctq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, pq_list, stq_list, backname, ui_gubun):
         self.wq       = wq
         self.bq       = bq
         self.sq       = sq
         self.tq       = tq
         self.lq       = lq
         self.pq_list  = pq_list
-        self.ctq_list = ctq_list
+        self.stq_list = stq_list
         self.backname = backname
         self.ui_gubun = ui_gubun
         self.dict_set = DICT_SET
@@ -256,7 +281,6 @@ class BackTest:
         df_kp         = data[12]
         df_kq         = data[13]
         back_club     = data[14]
-
         if buystg_name == '벤치전략':
             betting   = 20000000
             avgtime   = 30
@@ -278,8 +302,8 @@ class BackTest:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ['보유종목수어레이', arry_bct]
-        for q in self.ctq_list:
+        data = ['백테정보', arry_bct, betting, None]
+        for q in self.stq_list:
             q.put(data)
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'])
 
@@ -297,14 +321,14 @@ class BackTest:
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'])
 
         mq = Queue()
-        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, self.bq, self.ctq_list, self.backname, self.ui_gubun, self.gubun)).start()
+        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, self.bq, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
 
         self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
-                     dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club])
+                     dict_cn, back_count, day_count, bl, schedul, arry_bct, df_kp, df_kq, back_club])
         data = ['백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None]
 
-        for q in self.ctq_list:
+        for q in self.stq_list:
             q.put('백테시작')
         for q in self.pq_list:
             q.put(data)

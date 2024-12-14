@@ -141,9 +141,22 @@ class Chart:
             if coin:
                 gubun = '코인'
                 gbtime = self.dict_set['코인장초전략종료시간']
+                round_unit = 8
             else:
                 gubun = '주식'
                 gbtime = self.dict_set['주식장초전략종료시간']
+                round_unit = 3
+
+            df['체결시간']     = df.index
+            df['이동평균60']   = df['현재가'].rolling(window=60).mean().round(round_unit)
+            df['이동평균300']  = df['현재가'].rolling(window=300).mean().round(round_unit)
+            df['이동평균600']  = df['현재가'].rolling(window=600).mean().round(round_unit)
+            df['이동평균1200'] = df['현재가'].rolling(window=1200).mean().round(round_unit)
+
+            df['최고현재가'] = 0
+            df['최저현재가'] = 0
+            df['최고초당매수수량'] = 0
+            df['최고초당매도수량'] = 0
 
             """ 체결강도를 최근 5분간의 매도수수량으로 계산하여 표시한다.
             df2 = df[['체결강도', '초당매수수량', '초당매도수량']].copy()
@@ -158,29 +171,62 @@ class Chart:
 
             if tickcount != 30:
                 df['초당거래대금평균'] = df['초당거래대금'].rolling(window=tickcount).mean()
-                df['체결강도평균'] = df['체결강도'].rolling(window=tickcount).mean()
-                df['최고체결강도'] = df['체결강도'].rolling(window=tickcount).max()
-                df['최저체결강도'] = df['체결강도'].rolling(window=tickcount).min()
+                df['체결강도평균']    = df['체결강도'].rolling(window=tickcount).mean()
+                df['최고체결강도']    = df['체결강도'].rolling(window=tickcount).max()
+                df['최저체결강도']    = df['체결강도'].rolling(window=tickcount).min()
             else:
                 df['장초초당거래대금평균'] = df['초당거래대금'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean()
-                df['장초체결강도평균'] = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean()
-                df['장초최고체결강도'] = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).max()
-                df['장초최저체결강도'] = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).min()
+                df['장초체결강도평균']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean()
+                df['장초최고체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).max()
+                df['장초최저체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).min()
 
                 df['장중초당거래대금평균'] = df['초당거래대금'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean()
-                df['장중체결강도평균'] = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean()
-                df['장중최고체결강도'] = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).max()
-                df['장중최저체결강도'] = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).min()
-                df['index'] = df.index
+                df['장중체결강도평균']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean()
+                df['장중최고체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).max()
+                df['장중최저체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).min()
 
-                df['구분용체결시간'] = df['index'].apply(lambda x: int(str(x)[8:]))
+                df['구분용체결시간'] = df['체결시간'].apply(lambda x: int(str(x)[8:]))
                 df2 = df[df['구분용체결시간'] <= gbtime][['장초초당거래대금평균', '장초체결강도평균', '장초최고체결강도', '장초최저체결강도']]
                 df3 = df[df['구분용체결시간'] > gbtime][['장중초당거래대금평균', '장중체결강도평균', '장중최고체결강도', '장중최저체결강도']]
 
                 df['초당거래대금평균'] = df2['장초초당거래대금평균'].to_list() + df3['장중초당거래대금평균'].to_list()
-                df['체결강도평균'] = df2['장초체결강도평균'].to_list() + df3['장중체결강도평균'].to_list()
-                df['최고체결강도'] = df2['장초최고체결강도'].to_list() + df3['장중최고체결강도'].to_list()
-                df['최저체결강도'] = df2['장초최저체결강도'].to_list() + df3['장중최저체결강도'].to_list()
+                df['체결강도평균']    = df2['장초체결강도평균'].to_list() + df3['장중체결강도평균'].to_list()
+                df['최고체결강도']    = df2['장초최고체결강도'].to_list() + df3['장중최고체결강도'].to_list()
+                df['최저체결강도']    = df2['장초최저체결강도'].to_list() + df3['장중최저체결강도'].to_list()
+
+            if tickcount == '': tickcount = self.dict_set[f'{gubun}장초평균값계산틱수']
+            df['누적초당매수수량'] = df['초당매수수량'].rolling(window=tickcount).sum()
+            df['누적초당매도수량'] = df['초당매도수량'].rolling(window=tickcount).sum()
+            df[f'등락율N{tickcount}'] = df['등락율'].shift(tickcount - 1)
+            df['등락율차이'] = df['등락율'] - df[f'등락율N{tickcount}']
+            df[f'당일거래대금N{tickcount}'] = df['당일거래대금'].shift(tickcount - 1)
+            df['당일거래대금차이'] = df['당일거래대금'] - df[f'당일거래대금N{tickcount}']
+            if not coin:
+                df['등락율각도'] = df['등락율차이'].apply(lambda x: round(math.atan2(x * 5, tickcount) / (2 * math.pi) * 360, 2))
+                df['당일거래대금각도'] = df['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100, tickcount) / (2 * math.pi) * 360, 2))
+            else:
+                df['등락율각도'] = df['등락율차이'].apply(lambda x: round(math.atan2(x * 10, tickcount) / (2 * math.pi) * 360, 2))
+                df['당일거래대금각도'] = df['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100_000_000, tickcount) / (2 * math.pi) * 360, 2))
+            if not coin:
+                df[f'전일비N{tickcount}'] = df['전일비'].shift(tickcount - 1)
+                df['전일비차이'] = df['전일비'] - df[f'전일비N{tickcount}']
+                df['전일비각도'] = df['전일비차이'].apply(lambda x: round(math.atan2(x, tickcount) / (2 * math.pi) * 360, 2))
+
+            df['거래대금순위'] = 0
+            if db == '개별디비':
+                con = sqlite3.connect(db_name1)
+            elif db == '백테디비':
+                con = sqlite3.connect(db_name2)
+            else:
+                con = sqlite3.connect(db_name3)
+            df_mt = pd.read_sql(f'SELECT * FROM moneytop WHERE `index` LIKE "{searchdate}%"', con)
+            con.close()
+
+            df_mt.set_index('index', inplace=True)
+            dict_mt = df_mt['거래대금순위'].to_dict()
+            for key, value in dict_mt.items():
+                if code in value and key in df.index:
+                    df.loc[key, '거래대금순위'] = 1
 
             buy_index  = []
             sell_index = []
@@ -249,58 +295,40 @@ class Chart:
                     buytimes = buytimes.split('^')
                     buytimes = [x.split(';') for x in buytimes]
                     for x in buytimes:
-                        buy_index.append(int(x[0]))
-                        df.loc[int(x[0]), '매수가'] = int(x[1]) if not coin else float(x[1])
+                        index, buy_price = int(x[0]), int(x[1]) if not coin else float(x[1])
+                        buy_index.append(index)
+                        df.loc[index, '매수가'] = buy_price
 
-            roucd_count = 8 if coin else 3
-            df['이평60'] = df['현재가'].rolling(window=60).mean().round(roucd_count)
-            df['이평300'] = df['현재가'].rolling(window=300).mean().round(roucd_count)
-            df['이평600'] = df['현재가'].rolling(window=600).mean().round(roucd_count)
-            df['이평1200'] = df['현재가'].rolling(window=1200).mean().round(roucd_count)
-
-            df['거래대금순위'] = 0
-            if db == '개별디비':
-                con = sqlite3.connect(db_name1)
-            elif db == '백테디비':
-                con = sqlite3.connect(db_name2)
+            if not coin:
+                columns = [
+                    '체결시간', '현재가', '시가', '고가', '저가', '등락율', '당일거래대금', '체결강도', '거래대금증감', '전일비', '회전율',
+                    '전일동시간비', '시가총액', '라운드피겨위5호가이내', '초당매수수량', '초당매도수량', 'VI해제시간', 'VI가격', 'VI호가단위',
+                    '초당거래대금', '고저평균대비등락율', '매도총잔량', '매수총잔량', '매도호가5', '매도호가4', '매도호가3', '매도호가2',
+                    '매도호가1', '매수호가1', '매수호가2', '매수호가3', '매수호가4', '매수호가5', '매도잔량5', '매도잔량4', '매도잔량3',
+                    '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합',
+                    '이동평균60', '이동평균300', '이동평균600', '이동평균1200', '최고현재가', '최저현재가', '체결강도평균', '최고체결강도',
+                    '최저체결강도', '최고초당매수수량', '최고초당매도수량', '누적초당매수수량', '누적초당매도수량', '초당거래대금평균',
+                    '등락율각도', '당일거래대금각도', '전일비각도'
+                ]
             else:
-                con = sqlite3.connect(db_name3)
-            df_mt = pd.read_sql(f'SELECT * FROM moneytop WHERE `index` LIKE "{searchdate}%"', con)
-            con.close()
+                columns = [
+                    '체결시간', '현재가', '시가', '고가', '저가', '등락율', '당일거래대금', '체결강도', '초당매수수량', '초당매도수량',
+                    '초당거래대금', '고저평균대비등락율', '매도총잔량', '매수총잔량', '매도호가5', '매도호가4', '매도호가3', '매도호가2',
+                    '매도호가1', '매수호가1', '매수호가2', '매수호가3', '매수호가4', '매수호가5', '매도잔량5', '매도잔량4', '매도잔량3',
+                    '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합',
+                    '이동평균60', '이동평균300', '이동평균600', '이동평균1200', '최고현재가', '최저현재가', '체결강도평균', '최고체결강도',
+                    '최저체결강도', '최고초당매수수량', '최고초당매도수량', '누적초당매수수량', '누적초당매도수량', '초당거래대금평균',
+                    '등락율각도', '당일거래대금각도'
+                ]
 
-            df_mt.set_index('index', inplace=True)
-            dict_mt = df_mt['거래대금순위'].to_dict()
-            for key, value in dict_mt.items():
-                if code in value and key in df.index:
-                    df.loc[key, '거래대금순위'] = 1
-
-            if tickcount == '': tickcount = self.dict_set[f'{gubun}장초평균값계산틱수']
-            df['누적초당매수수량'] = df['초당매수수량'].rolling(window=tickcount).sum()
-            df['누적초당매도수량'] = df['초당매도수량'].rolling(window=tickcount).sum()
-            if not coin:
-                df[f'전일비N{tickcount}'] = df['전일비'].shift(tickcount - 1)
-                df['전일비차이'] = df['전일비'] - df[f'전일비N{tickcount}']
-                df['전일비각도'] = df['전일비차이'].apply(lambda x: round(math.atan2(x, tickcount) / (2 * math.pi) * 360, 2))
-            df[f'당일거래대금N{tickcount}'] = df['당일거래대금'].shift(tickcount - 1)
-            df['당일거래대금차이'] = df['당일거래대금'] - df[f'당일거래대금N{tickcount}']
-            df['당일거래대금각도'] = df['당일거래대금차이'].apply(lambda x: round(math.atan2(x, tickcount) / (2 * math.pi) * 360, 2))
-
-            columns = [
-                '이평60', '이평300', '이평600', '이평1200', '현재가', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도',
-                '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량', '등락율', '고저평균대비등락율', '매수총잔량', '매도총잔량',
-                '매수잔량1', '매도잔량1', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '당일거래대금각도',
-                '매수가', '매도가', '거래대금순위'
-            ]
-            if not coin:
-                columns += ['전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비']
-            elif 'USDT' in code:
+            columns += ['거래대금순위', '매수가', '매도가']
+            if 'USDT' in code:
                 columns += ['매수가2', '매도가2']
             df = df[columns]
             df.fillna(0, inplace=True)
-
-            ar = np.array(df)
-            xticks = [strp_time('%Y%m%d%H%M%S', str(x)).timestamp() for x in df.index]
-            self.windowQ.put([ui_num['차트'], coin, xticks, ar, buy_index, sell_index])
+            arry = np.array(df)
+            xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
+            self.windowQ.put([ui_num['차트'], coin, xticks, arry, buy_index, sell_index])
 
     def UpdateChartDayMin(self, data):
         gubun, coin, code, name, searchdate = data

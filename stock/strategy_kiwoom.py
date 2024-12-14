@@ -318,25 +318,13 @@ class StrategyKiwoom:
 
         def 이동평균(tick, pre=0):
             if tick == 60:
-                if pre != -1:
-                    return self.dict_tik_ar[종목코드][index-pre, 44]
-                else:
-                    return self.dict_tik_ar[종목코드][매수틱번호, 44]
+                return Parameter_Previous(44, pre)
             elif tick == 300:
-                if pre != -1:
-                    return self.dict_tik_ar[종목코드][index-pre, 45]
-                else:
-                    return self.dict_tik_ar[종목코드][매수틱번호, 45]
+                return Parameter_Previous(45, pre)
             elif tick == 600:
-                if pre != -1:
-                    return self.dict_tik_ar[종목코드][index-pre, 46]
-                else:
-                    return self.dict_tik_ar[종목코드][매수틱번호, 46]
+                return Parameter_Previous(46, pre)
             elif tick == 1200:
-                if pre != -1:
-                    return self.dict_tik_ar[종목코드][index-pre, 47]
-                else:
-                    return self.dict_tik_ar[종목코드][매수틱번호, 47]
+                return Parameter_Previous(47, pre)
             else:
                 if pre != -1:
                     return round(self.dict_tik_ar[종목코드][index+1-tick-pre:index+1-pre, 1].mean(), 3)
@@ -345,10 +333,7 @@ class StrategyKiwoom:
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
-                if pre != -1:
-                    return self.dict_tik_ar[종목코드][index-pre, aindex]
-                else:
-                    return self.dict_tik_ar[종목코드][매수틱번호, aindex]
+                return Parameter_Previous(aindex, pre)
             else:
                 if pre != -1:
                     if gubun_ == 'max':
@@ -397,25 +382,24 @@ class StrategyKiwoom:
         def 초당거래대금평균(tick, pre=0):
             return Parameter_Area(57, 19, tick, pre, 'mean')
 
-        def 당일거래대금각도(tick, pre=0):
+        def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick == 평균값계산틱수:
-                return Parameter_Previous(58, pre)
+                return Parameter_Previous(aindex, pre)
             else:
                 if pre != -1:
-                    dmp_gap = self.dict_tik_ar[종목코드][index-pre, 6] - self.dict_tik_ar[종목코드][index+1-tick-pre, 6]
+                    dmp_gap = self.dict_tik_ar[종목코드][index-pre, vindex] - self.dict_tik_ar[종목코드][index+1-tick-pre, vindex]
                 else:
-                    dmp_gap = self.dict_tik_ar[종목코드][매수틱번호, 6] - self.dict_tik_ar[종목코드][매수틱번호+1-tick, 6]
-                return round(math.atan2(dmp_gap, tick) / (2 * math.pi) * 360, 2)
+                    dmp_gap = self.dict_tik_ar[종목코드][매수틱번호, vindex] - self.dict_tik_ar[종목코드][매수틱번호+1-tick, vindex]
+                return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+
+        def 등락율각도(tick, pre=0):
+            return Parameter_Dgree(58, 5, tick, pre, 5)
+
+        def 당일거래대금각도(tick, pre=0):
+            return Parameter_Dgree(59, 6, tick, pre, 0.01)
 
         def 전일비각도(tick, pre=0):
-            if tick == 평균값계산틱수:
-                return Parameter_Previous(59, pre)
-            else:
-                if pre != -1:
-                    jvp_gap = self.dict_tik_ar[종목코드][index-pre, 9] - self.dict_tik_ar[종목코드][index+1-tick-pre, 9]
-                else:
-                    jvp_gap = self.dict_tik_ar[종목코드][매수틱번호, 9] - self.dict_tik_ar[종목코드][매수틱번호+1-tick, 9]
-                return round(math.atan2(jvp_gap, tick) / (2 * math.pi) * 360, 2)
+            return Parameter_Dgree(60, 9, tick, pre, 1)
 
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -429,14 +413,15 @@ class StrategyKiwoom:
         평균값계산틱수 = self.dict_set['주식장초평균값계산틱수'] if 시분초 < self.dict_set['주식장초전략종료시간'] else self.dict_set['주식장중평균값계산틱수']
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_ = 0., 0., 0., 0., 0, 0
         체결강도평균_, 최고체결강도_, 최저체결강도_, 최고초당매수수량_, 최고초당매도수량_ = 0., 0., 0., 0, 0
-        누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_, 전일비각도_ = 0, 0, 0., 0., 0.
+        누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_ = 0, 0, 0., 0., 0., 0.
 
         if 종목코드 in self.dict_tik_ar.keys():
-            if len(self.dict_tik_ar[종목코드]) >=   59: 이동평균60_   = round((self.dict_tik_ar[종목코드][  -59:, 1].sum() + 현재가) /   60, 3)
-            if len(self.dict_tik_ar[종목코드]) >=  299: 이동평균300_  = round((self.dict_tik_ar[종목코드][ -299:, 1].sum() + 현재가) /  300, 3)
-            if len(self.dict_tik_ar[종목코드]) >=  599: 이동평균600_  = round((self.dict_tik_ar[종목코드][ -599:, 1].sum() + 현재가) /  600, 3)
-            if len(self.dict_tik_ar[종목코드]) >= 1199: 이동평균1200_ = round((self.dict_tik_ar[종목코드][-1199:, 1].sum() + 현재가) / 1200, 3)
-            if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 - 1:
+            len_array = len(self.dict_tik_ar[종목코드])
+            if len_array >=   59: 이동평균60_   = round((self.dict_tik_ar[종목코드][  -59:, 1].sum() + 현재가) /   60, 3)
+            if len_array >=  299: 이동평균300_  = round((self.dict_tik_ar[종목코드][ -299:, 1].sum() + 현재가) /  300, 3)
+            if len_array >=  599: 이동평균600_  = round((self.dict_tik_ar[종목코드][ -599:, 1].sum() + 현재가) /  600, 3)
+            if len_array >= 1199: 이동평균1200_ = round((self.dict_tik_ar[종목코드][-1199:, 1].sum() + 현재가) / 1200, 3)
+            if len_array >= 평균값계산틱수 - 1:
                 최고현재가_      = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 1].max(), 현재가)
                 최저현재가_      = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 1].min(), 현재가)
                 체결강도평균_    =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수
@@ -447,7 +432,8 @@ class StrategyKiwoom:
                 누적초당매수수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].sum() + 초당매수수량
                 누적초당매도수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].sum() + 초당매도수량
                 초당거래대금평균_ =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 19].sum() + 초당거래대금) / 평균값계산틱수
-                당일거래대금각도_ = round(math.atan2(당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6], 평균값계산틱수) / (2 * math.pi) * 360, 2)
+                등락율각도_      = round(math.atan2((등락율 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 5]) * 5, 평균값계산틱수) / (2 * math.pi) * 360, 2)
+                당일거래대금각도_ = round(math.atan2((당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6]) / 100, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 전일비각도_      = round(math.atan2(전일비 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 9], 평균값계산틱수) / (2 * math.pi) * 360, 2)
 
         new_data_tick = [
@@ -456,7 +442,7 @@ class StrategyKiwoom:
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
             이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
-            최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_, 전일비각도_
+            최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
         ]
 
         """
@@ -470,8 +456,8 @@ class StrategyKiwoom:
            33       34       35        36       37        38       39        40       41       42          43
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
             44         45          46           47           48         49         50           51           52
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_, 전일비각도_
-              53            54               55              56              57             58            59
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
+              53            54               55              56              57             58         59            60
         """
 
         if 종목코드 not in self.dict_tik_ar.keys():
@@ -519,13 +505,14 @@ class StrategyKiwoom:
             D = NIB and self.dict_set['주식매도취소매수시그널'] and not NIS
 
             if BBT and BLK and (A or (B and C) or C or D):
+                매수 = True
                 매수수량 = 0
+
                 if A or (B and C) or C:
                     oc_ratio = dict_order_ratio[self.dict_set['주식매수분할방법']][self.dict_set['주식매수분할횟수']][분할매수횟수]
                     매수수량 = int(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100)
 
                 if A or (B and C) or D:
-                    매수 = True
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
@@ -544,7 +531,6 @@ class StrategyKiwoom:
                                 print_exc()
                                 self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2']])
                 elif C:
-                    매수 = False
                     분할매수기준수익률 = round((현재가 / 현재가N(-1) - 1) * 100, 2) if self.dict_set['주식매수분할고정수익률'] else 수익률
                     if self.dict_set['주식매수분할하방'] and 분할매수기준수익률 < -self.dict_set['주식매수분할하방수익률']:
                         매수 = True
@@ -566,8 +552,10 @@ class StrategyKiwoom:
             F = NIB and NIS and 매입가 != 0 and self.dict_set['주식매도손절수익금청산'] and 수익금 < -self.dict_set['주식매도손절수익금']
 
             if SBT and (A or (B and C) or C or D or E or F):
+                매도 = False
                 매도수량 = 0
                 강제청산 = E or F
+
                 if A or E or F:
                     매도수량 = 보유수량
                 elif (B and C) or C:
@@ -576,7 +564,6 @@ class StrategyKiwoom:
                     if 매도수량 > 보유수량 or 분할매도횟수 + 1 == self.dict_set['주식매도분할횟수']: 매도수량 = 보유수량
 
                 if A or (B and C) or D:
-                    매도 = False
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.sellstrategy1 is not None:
                             try:
@@ -592,7 +579,6 @@ class StrategyKiwoom:
                                 print_exc()
                                 self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2']])
                 elif C or E or F:
-                    매도 = False
                     if 강제청산:
                         매도 = True
                     elif C:

@@ -29,20 +29,21 @@ class SetDialogEtc:
         self.ui.ct_checkBoxxxxx_08 = self.wc.setCheckBox('1호가잔량', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[7] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
         self.ui.ct_checkBoxxxxx_09 = self.wc.setCheckBox('5호가잔량합', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[8] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
         self.ui.ct_checkBoxxxxx_10 = self.wc.setCheckBox('당일거래대금', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[9] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_11 = self.wc.setCheckBox('거래대금증감', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[10] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_12 = self.wc.setCheckBox('전일비', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[11] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_13 = self.wc.setCheckBox('회전율', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[12] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_14 = self.wc.setCheckBox('전일동시간비', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[13] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_15 = self.wc.setCheckBox('누적초당매도수수량', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[14] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_16 = self.wc.setCheckBox('전일비각도', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[15] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_17 = self.wc.setCheckBox('당일거래대금각도', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[16] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_11 = self.wc.setCheckBox('누적초당매도수수량', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[10] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_12 = self.wc.setCheckBox('등락율각도', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[11] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_13 = self.wc.setCheckBox('당일거래대금각도', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[12] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_14 = self.wc.setCheckBox('거래대금증감', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[13] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_15 = self.wc.setCheckBox('전일비', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[14] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_16 = self.wc.setCheckBox('회전율', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[15] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_17 = self.wc.setCheckBox('전일동시간비', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[16] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_18 = self.wc.setCheckBox('전일비각도', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[17] else False, changed=self.ui.CheckboxChanged_22, style=style_ck_bx)
 
         self.ui.factor_checkbox_list = [
             self.ui.ct_checkBoxxxxx_01, self.ui.ct_checkBoxxxxx_02, self.ui.ct_checkBoxxxxx_03, self.ui.ct_checkBoxxxxx_04,
             self.ui.ct_checkBoxxxxx_05, self.ui.ct_checkBoxxxxx_06, self.ui.ct_checkBoxxxxx_07, self.ui.ct_checkBoxxxxx_08,
             self.ui.ct_checkBoxxxxx_09, self.ui.ct_checkBoxxxxx_10, self.ui.ct_checkBoxxxxx_11, self.ui.ct_checkBoxxxxx_12,
             self.ui.ct_checkBoxxxxx_13, self.ui.ct_checkBoxxxxx_14, self.ui.ct_checkBoxxxxx_15, self.ui.ct_checkBoxxxxx_16,
-            self.ui.ct_checkBoxxxxx_17
+            self.ui.ct_checkBoxxxxx_17, self.ui.ct_checkBoxxxxx_18
         ]
 
         self.ui.dialog_test = self.wc.setDialog('STOM SIMULATOR', tab=self.ui.dialog_chart)
@@ -227,23 +228,46 @@ class SetDialogEtc:
         self.ui.dialog_optuna.geometry().center()
         self.ui.op_groupBoxxxx_01 = QGroupBox(' ', self.ui.dialog_optuna)
         text = '''
-        optuna의 기본 최적화 알고리즘은
-        베이지안서치(BaseSampler)입니다.
-        아래 콤보박스에서 다른 최적화
-        알고리즘을 선택할 수 있습니다.'
+        "optuna의 범위설정은 최적화 범위
+        설정과 동일합니다. 그대로 사용해도
+        되지만, 일부 아는 중요한 값들은
+        고정하여 사용하면 초기에 보다
+        빠르게 최적값을 탐색할 수 있습니다.
+        아래의 빈칸에 콤머로 구분하여
+        고정할 변수의 번호를 입력하십시오."
         '''
         self.ui.op_labelllllll_01 = QLabel(text, self.ui.op_groupBoxxxx_01)
         self.ui.op_labelllllll_01.setAlignment(Qt.AlignCenter)
-        item_list = ['BaseSampler', 'BruteForceSampler', 'CmaEsSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
-        self.ui.op_comboBoxxxx_01 = self.wc.setCombobox(self.ui.op_groupBoxxxx_01, items=item_list)
+        self.ui.op_lineEditttt_01 = self.wc.setLineedit(self.ui.op_groupBoxxxx_01, style=style_bc_dk)
         text = '''
-        optuna로 실행된 최적화의 정보는
-        별도의 데이터베이스에 저장됩니다
-        해당 DB의 정보를 열람하려면
-        아래 버튼을 클릭하십시오.'
+        "optuna은 기본적으로 범위설정에서
+        입력한 간격대로 변수를 탐색합니다.
+        하지만 범위설정의 간격을 무시하고
+        optuna가 최소, 최대의 범위안에서
+        자동으로 탐색하게 할 수 있습니다.
+        원하시면 아래의 설정을 사용하십시오."
         '''
         self.ui.op_labelllllll_02 = QLabel(text, self.ui.op_groupBoxxxx_01)
         self.ui.op_labelllllll_02.setAlignment(Qt.AlignCenter)
+        self.ui.op_checkBoxxxx_01 = self.wc.setCheckBox('범위간격 자동탐색 사용하기', self.ui.op_groupBoxxxx_01, checked=False, style=style_ck_bx)
+        text = '''
+        "optuna의 기본 최적화 알고리즘은
+        베이지안서치(BaseSampler)입니다.
+        아래 콤보박스에서 다른 최적화
+        알고리즘을 선택할 수 있습니다."
+        '''
+        self.ui.op_labelllllll_03 = QLabel(text, self.ui.op_groupBoxxxx_01)
+        self.ui.op_labelllllll_03.setAlignment(Qt.AlignCenter)
+        item_list = ['BaseSampler', 'BruteForceSampler', 'CmaEsSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
+        self.ui.op_comboBoxxxx_01 = self.wc.setCombobox(self.ui.op_groupBoxxxx_01, items=item_list)
+        text = '''
+        "optuna로 실행된 최적화의 정보는
+        별도의 데이터베이스에 저장됩니다
+        해당 DB의 정보를 열람하려면
+        아래 버튼을 클릭하십시오."
+        '''
+        self.ui.op_labelllllll_04 = QLabel(text, self.ui.op_groupBoxxxx_01)
+        self.ui.op_labelllllll_04.setAlignment(Qt.AlignCenter)
         self.ui.op_pushButtonn_01 = self.wc.setPushbutton('OPTUNA DASHBOARD', box=self.ui.op_groupBoxxxx_01, color=3, click=self.ui.opButtonClicked_01)
 
         self.ui.dialog_pass = self.wc.setDialog('STOM PASSWARD', tab=self.ui)
@@ -342,6 +366,7 @@ class SetDialogEtc:
         self.ui.ct_checkBoxxxxx_15.setGeometry(260, 165, 120, 30)
         self.ui.ct_checkBoxxxxx_16.setGeometry(10, 200, 120, 30)
         self.ui.ct_checkBoxxxxx_17.setGeometry(135, 200, 120, 30)
+        self.ui.ct_checkBoxxxxx_18.setGeometry(260, 200, 120, 30)
 
         self.ui.dialog_hoga.setFixedSize(572, 355)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
@@ -502,12 +527,16 @@ class SetDialogEtc:
         self.ui.od_pushButtonnn_07.setGeometry(10, 255, 100, 30)
         self.ui.od_pushButtonnn_08.setGeometry(115, 255, 100, 30)
 
-        self.ui.dialog_optuna.setFixedSize(220, 220)
-        self.ui.op_groupBoxxxx_01.setGeometry(5, -10, 210, 225)
-        self.ui.op_labelllllll_01.setGeometry(-5, 12, 200, 70)
-        self.ui.op_comboBoxxxx_01.setGeometry(5, 90, 200, 30)
-        self.ui.op_labelllllll_02.setGeometry(-5, 112, 200, 70)
-        self.ui.op_pushButtonn_01.setGeometry(5, 190, 200, 30)
+        self.ui.dialog_optuna.setFixedSize(220, 490)
+        self.ui.op_groupBoxxxx_01.setGeometry(5, -10, 210, 495)
+        self.ui.op_labelllllll_01.setGeometry(-10, 10, 210, 130)
+        self.ui.op_lineEditttt_01.setGeometry(10, 132, 190, 30)
+        self.ui.op_labelllllll_02.setGeometry(-10, 160, 210, 100)
+        self.ui.op_checkBoxxxx_01.setGeometry(25, 265, 190, 20)
+        self.ui.op_labelllllll_03.setGeometry(-10, 277, 210, 70)
+        self.ui.op_comboBoxxxx_01.setGeometry(10, 355, 190, 30)
+        self.ui.op_labelllllll_04.setGeometry(-10, 377, 200, 70)
+        self.ui.op_pushButtonn_01.setGeometry(10, 455, 190, 30)
 
         self.ui.dialog_pass.setFixedSize(200, 100)
         self.ui.pa_groupBoxxxx_01.setGeometry(5, -10, 190, 105)

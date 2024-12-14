@@ -14,8 +14,8 @@ from utility.static import strp_time, timedelta_sec, strf_time, timedelta_day, p
 
 
 class CoinFutureBackEngine3(CoinFutureBackEngine):
-    def __init__(self, gubun, wq, pq, tq, bq, ctq_list, profile=False):
-        super().__init__(gubun, wq, pq, tq, bq, ctq_list, profile)
+    def __init__(self, gubun, wq, pq, tq, bq, stq_list, profile=False):
+        super().__init__(gubun, wq, pq, tq, bq, stq_list, profile)
 
     def DataLoad(self, data):
         bk = 0
@@ -251,7 +251,7 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
             if len(self.array_tick) > 0:
                 last = len(self.array_tick) - 1
                 for i, index in enumerate(self.array_tick[:, 0]):
-                    if self.back_type is None: return
+                    if self.back_type is None: break
                     next_day_change = i != last and str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
                     self.tick_count += 1
                     self.index  = int(index)
@@ -294,11 +294,11 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
         def now_utc():
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
-        def Parameter_Previous(number, pre):
+        def Parameter_Previous(vindex, pre):
             if pre != -1:
-                return self.array_tick[self.indexn - pre, number]
+                return self.array_tick[self.indexn - pre, vindex]
             else:
-                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], number]
+                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -404,25 +404,13 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
 
         def 이동평균(tick, pre=0):
             if tick == 60:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 35]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 35]
+                return Parameter_Previous(35, pre)
             elif tick == 300:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 36]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 36]
+                return Parameter_Previous(36, pre)
             elif tick == 600:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 37]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 37]
+                return Parameter_Previous(37, pre)
             elif tick == 1200:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 38]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 38]
+                return Parameter_Previous(38, pre)
             else:
                 if pre != -1:
                     return round(self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, 1].mean(), 8)
@@ -431,14 +419,11 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                     return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 8)
 
         def GetArrayIndex(bc):
-            return bc + 10 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
+            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, GetArrayIndex(aindex)]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], GetArrayIndex(aindex)]
+                return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
                 if pre != -1:
                     if gubun_ == 'max':
@@ -488,12 +473,21 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
         def 초당거래대금평균(tick, pre=0):
             return Parameter_Area(48, 19, tick, pre, 'mean')
 
-        def 당일거래대금각도(tick, pre=0):
-            if pre != -1:
-                dmp_gap = self.array_tick[self.indexn - pre, 6] - self.array_tick[self.indexn + 1 - tick - pre, 6]
+        def Parameter_Dgree(aindex, vindex, tick, pre, cf):
+            if tick in self.avg_list:
+                return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 6] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, 6]
-            return round(math.atan2(dmp_gap, tick) / (2 * math.pi) * 360, 2)
+                if pre != -1:
+                    dmp_gap = self.array_tick[self.indexn - pre, vindex] - self.array_tick[self.indexn + 1 - tick - pre, vindex]
+                else:
+                    dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, vindex]
+                return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+
+        def 등락율각도(tick, pre=0):
+            return Parameter_Dgree(49, 5, tick, pre, 10)
+
+        def 당일거래대금각도(tick, pre=0):
+            return Parameter_Dgree(50, 6, tick, pre, 0.00000001)
 
         if self.dict_set['코인분봉데이터']:
             def 분봉시가N(pre):
@@ -618,25 +612,26 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
             self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
             for j in range(self.vars_count):
-                if self.back_type is None: return
                 self.vars_key = j
                 if self.back_type in ['백테스트', '조건최적화']:
                     if self.tick_count < self.avgtime:
-                        return
-                else:
-                    if self.back_type == 'GA최적화':
-                        self.vars = self.vars_lists[j]
-                    elif self.vars_turn >= 0:
-                        curr_var = self.vars_list[self.vars_turn][j]
-                        if curr_var == self.high_var:
-                            continue
-                        self.vars[self.vars_turn] = curr_var
-
+                        break
+                elif self.back_type == 'GA최적화':
+                    self.vars = self.vars_lists[j]
                     if self.tick_count < self.vars[0]:
-                        if self.vars_turn == 0:
-                            continue
+                        continue
+                elif self.vars_turn >= 0:
+                    curr_var = self.vars_list[self.vars_turn][j]
+                    if curr_var == self.high_var:
+                        continue
+                    self.vars[self.vars_turn] = curr_var
+                    if self.tick_count < self.vars[0]:
+                        if self.vars_turn != 0:
+                            break
                         else:
-                            return
+                            continue
+                elif self.tick_count < self.vars[0]:
+                    break
 
                 try:
                     if not self.trade_info[j]['보유중']:
@@ -647,7 +642,7 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                             continue
 
                         self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
-                        매수 = True
+                        BUY_LONG, SELL_SHORT = True, True
                         if self.back_type != '조건최적화':
                             exec(self.buystg, None, locals())
                         else:
@@ -668,7 +663,7 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                         포지션 = 'LONG' if self.trade_info[j]['보유중'] == 1 else 'SHORT'
 
                         self.trade_info[j]['주문수량'] = 보유수량
-                        매도 = False
+                        SELL_LONG, BUY_SHORT = False, False
                         if self.back_type != '조건최적화':
                             exec(self.sellstg, None, locals())
                         else:
@@ -676,4 +671,4 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
-                    return
+                    break

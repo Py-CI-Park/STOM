@@ -11,8 +11,8 @@ from utility.static import strp_time, timedelta_sec, pickle_read, GetBinanceLong
 
 
 class CoinFutureBackEngine2(CoinFutureBackEngine):
-    def __init__(self, gubun, wq, pq, tq, bq, ctq_list, profile=False):
-        super().__init__(gubun, wq, pq, tq, bq, ctq_list, profile)
+    def __init__(self, gubun, wq, pq, tq, bq, stq_list, profile=False):
+        super().__init__(gubun, wq, pq, tq, bq, stq_list, profile)
 
     def InitDayInfo(self):
         self.tick_count = 0
@@ -41,7 +41,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             self.code = self.name = code
             self.total_count = 0
 
-            if self.dict_set['백테주문관리적용'] and self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
+            if self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
                 self.tq.put(['백테완료', 0])
                 continue
 
@@ -65,7 +65,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             if len(self.array_tick) > 0:
                 last = len(self.array_tick) - 1
                 for i, index in enumerate(self.array_tick[:, 0]):
-                    if self.back_type is None: return
+                    if self.back_type is None: break
                     next_day_change = i != last and str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
                     self.tick_count += 1
                     self.index  = int(index)
@@ -87,11 +87,11 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         def now_utc():
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
-        def Parameter_Previous(number, pre):
+        def Parameter_Previous(vindex, pre):
             if pre != -1:
-                return self.array_tick[self.indexn - pre, number]
+                return self.array_tick[self.indexn - pre, vindex]
             else:
-                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], number]
+                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -197,25 +197,13 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
         def 이동평균(tick, pre=0):
             if tick == 60:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 35]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 35]
+                return Parameter_Previous(35, pre)
             elif tick == 300:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 36]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 36]
+                return Parameter_Previous(36, pre)
             elif tick == 600:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 37]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 37]
+                return Parameter_Previous(37, pre)
             elif tick == 1200:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, 38]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 38]
+                return Parameter_Previous(38, pre)
             else:
                 if pre != -1:
                     return round(self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, 1].mean(), 8)
@@ -224,14 +212,11 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 8)
 
         def GetArrayIndex(bc):
-            return bc + 10 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
+            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
-                if pre != -1:
-                    return self.array_tick[self.indexn - pre, GetArrayIndex(aindex)]
-                else:
-                    return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], GetArrayIndex(aindex)]
+                return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
                 if pre != -1:
                     if gubun_ == 'max':
@@ -281,12 +266,21 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         def 초당거래대금평균(tick, pre=0):
             return Parameter_Area(48, 19, tick, pre, 'mean')
 
-        def 당일거래대금각도(tick, pre=0):
-            if pre != -1:
-                dmp_gap = self.array_tick[self.indexn - pre, 6] - self.array_tick[self.indexn + 1 - tick - pre, 6]
+        def Parameter_Dgree(aindex, vindex, tick, pre, cf):
+            if tick in self.avg_list:
+                return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 6] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, 6]
-            return round(math.atan2(dmp_gap, tick) / (2 * math.pi) * 360, 2)
+                if pre != -1:
+                    dmp_gap = self.array_tick[self.indexn - pre, vindex] - self.array_tick[self.indexn + 1 - tick - pre, vindex]
+                else:
+                    dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, vindex]
+                return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+
+        def 등락율각도(tick, pre=0):
+            return Parameter_Dgree(49, 5, tick, pre, 10)
+
+        def 당일거래대금각도(tick, pre=0):
+            return Parameter_Dgree(50, 6, tick, pre, 0.00000001)
 
         현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율, 매도총잔량, \
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
@@ -297,7 +291,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             if self.tick_count < self.avgtime:
                 return
 
-            매수 = True
+            BUY_LONG, SELL_SHORT = True, True
             try:
                 exec(self.buystg, None, locals())
             except:
@@ -308,25 +302,26 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
             for j in range(self.vars_count):
-                if self.back_type is None: return
                 self.vars_key = j
                 if self.back_type in ['백테스트', '조건최적화']:
                     if self.tick_count < self.avgtime:
-                        return
-                else:
-                    if self.back_type == 'GA최적화':
-                        self.vars = self.vars_lists[j]
-                    elif self.vars_turn >= 0:
-                        curr_var = self.vars_list[self.vars_turn][j]
-                        if curr_var == self.high_var:
-                            continue
-                        self.vars[self.vars_turn] = curr_var
-
+                        break
+                elif self.back_type == 'GA최적화':
+                    self.vars = self.vars_lists[j]
                     if self.tick_count < self.vars[0]:
-                        if self.vars_turn == 0:
-                            continue
+                        continue
+                elif self.vars_turn >= 0:
+                    curr_var = self.vars_list[self.vars_turn][j]
+                    if curr_var == self.high_var:
+                        continue
+                    self.vars[self.vars_turn] = curr_var
+                    if self.tick_count < self.vars[0]:
+                        if self.vars_turn != 0:
+                            break
                         else:
-                            return
+                            continue
+                elif self.tick_count < self.vars[0]:
+                    break
 
                 포지션, 수익금, 수익률, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 보유시간 = None, 0, 0., 0, 0., 0., 0, strp_time('%Y%m%d', '20000101'), 0
                 if self.trade_info[j]['보유중']:
@@ -430,62 +425,53 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                                 else:
                                     exec(self.dict_buystg[j], None, locals())
                     else:
-                        if not self.dict_set['백테주문관리적용']:
+                        if (self.dict_set['코인매도손절수익률청산'] and 수익률 < -self.dict_set['코인매도손절수익률']) or \
+                                (self.dict_set['코인매도손절수익금청산'] and 수익금 < -self.dict_set['코인매도손절수익금']):
+                            self.Sonjeol()
+                            continue
+
+                        cancel = False
+                        if self.dict_set['코인매도금지시간'] and self.dict_set['코인매도금지시작시간'] < int(str(self.index)[8:]) < self.dict_set['코인매도금지종료시간']:
+                            cancel = True
+                        elif self.dict_set['코인매도금지간격'] and now_utc() <= self.day_info[j]['직전거래시간']:
+                            cancel = True
+                        elif self.dict_set['코인매수분할횟수'] > 1 and self.dict_set['코인매도금지매수횟수'] and self.trade_info[j]['매수분할횟수'] <= self.dict_set['코인매도금지매수횟수값']:
+                            cancel = True
+                        if cancel: continue
+
+                        if self.dict_set['코인매도분할횟수'] == 1:
                             self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']
-                            SELL_LONG, BUY_SHORT = False, False
-                            try:
-                                exec(self.sellstg, None, locals())
-                            except:
-                                if self.gubun == 0: print_exc()
-                                self.BackStop()
                         else:
-                            if (self.dict_set['코인매도손절수익률청산'] and 수익률 < -self.dict_set['코인매도손절수익률']) or \
-                                    (self.dict_set['코인매도손절수익금청산'] and 수익금 < -self.dict_set['코인매도손절수익금']):
-                                self.Sonjeol()
-                                continue
-
-                            cancel = False
-                            if self.dict_set['코인매도금지시간'] and self.dict_set['코인매도금지시작시간'] < int(str(self.index)[8:]) < self.dict_set['코인매도금지종료시간']:
-                                cancel = True
-                            elif self.dict_set['코인매도금지간격'] and now_utc() <= self.day_info[j]['직전거래시간']:
-                                cancel = True
-                            elif self.dict_set['코인매수분할횟수'] > 1 and self.dict_set['코인매도금지매수횟수'] and self.trade_info[j]['매수분할횟수'] <= self.dict_set['코인매도금지매수횟수값']:
-                                cancel = True
-                            if cancel: continue
-
-                            if self.dict_set['코인매도분할횟수'] == 1:
+                            oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][self.trade_info[j]['매도분할횟수']]
+                            self.trade_info[j]['주문수량'] = round(self.betting / self.trade_info[j]['매수가'] * oc_ratio / 100, 8)
+                            if self.trade_info[j]['주문수량'] > self.trade_info[j]['보유수량'] or self.trade_info[j]['매도분할횟수'] + 1 == self.dict_set['코인매도분할횟수']:
                                 self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']
-                            else:
-                                oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][self.trade_info[j]['매도분할횟수']]
-                                self.trade_info[j]['주문수량'] = round(self.betting / self.trade_info[j]['매수가'] * oc_ratio / 100, 8)
-                                if self.trade_info[j]['주문수량'] > self.trade_info[j]['보유수량'] or self.trade_info[j]['매도분할횟수'] + 1 == self.dict_set['코인매도분할횟수']:
-                                    self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']
 
-                            if self.dict_set['코인매도분할횟수'] == 1:
+                        if self.dict_set['코인매도분할횟수'] == 1:
+                            SELL_LONG, BUY_SHORT = False, False
+                            if self.back_type != '조건최적화':
+                                exec(self.sellstg, None, locals())
+                            else:
+                                exec(self.dict_sellstg[j], None, locals())
+                        else:
+                            if 포지션 == 'LONG' and self.dict_set['코인매도분할하방'] and 수익률 < -self.dict_set['코인매도분할하방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                self.Sell('SELL_LONG', 100)
+                            elif 포지션 == 'LONG' and self.dict_set['코인매도분할상방'] and 수익률 > self.dict_set['코인매도분할상방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                self.Sell('SELL_LONG', 100)
+                            elif 포지션 == 'SHORT' and self.dict_set['코인매도분할하방'] and 수익률 < -self.dict_set['코인매도분할하방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                self.Sell('BUY_SHORT', 100)
+                            elif 포지션 == 'SHORT' and self.dict_set['코인매도분할상방'] and 수익률 > self.dict_set['코인매도분할상방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                self.Sell('BUY_SHORT', 100)
+                            elif self.dict_set['코인매도분할시그널']:
                                 SELL_LONG, BUY_SHORT = False, False
                                 if self.back_type != '조건최적화':
                                     exec(self.sellstg, None, locals())
                                 else:
                                     exec(self.dict_sellstg[j], None, locals())
-                            else:
-                                if 포지션 == 'LONG' and self.dict_set['코인매도분할하방'] and 수익률 < -self.dict_set['코인매도분할하방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
-                                    self.Sell('SELL_LONG', 100)
-                                elif 포지션 == 'LONG' and self.dict_set['코인매도분할상방'] and 수익률 > self.dict_set['코인매도분할상방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
-                                    self.Sell('SELL_LONG', 100)
-                                elif 포지션 == 'SHORT' and self.dict_set['코인매도분할하방'] and 수익률 < -self.dict_set['코인매도분할하방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
-                                    self.Sell('BUY_SHORT', 100)
-                                elif 포지션 == 'SHORT' and self.dict_set['코인매도분할상방'] and 수익률 > self.dict_set['코인매도분할상방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
-                                    self.Sell('BUY_SHORT', 100)
-                                elif self.dict_set['코인매도분할시그널']:
-                                    SELL_LONG, BUY_SHORT = False, False
-                                    if self.back_type != '조건최적화':
-                                        exec(self.sellstg, None, locals())
-                                    else:
-                                        exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
-                    return
+                    break
 
     def Buy(self, gubun):
         if self.dict_set['코인매수주문구분'] == '시장가':
@@ -649,11 +635,11 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
         for k in range(self.vars_count):
             self.vars_key = k
-            if self.trade_info[self.vars_key]['보유중'] > 0:
-                남은수량 = self.trade_info[self.vars_key]['보유수량']
+            if self.trade_info[k]['보유중'] > 0:
+                남은수량 = self.trade_info[k]['보유수량']
                 직전남은수량 = 남은수량
                 매도금액 = 0
-                hogainfo = shogainfo if self.trade_info[self.vars_key]['보유중'] == 1 else bhogainfo
+                hogainfo = shogainfo if self.trade_info[k]['보유중'] == 1 else bhogainfo
                 hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
                 for 호가, 잔량 in hogainfo:
                     남은수량 -= 잔량
@@ -665,20 +651,21 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                         직전남은수량 = 남은수량
 
                 if 남은수량 <= 0:
-                    self.trade_info[self.vars_key]['매도가'] = round(매도금액 / self.trade_info[self.vars_key]['보유수량'], 4)
+                    self.trade_info[k]['매도가'] = round(매도금액 / self.trade_info[k]['보유수량'], 4)
                 elif 매도금액 == 0:
-                    self.trade_info[self.vars_key]['매도가'] = self.array_tick[self.indexn, 1]
+                    self.trade_info[k]['매도가'] = self.array_tick[self.indexn, 1]
                 else:
-                    self.trade_info[self.vars_key]['매도가'] = round(매도금액 / (self.trade_info[self.vars_key]['보유수량'] - 남은수량), 4)
+                    self.trade_info[k]['매도가'] = round(매도금액 / (self.trade_info[k]['보유수량'] - 남은수량), 4)
 
-                self.trade_info[self.vars_key]['주문수량'] = self.trade_info[self.vars_key]['보유수량']
+                self.trade_info[k]['주문수량'] = self.trade_info[k]['보유수량']
                 self.sell_cond = 0
                 self.CalculationEyun()
 
     def CalculationEyun(self):
         self.total_count += 1
-        _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _, 추가매수시간 = list(self.trade_info[self.vars_key].values())[:10]
-        매수시간, 매도시간, 보유시간, 매수금액 = int(self.array_tick[매수틱번호, 0]), self.index, self.indexn - 매수틱번호, 주문수량 * 매수가
+        _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _, 추가매수시간, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[self.vars_key].values()
+        보유시간 = int((strp_time('%Y%m%d%H%M%S', str(int(self.index))) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[매수틱번호, 0])))).total_seconds())
+        매수시간, 매도시간, 매수금액 = int(self.array_tick[매수틱번호, 0]), self.index, 주문수량 * 매수가
         if self.trade_info[self.vars_key]['보유중'] == 1:
             포지션 = 'LONG'
             매도금액, 수익금, 수익률 = GetBinanceLongPgSgSp(매수금액, self.trade_info[self.vars_key]['주문수량'] * self.trade_info[self.vars_key]['매도가'], '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
@@ -688,7 +675,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
         추가매수시간, 잔량없음 = '^'.join(추가매수시간), 보유수량 - 주문수량 == 0
         data = ['백테결과', self.name, 포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
-        self.ctq_list[self.vars_key].put(data)
+        self.stq_list[self.sell_count % 10].put(data)
         if 수익률 < 0:
             self.day_info[self.vars_key]['손절횟수'] += 1
             self.day_info[self.vars_key]['손절매도시간'] = timedelta_sec(self.dict_set['코인매수금지손절간격초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
@@ -699,3 +686,4 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             self.trade_info[self.vars_key]['매도분할횟수'] += 1
         else:
             self.trade_info[self.vars_key] = GetTradeInfo(2)
+        self.sell_count += 1

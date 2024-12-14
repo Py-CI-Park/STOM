@@ -6,19 +6,19 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SubTotal, SendTextAndStd, GetMoneytopQuery
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery
 from utility.static import strf_time, now, timedelta_day, timedelta_sec, strp_time
 from utility.setting import DB_STOCK_BACK, ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_COIN_BACK
 
 
 class Total:
-    def __init__(self, wq, tq, mq, tdq_list, vdq_list, ctq_list, ui_gubun):
+    def __init__(self, wq, tq, mq, tdq_list, vdq_list, stq_list, ui_gubun):
         self.wq           = wq
         self.tq           = tq
         self.mq           = mq
         self.tdq_list     = tdq_list
         self.vdq_list     = vdq_list
-        self.ctq_list     = ctq_list
+        self.stq_list     = stq_list
         self.ui_gubun     = ui_gubun
         self.dict_set     = DICT_SET
 
@@ -39,11 +39,12 @@ class Total:
         self.starttime    = None
         self.endtime      = None
 
+        self.arry_bct     = None
         self.dict_t       = {}
         self.dict_v       = {}
 
         self.vars_lists   = None
-        self.stdp         = -100_000_000_000
+        self.stdp         = -2_147_483_648
         self.sub_total    = 0
         self.total_count  = 0
 
@@ -54,22 +55,50 @@ class Total:
         tc  = 0
         bc  = 0
         tbc = 0
+        sc  = 0
+        total_dict_tsg = {}
+        total_dict_bct = {}
         while True:
             data = self.tq.get()
             if data[0] == '백테결과':
-                _, vars_key, list_data, arry_bct = data
-                if vars_key is not None:
-                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    data = [columns, list_data, arry_bct]
+                _, dict_tsg, dict_bct = data
+                if dict_tsg:
+                    for vars_key in list(dict_tsg.keys()):
+                        if vars_key not in total_dict_tsg.keys():
+                            total_dict_tsg[vars_key] = [[] for _ in range(14)]
+                            total_dict_bct[vars_key] = self.arry_bct
+                        for j in range(14):
+                            if j == 0:
+                                for index in dict_tsg[vars_key][j]:
+                                    index_ = index
+                                    while index_ in total_dict_tsg[vars_key][j]:
+                                        index_ = str(int(index_) + 1)
+                                    total_dict_tsg[vars_key][j].append(index_)
+                            else:
+                                total_dict_tsg[vars_key][j] += dict_tsg[vars_key][j]
+                        total_dict_bct[vars_key][:, 1] += dict_bct[vars_key][:, 1]
+                sc += 1
+                if sc < 10:
+                    continue
+
+                sc = 0
+                columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+                           '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
+                k  = 0
+                for vars_key in list(total_dict_tsg.keys()):
+                    data = ['결과집계', columns, total_dict_tsg[vars_key], total_dict_bct[vars_key]]
                     if self.valid_days is not None:
                         for i, vdays in enumerate(self.valid_days):
                             data_ = data + [vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key]
-                            self.tdq_list[i].put(data_)
-                            self.vdq_list[i].put(data_)
+                            self.tdq_list[k % 5].put(data_)
+                            self.vdq_list[k % 5].put(data_)
+                            k += 1
                     else:
                         data_ = data + [self.day_count, vars_key]
-                        self.tdq_list[0].put(data_)
+                        self.stq_list[k % 10].put(data_)
+                        k += 1
+                total_dict_tsg = {}
+                total_dict_bct = {}
 
             elif data[0] == '백테완료':
                 bc  += 1
@@ -81,7 +110,7 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for ctq in self.ctq_list:
+                        for ctq in self.stq_list:
                             ctq.put('백테완료')
                     else:
                         if self.valid_days is not None:
@@ -118,19 +147,11 @@ class Total:
                 self.total_count = data[1]
                 self.back_count  = data[2]
             elif data == '백테중지':
-                self.BackStop()
+                self.mq.put('백테중지')
                 break
 
         time.sleep(1)
         sys.exit()
-
-    def BackStop(self):
-        if self.tdq_list:
-            for q in self.tdq_list:
-                q.put('서브집계프로세스종료')
-            for q in self.vdq_list:
-                q.put('서브집계프로세스종료')
-        self.mq.put('백테중지')
 
     def BackInfo(self, data):
         self.betting      = data[1]
@@ -143,8 +164,9 @@ class Total:
         self.dict_cn      = data[8]
         self.std_list     = data[9]
         self.optistandard = data[10]
-        self.valid_days   = data[11]
-        self.day_count    = data[12]
+        self.arry_bct     = data[11]
+        self.valid_days   = data[12]
+        self.day_count    = data[13]
         if self.valid_days is not None:
             self.sub_total = len(self.valid_days) * 2
         else:
@@ -155,14 +177,14 @@ class Total:
 
 
 class OptimizeGeneticAlgorithm:
-    def __init__(self, wq, bq, sq, tq, lq, pq_list, ctq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, pq_list, stq_list, backname, ui_gubun):
         self.wq          = wq
         self.bq          = bq
         self.sq          = sq
         self.tq          = tq
         self.lq          = lq
         self.pq_list     = pq_list
-        self.ctq_list    = ctq_list
+        self.stq_list    = stq_list
         self.backname    = backname
         self.ui_gubun    = ui_gubun
         self.fixed_list  = []
@@ -265,8 +287,8 @@ class OptimizeGeneticAlgorithm:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ['보유종목수어레이', arry_bct]
-        for q in self.ctq_list:
+        data = ['백테정보', arry_bct, betting, optistandard]
+        for q in self.stq_list:
             q.put(data)
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'])
 
@@ -294,25 +316,12 @@ class OptimizeGeneticAlgorithm:
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'])
 
         mq = Queue()
-        tdq_list = []
-        vdq_list = []
-        if 'V' in self.backname:
-            for _ in valid_days:
-                tdq, vdq = Queue(), Queue()
-                tdq_list.append(tdq)
-                vdq_list.append(vdq)
-                Process(target=SubTotal, args=(self.tq, tdq, betting, optistandard, 1)).start()
-                Process(target=SubTotal, args=(self.tq, vdq, betting, optistandard, 0)).start()
-        else:
-            for _ in range(10):
-                tdq = Queue()
-                tdq_list.append(tdq)
-                Process(target=SubTotal, args=(self.tq, tdq, betting, optistandard, 1)).start()
-
-        Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.ctq_list, self.ui_gubun)).start()
+        tdq_list = self.stq_list[:5]
+        vdq_list = self.stq_list[5:]
+        Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.ui_gubun)).start()
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
 
-        self.tq.put(['백테정보', betting, startday, endday, starttime, endtime, buystg, sellstg, dict_cn, std_text, optistandard, valid_days, len(day_list)])
+        self.tq.put(['백테정보', betting, startday, endday, starttime, endtime, buystg, sellstg, dict_cn, std_text, optistandard, arry_bct, valid_days, len(day_list)])
         data = ['백테정보', betting, self.vars[0][0], startday, endday, starttime, endtime, buystg, sellstg]
         for q in self.pq_list:
             q.put(data)
@@ -332,7 +341,7 @@ class OptimizeGeneticAlgorithm:
                 vars_lists = self.GetVarslist()
                 if vars_lists:
                     self.tq.put(['변수정보', vars_lists])
-                    for q in self.ctq_list:
+                    for q in self.stq_list:
                         q.put('백테시작')
                     for q in self.pq_list:
                         q.put(['변수정보', vars_lists])

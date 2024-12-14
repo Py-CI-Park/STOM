@@ -61,7 +61,7 @@ from coin.simulator_upbit import ReceiverUpbit2, TraderUpbit2
 from coin.simulator_binance import ReceiverBinanceFuture2, TraderBinanceFuture2
 from stock.login_kiwoom.manuallogin import leftClick, enter_keys, press_keys
 
-from backtester.back_static import CollectTotal, GetMoneytopQuery, RunOptunaServer
+from backtester.back_static import SubTotal, GetMoneytopQuery, RunOptunaServer
 from backtester.back_code_test import BackCodeTest
 from backtester.backengine_stock import StockBackEngine
 from backtester.backengine_stock2 import StockBackEngine2
@@ -325,6 +325,10 @@ class Window(QMainWindow):
         self.ct_test          = 0
         self.back_scount      = 0
 
+        self.stock_simulator_alive = False
+        self.backengin_window_open = False
+        self.optuna_window_open    = False
+
         self.proc_backtester_bb    = None
         self.proc_backtester_bf    = None
         self.proc_backtester_o     = None
@@ -562,26 +566,40 @@ class Window(QMainWindow):
         self.crc_textEditttt_01.clear()
 
     def UpdateWindowTitle(self):
+        inthms = int_hms()
+        inthmsutc = int_hms_utc()
         text = 'STOM'
         if self.dict_set['리시버공유'] == 1:
             text = f'{text} Server'
         elif self.dict_set['리시버공유'] == 2:
             text = f'{text} Client'
-        if self.dict_set['거래소'] == '바이낸스선물' and self.dict_set['코인리시버']:
+        if self.dict_set['거래소'] == '바이낸스선물' and self.dict_set['코인트레이더']:
             text = f'{text} | 바이낸스선물'
-        elif self.dict_set['거래소'] == '업비트' and self.dict_set['코인리시버']:
+        elif self.dict_set['거래소'] == '업비트' and self.dict_set['코인트레이더']:
             text = f'{text} | 업비트'
-        elif self.dict_set['증권사'] == '키움증권해외선물' and self.dict_set['주식리시버']:
+        elif self.dict_set['증권사'] == '키움증권해외선물' and self.dict_set['주식트레이더']:
             text = f'{text} | 키움증권해외선물'
-        elif self.dict_set['주식리시버']:
+        elif self.dict_set['주식트레이더']:
             text = f'{text} | 키움증권'
         if self.showQsize:
-            ctqsize = sum([ctq.qsize() for ctq in self.bact_pques]) if self.bact_pques else 0
+            ctqsize = sum((ctq.qsize() for ctq in self.bact_pques)) if self.bact_pques else 0
             text = f'{text} | sreceivQ[{self.srqsize}] | straderQ[{self.stqsize}] | sstgQ[{self.ssqsize}] | ' \
                    f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstgQ[{cstgQ.qsize()}] | ' \
                    f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
                    f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backctQ[{ctqsize}]'
         else:
+            if self.dict_set['코인트레이더']:
+                text = f'{text} | 모의' if self.dict_set['코인모의투자'] else f'{text} | 실전'
+                if inthmsutc < self.dict_set["코인장초전략종료시간"]:
+                    text = f'{text} | {self.dict_set["코인장초매수전략"] if self.dict_set["코인장초매수전략"] != "" else "전략사용안함"}'
+                else:
+                    text = f'{text} | {self.dict_set["코인장중매수전략"] if self.dict_set["코인장중매수전략"] != "" else "전략사용안함"}'
+            elif self.dict_set['주식트레이더']:
+                text = f'{text} | 모의' if self.dict_set['주식모의투자'] else f'{text} | 실전'
+                if inthms < self.dict_set["주식장초전략종료시간"]:
+                    text = f'{text} | {self.dict_set["주식장초매수전략"] if self.dict_set["주식장초매수전략"] != "" else "전략사용안함"}'
+                else:
+                    text = f'{text} | {self.dict_set["주식장중매수전략"] if self.dict_set["주식장중매수전략"] != "" else "전략사용안함"}'
             text = f"{text} | {strf_time('%Y-%m-%d %H:%M:%S')}"
         self.setWindowTitle(text)
 
@@ -1102,11 +1120,7 @@ class Window(QMainWindow):
             for j, column in enumerate(df.columns):
                 if column in ['체결시간', '매수시간', '매도시간']:
                     cgtime = str(arry[i, j])
-                    if column in ['매수시간', '매도시간']:
-                        if ';' not in cgtime:
-                            cgtime = f'{cgtime[:8]} {cgtime[8:10]}:{cgtime[10:12]}:{cgtime[12:14]}'
-                    else:
-                        cgtime = f'{cgtime[8:10]}:{cgtime[10:12]}:{cgtime[12:14]}'
+                    if column == '체결시간': cgtime = f'{cgtime[8:10]}:{cgtime[10:12]}:{cgtime[12:14]}'
                     item = QTableWidgetItem(cgtime)
                 elif column in ['거래일자', '일자', '일자 및 시간']:
                     day = arry[i, j]
@@ -1348,41 +1362,128 @@ class Window(QMainWindow):
         hms = ymdhms[8:]
         self.hg_labellllllll_01.setText(f'{ymd[:4]}-{ymd[4:6]}-{ymd[6:]} {hms[:2]}:{hms[2:4]}:{hms[4:]}')
 
-        """
-        '이평60', '이평300', '이평600', '이평1200', '현재가', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도',
-            0        1         2          3         4        5           6             7            8
-        '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량', '등락율', '고저평균대비등락율', '매수총잔량', '매도총잔량',
-             9              10             11            12         13             14            15          16
-        '매수잔량1', '매도잔량1', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '당일거래대금각도',
-            17         18            19              20              21              22               23
-        '매수가', '매도가', '거래대금순위', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비'
-          24       25         26           27           28          29      30         31
+        """ 주식
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
+           0      1     2    3    4     5         6         7         8        9      10       11        12           13
+        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            14         15          16      17       18         19            20            21        22
+        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           23       24       25        26       27        28       29        30       31        32
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           33       34       35        36       37        38       39        40       41       42          43
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
+            44         45          46           47           48         49         50           51           52
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
+              53            54               55              56              57           58           59           60
+        거래대금순위, 매수가, 매도가
+            61       62     63
         """
 
         xpoint = self.ctpg_tik_xticks.index(x)
-        info   = ['이평60', '이평300', '이평600', '이평1200', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도', '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량']
-        data   = list(self.ctpg_tik_arry[xpoint, 0:4]) + list(self.ctpg_tik_arry[xpoint, 5:13])
-        df     = pd.DataFrame({'체결수량': info, '체결강도': data})
-        windowQ.put([ui_num['S호가체결' if gubun == ui_num['S호가종목'] else 'C호가체결'], df])
+        info = ['이평60', '이평300', '이평600', '이평1200', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도', '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량']
         if gubun == ui_num['S호가종목']:
-            info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '당일거래대금각도', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비']
-            data = [self.ctpg_tik_arry[xpoint, 14]] + list(self.ctpg_tik_arry[xpoint, 19:24]) + list(self.ctpg_tik_arry[xpoint, 27:32])
-            df   = pd.DataFrame({'체결수량': info, '체결강도': data})
+            data = [
+                self.ctpg_tik_arry[xpoint, 44], self.ctpg_tik_arry[xpoint, 45], self.ctpg_tik_arry[xpoint, 46],
+                self.ctpg_tik_arry[xpoint, 47], self.ctpg_tik_arry[xpoint, 7], self.ctpg_tik_arry[xpoint, 50],
+                self.ctpg_tik_arry[xpoint, 51], self.ctpg_tik_arry[xpoint, 52], self.ctpg_tik_arry[xpoint, 19],
+                self.ctpg_tik_arry[xpoint, 57], self.ctpg_tik_arry[xpoint, 14], self.ctpg_tik_arry[xpoint, 15]
+            ]
+            df1  = pd.DataFrame({'체결수량': info, '체결강도': data})
+            info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '등락율각도', '당일거래대금각도', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비']
+            data = [
+                self.ctpg_tik_arry[xpoint, 20], self.ctpg_tik_arry[xpoint, 43], self.ctpg_tik_arry[xpoint, 6],
+                self.ctpg_tik_arry[xpoint, 55], self.ctpg_tik_arry[xpoint, 56], self.ctpg_tik_arry[xpoint, 58],
+                self.ctpg_tik_arry[xpoint, 59], self.ctpg_tik_arry[xpoint, 60], self.ctpg_tik_arry[xpoint, 8],
+                self.ctpg_tik_arry[xpoint, 9], self.ctpg_tik_arry[xpoint, 10], self.ctpg_tik_arry[xpoint, 11]
+            ]
+            df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
             coin = False
-            windowQ.put([ui_num['S호가체결2'], df])
+            windowQ.put([ui_num['S호가체결'], df1])
+            windowQ.put([ui_num['S호가체결2'], df2])
         else:
-            info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '당일거래대금각도']
-            data = [self.ctpg_tik_arry[xpoint, 14]] + list(self.ctpg_tik_arry[xpoint, 19:24])
-            df   = pd.DataFrame({'체결수량': info, '체결강도': data})
+            data = [
+                self.ctpg_tik_arry[xpoint, 35], self.ctpg_tik_arry[xpoint, 36], self.ctpg_tik_arry[xpoint, 37],
+                self.ctpg_tik_arry[xpoint, 38], self.ctpg_tik_arry[xpoint, 7], self.ctpg_tik_arry[xpoint, 41],
+                self.ctpg_tik_arry[xpoint, 42], self.ctpg_tik_arry[xpoint, 43], self.ctpg_tik_arry[xpoint, 10],
+                self.ctpg_tik_arry[xpoint, 48], self.ctpg_tik_arry[xpoint, 8], self.ctpg_tik_arry[xpoint, 9]
+            ]
+            df1  = pd.DataFrame({'체결수량': info, '체결강도': data})
+            info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '등락율각도', '당일거래대금각도']
+            data = [
+                self.ctpg_tik_arry[xpoint, 11], self.ctpg_tik_arry[xpoint, 34], self.ctpg_tik_arry[xpoint, 6],
+                self.ctpg_tik_arry[xpoint, 46], self.ctpg_tik_arry[xpoint, 47], self.ctpg_tik_arry[xpoint, 49],
+                self.ctpg_tik_arry[xpoint, 50]
+            ]
+            df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
             coin = True
-            windowQ.put([ui_num['C호가체결2'], df])
+            windowQ.put([ui_num['C호가체결'], df1])
+            windowQ.put([ui_num['C호가체결2'], df2])
 
         for i in range(len(self.ctpg_tik_legend)):
-            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, xpoint, self.ctpg_tik_factors[i], f'{hms[:2]}:{hms[2:4]}:{hms[4:]}', False))
+            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, xpoint, self.ctpg_tik_factors[i], f'{hms[:2]}:{hms[2:4]}:{hms[4:]}'))
             self.ctpg_tik_labels[i].setText('')
+
+        """ 코인
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
+           0      1     2    3     4     5        6         7         8           9          10            11
+        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           12        13        14       15       16        17       18        19       20       21        22       23
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           24        25       26       27        28       29        30       31       32        33         34
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
+            35         36           37           38          39         40         41           42          43
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
+               44            45              46              47              48           49            50
+        거래대금순위, 매수가, 매도가, 매수가2, 매도가2
+            51       52     53     54      55
+        """
 
     @error_decorator
     def DrawChart(self, data):
+        def cindex(number):
+            return dict_stock[number] if not coin else dict_coin[number]
+
+        """ 주식
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
+           0      1     2    3    4     5         6         7         8        9      10       11        12           13
+        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            14         15          16      17       18         19            20            21        22
+        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           23       24       25        26       27        28       29        30       31        32
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           33       34       35        36       37        38       39        40       41       42          43
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
+            44         45          46           47           48         49         50           51           52
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
+              53            54               55              56              57           58           59           60
+        거래대금순위, 매수가, 매도가
+            61       62     63
+        """
+        dict_stock = {
+            1: 44, 2: 45, 3: 46, 4: 47, 5: 1, 6: 50, 7: 51, 8: 52, 9: 7, 10: 19, 11: 57, 12: 14, 13: 15, 14: 5, 15: 20,
+            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 60, 27: 8, 28: 9, 29: 10,
+            30: 11, 40: 61, 41: 62, 42: 63
+        }
+        """ 코인
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
+           0      1     2    3     4     5        6         7         8           9          10            11
+        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           12        13        14       15       16        17       18        19       20       21        22       23
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           24        25       26       27        28       29        30       31       32        33         34
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
+            35         36           37           38          39         40         41           42          43
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
+               44            45              46              47              48           49            50
+        거래대금순위, 매수가, 매도가, 매수가2, 매도가2
+            51       52     53     54      55
+        """
+        dict_coin = {
+            1: 35, 2: 36, 3: 37, 4: 38, 5: 1, 6: 41, 7: 42, 8: 43, 9: 7, 10: 10, 11: 48, 12: 8, 13: 9, 14: 5, 15: 11,
+            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49, 25: 50, 40: 51, 41: 52, 42: 53,
+            43: 54, 44: 55
+        }
+
         self.ChartClear()
         if not self.dialog_chart.isVisible():
             return
@@ -1415,159 +1516,147 @@ class Window(QMainWindow):
         if self.ct_checkBoxxxxx_08.isChecked():     self.ctpg_tik_factors.append('1호가잔량')
         if self.ct_checkBoxxxxx_09.isChecked():     self.ctpg_tik_factors.append('5호가잔량합')
         if self.ct_checkBoxxxxx_10.isChecked():     self.ctpg_tik_factors.append('당일거래대금')
-        if self.ct_checkBoxxxxx_15.isChecked():     self.ctpg_tik_factors.append('누적초당매도수수량')
-        if self.ct_checkBoxxxxx_17.isChecked():     self.ctpg_tik_factors.append('당일거래대금각도')
+        if self.ct_checkBoxxxxx_11.isChecked():     self.ctpg_tik_factors.append('누적초당매도수수량')
+        if self.ct_checkBoxxxxx_12.isChecked():     self.ctpg_tik_factors.append('등락율각도')
+        if self.ct_checkBoxxxxx_13.isChecked():     self.ctpg_tik_factors.append('당일거래대금각도')
         if not coin:
-            if self.ct_checkBoxxxxx_11.isChecked(): self.ctpg_tik_factors.append('거래대금증감')
-            if self.ct_checkBoxxxxx_12.isChecked(): self.ctpg_tik_factors.append('전일비')
-            if self.ct_checkBoxxxxx_13.isChecked(): self.ctpg_tik_factors.append('회전율')
-            if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_factors.append('전일동시간비')
-            if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_factors.append('전일비각도')
+            if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_factors.append('거래대금증감')
+            if self.ct_checkBoxxxxx_15.isChecked(): self.ctpg_tik_factors.append('전일비')
+            if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_factors.append('회전율')
+            if self.ct_checkBoxxxxx_17.isChecked(): self.ctpg_tik_factors.append('전일동시간비')
+            if self.ct_checkBoxxxxx_18.isChecked(): self.ctpg_tik_factors.append('전일비각도')
 
-        """
-        '이평60', '이평300', '이평600', '이평1200', '현재가', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도',
-            0        1         2          3         4        5           6             7            8
-        '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량', '등락율', '고저평균대비등락율', '매수총잔량', '매도총잔량',
-             9              10             11            12         13             14            15          16
-        '매수잔량1', '매도잔량1', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '당일거래대금각도',
-            17         18            19              20              21              22               23
-        '매수가', '매도가', '거래대금순위', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비'
-          24       25         26           27           28          29      30         31
-        """
+        for j in range(len(self.ctpg_tik_arry[0, :])):
+            if j in [cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25)]:
+                self.ctpg_tik_data[j] = [x for x in self.ctpg_tik_arry[:, j] if x != 0]
+            else:
+                self.ctpg_tik_data[j] = self.ctpg_tik_arry[:, j]
 
-        chuse_exist = True if len(self.ctpg_tik_arry[self.ctpg_tik_arry[:, 26] > 0]) > 0 else False
-        hms = from_timestamp(xmax).strftime('%H:%M:%S')
+        hms  = from_timestamp(xmax).strftime('%H:%M:%S')
+        tlen = len(self.ctpg_tik_xticks)
+        len1 = len(self.ctpg_tik_data[cindex(1)])
+        len2 = len(self.ctpg_tik_data[cindex(2)])
+        len3 = len(self.ctpg_tik_data[cindex(3)])
+        len4 = len(self.ctpg_tik_data[cindex(4)])
+        len5 = len(self.ctpg_tik_data[cindex(6)])
+        len6 = len(self.ctpg_tik_data[cindex(7)])
+        len7 = len(self.ctpg_tik_data[cindex(8)])
+        len8 = len(self.ctpg_tik_data[cindex(25)])
+        chuse_exist = True if len(self.ctpg_tik_arry[self.ctpg_tik_arry[:, cindex(40)] > 0]) > 0 else False
+
         for i, factor in enumerate(self.ctpg_tik_factors):
             self.ctpg[i].clear()
             ymin, ymax = 0, 0
             if factor == '현재가':
-                ar_ma0060 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 0] > 0][:, 0]
-                ar_ma0300 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 1] > 0][:, 1]
-                ar_ma0600 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 2] > 0][:, 2]
-                ar_ma1200 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 3] > 0][:, 3]
-                ar_c_ma = np.r_[ar_ma0060, ar_ma0300, ar_ma0600, ar_ma1200, self.ctpg_tik_arry[:, 4]]
-                ymin = ar_c_ma.min()
-                ymax = ar_c_ma.max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                len_ar = len(self.ctpg_tik_arry)
-                if len_ar >=   60: self.ctpg[i].plot(x=self.ctpg_tik_xticks[  59:], y=self.ctpg_tik_arry[  59:, 0], pen=(140, 140, 145))
-                if len_ar >=  300: self.ctpg[i].plot(x=self.ctpg_tik_xticks[ 299:], y=self.ctpg_tik_arry[ 299:, 1], pen=(120, 120, 125))
-                if len_ar >=  600: self.ctpg[i].plot(x=self.ctpg_tik_xticks[ 599:], y=self.ctpg_tik_arry[ 599:, 2], pen=(100, 100, 105))
-                if len_ar >= 1200: self.ctpg[i].plot(x=self.ctpg_tik_xticks[1199:], y=self.ctpg_tik_arry[1199:, 3], pen=( 80,  80,  85))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 4], pen=(200, 50, 50))
-                for j, price in enumerate(self.ctpg_tik_arry[:, 24]):
+                list_ = self.ctpg_tik_data[cindex(1)] + self.ctpg_tik_data[cindex(2)] + self.ctpg_tik_data[cindex(3)] + self.ctpg_tik_data[cindex(4)] + list(self.ctpg_tik_data[cindex(5)])
+                ymax, ymin = max(list_), min(list_)
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len1:], y=self.ctpg_tik_data[cindex(1)], pen=(140, 140, 145))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len2:], y=self.ctpg_tik_data[cindex(2)], pen=(120, 120, 125))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len3:], y=self.ctpg_tik_data[cindex(3)], pen=(100, 100, 105))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len4:], y=self.ctpg_tik_data[cindex(4)], pen=(80, 80, 85))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(5)], pen=(200, 50, 50))
+                for j, price in enumerate(self.ctpg_tik_arry[:, cindex(41)]):
                     if price > 0:
                         arrow = pg.ArrowItem(angle=-180, tipAngle=60, headLen=10, pen='w', brush='r')
                         arrow.setPos(self.ctpg_tik_xticks[j], price)
                         self.ctpg[i].addItem(arrow)
-                for j, price in enumerate(self.ctpg_tik_arry[:, 25]):
+                for j, price in enumerate(self.ctpg_tik_arry[:, cindex(42)]):
                     if price > 0:
                         arrow = pg.ArrowItem(angle=0, tipAngle=60, headLen=10, pen='w', brush='b')
                         arrow.setPos(self.ctpg_tik_xticks[j], price)
                         self.ctpg[i].addItem(arrow)
                 if 'USDT' in code:
-                    for j, price in enumerate(self.ctpg_tik_arry[:, 27]):
+                    for j, price in enumerate(self.ctpg_tik_arry[:, cindex(43)]):
                         if price > 0:
                             arrow = pg.ArrowItem(angle=-180, tipAngle=60, headLen=10, pen='w', brush='m')
                             arrow.setPos(self.ctpg_tik_xticks[j], price)
                             self.ctpg[i].addItem(arrow)
-                    for j, price in enumerate(self.ctpg_tik_arry[:, 28]):
+                    for j, price in enumerate(self.ctpg_tik_arry[:, cindex(44)]):
                         if price > 0:
                             arrow = pg.ArrowItem(angle=0, tipAngle=60, headLen=10, pen='w', brush='b')
                             arrow.setPos(self.ctpg_tik_xticks[j], price)
                             self.ctpg[i].addItem(arrow)
             elif factor == '체결강도':
-                ymin = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 8] > 0][:, 8].min()
-                ymax = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 7] > 0][:, 7].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 8], pen=( 50,  50, 200))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 7], pen=(200,  50,  50))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 6], pen=( 50, 200, 200))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 5], pen=( 50, 200,  50))
+                ymax, ymin = max(self.ctpg_tik_data[cindex(7)]), min(self.ctpg_tik_data[cindex(8)])
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len5:], y=self.ctpg_tik_data[cindex(6)], pen=(50, 50, 200))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len6:], y=self.ctpg_tik_data[cindex(7)], pen=(200, 50, 50))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len7:], y=self.ctpg_tik_data[cindex(8)], pen=(50, 200, 200))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(9)], pen=(50, 200, 50))
             elif factor == '초당거래대금':
-                ymin = min(self.ctpg_tik_arry[:, 9].min(), self.ctpg_tik_arry[:, 10].min())
-                ymax = max(self.ctpg_tik_arry[:, 9].max(), self.ctpg_tik_arry[:, 10].max())
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:,  9], pen=(200,  50,  50))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 10], pen=( 50, 200,  50))
+                ymax, ymin = self.ctpg_tik_data[cindex(10)].max(), self.ctpg_tik_data[cindex(10)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(10)], pen=(200, 50, 50))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(11)], pen=(50, 200, 50))
             elif factor == '초당체결수량':
-                ymin = min(self.ctpg_tik_arry[:, 11].min(), self.ctpg_tik_arry[:, 12].min())
-                ymax = max(self.ctpg_tik_arry[:, 11].max(), self.ctpg_tik_arry[:, 12].max())
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 11], pen=(200, 50,  50))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 12], pen=( 50, 50, 200))
+                ymax, ymin = max(self.ctpg_tik_data[cindex(12)].max(), self.ctpg_tik_data[cindex(13)].max()), min(self.ctpg_tik_data[cindex(12)].min(), self.ctpg_tik_data[cindex(13)].min())
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(12)], pen=(200, 50, 50))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(13)], pen=(50, 50, 200))
             elif factor == '등락율':
-                ymin = self.ctpg_tik_arry[:, 13].min()
-                ymax = self.ctpg_tik_arry[:, 13].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 13], pen=(200, 50, 200))
+                ymax, ymin = self.ctpg_tik_data[cindex(14)].max(), self.ctpg_tik_data[cindex(14)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(14)], pen=(200, 50, 200))
             elif factor == '고저평균대비등락율':
-                ymin = self.ctpg_tik_arry[:, 14].min()
-                ymax = self.ctpg_tik_arry[:, 14].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 14], pen=(50, 200, 200))
+                ymax, ymin = self.ctpg_tik_data[cindex(15)].max(), self.ctpg_tik_data[cindex(15)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(15)], pen=(50, 200, 200))
             elif factor == '호가총잔량':
-                ymin = min(self.ctpg_tik_arry[:, 15].min(), self.ctpg_tik_arry[:, 16].min())
-                ymax = max(self.ctpg_tik_arry[:, 15].max(), self.ctpg_tik_arry[:, 16].max())
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 15], pen=(200, 50,  50))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 16], pen=( 50, 50, 200))
+                ymax, ymin = max(self.ctpg_tik_data[cindex(16)].max(), self.ctpg_tik_data[cindex(17)].max()), min(self.ctpg_tik_data[cindex(16)].min(), self.ctpg_tik_data[cindex(17)].min())
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(16)], pen=(200, 50, 50))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(17)], pen=(50, 50, 200))
             elif factor == '1호가잔량':
-                ymin = min(self.ctpg_tik_arry[:, 17].min(), self.ctpg_tik_arry[:, 18].min())
-                ymax = max(self.ctpg_tik_arry[:, 17].max(), self.ctpg_tik_arry[:, 18].max())
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 17], pen=(200, 50,  50))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 18], pen=( 50, 50, 200))
+                ymax, ymin = max(self.ctpg_tik_data[cindex(18)].max(), self.ctpg_tik_data[cindex(19)].max()), min(self.ctpg_tik_data[cindex(18)].min(), self.ctpg_tik_data[cindex(19)].min())
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(18)], pen=(200, 50, 50))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(19)], pen=(50, 50, 200))
             elif factor == '5호가잔량합':
-                ymin = self.ctpg_tik_arry[:, 19].min()
-                ymax = self.ctpg_tik_arry[:, 19].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 19], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(20)].max(), self.ctpg_tik_data[cindex(20)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(20)], pen=(200, 50, 50))
             elif factor == '당일거래대금':
-                ymin = self.ctpg_tik_arry[:, 20].min()
-                ymax = self.ctpg_tik_arry[:, 20].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 20], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(21)].max(), self.ctpg_tik_data[cindex(21)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(21)], pen=(200, 50, 50))
             elif factor == '누적초당매도수수량':
-                ymin = min(self.ctpg_tik_arry[:, 21].min(), self.ctpg_tik_arry[:, 22].min())
-                ymax = max(self.ctpg_tik_arry[:, 21].max(), self.ctpg_tik_arry[:, 22].max())
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 21], pen=(200, 50,  50))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 22], pen=( 50, 50, 200))
+                ymax, ymin = max(self.ctpg_tik_data[cindex(22)].max(), self.ctpg_tik_data[cindex(23)].max()), min(self.ctpg_tik_data[cindex(22)].min(), self.ctpg_tik_data[cindex(23)].min())
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(22)], pen=(200, 50, 50))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(23)], pen=(50, 50, 200))
+            elif factor == '등락율각도':
+                ymax, ymin = max(self.ctpg_tik_data[cindex(24)]), min(self.ctpg_tik_data[cindex(24)])
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(24)], pen=(200, 50, 50))
             elif factor == '당일거래대금각도':
-                ymin = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 23] > 0][:, 23].min()
-                ymax = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 23] > 0][:, 23].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 23], pen=(200, 50, 50))
+                ymax, ymin = max(self.ctpg_tik_data[cindex(25)]), min(self.ctpg_tik_data[cindex(25)])
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(25)], pen=(200, 50, 50))
             elif factor == '전일비각도':
-                ymin = self.ctpg_tik_arry[:, 27].min()
-                ymax = self.ctpg_tik_arry[:, 27].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 27], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(26)].max(), self.ctpg_tik_data[cindex(26)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(26)], pen=(200, 50, 50))
             elif factor == '거래대금증감':
-                ymin = self.ctpg_tik_arry[:, 28].min()
-                ymax = self.ctpg_tik_arry[:, 28].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 28], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(27)].max(), self.ctpg_tik_data[cindex(27)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(27)], pen=(200, 50, 50))
             elif factor == '전일비':
-                ymin = self.ctpg_tik_arry[:, 29].min()
-                ymax = self.ctpg_tik_arry[:, 29].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 29], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(28)].max(), self.ctpg_tik_data[cindex(28)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(28)], pen=(200, 50, 50))
             elif factor == '회전율':
-                ymin = self.ctpg_tik_arry[:, 30].min()
-                ymax = self.ctpg_tik_arry[:, 30].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 30], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(29)].max(), self.ctpg_tik_data[cindex(29)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(29)], pen=(200, 50, 50))
             elif factor == '전일동시간비':
-                ymin = self.ctpg_tik_arry[:, 31].min()
-                ymax = self.ctpg_tik_arry[:, 31].max()
-                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
-                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 31], pen=(200, 50, 50))
+                ymax, ymin = self.ctpg_tik_data[cindex(30)].max(), self.ctpg_tik_data[cindex(30)].min()
+                if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ctpg_tik_xticks))
+                self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(30)], pen=(200, 50, 50))
 
             if self.ct_checkBoxxxxx_22.isChecked():
                 legend = pg.TextItem(anchor=(1, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
-                legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, False))
+                legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms))
                 legend.setFont(qfont12)
                 legend.setPos(xmax, ymax)
                 self.ctpg[i].addItem(legend)
@@ -1829,9 +1918,9 @@ class Window(QMainWindow):
                     for n, labell in enumerate(self.ctpg_tik_labels):
                         foctor = self.ctpg_tik_factors[n]
                         if index == n:
-                            text = f'Y축 {round(mousePoint.y(), 2):,}\n{self.GetLabelText(coin_, self.ctpg_tik_arry, xpoint, foctor, hms_, True if real else False)}'
+                            text = f'Y축 {round(mousePoint.y(), 2):,}\n{self.GetLabelText(coin_, self.ctpg_tik_arry, xpoint, foctor, hms_)}'
                         else:
-                            text = self.GetLabelText(coin_, self.ctpg_tik_arry, xpoint, foctor, hms_, True if real else False)
+                            text = self.GetLabelText(coin_, self.ctpg_tik_arry, xpoint, foctor, hms_)
                         labell.setText(text)
                         lxmin, lxmax = self.ctpg_cvb[n].state['viewRange'][0]
                         lymin, lymax = self.ctpg_cvb[n].state['viewRange'][1]
@@ -1861,17 +1950,18 @@ class Window(QMainWindow):
         main_pg.proxy = pg.SignalProxy(main_pg.scene().sigMouseMoved, rateLimit=20, slot=mouseMoved)
 
     @staticmethod
-    def GetLabelText(coin, arry, xpoint, factor, hms, real):
+    def GetLabelText(coin, arry, xpoint, factor, hms):
         def cindex(number):
             return dict_stock[number] if not coin else dict_coin[number]
 
         dict_stock = {
             1: 44, 2: 45, 3: 46, 4: 47, 5: 1, 6: 50, 7: 51, 8: 52, 9: 7, 10: 19, 11: 57, 12: 14, 13: 15, 14: 5, 15: 20,
-            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 8, 27: 9, 28: 10, 29: 11
+            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 60, 27: 8, 28: 9, 29: 10,
+            30: 11
         }
         dict_coin = {
             1: 35, 2: 36, 3: 37, 4: 38, 5: 1, 6: 41, 7: 42, 8: 43, 9: 7, 10: 10, 11: 48, 12: 8, 13: 9, 14: 5, 15: 11,
-            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49
+            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49, 25: 50
         }
 
         jpd = 0
@@ -1879,36 +1969,37 @@ class Window(QMainWindow):
         jip = 0
         hjp = 0
         jdp = 0
-        ema0060 = arry[xpoint, cindex(1) if real else 0]
-        ema0300 = arry[xpoint, cindex(2) if real else 1]
-        ema0600 = arry[xpoint, cindex(3) if real else 2]
-        ema1200 = arry[xpoint, cindex(4) if real else 3]
-        cc      = arry[xpoint, cindex(5) if real else 4]
-        ch      = arry[xpoint, cindex(9) if real else 5]
-        ach     = arry[xpoint, cindex(6) if real else 6]
-        hch     = arry[xpoint, cindex(7) if real else 7]
-        lch     = arry[xpoint, cindex(8) if real else 8]
-        sm      = arry[xpoint, cindex(10) if real else 9]
-        asm     = arry[xpoint, cindex(11) if real else 10]
-        bbc     = arry[xpoint, cindex(12) if real else 11]
-        sbc     = arry[xpoint, cindex(13) if real else 12]
-        per     = arry[xpoint, cindex(14) if real else 13]
-        hlp     = arry[xpoint, cindex(15) if real else 14]
-        tbj     = arry[xpoint, cindex(16) if real else 15]
-        tsj     = arry[xpoint, cindex(17) if real else 16]
-        b1j     = arry[xpoint, cindex(18) if real else 17]
-        s1j     = arry[xpoint, cindex(19) if real else 18]
-        jr5     = arry[xpoint, cindex(20) if real else 19]
-        dm      = arry[xpoint, cindex(21) if real else 20]
-        nsb     = arry[xpoint, cindex(22) if real else 21]
-        nss     = arry[xpoint, cindex(23) if real else 22]
-        dmd     = arry[xpoint, cindex(24) if real else 23]
+        ema0060 = arry[xpoint, cindex(1)]
+        ema0300 = arry[xpoint, cindex(2)]
+        ema0600 = arry[xpoint, cindex(3)]
+        ema1200 = arry[xpoint, cindex(4)]
+        cc      = arry[xpoint, cindex(5)]
+        ch      = arry[xpoint, cindex(9)]
+        ach     = arry[xpoint, cindex(6)]
+        hch     = arry[xpoint, cindex(7)]
+        lch     = arry[xpoint, cindex(8)]
+        sm      = arry[xpoint, cindex(10)]
+        asm     = arry[xpoint, cindex(11)]
+        bbc     = arry[xpoint, cindex(12)]
+        sbc     = arry[xpoint, cindex(13)]
+        per     = arry[xpoint, cindex(14)]
+        hlp     = arry[xpoint, cindex(15)]
+        tbj     = arry[xpoint, cindex(16)]
+        tsj     = arry[xpoint, cindex(17)]
+        b1j     = arry[xpoint, cindex(18)]
+        s1j     = arry[xpoint, cindex(19)]
+        jr5     = arry[xpoint, cindex(20)]
+        dm      = arry[xpoint, cindex(21)]
+        nsb     = arry[xpoint, cindex(22)]
+        nss     = arry[xpoint, cindex(23)]
+        prd     = arry[xpoint, cindex(24)]
+        dmd     = arry[xpoint, cindex(25)]
         if not coin:
-            jpd = arry[xpoint, cindex(25) if real else 24]
-            dmj = arry[xpoint, cindex(26) if real else 25]
-            jip = arry[xpoint, cindex(27) if real else 26]
-            hjp = arry[xpoint, cindex(28) if real else 27]
-            jdp = arry[xpoint, cindex(29) if real else 28]
+            jpd = arry[xpoint, cindex(26)]
+            dmj = arry[xpoint, cindex(27)]
+            jip = arry[xpoint, cindex(28)]
+            hjp = arry[xpoint, cindex(29)]
+            jdp = arry[xpoint, cindex(30)]
 
         text = ''
         if factor == '현재가':
@@ -1973,6 +2064,8 @@ class Window(QMainWindow):
             else:
                 text = f"누적초당매수수량 {nsb:,.0f}\n" \
                        f"누적초당매도수량 {nss:,.0f}"
+        elif factor == '등락율각도':
+            text = f"등락율각도 {prd:,.2f}º"
         elif factor == '당일거래대금각도':
             text = f"당일거래대금각도 {dmd:,.2f}º"
         elif factor == '전일비각도':
@@ -2021,14 +2114,15 @@ class Window(QMainWindow):
             if self.ct_checkBoxxxxx_08.isChecked():     self.ctpg_tik_factors.append('1호가잔량')
             if self.ct_checkBoxxxxx_09.isChecked():     self.ctpg_tik_factors.append('5호가잔량합')
             if self.ct_checkBoxxxxx_10.isChecked():     self.ctpg_tik_factors.append('당일거래대금')
-            if self.ct_checkBoxxxxx_15.isChecked():     self.ctpg_tik_factors.append('누적초당매도수수량')
-            if self.ct_checkBoxxxxx_17.isChecked():     self.ctpg_tik_factors.append('당일거래대금각도')
+            if self.ct_checkBoxxxxx_11.isChecked():     self.ctpg_tik_factors.append('누적초당매도수수량')
+            if self.ct_checkBoxxxxx_12.isChecked():     self.ctpg_tik_factors.append('등락율각도')
+            if self.ct_checkBoxxxxx_13.isChecked():     self.ctpg_tik_factors.append('당일거래대금각도')
             if not coin:
-                if self.ct_checkBoxxxxx_11.isChecked(): self.ctpg_tik_factors.append('거래대금증감')
-                if self.ct_checkBoxxxxx_12.isChecked(): self.ctpg_tik_factors.append('전일비')
-                if self.ct_checkBoxxxxx_13.isChecked(): self.ctpg_tik_factors.append('회전율')
-                if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_factors.append('전일동시간비')
-                if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_factors.append('전일비각도')
+                if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_factors.append('거래대금증감')
+                if self.ct_checkBoxxxxx_15.isChecked(): self.ctpg_tik_factors.append('전일비')
+                if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_factors.append('회전율')
+                if self.ct_checkBoxxxxx_17.isChecked(): self.ctpg_tik_factors.append('전일동시간비')
+                if self.ct_checkBoxxxxx_18.isChecked(): self.ctpg_tik_factors.append('전일비각도')
 
         """ 주식
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
@@ -2041,14 +2135,14 @@ class Window(QMainWindow):
            33       34       35        36       37        38       39        40       41       42          43
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
             44         45          46           47           48         49         50           51           52
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_, 전일비각도_
-              53            54               55              56              57             58            59
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
+              53            54               55              56              57           58           59           60
         """
         dict_stock = {
             1: 44, 2: 45, 3: 46, 4: 47, 5: 1, 6: 50, 7: 51, 8: 52, 9: 7, 10: 19, 11: 57, 12: 14, 13: 15, 14: 5, 15: 20,
-            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 8, 27: 9, 28: 10, 29: 11
+            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 60, 27: 8, 28: 9, 29: 10,
+            30: 11
         }
-
         """ 코인
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
            0      1     2    3     4     5        6         7         8           9          10            11
@@ -2058,16 +2152,16 @@ class Window(QMainWindow):
            24        25       26       27        28       29        30       31       32        33         34
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
             35         36           37           38          39         40         41           42          43
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_
-               44            45              46              47              48             49
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
+               44            45              46              47              48           49            50
         """
         dict_coin = {
             1: 35, 2: 36, 3: 37, 4: 38, 5: 1, 6: 41, 7: 42, 8: 43, 9: 7, 10: 10, 11: 48, 12: 8, 13: 9, 14: 5, 15: 11,
-            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49
+            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49, 25: 50
         }
 
         for j in range(len(self.ctpg_tik_arry[0, :])):
-            if j in [cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(24)]:
+            if j in [cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25)]:
                 self.ctpg_tik_data[j] = [x for x in self.ctpg_tik_arry[:, j] if x != 0]
             else:
                 self.ctpg_tik_data[j] = self.ctpg_tik_arry[:, j]
@@ -2083,7 +2177,7 @@ class Window(QMainWindow):
         len5 = len(self.ctpg_tik_data[cindex(6)])
         len6 = len(self.ctpg_tik_data[cindex(7)])
         len7 = len(self.ctpg_tik_data[cindex(8)])
-        len8 = len(self.ctpg_tik_data[cindex(24)])
+        len8 = len(self.ctpg_tik_data[cindex(25)])
 
         if self.ctpg_tik_name != name:
             for i, factor in enumerate(self.ctpg_tik_factors):
@@ -2139,29 +2233,32 @@ class Window(QMainWindow):
                     self.ctpg_tik_item[22] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(22)], pen=(200, 50, 50))
                     self.ctpg_tik_item[23] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(23)], pen=(50, 50, 200))
                     ymax, ymin = max(self.ctpg_tik_data[cindex(22)].max(), self.ctpg_tik_data[cindex(23)].max()), min(self.ctpg_tik_data[cindex(22)].min(), self.ctpg_tik_data[cindex(23)].min())
-                elif factor == '당일거래대금각도':
-                    self.ctpg_tik_item[24] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(24)], pen=(200, 50, 50))
+                elif factor == '등락율각도':
+                    self.ctpg_tik_item[24] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(24)], pen=(200, 50, 50))
                     ymax, ymin = max(self.ctpg_tik_data[cindex(24)]), min(self.ctpg_tik_data[cindex(24)])
+                elif factor == '당일거래대금각도':
+                    self.ctpg_tik_item[25] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(25)], pen=(200, 50, 50))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(25)]), min(self.ctpg_tik_data[cindex(25)])
                 elif factor == '전일비각도':
-                    self.ctpg_tik_item[25] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(25)], pen=(200, 50, 50))
-                    ymax, ymin = self.ctpg_tik_data[cindex(25)].max(), self.ctpg_tik_data[cindex(25)].min()
-                elif factor == '거래대금증감':
                     self.ctpg_tik_item[26] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(26)], pen=(200, 50, 50))
                     ymax, ymin = self.ctpg_tik_data[cindex(26)].max(), self.ctpg_tik_data[cindex(26)].min()
-                elif factor == '전일비':
+                elif factor == '거래대금증감':
                     self.ctpg_tik_item[27] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(27)], pen=(200, 50, 50))
                     ymax, ymin = self.ctpg_tik_data[cindex(27)].max(), self.ctpg_tik_data[cindex(27)].min()
-                elif factor == '회전율':
+                elif factor == '전일비':
                     self.ctpg_tik_item[28] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(28)], pen=(200, 50, 50))
                     ymax, ymin = self.ctpg_tik_data[cindex(28)].max(), self.ctpg_tik_data[cindex(28)].min()
-                elif factor == '전일동시간비':
+                elif factor == '회전율':
                     self.ctpg_tik_item[29] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(29)], pen=(200, 50, 50))
                     ymax, ymin = self.ctpg_tik_data[cindex(29)].max(), self.ctpg_tik_data[cindex(29)].min()
+                elif factor == '전일동시간비':
+                    self.ctpg_tik_item[30] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(30)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(30)].max(), self.ctpg_tik_data[cindex(30)].min()
 
                 if self.ct_checkBoxxxxx_22.isChecked():
                     legend = pg.TextItem(anchor=(0, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
                     legend.setFont(qfont12)
-                    legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, True))
+                    legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms))
                     self.ctpg[i].addItem(legend)
                     self.ctpg_tik_legend[i] = legend
 
@@ -2226,24 +2323,27 @@ class Window(QMainWindow):
                     ymax, ymin = max(self.ctpg_tik_data[cindex(22)].max(), self.ctpg_tik_data[cindex(23)].max()), min(self.ctpg_tik_data[cindex(22)].min(), self.ctpg_tik_data[cindex(23)].min())
                     self.ctpg_tik_item[22].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(22)])
                     self.ctpg_tik_item[23].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(23)])
-                elif factor == '당일거래대금각도':
+                elif factor == '등락율각도':
                     ymax, ymin = max(self.ctpg_tik_data[cindex(24)]), min(self.ctpg_tik_data[cindex(24)])
-                    self.ctpg_tik_item[24].setData(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(24)])
+                    self.ctpg_tik_item[24].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(24)])
+                elif factor == '당일거래대금각도':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(25)]), min(self.ctpg_tik_data[cindex(25)])
+                    self.ctpg_tik_item[25].setData(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(25)])
                 elif factor == '전일비각도':
-                    ymax, ymin = self.ctpg_tik_data[cindex(25)].max(), self.ctpg_tik_data[cindex(25)].min()
-                    self.ctpg_tik_item[25].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(25)])
-                elif factor == '거래대금증감':
                     ymax, ymin = self.ctpg_tik_data[cindex(26)].max(), self.ctpg_tik_data[cindex(26)].min()
                     self.ctpg_tik_item[26].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(26)])
-                elif factor == '전일비':
+                elif factor == '거래대금증감':
                     ymax, ymin = self.ctpg_tik_data[cindex(27)].max(), self.ctpg_tik_data[cindex(27)].min()
                     self.ctpg_tik_item[27].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(27)])
-                elif factor == '회전율':
+                elif factor == '전일비':
                     ymax, ymin = self.ctpg_tik_data[cindex(28)].max(), self.ctpg_tik_data[cindex(28)].min()
                     self.ctpg_tik_item[28].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(28)])
-                elif factor == '전일동시간비':
+                elif factor == '회전율':
                     ymax, ymin = self.ctpg_tik_data[cindex(29)].max(), self.ctpg_tik_data[cindex(29)].min()
                     self.ctpg_tik_item[29].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(29)])
+                elif factor == '전일동시간비':
+                    ymax, ymin = self.ctpg_tik_data[cindex(30)].max(), self.ctpg_tik_data[cindex(30)].min()
+                    self.ctpg_tik_item[30].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(30)])
 
                 self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
                 self.SetPosLegendLabel(i, coin, hms)
@@ -2260,7 +2360,7 @@ class Window(QMainWindow):
             self.ctpg_tik_labels[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][0])
         if self.ct_checkBoxxxxx_22.isChecked():
             self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][1])
-            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, True))
+            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms))
 
     @error_decorator
     def DrawRealJisuChart(self, data):
@@ -2269,17 +2369,17 @@ class Window(QMainWindow):
 
         gubun, xticks, ydatas = data
         if gubun == ui_num['코스피']:
-            if 30 not in self.ctpg_tik_item.keys():
-                self.ctpg_tik_item[30] = self.jspg[1].plot(x=xticks, y=ydatas, pen=(255, 0, 0))
+            if 40 not in self.ctpg_tik_item.keys():
+                self.ctpg_tik_item[40] = self.jspg[1].plot(x=xticks, y=ydatas, pen=(255, 0, 0))
                 self.jspg[1].enableAutoRange()
             else:
-                self.ctpg_tik_item[30].setData(x=xticks, y=ydatas)
+                self.ctpg_tik_item[40].setData(x=xticks, y=ydatas)
         elif gubun == ui_num['코스닥']:
-            if 31 not in self.ctpg_tik_item.keys():
-                self.ctpg_tik_item[31] = self.jspg[2].plot(x=xticks, y=ydatas, pen=(0, 0, 255))
+            if 41 not in self.ctpg_tik_item.keys():
+                self.ctpg_tik_item[41] = self.jspg[2].plot(x=xticks, y=ydatas, pen=(0, 0, 255))
                 self.jspg[2].enableAutoRange()
             else:
-                self.ctpg_tik_item[31].setData(x=xticks, y=ydatas)
+                self.ctpg_tik_item[41].setData(x=xticks, y=ydatas)
 
     @error_decorator
     def DrawTremap(self, data):
@@ -4525,6 +4625,8 @@ class Window(QMainWindow):
                     benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
                     optunasampl = self.op_comboBoxxxx_01.currentText()
+                    optunafixv  = self.op_lineEditttt_01.text()
+                    optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
                     for bpq in self.back_pques:
                         bpq.put(['백테유형', '전진분석'])
@@ -4533,14 +4635,15 @@ class Window(QMainWindow):
                         backQ.put([
                             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn,
                             ccount, self.dict_set['최적화기준값제한'], optistd, self.back_count, True, self.df_kp,
-                            self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                            self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl,
+                            optunafixv, optunaautos
                         ])
                         gubun = 'S'
                     else:
                         backQ.put([
                             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount,
                             self.dict_set['최적화기준값제한'], optistd, self.back_count, True, None, None, weeks_train,
-                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
                         ])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
@@ -4605,20 +4708,24 @@ class Window(QMainWindow):
                     benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
                     optunasampl = self.op_comboBoxxxx_01.currentText()
+                    optunafixv  = self.op_lineEditttt_01.text()
+                    optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
                     for bpq in self.back_pques:
                         bpq.put(['백테유형', '최적화'])
 
                     if bt_gubun == '주식':
                         backQ.put([
-                            betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                            optistd, self.back_count, True, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                            betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount,
+                            self.dict_set['최적화기준값제한'], optistd, self.back_count, True, self.df_kp, self.df_kd,
+                            weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
                         ])
                         gubun = 'S'
                     else:
                         backQ.put([
-                            betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                            optistd, self.back_count, True, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                            betting, starttime, endtime, buystg, sellstg, optivars, None, ccount,
+                            self.dict_set['최적화기준값제한'], optistd, self.back_count, True, None, None, weeks_train,
+                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
                         ])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
@@ -7020,6 +7127,8 @@ class Window(QMainWindow):
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
             optunasampl = self.op_comboBoxxxx_01.currentText()
+            optunafixv  = self.op_lineEditttt_01.text()
+            optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
             if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
@@ -7040,7 +7149,8 @@ class Window(QMainWindow):
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday,
+                bengineeday, optunasampl, optunafixv, optunaautos
             ])
             if back_name == '최적화O':
                 self.proc_backtester_o = Process(
@@ -7145,6 +7255,8 @@ class Window(QMainWindow):
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
             optunasampl = self.op_comboBoxxxx_01.currentText()
+            optunafixv  = self.op_lineEditttt_01.text()
+            optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
             if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
@@ -7167,8 +7279,9 @@ class Window(QMainWindow):
                 bpq.put(['백테유형', '전진분석'])
 
             backQ.put([
-                betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount,
+                self.dict_set['최적화기준값제한'], optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train,
+                weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunaautos
             ])
             if back_name == '전진분석O':
                 self.proc_backtester_or = Process(
@@ -7731,8 +7844,12 @@ class Window(QMainWindow):
 
     def svcButtonClicked_12(self):
         if not self.dialog_optuna.isVisible():
+            if not self.optuna_window_open:
+                self.op_lineEditttt_01.setText(self.dict_set['옵튜나고정변수'])
+                self.op_checkBoxxxx_01.setChecked(True) if self.dict_set['옵튜나자동스탭'] else self.op_checkBoxxxx_01.setChecked(False)
+                self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
             self.dialog_optuna.show()
-            self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
+            self.optuna_window_open = True
         else:
             self.dialog_optuna.close()
 
@@ -8602,6 +8719,8 @@ class Window(QMainWindow):
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
             optunasampl = self.op_comboBoxxxx_01.currentText()
+            optunafixv  = self.op_lineEditttt_01.text()
+            optunaautos = 1 if self.op_checkBoxxxx_01.isChecked() else 0
 
             if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
@@ -8622,7 +8741,8 @@ class Window(QMainWindow):
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
+                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday,
+                optunasampl, optunafixv, optunaautos
             ])
             if back_name == '최적화O':
                 self.proc_backtester_o = Process(
@@ -9314,8 +9434,12 @@ class Window(QMainWindow):
 
     def cvcButtonClicked_12(self):
         if not self.dialog_optuna.isVisible():
+            if not self.optuna_window_open:
+                self.op_lineEditttt_01.setText(self.dict_set['옵튜나고정변수'])
+                self.op_checkBoxxxx_01.setChecked(True) if self.dict_set['옵튜나자동스탭'] else self.op_checkBoxxxx_01.setChecked(False)
+                self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
             self.dialog_optuna.show()
-            self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
+            self.optuna_window_open = True
         else:
             self.dialog_optuna.close()
 
@@ -9432,10 +9556,12 @@ class Window(QMainWindow):
             self.be_comboBoxxxxx_02.clear()
             for name in name_list:
                 self.be_comboBoxxxxx_02.addItem(name)
-        self.be_comboBoxxxxx_01.setCurrentText(self.dict_set['백테엔진분류방법'])
         self.be_lineEdittttt_01.setText('90000' if gubun == '주식' else '0')
         self.be_lineEdittttt_02.setText('93000' if gubun == '주식' else '235959')
+        if not self.backengin_window_open:
+            self.be_comboBoxxxxx_01.setCurrentText(self.dict_set['백테엔진분류방법'])
         self.dialog_backengine.show()
+        self.backengin_window_open = True
 
     @thread_decorator
     def StartBacktestEngine(self, gubun):
@@ -9446,70 +9572,73 @@ class Window(QMainWindow):
         self.avg_list  = [int(x) for x in self.be_lineEdittttt_03.text().split(',')]
         multi          = int(self.be_lineEdittttt_04.text())
         divid_mode     = self.be_comboBoxxxxx_01.currentText()
-        one_code       = self.be_comboBoxxxxx_02.currentText()
-        one_code       = self.dict_code[one_code] if one_code in self.dict_code.keys() else one_code
+        one_name       = self.be_comboBoxxxxx_02.currentText()
+        one_code       = self.dict_code[one_name] if one_name in self.dict_code.keys() else one_name
 
         wdservQ.put(['manager', '백테엔진구동'])
-        for i in range(20):
-            ctQ   = Queue()
-            cproc = Process(target=CollectTotal, args=(totalQ, ctQ, self.dict_set['백테매수시간기준'], i), daemon=True)
-            cproc.start()
-            self.bact_procs.append(cproc)
-            self.bact_pques.append(ctQ)
+        for i in range(10):
+            stq = Queue()
+            if i < 5:
+                proc = Process(target=SubTotal, args=(totalQ, stq, self.dict_set['백테매수시간기준'], 1), daemon=True)
+            else:
+                proc = Process(target=SubTotal, args=(totalQ, stq, self.dict_set['백테매수시간기준'], 0), daemon=True)
+            proc.start()
+            self.bact_procs.append(proc)
+            self.bact_pques.append(stq)
             windowQ.put([ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'])
 
         for i in range(multi):
-            bprocQ = Queue()
+            bpq = Queue()
             if gubun == '주식':
                 if not self.dict_set['주식분봉데이터'] and not self.dict_set['주식일봉데이터']:
                     if not self.dict_set['백테주문관리적용']:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=StockBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=StockBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
                     else:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=StockBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=StockBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
                 else:
                     if not self.dict_set['백테주문관리적용']:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=StockBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=StockBackEngine3, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=StockBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=StockBackEngine3, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
                     else:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=StockBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=StockBackEngine4, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=StockBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=StockBackEngine4, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
             else:
                 if not self.dict_set['코인분봉데이터'] and not self.dict_set['코인일봉데이터']:
                     if not self.dict_set['백테주문관리적용']:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
                     else:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
                 else:
                     if not self.dict_set['백테주문관리적용']:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
                     else:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=CoinUpbitBackEngine4 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine4 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine4, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=CoinUpbitBackEngine4 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                            proc = Process(target=CoinUpbitBackEngine4 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine4, args=(i, windowQ, bpq, totalQ, backQ, self.bact_pques), daemon=True)
 
-            bproc.start()
-            self.back_procs.append(bproc)
-            self.back_pques.append(bprocQ)
+            proc.start()
+            self.back_procs.append(proc)
+            self.back_pques.append(bpq)
             windowQ.put([ui_num['백테엔진'], f'연산용 프로세스{i + 1} 생성 완료'])
 
         if gubun == '주식':
@@ -9523,8 +9652,6 @@ class Window(QMainWindow):
             windowQ.put([ui_num['백테엔진'], '이전 임시파일 삭제 완료'])
 
         dict_kd = None
-        # noinspection PyUnusedLocal
-        df_mt = None
         try:
             con = sqlite3.connect(DB_STOCK_BACK) if gubun == '주식' else sqlite3.connect(DB_COIN_BACK)
             if gubun == '주식':
@@ -9571,10 +9698,23 @@ class Window(QMainWindow):
 
         code_days = {}
         for code in table_list:
-            code_days[code] = []
-            for day, codes in day_codes.items():
-                if code in codes:
-                    code_days[code].append(day)
+            code_days[code] = [day for day, codes in day_codes.items() if code in codes]
+
+        if divid_mode == '종목코드별 분류' and len(code_days) < multi:
+            windowQ.put([ui_num['백테엔진'], f'{one_name} 선택한 일자의 종목의 개수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
+            return
+
+        if divid_mode == '일자별 분류' and len(day_codes) < multi:
+            windowQ.put([ui_num['백테엔진'], f'{one_name} 선택한 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
+            return
+
+        if divid_mode == '한종목 로딩' and one_code not in code_days.keys():
+            windowQ.put([ui_num['백테엔진'], f'{one_name} 종목은 선택한 일자에 데이터가 존재하지 않습니다.'])
+            return
+
+        if divid_mode == '한종목 로딩' and len(code_days[one_code]) < multi:
+            windowQ.put([ui_num['백테엔진'], f'{one_name} 선택한 종목의 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
+            return
 
         for i in range(multi):
             if gubun == '주식':
@@ -9601,12 +9741,8 @@ class Window(QMainWindow):
                     windowQ.put([ui_num['백테엔진'], f'종목별 데이터 크기 추출 중 ... [{i + 1}/{last}]'])
             windowQ.put([ui_num['백테엔진'], '종목별 데이터 크기 추출 완료'])
 
-            code_lists = []
-            total_list = []
-            for _ in range(multi):
-                code_lists.append([])
-                total_list.append(0)
-
+            code_lists  = [[] for _ in range(multi)]
+            total_list  = [0 for _ in range(multi)]
             add_count   = 0
             multi_num   = 0
             reverse     = False
@@ -11434,6 +11570,7 @@ class Window(QMainWindow):
 
             if gubun == '주식':
                 wdservQ.put(['manager', '시뮬레이터구동'])
+                self.stock_simulator_alive = False
             else:
                 self.proc_strategy_coin.start()
                 self.proc_simulator_td.start()
@@ -11451,11 +11588,14 @@ class Window(QMainWindow):
 
     def ctButtonClicked_02(self):
         if self.SimulatorProcessAlive():
-            self.proc_simulator_rv.kill()
-            self.proc_simulator_td.kill()
-        wdservQ.put(['manager', '시뮬레이터종료'])
-        if self.CoinStrategyProcessAlive():
-            self.proc_strategy_coin.kill()
+            if self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive():
+                self.proc_simulator_rv.kill()
+            if self.proc_simulator_td is not None and self.proc_simulator_td.is_alive():
+                self.proc_simulator_td.kill()
+            if self.CoinStrategyProcessAlive():
+                self.proc_strategy_coin.kill()
+            wdservQ.put(['manager', '시뮬레이터종료'])
+            self.stock_simulator_alive = False
         qtest_qwait(3)
         QMessageBox.information(self.dialog_test, '알림', '시뮬레이터 엔진 종료 완료')
 
@@ -11656,7 +11796,12 @@ class Window(QMainWindow):
         return self.proc_stomlive_stock is not None and self.proc_stomlive_stock.is_alive()
 
     def SimulatorProcessAlive(self):
-        return self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and self.proc_simulator_td is not None and self.proc_simulator_td.is_alive()
+        result = False
+        if self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and self.proc_simulator_td is not None and self.proc_simulator_td.is_alive():
+            result = True
+        if self.stock_simulator_alive:
+            result = True
+        return result
 
     def CoinReceiverProcessAlive(self):
         return self.proc_receiver_coin is not None and self.proc_receiver_coin.is_alive()
@@ -12135,9 +12280,11 @@ class Window(QMainWindow):
             factor_choice = f"{factor_choice}{'1' if checkbox.isChecked() else '0'};"
         query = f"UPDATE etc SET 팩터선택 = '{factor_choice[:-1]}'"
         queryQ.put(['설정디비', query])
-        divid_mode = self.be_comboBoxxxxx_01.currentText()
-        optuna_sampler = self.op_comboBoxxxx_01.currentText()
-        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}', '옵튜나샘플러' = '{optuna_sampler}'"
+        divid_mode      = self.be_comboBoxxxxx_01.currentText()
+        optuna_sampler  = self.op_comboBoxxxx_01.currentText()
+        optuna_fixvars  = self.op_lineEditttt_01.text()
+        optuna_autostep = 1 if self.op_checkBoxxxx_01.isChecked() else 0
+        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}', '옵튜나샘플러' = '{optuna_sampler}', '옵튜나고정변수' = '{optuna_fixvars}', '옵튜나자동스탭' = {optuna_autostep}"
         queryQ.put(['설정디비', query])
 
         if self.dict_set['창위치기억']:

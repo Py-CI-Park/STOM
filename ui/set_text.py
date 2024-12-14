@@ -684,7 +684,7 @@ try:
 except:
     마지막날짜 = ''
 if 현재날짜 == 마지막날짜 and 매수:
-    self.tq.put([종목코드, self.index] + self.tickdata)'''
+    self.tq.put(['백파결과', 종목코드, self.index] + self.tickdata)'''
 
 example_finder_future = '''# 탐색틱수에 현재틱 이후의 범위를 입력하십시오.
 # 입력된 범위내 최고현재가의 현재가대비등락율이 설정한만큼 상승했을 경우를 탐색합니다.
@@ -725,7 +725,7 @@ try:
 except:
     마지막날짜 = ''
 if 현재날짜 == 마지막날짜 and BUY_LONG:
-    self.tq.put([종목코드, self.index] + self.tickdata)'''
+    self.tq.put(['백파결과', 종목코드, self.index] + self.tickdata)'''
 
 example_opti_vars = '''# 키값 0번을 제외한 모든 변수는 최적화편집기에서
 # 사용한 변수들입니다. 키값 0번의 벨류값은 평균값

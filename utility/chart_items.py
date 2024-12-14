@@ -17,8 +17,9 @@ class ChuseItem(pg.GraphicsObject):
         start = 0
         p.setBrush(pg.mkBrush(color_bg_dk))
         p.setPen(pg.mkPen(color_bg_dk))
+        last = len(ar) - 1
         for i, mt in enumerate(ar):
-            if i != len(ar) - 1:
+            if i != last:
                 if mt == 1 and start == 0:
                     start = xticks[i]
                 elif mt == 0 and start != 0:
@@ -60,17 +61,17 @@ class MoveavgItem(pg.GraphicsObject):
             ma240 = ar[-2, 11]
             ma241 = ar[-1, 11]
             p.setPen(pg.mkPen(color_ma05))
-            p.drawLine(QPointF(len(ar) - 2, ma050), QPointF(len(ar) - 1, ma051))
+            p.drawLine(QPointF(count - 2, ma050), QPointF(count - 1, ma051))
             p.setPen(pg.mkPen(color_ma10))
-            p.drawLine(QPointF(len(ar) - 2, ma100), QPointF(len(ar) - 1, ma101))
+            p.drawLine(QPointF(count - 2, ma100), QPointF(count - 1, ma101))
             p.setPen(pg.mkPen(color_ma20))
-            p.drawLine(QPointF(len(ar) - 2, ma200), QPointF(len(ar) - 1, ma201))
+            p.drawLine(QPointF(count - 2, ma200), QPointF(count - 1, ma201))
             p.setPen(pg.mkPen(color_ma60))
-            p.drawLine(QPointF(len(ar) - 2, ma600), QPointF(len(ar) - 1, ma601))
+            p.drawLine(QPointF(count - 2, ma600), QPointF(count - 1, ma601))
             p.setPen(pg.mkPen(color_ma120))
-            p.drawLine(QPointF(len(ar) - 2, ma120), QPointF(len(ar) - 1, ma121))
+            p.drawLine(QPointF(count - 2, ma120), QPointF(count - 1, ma121))
             p.setPen(pg.mkPen(color_ma240))
-            p.drawLine(QPointF(len(ar) - 2, ma240), QPointF(len(ar) - 1, ma241))
+            p.drawLine(QPointF(count - 2, ma240), QPointF(count - 1, ma241))
         else:
             for i in range(count):
                 if i < count - 2:
@@ -186,7 +187,7 @@ class VolumeBarsItem(pg.GraphicsObject):
                 p.setBrush(pg.mkBrush(color_minus))
             p.drawRect(QRectF(x - 0.25, 0, 0.25 * 2, m))
         else:
-            for i in range(len(ar)):
+            for i in range(count):
                 if i < count - 1:
                     o = ar[i, 1]
                     c = ar[i, 4]
