@@ -1,5 +1,4 @@
 import math
-import sys
 import random
 import pyupbit
 import sqlite3
@@ -11,7 +10,7 @@ from traceback import print_exc
 from matplotlib import pyplot as plt
 from optuna_dashboard import run_server
 from matplotlib import font_manager, gridspec
-from utility.static import strp_time, strf_time, timedelta_sec, thread_decorator
+from utility.static import strp_time, strf_time, thread_decorator
 from utility.setting import ui_num, GRAPH_PATH, columns_btf, columns_bt, DICT_SET, DB_SETTING, DB_OPTUNA
 
 
@@ -160,45 +159,45 @@ def LoadOrderSetting(gubun):
     return buy_setting, sell_setting
 
 
-def GetBuyStg(buystg):
+def GetBuyStg(buystg, gubun):
     buystg = buystg.split('if 매수:')[0] + 'if 매수:\n    self.Buy()'
     try:
         buystg = compile(buystg, '<string>', 'exec')
     except:
         buystg = None
-        print_exc()
+        if gubun == 0: print_exc()
     return buystg
 
 
-def GetSellStg(sellstg):
+def GetSellStg(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split('if 매도:')[0] + 'if 매도:\n    self.Sell(sell_cond)'
     sellstg, dict_cond = SetSellCond(sellstg.split('\n'))
     try:
         sellstg = compile(sellstg, '<string>', 'exec')
     except:
         sellstg = None
-        print_exc()
+        if gubun == 0: print_exc()
     return sellstg, dict_cond
 
 
-def GetBuyConds(buy_conds):
+def GetBuyConds(buy_conds, gubun):
     buy_conds = 'if ' + ':\n    매수 = False\nelif '.join(buy_conds) + ':\n    매수 = False\nif 매수:\n    self.Buy()'
     try:
         buy_conds = compile(buy_conds, '<string>', 'exec')
     except:
         buy_conds = None
-        print_exc()
+        if gubun == 0: print_exc()
     return buy_conds
 
 
-def GetSellConds(sell_conds):
+def GetSellConds(sell_conds, gubun):
     sell_conds = 'sell_cond = 0\nif ' + ':\n    매도 = True\nelif '.join(sell_conds) + ':\n    매도 = True\nif 매도:\n    self.Sell(sell_cond)'
     sell_conds, dict_cond = SetSellCond(sell_conds.split('\n'))
     try:
         sell_conds = compile(sell_conds, '<string>', 'exec')
     except:
         sell_conds = None
-        print_exc()
+        if gubun == 0: print_exc()
     return sell_conds, dict_cond
 
 
@@ -216,28 +215,28 @@ def SetSellCond(selllist):
     return sellstg, dict_cond
 
 
-def GetBuyStgFuture(buystg):
+def GetBuyStgFuture(buystg, gubun):
     buystg = buystg.split('if BUY_LONG or SELL_SHORT:')[0] + 'if BUY_LONG:\n    self.Buy("BUY_LONG")\nelif SELL_SHORT:\n    self.Buy("SELL_SHORT")'
     try:
         buystg = compile(buystg, '<string>', 'exec')
     except:
         buystg = None
-        print_exc()
+        if gubun == 0: print_exc()
     return buystg
 
 
-def GetSellStgFuture(sellstg):
+def GetSellStgFuture(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split("if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):")[0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell('SELL_LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell('BUY_SHORT', sell_cond)"
     sellstg, dict_cond = SetSellCond(sellstg.split('\n'))
     try:
         sellstg = compile(sellstg, '<string>', 'exec')
     except:
         sellstg = None
-        print_exc()
+        if gubun == 0: print_exc()
     return sellstg, dict_cond
 
 
-def GetBuyCondsFuture(is_long, buy_conds):
+def GetBuyCondsFuture(is_long, buy_conds, gubun):
     if is_long:
         buy_conds = 'if ' + ':\n    BUY_LONG = False\nelif '.join(buy_conds) + ':\n    BUY_LONG = False\nif BUY_LONG:\n    self.Buy("BUY_LONG")'
     else:
@@ -246,11 +245,11 @@ def GetBuyCondsFuture(is_long, buy_conds):
         buy_conds = compile(buy_conds, '<string>', 'exec')
     except:
         buy_conds = None
-        print_exc()
+        if gubun == 0: print_exc()
     return buy_conds
 
 
-def GetSellCondsFuture(is_long, sell_conds):
+def GetSellCondsFuture(is_long, sell_conds, gubun):
     if is_long:
         sell_conds = 'sell_cond = 0\nif ' + ':\n    SELL_LONG = True\nelif '.join(sell_conds) + ':\n    SELL_LONG = True\nif SELL_LONG:\n    self.Sell("SELL_LONG", sell_cond)'
     else:
@@ -260,7 +259,7 @@ def GetSellCondsFuture(is_long, sell_conds):
         sell_conds = compile(sell_conds, '<string>', 'exec')
     except:
         sell_conds = None
-        print_exc()
+        if gubun == 0: print_exc()
     return sell_conds, dict_cond
 
 
@@ -321,10 +320,7 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
         for text in valid_text:
             wq.put([ui_num[f'{ui_gubun}백테스트'], text])
     elif dict_train is not None:
-        if gubun in ['GA최적화', '조건최적화']:
-            text2, std   = GetText2('', optistd, std_list, betting, dict_train)
-            text3, stdp_ = GetText3(False, std, stdp)
-        elif gubun == '최적화테스트':
+        if gubun == '최적화테스트':
             text2, std = GetText2('TEST', optistd, std_list, betting, dict_train)
             text3 = ''
         else:
@@ -332,7 +328,8 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
             text3, stdp_ = GetText3(False, std, stdp)
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'])
     else:
-        std = -2_147_483_648
+        stdp_ = stdp
+        std   = -2_147_483_648
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
 
@@ -574,7 +571,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     df_st = df_tsg[['수익금']].copy()
     df_st['시간'] = df_st.index
     df_st['시간'] = df_st['시간'].apply(lambda x: strp_time('%H%M%S', x[8:]))
-    df_st = df_st.set_index('시간')
+    df_st.set_index('시간', inplace=True)
     start_time = strp_time('%H%M%S', str(starttime).zfill(6))
     end_time = strp_time('%H%M%S', str(endtime).zfill(6))
     total_sec = (end_time - start_time).total_seconds()
@@ -582,7 +579,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     df_st['시간'] = df_st.index
     df_st['시간'] = df_st['시간'].apply(lambda x: strf_time('%H%M%S', x))
     df_st['시간'] = df_st['시간'].apply(lambda x: x[:2] + ':' + x[2:4] + ':' + x[4:])
-    df_st = df_st.set_index('시간')
+    df_st.set_index('시간', inplace=True)
     df_st['이익금액'] = df_st['수익금'].apply(lambda x: x if x >= 0 else 0)
     df_st['손실금액'] = df_st['수익금'].apply(lambda x: x if x < 0 else 0)
 
@@ -752,31 +749,24 @@ class SubTotal:
                 self.optistd  = data[3]
             elif data == '백테시작':
                 self.complete = False
-                self.InitData()
+                self.dict_tsg = {}
+                self.dict_bct = {}
             elif data == '백테완료':
                 self.complete = True
-            else:
-                break
 
             if self.complete and self.stq.empty():
                 self.tq.put(['백테결과', self.dict_tsg, self.dict_bct])
                 self.complete = False
 
-        sys.exit()
-
-    def InitData(self):
-        self.dict_tsg = {}
-        self.dict_bct = {}
-
     def CollectData(self, data):
         _, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, vars_key = data
         if vars_key not in self.dict_tsg.keys():
             self.dict_tsg[vars_key] = [[] for _ in range(14)]
-            self.dict_bct[vars_key] = self.arry_bct
+            self.dict_bct[vars_key] = self.arry_bct.copy()
 
         index = str(매수시간) if self.buystd else str(매도시간)
-        while index in self.dict_tsg[vars_key][0]:
-            index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
+        # while index in self.dict_tsg[vars_key][0]:
+        #     index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
 
         self.dict_tsg[vars_key][0].append(index)
         self.dict_tsg[vars_key][1].append(종목명)
@@ -794,10 +784,11 @@ class SubTotal:
         self.dict_tsg[vars_key][13].append(추가매수시간)
 
         if 잔량없음:
-            arry_bct = self.dict_bct[vars_key]
-            array_bct = arry_bct[(arry_bct[:, 0] >= data[3]) & (arry_bct[:, 0] <= data[4])]
-            array_bct[:, 1] += 1
-            self.dict_bct[vars_key][(self.dict_bct[vars_key][:, 0] >= data[3]) & (self.dict_bct[vars_key][:, 0] <= data[4])] = array_bct
+            arry_bct  = self.dict_bct[vars_key]
+            arry_bct_ = arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)]
+            arry_bct_[:, 1] += 1
+            arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)] = arry_bct_
+            self.dict_bct[vars_key] = arry_bct
 
     def SendSubTotal(self, data):
         _, columns, list_data, arry_bct = data[:4]
@@ -810,21 +801,21 @@ class SubTotal:
         if len(data) == 11:
             vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
-                df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | ((df_tsg['매도시간'] > veday * 1000000 + 240000) & (df_tsg['매도시간'] < tsday * 1000000))]
-                df_bct = df_bct[(df_bct.index < vsday * 1000000) | ((df_bct.index > veday * 1000000 + 240000) & (df_bct.index < tsday * 1000000))]
+                df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | ((veday * 1000000 + 240000 < df_tsg['매도시간']) & (df_tsg['매도시간'] < tsday * 1000000))]
+                df_bct = df_bct[(df_bct.index < vsday * 1000000) | ((veday * 1000000 + 240000 < df_bct.index) & (df_bct.index < tsday * 1000000))]
             else:
-                df_tsg = df_tsg[(df_tsg['매도시간'] >= vsday * 1000000) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
-                df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
+                df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
+                df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
         elif len(data) == 10:
             vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
-                df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | (df_tsg['매도시간'] > veday * 1000000 + 240000)]
-                df_bct = df_bct[(df_bct.index < vsday * 1000000) | (df_bct.index > veday * 1000000 + 240000)]
+                df_tsg = df_tsg[(vsday * 1000000 < df_tsg['매도시간']) | (df_tsg['매도시간'] > veday * 1000000 + 240000)]
+                df_bct = df_bct[(vsday * 1000000 < df_bct.index) | (df_bct.index > veday * 1000000 + 240000)]
             else:
-                df_tsg = df_tsg[(df_tsg['매도시간'] >= vsday * 1000000) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
-                df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
+                df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
+                df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
         else:

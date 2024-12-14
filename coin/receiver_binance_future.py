@@ -21,7 +21,7 @@ class ZmqServ(Thread):
         self.zq = zq
         zctx = zmq.Context()
         self.sock = zctx.socket(zmq.PUB)
-        self.sock.bind(f'tcp://*:5690')
+        self.sock.bind(f'tcp://*:5779')
 
     def run(self):
         while True:
@@ -33,7 +33,7 @@ class ZmqServ(Thread):
 class ReceiverBinanceFuture:
     def __init__(self, qlist):
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ  = qlist[0]

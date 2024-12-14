@@ -493,7 +493,7 @@ class SetDialogBack:
                 self.ui.dialog_backengine.move(self.ui.dict_set['창위치'][22], self.ui.dict_set['창위치'][23])
             except:
                 pass
-        self.ui.be_groupBoxxxxx_01.setGeometry(5, 5, 470, 595)
+        self.ui.be_groupBoxxxxx_01.setGeometry(5, 5, 470, 590)
         self.ui.be_labellllllll_04.setGeometry(10, 5, 450, 30)
         self.ui.be_comboBoxxxxx_01.setGeometry(15, 40, 220, 30)
         self.ui.be_comboBoxxxxx_02.setGeometry(245, 40, 220, 30)

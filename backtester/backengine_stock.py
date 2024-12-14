@@ -101,8 +101,8 @@ class StockBackEngine:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
+                        self.buystg     = GetBuyStg(data[7], self.gubun)
+                        self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -124,8 +124,8 @@ class StockBackEngine:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
+                        self.buystg     = GetBuyStg(data[7], self.gubun)
+                        self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -151,8 +151,8 @@ class StockBackEngine:
                         self.didict_cond  = {}
                         error = False
                         for i in range(10):
-                            buystg = GetBuyConds(data[1][i])
-                            sellstg, dict_cond = GetSellConds(data[2][i])
+                            buystg = GetBuyConds(data[1][i], self.gubun)
+                            sellstg, dict_cond = GetSellConds(data[2][i], self.gubun)
                             self.dict_buystg[i]  = buystg
                             self.dict_sellstg[i] = sellstg
                             self.didict_cond[i]  = dict_cond
@@ -171,8 +171,8 @@ class StockBackEngine:
                         avg_list        = data[2]
                         self.starttime  = data[3]
                         self.endtime    = data[4]
-                        self.buystg     = GetBuyStg(data[5])
-                        self.sellstg, self.dict_cond = GetSellStg(data[6])
+                        self.buystg     = GetBuyStg(data[5], self.gubun)
+                        self.sellstg, self.dict_cond = GetSellStg(data[6], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -196,8 +196,8 @@ class StockBackEngine:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
+                        self.buystg     = GetBuyStg(data[7], self.gubun)
+                        self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
                         self.vars_count = 1
                         self.InitDayInfo()
                         self.InitTradeInfo()
@@ -790,12 +790,12 @@ class StockBackEngine:
         self.total_count += 1
         _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _ = self.trade_info[self.vars_key].values()
         시가총액 = int(self.array_tick[self.indexn, 12])
-        보유시간 = int((strp_time('%Y%m%d%H%M%S', str(int(self.index))) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[매수틱번호, 0])))).total_seconds())
+        보유시간 = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[매수틱번호, 0])))).total_seconds())
         매수시간, 매도시간, 매수금액 = int(self.array_tick[매수틱번호, 0]), self.index, 주문수량 * 매수가
         매도금액, 수익금, 수익률 = GetKiwoomPgSgSp(매수금액, 주문수량 * 매도가)
         매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
         추가매수시간, 잔량없음 = '', True
-        data = ['백테결과', self.name, 시가총액, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
+        data = ('백테결과', self.name, 시가총액, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key)
         self.stq_list[self.sell_count % 10].put(data)
         self.trade_info[self.vars_key] = GetTradeInfo(1)
         self.sell_count += 1

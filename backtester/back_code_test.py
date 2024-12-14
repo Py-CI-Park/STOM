@@ -186,6 +186,9 @@ class BackCodeTest:
         def 이동평균(tick, pre=0):
             return 1
 
+        def 등락율각도(tick, pre=0):
+            return 1
+
         def 당일거래대금각도(tick, pre=0):
             return 1
 

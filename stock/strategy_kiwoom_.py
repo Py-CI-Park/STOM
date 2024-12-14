@@ -15,7 +15,7 @@ from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_g
 class StrategyKiwoom2:
     def __init__(self, gubun, qlist):
         self.gubun    = gubun
-        self.kwmservQ = qlist[0]
+        self.kwzservQ = qlist[0]
         self.straderQ = qlist[2]
         self.sstgQs   = qlist[3]
         self.sstgQ    = qlist[3][self.gubun]
@@ -103,7 +103,7 @@ class StrategyKiwoom2:
 
     def Start(self):
         if self.gubun == 7:
-            self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 전략연산 시작']])
+            self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 전략연산 시작']])
         jg_receiv_count = 0
         while True:
             data = self.sstgQ.get()
@@ -138,7 +138,7 @@ class StrategyKiwoom2:
                     self.chart_code = data
 
         if self.gubun == 7:
-            self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 전략연산 종료']])
+            self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 전략연산 종료']])
         time.sleep(1)
 
     def LoadDayMinData(self):
@@ -163,10 +163,10 @@ class StrategyKiwoom2:
                         print(f'[{now()}] 주식 분봉데이터 로딩 중 ... [{i + 1}/{last}]')
                 for code in self.dict_min_ar.keys():
                     self.dict_min_data[code] = self.GetNewLineData(self.dict_min_ar[code], self.dict_set['주식분봉개수'])
-                self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 분봉데이터 로딩 완료']])
+                self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 분봉데이터 로딩 완료']])
             else:
                 self.dict_set['주식분봉데이터'] = False
-                self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 오류 알림 - 분봉데이터가 존재하지 않습니다.']])
+                self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 오류 알림 - 분봉데이터가 존재하지 않습니다.']])
             con.close()
 
         if self.dict_set['주식일봉데이터']:
@@ -190,10 +190,10 @@ class StrategyKiwoom2:
                         print(f'[{now()}] 주식 일봉데이터 로딩 중 ... [{i + 1}/{last}]')
                 for code in self.dict_day_ar.keys():
                     self.dict_day_data[code] = self.GetNewLineData(self.dict_day_ar[code], 250)
-                self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 일봉데이터 로딩 완료']])
+                self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 일봉데이터 로딩 완료']])
             else:
                 self.dict_set['주식일봉데이터'] = False
-                self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 오류 알림 - 일봉데이터가 존재하지 않습니다.']])
+                self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 오류 알림 - 일봉데이터가 존재하지 않습니다.']])
             con.close()
 
     @staticmethod
@@ -764,7 +764,7 @@ class StrategyKiwoom2:
                 분봉이평240 = round((분봉종가합계239 + 현재가) / 240, 3)
                 분봉최고거래대금대비 = round(분봉거래대금 / 분봉최고거래대금 * 100, 2) if 분봉최고거래대금 != 0 else 0.
             except Exception as e:
-                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - 분봉데이터 {e}']])
+                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - 분봉데이터 {e}']])
                 return
 
         if self.dict_set['주식일봉데이터']:
@@ -796,7 +796,7 @@ class StrategyKiwoom2:
                 D_ATR = talib.ATR(np.r_[self.dict_day_ar[종목코드][:, 2], np.array([고가])], np.r_[self.dict_day_ar[종목코드][:, 3], np.array([저가])], np.r_[self.dict_day_ar[종목코드][:, 4], np.array([현재가])], timeperiod=14)[-1]
                 """
             except Exception as e:
-                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}']])
+                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}']])
                 return
 
             if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0):
@@ -844,7 +844,7 @@ class StrategyKiwoom2:
                                 exec(self.buystrategy1, None, locals())
                             except:
                                 print_exc()
-                                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy1']])
+                                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy1']])
                     elif self.dict_set['주식장초전략종료시간'] <= 시분초 < self.dict_set['주식장중전략종료시간']:
                         if self.buystrategy2 is not None:
                             if not self.stg_change:
@@ -854,7 +854,7 @@ class StrategyKiwoom2:
                                 exec(self.buystrategy2, None, locals())
                             except:
                                 print_exc()
-                                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2']])
+                                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2']])
                 elif C:
                     매수 = False
                     분할매수기준수익률 = round((현재가 / self.dict_buyinfo[종목코드][9] - 1) * 100, 2) if self.dict_set['주식매수분할고정수익률'] else 수익률
@@ -893,14 +893,14 @@ class StrategyKiwoom2:
                                 exec(self.sellstrategy1, None, locals())
                             except:
                                 print_exc()
-                                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy1']])
+                                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy1']])
                     elif self.dict_set['주식장초전략종료시간'] <= 시분초 < self.dict_set['주식장중전략종료시간']:
                         if self.sellstrategy2 is not None:
                             try:
                                 exec(self.sellstrategy2, None, locals())
                             except:
                                 print_exc()
-                                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2']])
+                                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2']])
                 elif C or E or F:
                     매도 = False
                     if 강제청산:
@@ -924,7 +924,7 @@ class StrategyKiwoom2:
                     self.dict_min_ar[종목코드] = np.delete(self.dict_min_ar[종목코드], 0, 0)
 
             if self.chart_code == 종목코드:
-                self.kwmservQ.put(['window', [ui_num['분봉차트'], 종목명, self.dict_min_ar[종목코드][-120:]]])
+                self.kwzservQ.put(['window', [ui_num['분봉차트'], 종목명, self.dict_min_ar[종목코드][-120:]]])
 
         if self.dict_set['주식일봉데이터']:
             if self.dict_day_ar[종목코드][-1, 0] == 일봉일자:
@@ -934,17 +934,17 @@ class StrategyKiwoom2:
                 self.dict_day_ar[종목코드] = np.r_[self.dict_day_ar[종목코드], np.array([new_data])]
 
             if self.chart_code == 종목코드:
-                self.kwmservQ.put(['window', [ui_num['일봉차트'], 종목명, self.dict_day_ar[종목코드][-120:]]])
+                self.kwzservQ.put(['window', [ui_num['일봉차트'], 종목명, self.dict_day_ar[종목코드][-120:]]])
 
         if 종목코드 in self.list_gsjm:
             self.df_gj.loc[종목코드] = 종목명, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:
-            self.kwmservQ.put(['window', [ui_num['실시간차트'], 종목명, self.dict_tik_ar[종목코드]]])
+            self.kwzservQ.put(['window', [ui_num['실시간차트'], 종목명, self.dict_tik_ar[종목코드]]])
 
         if 틱수신시간 != 0:
             gap = (now() - 틱수신시간).total_seconds()
-            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.']])
+            self.kwzservQ.put(['window', [ui_num['S단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.']])
 
     def Buy(self, 종목코드, 종목명, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이):
         if '지정가' in self.dict_set['주식매수주문구분']:
@@ -998,7 +998,7 @@ class StrategyKiwoom2:
 
     def PutGsjmAndDeleteHilo(self):
         if len(self.df_gj) > 0:
-            self.kwmservQ.put(['window', [ui_num[f'S관심종목'], self.df_gj.copy()]])
+            self.kwzservQ.put(['window', [ui_num[f'S관심종목'], self.df_gj.copy()]])
         if len(self.dict_hilo) > 0:
             for code in list(self.dict_hilo.keys()):
                 if code not in self.df_jg.index:
@@ -1027,10 +1027,10 @@ class StrategyKiwoom2:
                 df.set_index('index', inplace=True)
                 df.to_sql(code, con, if_exists='append', chunksize=1000)
                 text = f'시스템 명령 실행 알림 - 전략연산 프로세스 틱데이터 저장 중 ... [{self.gubun + 1}]{i + 1}/{last}'
-                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], text]])
+                self.kwzservQ.put(['window', [ui_num['S단순텍스트'], text]])
             save_time = (now() - start).total_seconds()
             text = f'시스템 명령 실행 알림 - 틱데이터 저장 쓰기소요시간은 [{save_time:.6f}]초입니다.'
-            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], text]])
+            self.kwzservQ.put(['window', [ui_num['S단순텍스트'], text]])
         con.close()
 
         if self.gubun != 7:

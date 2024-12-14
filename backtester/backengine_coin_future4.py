@@ -28,7 +28,7 @@ class CoinFutureBackEngine4(CoinFutureBackEngine2):
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
             if gubun == '데이터크기':
                 for code in code_list:
-                    len_df_tick = None, 0
+                    len_df_tick = 0
                     try:
                         df_tick = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
                         len_df_tick = len(df_tick)

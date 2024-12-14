@@ -664,7 +664,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
     def CalculationEyun(self):
         self.total_count += 1
         _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _, 추가매수시간, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[self.vars_key].values()
-        보유시간 = int((strp_time('%Y%m%d%H%M%S', str(int(self.index))) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[매수틱번호, 0])))).total_seconds())
+        보유시간 = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[매수틱번호, 0])))).total_seconds())
         매수시간, 매도시간, 매수금액 = int(self.array_tick[매수틱번호, 0]), self.index, 주문수량 * 매수가
         if self.trade_info[self.vars_key]['보유중'] == 1:
             포지션 = 'LONG'
@@ -674,7 +674,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             매도금액, 수익금, 수익률 = GetBinanceShortPgSgSp(매수금액, self.trade_info[self.vars_key]['주문수량'] * self.trade_info[self.vars_key]['매도가'], '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
         매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
         추가매수시간, 잔량없음 = '^'.join(추가매수시간), 보유수량 - 주문수량 == 0
-        data = ['백테결과', self.name, 포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
+        data = ('백테결과', self.name, 포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key)
         self.stq_list[self.sell_count % 10].put(data)
         if 수익률 < 0:
             self.day_info[self.vars_key]['손절횟수'] += 1

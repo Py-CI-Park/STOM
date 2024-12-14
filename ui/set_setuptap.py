@@ -1,7 +1,5 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGroupBox, QLabel, QTabWidget
-
 from ui.set_style import style_bc_dk
+from PyQt5.QtWidgets import QGroupBox, QLabel, QTabWidget
 
 
 class SetSetupTap:
@@ -198,7 +196,7 @@ class SetSetupTap:
         self.ui.sj_back_comBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_07, tip='사용할 분봉을 선택하십시오.', items=['1', '3', '5', '15', '30'])
         self.ui.sj_back_cheBox_12 = self.wc.setCheckBox('코인 일봉, 분봉 자동다운로드  |  다운로드 선택시 리시버가 구동될 때 자동 실행됨', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_15)
         self.ui.sj_back_cheBox_13 = self.wc.setCheckBox('일반 백테스트 시 그래프 저장하지 않기', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_14)
-        self.ui.sj_back_cheBox_14 = self.wc.setCheckBox('일반 백테스트 시 그래프 띄우지 않기', self.ui.sj_bs_groupBox_07)
+        self.ui.sj_back_cheBox_14 = self.wc.setCheckBox('일반 백테스트 시 그래프 띄우지 않기', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_141)
 
         self.ui.sj_back_cheBox_15 = self.wc.setCheckBox('주식 DB 자동관리(일자DB분리, 백테DB추가)', self.ui.sj_bs_groupBox_07, tip='틱데이터 저장 후 일자별분리 및 백테디비추가가 자동실행됨')
         self.ui.sj_back_cheBox_16 = self.wc.setCheckBox('교차검증 최적화에 가중치 적용하기', self.ui.sj_bs_groupBox_07, tip='교차검증 최적화 시 최근데이터일수록 가중치를 줘서 기준값을 계산한다.')

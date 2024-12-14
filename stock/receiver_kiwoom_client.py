@@ -64,7 +64,7 @@ class ReceiverKiwoomClient:
     def __init__(self, qlist):
         app = QApplication(sys.argv)
 
-        self.kwmservQ = qlist[0]
+        self.kwzservQ = qlist[0]
         self.sreceivQ = qlist[1]
         self.straderQ = qlist[2]
         self.sstgQs   = qlist[3]
@@ -112,9 +112,9 @@ class ReceiverKiwoomClient:
         self.qtimer1.start()
 
         text = '주식 리시버를 시작하였습니다.'
-        if self.dict_set['주식알림소리']: self.kwmservQ.put(['sound', text])
-        self.kwmservQ.put(['tele', text])
-        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작']])
+        if self.dict_set['주식알림소리']: self.kwzservQ.put(['sound', text])
+        self.kwzservQ.put(['tele', text])
+        self.kwzservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작']])
 
         app.exec_()
 
@@ -140,14 +140,14 @@ class ReceiverKiwoomClient:
             name = data[-2]
             c, o, h, low, per, _, ch, _, _, _, _, sgta, _, bids, asks, _, uvi = data[1:18]
             hogadata = data[21:43]
-            self.kwmservQ.put(['hoga', [name, c, per, sgta, uvi, o, h, low]])
-            self.kwmservQ.put(['hoga', [bids, ch]])
-            self.kwmservQ.put(['hoga', [-asks, ch]])
-            self.kwmservQ.put(['hoga', [name] + hogadata + [0, 0]])
+            self.kwzservQ.put(['hoga', [name, c, per, sgta, uvi, o, h, low]])
+            self.kwzservQ.put(['hoga', [bids, ch]])
+            self.kwzservQ.put(['hoga', [-asks, ch]])
+            self.kwzservQ.put(['hoga', [name] + hogadata + [0, 0]])
 
     def UpdateLoginInfo(self, data):
         self.list_kosd, self.dict_sgbn, self.dict_name, self.dict_code = data
-        self.kwmservQ.put(['window', [ui_num['종목명데이터'], self.dict_name, self.dict_code, self.dict_sgbn, '더미']])
+        self.kwzservQ.put(['window', [ui_num['종목명데이터'], self.dict_name, self.dict_code, self.dict_sgbn, '더미']])
         self.straderQ.put(self.dict_sgbn)
         for q in self.sstgQs:
             q.put(self.dict_sgbn)
@@ -180,7 +180,7 @@ class ReceiverKiwoomClient:
 
     def StartJangjungStrategy(self):
         self.dict_bool['장중단타전략시작'] = True
-        self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 장중 단타 전략 시작']])
+        self.kwzservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 장중 단타 전략 시작']])
 
     def SysExit(self):
         self.dict_bool['프로세스종료'] = True
@@ -188,4 +188,4 @@ class ReceiverKiwoomClient:
         if self.updater.isRunning(): self.updater.quit()
         for q in self.sstgQs:
             q.put('프로세스종료')
-        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료']])
+        self.kwzservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료']])

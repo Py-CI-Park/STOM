@@ -95,16 +95,16 @@ class NumericItem(QTableWidgetItem):
 
 
 class ZmqServ(QThread):
-    def __init__(self, wdservQ_, port_num):
+    def __init__(self, wdzservQ_, port_num):
         super().__init__()
-        self.wdservQ_ = wdservQ_
+        self.wdzservQ_ = wdzservQ_
         self.zctx = zmq.Context()
         self.sock = self.zctx.socket(zmq.PUB)
         self.sock.bind(f'tcp://*:{port_num}')
 
     def run(self):
         while True:
-            msg, data = self.wdservQ_.get()
+            msg, data = self.wdzservQ_.get()
             self.sock.send_string(msg, zmq.SNDMORE)
             self.sock.send_pyobj(data)
             if data == '통신종료':
@@ -118,7 +118,7 @@ class ZmqRecv(QThread):
     def __init__(self, qlist_, port_num):
         super().__init__()
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ = qlist_[0]
@@ -420,7 +420,7 @@ class Window(QMainWindow):
         subprocess.Popen('python kiwoom_manager.py')
 
         port_num = GetPortNumber()
-        self.zmqserv = ZmqServ(wdservQ, port_num)
+        self.zmqserv = ZmqServ(wdzservQ, port_num)
         self.zmqserv.start()
 
         self.zmqrecv = ZmqRecv(qlist, port_num + 1)
@@ -582,11 +582,11 @@ class Window(QMainWindow):
         elif self.dict_set['주식트레이더']:
             text = f'{text} | 키움증권'
         if self.showQsize:
-            ctqsize = sum((ctq.qsize() for ctq in self.bact_pques)) if self.bact_pques else 0
-            text = f'{text} | sreceivQ[{self.srqsize}] | straderQ[{self.stqsize}] | sstgQ[{self.ssqsize}] | ' \
-                   f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstgQ[{cstgQ.qsize()}] | ' \
+            stqsize = sum((stq.qsize() for stq in self.bact_pques)) if self.bact_pques else 0
+            text = f'{text} | sreceivQ[{self.srqsize}] | straderQ[{self.stqsize}] | sstrateyQ[{self.ssqsize}] | ' \
+                   f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
                    f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
-                   f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backctQ[{ctqsize}]'
+                   f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backstQ[{stqsize}]'
         else:
             if self.dict_set['코인트레이더']:
                 text = f'{text} | 모의' if self.dict_set['코인모의투자'] else f'{text} | 실전'
@@ -855,15 +855,15 @@ class Window(QMainWindow):
                 self.gg_textEdittttt_01.append(data[1])
 
             if data[0] == ui_num['S단순텍스트'] and '리시버 종료' in data[1]:
-                wdservQ.put(['manager', '리시버 종료'])
+                wdzservQ.put(['manager', '리시버 종료'])
             elif data[0] == ui_num['S로그텍스트'] and '전략연산 종료' in data[1]:
-                wdservQ.put(['manager', '전략연산 종료'])
+                wdzservQ.put(['manager', '전략연산 종료'])
                 if self.tickdata_save and self.dict_set['디비자동관리']:
                     self.AutoDataBase(1)
                 else:
                     self.StockShutDownCheck()
             elif data[0] == ui_num['S로그텍스트'] and '트레이더 종료' in data[1]:
-                wdservQ.put(['manager', '트레이더 종료'])
+                wdzservQ.put(['manager', '트레이더 종료'])
             elif data[0] == ui_num['C단순텍스트'] and '리시버 종료' in data[1]:
                 if self.CoinReceiverProcessAlive():
                     self.proc_receiver_coin.kill()
@@ -1063,7 +1063,7 @@ class Window(QMainWindow):
             tableWidget = self.hj_tableWidgett_01
         elif gubun in [ui_num['C호가체결'], ui_num['S호가체결']]:
             if not self.dialog_hoga.isVisible():
-                wdservQ.put(['receiver', '000000'])
+                wdzservQ.put(['receiver', '000000'])
                 if self.CoinReceiverProcessAlive():  creceivQ.put('000000')
                 return
             tableWidget = self.hc_tableWidgett_01
@@ -2857,6 +2857,11 @@ class Window(QMainWindow):
             if not self.sj_back_cheBox_14.isChecked():
                 self.sj_back_cheBox_14.nextCheckState()
 
+    def CheckboxChanged_141(self, state):
+        if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
+            if self.sj_back_cheBox_13.isChecked():
+                self.sj_back_cheBox_13.nextCheckState()
+
     def CheckboxChanged_15(self, state):
         if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
             if self.sj_back_cheBox_06.isChecked():
@@ -3065,7 +3070,7 @@ class Window(QMainWindow):
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
         if buttonReply == QMessageBox.Yes:
-            wdservQ.put(['trader', ['매도', self.dict_code[name], name, c, oc, now(), True]])
+            wdzservQ.put(['trader', ['매도', self.dict_code[name], name, c, oc, now(), True]])
 
     @pyqtSlot(int)
     def CellClicked_03(self, row):
@@ -3593,7 +3598,7 @@ class Window(QMainWindow):
                 if coin:
                     if self.CoinStrategyProcessAlive(): cstgQ.put(code)
                 else:
-                    wdservQ.put(['strategy', ['차트코드갱신', self.dict_sgbn[code], code]])
+                    wdzservQ.put(['strategy', ['차트코드갱신', self.dict_sgbn[code], code]])
             else:
                 self.ChartClear()
                 if detail is None:
@@ -3882,11 +3887,11 @@ class Window(QMainWindow):
 
     def PutHogaCode(self, coin, code):
         if coin:
-            wdservQ.put(['receiver', '000000'])
+            wdzservQ.put(['receiver', '000000'])
             if self.CoinReceiverProcessAlive():  creceivQ.put(code)
         else:
             if self.CoinReceiverProcessAlive():  creceivQ.put('000000')
-            wdservQ.put(['receiver', code])
+            wdzservQ.put(['receiver', code])
 
     def ChartMoneyTopList(self):
         searchdate = self.ct_dateEdittttt_02.date().toString('yyyyMMdd')
@@ -4262,7 +4267,7 @@ class Window(QMainWindow):
                 ctraderQ.put(['매수', name, comma2float(op), comma2float(oc), now(), False, ordertype])
         elif 'USDT' not in name:
             code = self.dict_code[name]
-            wdservQ.put(['trader', ['매수', code, name, comma2int(op), comma2int(oc), now(), False, ordertype]])
+            wdzservQ.put(['trader', ['매수', code, name, comma2int(op), comma2int(oc), now(), False, ordertype]])
 
     def odButtonClicked_02(self):
         name      = self.od_comboBoxxxxx_01.currentText()
@@ -4277,7 +4282,7 @@ class Window(QMainWindow):
                 ctraderQ.put(['매도', name, comma2float(op), comma2float(oc), now(), False, ordertype])
         elif 'USDT' not in name:
             code = self.dict_code[name]
-            wdservQ.put(['trader', ['매도', code, name, comma2int(op), comma2int(oc), now(), False, ordertype]])
+            wdzservQ.put(['trader', ['매도', code, name, comma2int(op), comma2int(oc), now(), False, ordertype]])
 
     def odButtonClicked_03(self):
         name      = self.od_comboBoxxxxx_01.currentText()
@@ -4337,7 +4342,7 @@ class Window(QMainWindow):
                 ctraderQ.put(['SELL_SHORT_CANCEL', name, 0, 0, now(), False])
         else:
             code = self.dict_code[name]
-            wdservQ.put(['trader', ['매수취소', code, name, 0, 0, now(), False]])
+            wdzservQ.put(['trader', ['매수취소', code, name, 0, 0, now(), False]])
 
     def odButtonClicked_08(self):
         name = self.od_comboBoxxxxx_01.currentText()
@@ -4353,7 +4358,7 @@ class Window(QMainWindow):
                 ctraderQ.put(['BUY_SHORT_CANCEL', name, 0, 0, now(), False])
         else:
             code = self.dict_code[name]
-            wdservQ.put(['trader', ['매도취소', code, name, 0, 0, now(), False]])
+            wdzservQ.put(['trader', ['매도취소', code, name, 0, 0, now(), False]])
 
     # =================================================================================================================
 
@@ -4910,8 +4915,8 @@ class Window(QMainWindow):
         self.main_box_list[self.main_btn].setVisible(True)
         QTimer.singleShot(400, lambda: self.image_label.setVisible(True if self.svc_labellllll_05.isVisible() or self.cvc_labellllll_05.isVisible() else False))
         self.animation = QPropertyAnimation(self.main_box_list[self.main_btn], b'size')
-        self.animation.setEasingCurve(QEasingCurve.InOutBack)
-        self.animation.setDuration(700)
+        self.animation.setEasingCurve(QEasingCurve.InCirc)
+        self.animation.setDuration(300)
         self.animation.setStartValue(QSize(0, 757))
         self.animation.setEndValue(QSize(1353, 757))
         self.animation.start()
@@ -4958,9 +4963,9 @@ class Window(QMainWindow):
             )
 
         if buttonReply == QMessageBox.Yes:
-            wdservQ.put(['manager', '리시버 종료'])
-            wdservQ.put(['manager', '전략연산 종료'])
-            wdservQ.put(['manager', '트레이더 종료'])
+            wdzservQ.put(['manager', '리시버 종료'])
+            wdzservQ.put(['manager', '전략연산 종료'])
+            wdzservQ.put(['manager', '트레이더 종료'])
             qtest_qwait(3)
             if self.dict_set['리시버공유'] < 2 and self.dict_set['아이디2'] is None:
                 QMessageBox.critical(self, '오류 알림', '두번째 계정이 설정되지 않아\n리시버를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
@@ -4969,7 +4974,7 @@ class Window(QMainWindow):
             if self.dict_set['주식리시버'] and self.dict_set['주식트레이더']:
                 if self.dict_set['주식알림소리']:
                     soundQ.put('키움증권 OPEN API에 로그인을 시작합니다.')
-                wdservQ.put(['manager', '주식수동시작'])
+                wdzservQ.put(['manager', '주식수동시작'])
         self.ms_pushButton.setStyleSheet(style_bc_bt)
 
     def mnButtonClicked_03(self):
@@ -6412,7 +6417,7 @@ class Window(QMainWindow):
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if buttonReply == QMessageBox.Yes:
-                wdservQ.put(['strategy', ['매수전략', strategy]])
+                wdzservQ.put(['strategy', ['매수전략', strategy]])
                 self.svjb_pushButon_04.setStyleSheet(style_bc_dk)
                 self.svjb_pushButon_12.setStyleSheet(style_bc_st)
 
@@ -6438,7 +6443,7 @@ class Window(QMainWindow):
         self.ss_textEditttt_01.append(stock_buy_signal)
 
     def svjbButtonClicked_12(self):
-        wdservQ.put(['strategy', ['매수전략중지', '']])
+        wdzservQ.put(['strategy', ['매수전략중지', '']])
         self.svjb_pushButon_12.setStyleSheet(style_bc_dk)
         self.svjb_pushButon_04.setStyleSheet(style_bc_st)
 
@@ -7555,7 +7560,7 @@ class Window(QMainWindow):
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if buttonReply == QMessageBox.Yes:
-                wdservQ.put(['strategy', ['매도전략', strategy]])
+                wdzservQ.put(['strategy', ['매도전략', strategy]])
                 self.svjs_pushButon_04.setStyleSheet(style_bc_dk)
                 self.svjs_pushButon_14.setStyleSheet(style_bc_st)
 
@@ -7587,7 +7592,7 @@ class Window(QMainWindow):
         self.ss_textEditttt_02.append(stock_sell_signal)
 
     def svjsButtonClicked_14(self):
-        wdservQ.put(['strategy', ['매도전략중지', '']])
+        wdzservQ.put(['strategy', ['매도전략중지', '']])
         self.svjs_pushButon_14.setStyleSheet(style_bc_dk)
         self.svjs_pushButon_04.setStyleSheet(style_bc_st)
 
@@ -9575,7 +9580,7 @@ class Window(QMainWindow):
         one_name       = self.be_comboBoxxxxx_02.currentText()
         one_code       = self.dict_code[one_name] if one_name in self.dict_code.keys() else one_name
 
-        wdservQ.put(['manager', '백테엔진구동'])
+        wdzservQ.put(['manager', '백테엔진구동'])
         for i in range(10):
             stq = Queue()
             if i < 5:
@@ -9701,11 +9706,11 @@ class Window(QMainWindow):
             code_days[code] = [day for day, codes in day_codes.items() if code in codes]
 
         if divid_mode == '종목코드별 분류' and len(code_days) < multi:
-            windowQ.put([ui_num['백테엔진'], f'{one_name} 선택한 일자의 종목의 개수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
+            windowQ.put([ui_num['백테엔진'], '선택한 일자의 종목의 개수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
             return
 
         if divid_mode == '일자별 분류' and len(day_codes) < multi:
-            windowQ.put([ui_num['백테엔진'], f'{one_name} 선택한 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
+            windowQ.put([ui_num['백테엔진'], '선택한 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'])
             return
 
         if divid_mode == '한종목 로딩' and one_code not in code_days.keys():
@@ -10423,7 +10428,7 @@ class Window(QMainWindow):
             else:
                 self.sj_coin_labell_03.setText('장초전략                        USDT,   장중전략                        USDT              전략중지 및 잔고청산  |')
 
-            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            wdzservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.CoinReceiverProcessAlive():
                 creceivQ.put(self.dict_set)
             if self.CoinTraderProcessAlive():
@@ -10601,7 +10606,7 @@ class Window(QMainWindow):
             self.dict_set['주식수익중지']         = cp
             self.dict_set['주식수익중지수익률']    = cpp
 
-            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            wdzservQ.put(['manager', ['설정갱신', self.dict_set]])
             if proc_chart.is_alive():
                 chartQ.put(self.dict_set)
 
@@ -10769,7 +10774,7 @@ class Window(QMainWindow):
             self.dict_set['백테날짜고정']      = bdf
             self.dict_set['백테날짜']         = bd
 
-            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            wdzservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.CoinStrategyProcessAlive():   cstgQ.put(self.dict_set)
             if self.CoinTraderProcessAlive():     ctraderQ.put(self.dict_set)
             if self.backtest_engine:
@@ -10802,7 +10807,7 @@ class Window(QMainWindow):
         self.dict_set['스톰라이브']      = slv
         self.dict_set['프로그램종료']    = pex
 
-        wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+        wdzservQ.put(['manager', ['설정갱신', self.dict_set]])
         if self.CoinTraderProcessAlive():
             ctraderQ.put(self.dict_set)
 
@@ -11136,7 +11141,7 @@ class Window(QMainWindow):
             self.dict_set['주식매수정정호가차이']   = bb8c
             self.dict_set['주식매수정정호가']      = bb8h
 
-            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            wdzservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.backtest_engine:
                 for bpq in self.back_pques:
                     bpq.put(['설정변경', self.dict_set])
@@ -11251,7 +11256,7 @@ class Window(QMainWindow):
             self.dict_set['주식매도정정호가차이']   = bb5c
             self.dict_set['주식매도정정호가']      = bb5h
 
-            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            wdzservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.backtest_engine:
                 for bpq in self.back_pques:
                     bpq.put(['설정변경', self.dict_set])
@@ -11569,7 +11574,7 @@ class Window(QMainWindow):
                 self.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(qlist,), daemon=True)
 
             if gubun == '주식':
-                wdservQ.put(['manager', '시뮬레이터구동'])
+                wdzservQ.put(['manager', '시뮬레이터구동'])
                 self.stock_simulator_alive = False
             else:
                 self.proc_strategy_coin.start()
@@ -11594,7 +11599,7 @@ class Window(QMainWindow):
                 self.proc_simulator_td.kill()
             if self.CoinStrategyProcessAlive():
                 self.proc_strategy_coin.kill()
-            wdservQ.put(['manager', '시뮬레이터종료'])
+            wdzservQ.put(['manager', '시뮬레이터종료'])
             self.stock_simulator_alive = False
         qtest_qwait(3)
         QMessageBox.information(self.dialog_test, '알림', '시뮬레이터 엔진 종료 완료')
@@ -11620,21 +11625,21 @@ class Window(QMainWindow):
         end_time   = int(self.tt_lineEdittttt_02.text())
 
         if gubun == '주식' and self.dict_set['주식분봉데이터']:
-            wdservQ.put(['simul_strategy', ['분봉재로딩', code, int(date + '090000')]])
+            wdzservQ.put(['simul_strategy', ['분봉재로딩', code, int(date + '090000')]])
         elif gubun != '주식' and self.dict_set['코인분봉데이터']:
             cstgQ.put(['분봉재로딩', code, int(date + '000000')])
         qtest_qwait(1)
 
         if gubun == '주식' and self.dict_set['주식일봉데이터']:
-            wdservQ.put(['simul_strategy', ['일봉재로딩', code, int(date)]])
+            wdzservQ.put(['simul_strategy', ['일봉재로딩', code, int(date)]])
         elif gubun != '주식' and self.dict_set['코인일봉데이터']:
-            wdservQ.put(['simul_strategy', ['일봉재로딩', code, int(date + '000000')]])
+            wdzservQ.put(['simul_strategy', ['일봉재로딩', code, int(date + '000000')]])
         qtest_qwait(1)
 
         self.ChartClear()
         if gubun == '주식':
-            wdservQ.put(['simul_strategy', code])
-            wdservQ.put(['simul_strategy', ['관심목록', [code]]])
+            wdzservQ.put(['simul_strategy', code])
+            wdzservQ.put(['simul_strategy', ['관심목록', [code]]])
         else:
             cstgQ.put(code)
             cstgQ.put(['관심목록', [code], [code]])
@@ -11660,8 +11665,8 @@ class Window(QMainWindow):
             dt = self.df_test.index[self.ct_test]
             data = list(self.df_test.iloc[self.ct_test])
             if gubun == '주식':
-                wdservQ.put(['trader', '복기모드시간 ' + str(dt)])
-                wdservQ.put(['receiver', [dt] + data + [code]])
+                wdzservQ.put(['trader', '복기모드시간 ' + str(dt)])
+                wdzservQ.put(['receiver', [dt] + data + [code]])
             else:
                 ctraderQ.put('복기모드시간 ' + str(dt))
                 creceivQ.put([dt] + data + [code])
@@ -11671,8 +11676,8 @@ class Window(QMainWindow):
                 Timer(round(1 / speed, 2), self.TickInput, args=[code, gubun]).start()
         except:
             if gubun == '주식':
-                wdservQ.put(['simul_strategy', ['관심목록', []]])
-                wdservQ.put(['simul_strategy', '복기모드종료'])
+                wdzservQ.put(['simul_strategy', ['관심목록', []]])
+                wdzservQ.put(['simul_strategy', '복기모드종료'])
             else:
                 cstgQ.put(['관심목록', []])
                 cstgQ.put('복기모드종료')
@@ -12265,16 +12270,16 @@ class Window(QMainWindow):
 
     def ProcessKill(self):
         if self.dict_set['리시버프로파일링']:
-            wdservQ.put(['receiver', '프로파일링결과'])
+            wdzservQ.put(['receiver', '프로파일링결과'])
             qtest_qwait(3)
         if self.dict_set['트레이더프로파일링']:
-            wdservQ.put(['trader', '프로파일링결과'])
+            wdzservQ.put(['trader', '프로파일링결과'])
             qtest_qwait(3)
         if self.dict_set['전략연산프로파일링']:
-            wdservQ.put(['strategy', ['프로파일링결과', '']])
+            wdzservQ.put(['strategy', ['프로파일링결과', '']])
             qtest_qwait(3)
 
-        wdservQ.put(['manager', '통신종료'])
+        wdzservQ.put(['manager', '통신종료'])
         factor_choice = ''
         for checkbox in self.factor_checkbox_list:
             factor_choice = f"{factor_choice}{'1' if checkbox.isChecked() else '0'};"
@@ -12342,12 +12347,11 @@ class Window(QMainWindow):
         if self.BacktestProcessAlive():
             self.BacktestProcessKill()
 
-        qtest_qwait(1)
-        if self.back_procs:
-            for proc in self.back_procs:
-                proc.kill()
         if self.bact_procs:
             for proc in self.bact_procs:
+                proc.kill()
+        if self.back_procs:
+            for proc in self.back_procs:
                 proc.kill()
         if self.back_procs or self.bact_procs:
             qtest_qwait(3)
@@ -12362,9 +12366,9 @@ if __name__ == '__main__':
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--blink-settings=forceDarkModeEnabled=true"
     subprocess.Popen('python64 ./utility/timesync.py')
 
-    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, totalQ, testQ, kimpQ, wdservQ = \
+    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, totalQ, testQ, kimpQ, wdzservQ = \
         Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue()
-    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdservQ]
+    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdzservQ]
 
     proc_tele  = Process(target=TelegramMsg, args=(qlist,), daemon=True)
     proc_webc  = Process(target=WebCrawling, args=(qlist,), daemon=True)

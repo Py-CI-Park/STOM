@@ -39,7 +39,6 @@ class Total:
 
         self.dict_t       = {}
         self.dict_v       = {}
-        self.arry_bct     = None
 
         self.stdp         = -2_147_483_648
         self.sub_total    = 0
@@ -60,20 +59,24 @@ class Total:
             if data[0] == '백테결과':
                 _, dict_tsg, dict_bct = data
                 if dict_tsg:
-                    for vars_key in list(dict_tsg.keys()):
+                    for vars_key, list_tsg in dict_tsg.items():
+                        arry_bct = dict_bct[vars_key]
                         if vars_key not in total_dict_tsg.keys():
                             total_dict_tsg[vars_key] = [[] for _ in range(14)]
-                            total_dict_bct[vars_key] = self.arry_bct
-                        for j in range(14):
-                            if j == 0:
-                                for index in dict_tsg[vars_key][j]:
-                                    index_ = index
-                                    while index_ in total_dict_tsg[vars_key][j]:
-                                        index_ = str(int(index_) + 1)
-                                    total_dict_tsg[vars_key][j].append(index_)
-                            else:
-                                total_dict_tsg[vars_key][j] += dict_tsg[vars_key][j]
-                        total_dict_bct[vars_key][:, 1] += dict_bct[vars_key][:, 1]
+                            total_dict_bct[vars_key] = arry_bct
+                        else:
+                            total_dict_bct[vars_key][:, 1] += arry_bct[:, 1]
+
+                        for j, tsg_data in enumerate(list_tsg):
+                            total_dict_tsg[vars_key][j] += tsg_data
+                            # if j == 0:
+                            #     for index in tsg_data:
+                            #         index_ = index
+                            #         while index_ in total_dict_tsg[vars_key][j]:
+                            #             index_ = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index_)))
+                            #         total_dict_tsg[vars_key][j].append(index_)
+                            # else:
+                            #     total_dict_tsg[vars_key][j] += tsg_data
                 sc += 1
                 if sc < 10:
                     continue
@@ -82,8 +85,8 @@ class Total:
                 columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
                            '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
                 k  = 0
-                for vars_key in list(total_dict_tsg.keys()):
-                    data = ['결과집계', columns, total_dict_tsg[vars_key], total_dict_bct[vars_key]]
+                for vars_key, list_tsg in total_dict_tsg.items():
+                    data = ['결과집계', columns, list_tsg, total_dict_bct[vars_key]]
                     if self.valid_days is not None:
                         for i, vdays in enumerate(self.valid_days):
                             data_ = data + [vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key]
@@ -110,28 +113,25 @@ class Total:
                         for ctq in self.stq_list:
                             ctq.put('백테완료')
                     else:
-                        if self.valid_days is not None:
-                            for i, _ in enumerate(self.valid_days):
-                                self.stdp = SendTextAndStd(self.GetSendData(i), self.std_list, self.betting, None)
-                        else:
-                            self.stdp = SendTextAndStd(self.GetSendData(0), self.std_list, self.betting, None)
+                        self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
 
-            elif data[0] in ['TRAIN', 'VALID', 'ALL']:
-                vars_key = data[-1]
-                if data[0] == 'ALL':
-                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, data[2])
+            elif data[0] in ['TRAIN', 'VALID']:
+                gubun, num, data, vars_key = data
+                if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
+                if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
+                if vars_key not in st.keys(): st[vars_key] = 0
+                if gubun == 'TRAIN':
+                    self.dict_t[vars_key][num] = data
                 else:
-                    if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
-                    if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
-                    if vars_key not in st.keys(): st[vars_key] = 0
-                    if data[0] == 'TRAIN':
-                        self.dict_t[vars_key][data[1]] = data[2]
-                    else:
-                        self.dict_v[vars_key][data[1]] = data[2]
-                    st[vars_key] += 1
-                    if st[vars_key] == self.sub_total:
-                        self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, self.dict_t[vars_key], self.dict_v[vars_key], self.dict_set['교차검증가중치'])
-                        st[vars_key] = 0
+                    self.dict_v[vars_key][num] = data
+                st[vars_key] += 1
+                if st[vars_key] == self.sub_total:
+                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, self.dict_t[vars_key], self.dict_v[vars_key], self.dict_set['교차검증가중치'])
+                    st[vars_key] = 0
+
+            elif data[0] == 'ALL':
+                _, _, data, vars_key = data
+                self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, data)
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
@@ -154,15 +154,14 @@ class Total:
         self.endtime      = data[6]
         self.std_list     = data[7]
         self.optistandard = data[8]
-        self.arry_bct     = data[9]
-        self.valid_days   = data[10]
-        self.day_count    = data[11]
+        self.valid_days   = data[9]
+        self.day_count    = data[10]
         if self.valid_days is not None:
             self.sub_total = len(self.valid_days) * 2
         else:
             self.sub_total = 2
 
-    def GetSendData(self, vars_key):
+    def GetSendData(self, vars_key=0):
         return ['조건최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vars_key, None, self.startday, self.endday]
 
 
@@ -320,7 +319,7 @@ class OptimizeConditions:
         Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.ui_gubun)).start()
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
 
-        self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, std_text, self.optistandard, arry_bct, valid_days, len(day_list)])
+        self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, std_text, self.optistandard, valid_days, len(day_list)])
         data = ['백테정보', betting, avgtime, startday, endday, starttime, endtime]
         for q in self.pq_list:
             q.put(data)

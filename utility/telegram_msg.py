@@ -7,13 +7,13 @@ from telegram.ext import Updater, MessageHandler, Filters
 class TelegramMsg:
     def __init__(self, qlist):
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.teleQ    = qlist[3]
         self.ctraderQ = qlist[9]
         self.cstgQ    = qlist[10]
-        self.wdservQ  = qlist[13]
+        self.wdzservQ  = qlist[13]
         self.dict_set = None
         self.updater  = None
         self.bot      = None
@@ -66,13 +66,13 @@ class TelegramMsg:
             return
         cmd = update.message.text
         if cmd == 'S전략중지':
-            self.wdservQ.put(['strategy', ['매수전략중지', '']])
+            self.wdzservQ.put(['strategy', ['매수전략중지', '']])
             self.SendMsg('주식 전략 중지 완료')
         elif cmd == 'C전략중지':
             self.cstgQ.put(['매수전략중지', ''])
             self.SendMsg('코인 전략 중지 완료')
         elif 'S' in cmd:
-            self.wdservQ.put(['trader', cmd])
+            self.wdzservQ.put(['trader', cmd])
         elif 'C' in cmd:
             self.ctraderQ.put(cmd)
 

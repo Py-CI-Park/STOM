@@ -70,7 +70,7 @@ class ZmqRecv(QThread):
 class ZmqServ(QThread):
     def __init__(self, qlist, port_num):
         super().__init__()
-        self.kwmservQ = qlist[0]
+        self.kwzservQ = qlist[0]
         self.sreceivQ = qlist[1]
         self.straderQ = qlist[2]
         self.sstgQs   = qlist[3]
@@ -82,7 +82,7 @@ class ZmqServ(QThread):
     def run(self):
         int_hms_ = int_hms()
         while True:
-            msg, data = self.kwmservQ.get()
+            msg, data = self.kwzservQ.get()
             self.sock.send_string(msg, zmq.SNDMORE)
             self.sock.send_pyobj(data)
             if int_hms() > int_hms_:
@@ -102,10 +102,10 @@ class KiwoomManager:
     def __init__(self):
         app = QApplication(sys.argv)
 
-        self.kwmservQ, self.sreceivQ, self.straderQ, sstg1Q, sstg2Q, sstg3Q, sstg4Q, sstg5Q, sstg6Q, sstg7Q, sstg8Q = \
+        self.kwzservQ, self.sreceivQ, self.straderQ, sstg1Q, sstg2Q, sstg3Q, sstg4Q, sstg5Q, sstg6Q, sstg7Q, sstg8Q = \
             Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue()
         self.sstgQs   = [sstg1Q, sstg2Q, sstg3Q, sstg4Q, sstg5Q, sstg6Q, sstg7Q, sstg8Q]
-        self.qlist    = [self.kwmservQ, self.sreceivQ, self.straderQ, self.sstgQs]
+        self.qlist    = [self.kwzservQ, self.sreceivQ, self.straderQ, self.sstgQs]
         self.dict_set = DICT_SET
         self.int_time = int_hms()
 
@@ -215,7 +215,7 @@ class KiwoomManager:
             self.proc_trader_stock.kill()
 
     def ManagerProcessKill(self):
-        self.kwmservQ.put(['window', '통신종료'])
+        self.kwzservQ.put(['window', '통신종료'])
         self.SimulatorProcessKill()
         self.StockReceiverProcessKill()
         self.StockStrategyProcessKill()
@@ -250,7 +250,7 @@ class KiwoomManager:
         else:
             self.daydata_download = True
             if self.dict_set['주식알림소리']:
-                self.kwmservQ.put(['sound', '예약된 데이터 다운로드를 시작합니다.'])
+                self.kwzservQ.put(['sound', '예약된 데이터 다운로드를 시작합니다.'])
             subprocess.Popen('python download_kiwoom.py')
 
     @staticmethod

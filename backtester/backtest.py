@@ -50,7 +50,6 @@ class Total:
 
         self.df_tsg       = None
         self.df_bct       = None
-        self.arry_bct     = None
 
         self.df_kp        = None
         self.df_kd        = None
@@ -73,20 +72,24 @@ class Total:
             if data[0] == '백테결과':
                 _, dict_tsg, dict_bct = data
                 if dict_tsg:
-                    for vars_key in list(dict_tsg.keys()):
+                    for vars_key, list_tsg in dict_tsg.items():
+                        arry_bct = dict_bct[vars_key]
                         if vars_key not in total_dict_tsg.keys():
                             total_dict_tsg[vars_key] = [[] for _ in range(14)]
-                            total_dict_bct[vars_key] = self.arry_bct
-                        for j in range(14):
-                            if j == 0:
-                                for index in dict_tsg[vars_key][j]:
-                                    index_ = index
-                                    while index_ in total_dict_tsg[vars_key][j]:
-                                        index_ = str(int(index_) + 1)
-                                    total_dict_tsg[vars_key][j].append(index_)
-                            else:
-                                total_dict_tsg[vars_key][j] += dict_tsg[vars_key][j]
-                        total_dict_bct[vars_key][:, 1] += dict_bct[vars_key][:, 1]
+                            total_dict_bct[vars_key] = arry_bct
+                        else:
+                            total_dict_bct[vars_key][:, 1] += arry_bct[:, 1]
+
+                        for j, tsg_data in enumerate(list_tsg):
+                            total_dict_tsg[vars_key][j] += tsg_data
+                            # if j == 0:
+                            #     for index in tsg_data:
+                            #         index_ = index
+                            #         while index_ in total_dict_tsg[vars_key][j]:
+                            #             index_ = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index_)))
+                            #         total_dict_tsg[vars_key][j].append(index_)
+                            # else:
+                            #     total_dict_tsg[vars_key][j] += tsg_data
                 sc += 1
                 if sc < 10:
                     continue
@@ -132,10 +135,9 @@ class Total:
                 self.day_count   = data[12]
                 self.blacklist   = data[13]
                 self.schedul     = data[14]
-                self.arry_bct    = data[15]
-                self.df_kp       = data[16]
-                self.df_kd       = data[17]
-                self.back_club   = data[18]
+                self.df_kp       = data[15]
+                self.df_kd       = data[16]
+                self.back_club   = data[17]
 
             elif data == '백테중지':
                 self.mq.put('백테중지')
@@ -325,7 +327,7 @@ class BackTest:
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
 
         self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
-                     dict_cn, back_count, day_count, bl, schedul, arry_bct, df_kp, df_kq, back_club])
+                     dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club])
         data = ['백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None]
 
         for q in self.stq_list:

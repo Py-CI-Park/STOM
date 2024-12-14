@@ -6,7 +6,7 @@ from utility.static import now, strf_time, strp_time, timedelta_sec, roundfigure
 
 class ReceiverKiwoom2:
     def __init__(self, qlist):
-        self.kwmservQ  = qlist[0]
+        self.kwzservQ  = qlist[0]
         self.sreceivQ  = qlist[1]
         self.straderQ  = qlist[2]
         self.sstgQ     = qlist[3][0]
@@ -45,10 +45,10 @@ class ReceiverKiwoom2:
         self.sstgQ.put(data + [code, name, 0])
         if code in self.list_jang:
             self.straderQ.put([code, c])
-        self.kwmservQ.put(['hoga', [name, c, per, sgta, uvi, o, h, low]])
-        self.kwmservQ.put(['hoga', [bids, ch]])
-        self.kwmservQ.put(['hoga', [-asks, ch]])
-        self.kwmservQ.put(['hoga', [name] + hogadata + [0, 0]])
+        self.kwzservQ.put(['hoga', [name, c, per, sgta, uvi, o, h, low]])
+        self.kwzservQ.put(['hoga', [bids, ch]])
+        self.kwzservQ.put(['hoga', [-asks, ch]])
+        self.kwzservQ.put(['hoga', [name] + hogadata + [0, 0]])
 
     def UpdateList(self, data):
         gubun, data = data
@@ -57,7 +57,7 @@ class ReceiverKiwoom2:
 
 class TraderKiwoom2:
     def __init__(self, qlist):
-        self.kwmservQ  = qlist[0]
+        self.kwzservQ  = qlist[0]
         self.sreceivQ  = qlist[1]
         self.straderQ  = qlist[2]
         self.sstgQ     = qlist[3][0]
@@ -283,8 +283,8 @@ class TraderKiwoom2:
                 self.dict_intg['추정예수금'] += jg + sg
 
             if self.dict_set['주식알림소리']:
-                self.kwmservQ.put(['sound', f'{name} {cc}주를 {og}하였습니다'])
-            self.kwmservQ.put(['window', [ui_num['S로그텍스트'], f'주문 관리 시스템 알림 - [{ot}] {name} | {cp} | {cc} | {og}']])
+                self.kwzservQ.put(['sound', f'{name} {cc}주를 {og}하였습니다'])
+            self.kwzservQ.put(['window', [ui_num['S로그텍스트'], f'주문 관리 시스템 알림 - [{ot}] {name} | {cp} | {cc} | {og}']])
 
         elif ot == '체결' and og == '시드부족':
             self.UpdateChegeollist(index, code, name, og, oc, cc, mc, cp, ct, op, on)
@@ -293,7 +293,7 @@ class TraderKiwoom2:
 
     def UpdateTradelist(self, index, name, jg, pg, cc, sp, sg, ct):
         self.df_td.loc[index] = name, jg, pg, cc, sp, sg, ct
-        self.kwmservQ.put(['window', [ui_num['S거래목록'], self.df_td[::-1]]])
+        self.kwzservQ.put(['window', [ui_num['S거래목록'], self.df_td[::-1]]])
         self.UpdateTotaltradelist()
 
     def UpdateTotaltradelist(self):
@@ -305,12 +305,12 @@ class TraderKiwoom2:
         sg  = self.df_td['수익금'].sum()
         sp  = round(sg / self.dict_intg['추정예탁자산'] * 100, 2)
         self.df_tt = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.dict_strg['당일날짜']])
-        self.kwmservQ.put(['window', [ui_num['S실현손익'], self.df_tt]])
+        self.kwzservQ.put(['window', [ui_num['S실현손익'], self.df_tt]])
 
     def UpdateChegeollist(self, index, code, name, og, oc, cc, mc, cp, ct, op, on):
         self.dict_name[code][2] = timedelta_sec(self.dict_set['주식매수금지간격초'])
         self.df_cj.loc[index] = name, og, oc, cc, mc, cp, ct, op, on
-        self.kwmservQ.put(['window', [ui_num['S체결목록'], self.df_cj[::-1]]])
+        self.kwzservQ.put(['window', [ui_num['S체결목록'], self.df_cj[::-1]]])
 
     def UpdateTotaljango(self, inthms):
         if len(self.df_jg) > 0:
@@ -324,8 +324,8 @@ class TraderKiwoom2:
         else:
             self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['예수금'], self.dict_intg['예수금'], 0, 0.0, 0, 0, 0
 
-        self.kwmservQ.put(['window', [ui_num['S잔고목록'], self.df_jg.copy()]])
-        self.kwmservQ.put(['window', [ui_num['S잔고평가'], self.df_tj.copy()]])
+        self.kwzservQ.put(['window', [ui_num['S잔고목록'], self.df_jg.copy()]])
+        self.kwzservQ.put(['window', [ui_num['S잔고평가'], self.df_tj.copy()]])
 
         if self.dict_set['주식투자금고정']:
             if inthms < self.dict_set['주식장초전략종료시간']:
