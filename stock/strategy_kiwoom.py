@@ -146,7 +146,10 @@ class StrategyKiwoom:
             if codeorlist in self.list_buy:
                 self.list_buy.remove(codeorlist)
             if gubun == '매수완료':
-                self.dict_buy_tik[codeorlist] = self.dict_sgn_tik[codeorlist]
+                if codeorlist in self.dict_sgn_tik.keys():
+                    self.dict_buy_tik[codeorlist] = self.dict_sgn_tik[codeorlist]
+                else:
+                    self.dict_buy_tik[codeorlist] = len(self.dict_tik_ar[codeorlist]) - 1
         elif gubun in ['매도완료', '매도취소']:
             if codeorlist in self.list_sell:
                 self.list_sell.remove(codeorlist)

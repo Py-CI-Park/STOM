@@ -287,7 +287,7 @@ class StockBackEngine:
                         if code not in code_list:
                             code_list.append(code)
                 for code in code_list:
-                    days      = [day for day in day_list if day in code_days[code]]
+                    days = [day for day in day_list if day in code_days[code]]
                     try:
                         df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
                     except:

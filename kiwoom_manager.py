@@ -156,7 +156,7 @@ class KiwoomManager:
             self.StockStrategyProcessKill()
         elif data == '트레이더 종료':
             self.StockTraderProcessKill()
-        elif data  == '통신종료':
+        elif data == '통신종료':
             self.ManagerProcessKill()
         elif data == '백테엔진구동':
             self.backtest_engine = True
@@ -335,11 +335,14 @@ class KiwoomManager:
                                 text = file.read()
                             server_ip_select = text.split('SERVER_IP_SELECT=')[1].split('PROBLEM_CONNECTIP=')[0].strip()
                             inthms = int_hms()
-                            if inthms < 73000 or 85500 < inthms or now().weekday() > 4:
-                                print(f'접속 시간 초과, 마지막 접속 유지 [{server_ip_select}]')
-                                break
-                            elif fast_ip1 in server_ip_select or fast_ip2 in server_ip_select:
+                            if inthms < 85000 and fast_ip1 in server_ip_select:
                                 print(f'빠른 서버 접속 완료 [{server_ip_select}]')
+                                break
+                            elif 85000 < inthms < 85500 and (fast_ip1 in server_ip_select or fast_ip2 in server_ip_select):
+                                print(f'빠른 서버 접속 완료 [{server_ip_select}]')
+                                break
+                            elif inthms < 80000 or 85500 < inthms or now().weekday() > 4:
+                                print(f'접속 시간 초과, 마지막 접속 유지 [{server_ip_select}]')
                                 break
                             else:
                                 self.proc_receiver_stock.kill()

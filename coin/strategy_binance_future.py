@@ -166,6 +166,11 @@ class StrategyBinanceFuture:
             gubun = gubun.replace('_COMPLETE', '')
             if codeorlist in self.dict_signal[gubun]:
                 self.dict_signal[gubun].remove(codeorlist)
+            if gubun in ['BUY_LONG', 'SELL_SHORT']:
+                if codeorlist in self.dict_sgn_tik.keys():
+                    self.dict_buy_tik[codeorlist] = self.dict_sgn_tik[codeorlist]
+                else:
+                    self.dict_buy_tik[codeorlist] = len(self.dict_tik_ar[codeorlist]) - 1
         elif '_CANCEL' in gubun:
             gubun = gubun.replace('_CANCEL', '')
             if codeorlist in self.dict_signal[gubun]:
@@ -621,11 +626,11 @@ class StrategyBinanceFuture:
                 체결강도평균_    =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수
                 최고체결강도_    = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].max(), 체결강도)
                 최저체결강도_    = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
-                최고초당매수수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].max(), 초당매수수량)
-                최고초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].min(), 초당매도수량)
-                누적초당매수수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].sum(), 초당매수수량)
-                누적초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].sum(), 초당매도수량)
-                초당거래대금평균_ =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 19].sum() + 초당거래대금) / 평균값계산틱수
+                최고초당매수수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 8].max(), 초당매수수량)
+                최고초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].min(), 초당매도수량)
+                누적초당매수수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 8].sum(), 초당매수수량)
+                누적초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].sum(), 초당매도수량)
+                초당거래대금평균_ =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 10].sum() + 초당거래대금) / 평균값계산틱수
                 당일거래대금각도_ = round(math.atan2(당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6], 평균값계산틱수) / (2 * math.pi) * 360, 2)
 
         new_data_tick = [
@@ -719,7 +724,7 @@ class StrategyBinanceFuture:
                 self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}'])
                 return
 
-        if 초당거래대금평균 != 0:
+        if 체결강도평균_ != 0:
             if 종목코드 in self.df_jg.index:
                 매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else 0
                 포지션 = self.df_jg['포지션'][종목코드]
@@ -875,7 +880,7 @@ class StrategyBinanceFuture:
                         self.Sell(종목코드, 포지션, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
 
         if 종목코드 in self.list_gsjm2:
-            self.df_gj.loc[종목코드] = 종목코드, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균, 당일거래대금, 체결강도, 체결강도평균, 최고체결강도
+            self.df_gj.loc[종목코드] = 종목코드, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:
             self.windowQ.put([ui_num['실시간차트'], 종목코드, self.dict_tik_ar[종목코드]])
@@ -885,10 +890,6 @@ class StrategyBinanceFuture:
                 self.dict_tik_ar2[종목코드] = np.array([new_data_tick[:35]])
             else:
                 self.dict_tik_ar2[종목코드] = np.r_[self.dict_tik_ar2[종목코드], np.array([new_data_tick[:35]])]
-                if 틱수신시간 != 0:
-                    data = ['코인디비', self.dict_tik_ar2]
-                    self.queryQ.put(data)
-                    self.dict_tik_ar2 = {}
 
         if self.dict_set['코인분봉데이터']:
             if new_dbdata_min is None:
@@ -917,6 +918,11 @@ class StrategyBinanceFuture:
                 self.windowQ.put([ui_num['일봉차트'], 종목코드, self.dict_day_ar[종목코드][-120:]])
 
         if 틱수신시간 != 0:
+            if self.dict_tik_ar2:
+                data = ['코인디비', self.dict_tik_ar2]
+                self.queryQ.put(data)
+                self.dict_tik_ar2 = {}
+
             gap = (now() - 틱수신시간).total_seconds()
             self.windowQ.put([ui_num['C단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'])
 

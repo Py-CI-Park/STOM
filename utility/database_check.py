@@ -23,6 +23,8 @@ delete_file = './stock/collector_kiwoom.py'
 if os.path.isfile(delete_file): os.remove(delete_file)
 delete_file = './coin/collector_coin.py'
 if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './utility/static_numba.py'
+if os.path.isfile(delete_file): os.remove(delete_file)
 delete_file = './utility/db_update_20220529.py'
 if os.path.isfile(delete_file): os.remove(delete_file)
 delete_file = './utility/db_update_20220713.py'

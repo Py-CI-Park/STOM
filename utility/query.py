@@ -13,6 +13,7 @@ class Query:
         windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
+
         self.windowQ = qlist[0]
         self.queryQ  = qlist[2]
         self.con1    = sqlite3.connect(DB_SETTING)

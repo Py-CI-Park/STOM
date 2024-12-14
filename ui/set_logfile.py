@@ -16,7 +16,7 @@ class SetLogFile:
         if self.ui.dict_set['코인트레이더']:
             self.ui.log4 = self.setLog('TraderCoin', f"./_log/CT_{name}.txt")
             self.ui.log5 = self.setLog('ReceiverCoin', f"./_log/CT_{name}.txt")
-        self.ui.log6 = self.setLog('BacktesterStock', f"./_log/BK_{name}.txt")
+        self.ui.log6 = self.setLog('Backtester', f"./_log/BK_{name}.txt")
 
     @staticmethod
     def setLog(name, filename):

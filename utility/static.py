@@ -35,14 +35,12 @@ def opstarter_kill():
         os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
 
 
-# noinspection PyTypeChecker
 def array_to_bytes(x: np.ndarray) -> bytes:
     np_bytes = BytesIO()
     np.save(np_bytes, x, allow_pickle=True)
     return np_bytes.getvalue()
 
 
-# noinspection PyTypeChecker
 def bytes_to_array(b: bytes) -> np.ndarray:
     np_bytes = BytesIO(b)
     return np.load(np_bytes, allow_pickle=True)

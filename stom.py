@@ -2775,6 +2775,10 @@ class Window(QMainWindow):
                 if not self.sj_main_cheBox_11.isChecked() and not self.sj_main_cheBox_10.isChecked():
                     self.sj_main_cheBox_09.nextCheckState()
 
+    # noinspection PyUnusedLocal
+    def CheckboxChanged_22(self, state):
+        self.ctpg_tik_name = None
+
     # =================================================================================================================
 
     def sbCheckboxChanged_01(self, state):
