@@ -76,80 +76,15 @@ class Total:
         bc  = 0
         tbc = 0
         sc  = 0
-        total_dict_tsg = {}
-        total_dict_bct = {}
+        dict_tsg = {}
+        dict_bct = {}
         while True:
             data = self.tq.get()
-            if data[0] == '백테결과':
-                _, dict_tsg, dict_bct = data
-                if dict_tsg:
-                    for vars_key, list_tsg in dict_tsg.items():
-                        arry_bct = dict_bct[vars_key]
-                        if vars_key not in total_dict_tsg.keys():
-                            total_dict_tsg[vars_key] = [[] for _ in range(14)]
-                            total_dict_bct[vars_key] = arry_bct
-                        else:
-                            total_dict_bct[vars_key][:, 1] += arry_bct[:, 1]
-
-                        for j, tsg_data in enumerate(list_tsg):
-                            total_dict_tsg[vars_key][j] += tsg_data
-                            # if j == 0:
-                            #     for index in tsg_data:
-                            #         index_ = index
-                            #         while index_ in total_dict_tsg[vars_key][j]:
-                            #             index_ = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index_)))
-                            #         total_dict_tsg[vars_key][j].append(index_)
-                            # else:
-                            #     total_dict_tsg[vars_key][j] += tsg_data
-                sc += 1
-                if sc < 20:
-                    continue
-
-                sc = 0
-                columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-                           '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                if self.vars_turn >= -1:
-                    k = 0
-                    for vars_key, list_tsg in total_dict_tsg.items():
-                        data = ('결과집계', columns, list_tsg, total_dict_bct[vars_key])
-                        train_days, valid_days, test_days = self.list_days
-                        if valid_days is not None:
-                            for j, vdays in enumerate(valid_days):
-                                data_ = data + (vdays[0], vdays[1], test_days[0], train_days[2] - vdays[2], vdays[2], j, vars_key)
-                                self.tdq_list[k % 10].put(data_)
-                                self.vdq_list[k % 10].put(data_)
-                                k += 1
-                        else:
-                            data_ = data + (train_days[2], vars_key)
-                            self.stq_list[k % 20].put(data_)
-                            k += 1
-
-                    if self.vars_turn != -1:
-                        curr_vars_list = self.vars_list[self.vars_turn][0]
-                        if len(total_dict_tsg) < len(curr_vars_list) - 1:
-                            curr_high_index = curr_vars_list.index(self.vars_list[self.vars_turn][1])
-                            curr_vars_count = len(curr_vars_list)
-                            zero_key_list = [x for x in range(curr_vars_count) if x not in total_dict_tsg.keys() and x != curr_high_index]
-                            for vars_key in zero_key_list:
-                                self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
-                    total_dict_tsg = {}
-                    total_dict_bct = {}
-                else:
-                    self.df_tsg = pd.DataFrame(dict(zip(columns, total_dict_tsg[0])))
-                    self.df_tsg.set_index('index', inplace=True)
-                    self.df_tsg.sort_index(inplace=True)
-                    arry_bct = total_dict_bct[0]
-                    arry_bct = arry_bct[arry_bct[:, 1] > 0]
-                    self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
-                    self.Report()
-
-            elif data[0] == '백테완료':
+            if data[0] == '백테완료':
                 bc  += 1
                 tbc += 1
-                if data[1]:
-                    tc += 1
+                if data[1]: tc += 1
                 self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start))
-
                 if bc == self.back_count:
                     bc = 0
                     if tc > 0:
@@ -162,6 +97,66 @@ class Total:
                                 self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
                         else:
                             self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
+
+            elif data == '집계완료':
+                sc += 1
+                if sc == 20:
+                    sc = 0
+                    for stq in self.stq_list:
+                        stq.put('결과분리')
+
+            elif data == '분리완료':
+                sc += 1
+                if sc == 20:
+                    sc = 0
+                    for stq in self.stq_list:
+                        stq.put('결과전송')
+
+            elif data[0] == '백테결과':
+                _, vars_key, list_tsg, arry_bct = data
+                if list_tsg is not None:
+                    dict_tsg[vars_key] = list_tsg
+                    dict_bct[vars_key] = arry_bct
+
+                sc += 1
+                if sc == 20:
+                    sc = 0
+                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
+                    if self.vars_turn >= -1:
+                        k = 0
+                        for vars_key, list_tsg in dict_tsg.items():
+                            data = ('결과집계', columns, list_tsg, dict_bct[vars_key])
+                            train_days, valid_days, test_days = self.list_days
+                            if valid_days is not None:
+                                for j, vdays in enumerate(valid_days):
+                                    data_ = data + (vdays[0], vdays[1], test_days[0], train_days[2] - vdays[2], vdays[2], j, vars_key)
+                                    self.tdq_list[k % 10].put(data_)
+                                    self.vdq_list[k % 10].put(data_)
+                                    k += 1
+                            else:
+                                data_ = data + (train_days[2], vars_key)
+                                self.stq_list[k % 20].put(data_)
+                                k += 1
+
+                        if self.vars_turn != -1:
+                            curr_vars_list = self.vars_list[self.vars_turn][0]
+                            if len(dict_tsg) < len(curr_vars_list) - 1:
+                                curr_high_index = curr_vars_list.index(self.vars_list[self.vars_turn][1])
+                                curr_vars_count = len(curr_vars_list)
+                                zero_key_list = [x for x in range(curr_vars_count) if x not in dict_tsg.keys() and x != curr_high_index]
+                                for vars_key in zero_key_list:
+                                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                        dict_tsg = {}
+                        dict_bct = {}
+                    else:
+                        self.df_tsg = pd.DataFrame(dict(zip(columns, dict_tsg[0])))
+                        self.df_tsg.set_index('index', inplace=True)
+                        self.df_tsg.sort_index(inplace=True)
+                        arry_bct = dict_bct[0]
+                        arry_bct = arry_bct[arry_bct[:, 1] > 0]
+                        self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
+                        self.Report()
 
             elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
@@ -470,8 +465,13 @@ class Optimize:
         if 'V' in self.backname:
             valid_days = []
             for vdays in valid_days_:
-                valid_days_list = [x for x in day_list if vdays[0] <= x <= vdays[1]]
-                valid_days.append([valid_days_list[0], valid_days_list[-1], len(valid_days_list)])
+                try:
+                    valid_days_list = [x for x in day_list if vdays[0] <= x <= vdays[1]]
+                    valid_days.append([valid_days_list[0], valid_days_list[-1], len(valid_days_list)])
+                except:
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'백테엔진 마지막 일자와 실제 로딩된 데이터의 마지막 일자가 다릅니다.'))
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'마지막 일자를 실제 데이터의 마지막 일자로 변경하여 재구동하십시오.'))
+                    self.SysExit(True)
         else:
             valid_days = None
         if 'T' in self.backname:
@@ -674,6 +674,7 @@ class Optimize:
             k = 1
             total_change  = 0
             change_var_count = None
+            last_change_turn = 1000
             for _ in range(ccount if ccount != 0 else 100):
                 if ccount == 0:
                     if change_var_count == 0:
@@ -685,12 +686,15 @@ class Optimize:
                 del_vars_list = []
                 change_var_count = 0
                 for i in range(len_vars):
+                    if change_var_count == 0 and last_change_turn == i:
+                        break
+
                     del_list  = []
                     len_vars_ = len(vars_[i][0]) - 1
                     if len_vars_ > 0:
                         start = now()
-                        print('==================================================================')
-                        print(f'opt_vars_turn : {i} len_vars : {len_vars_}')
+                        print('========================================================================')
+                        print(f'opt_vars_turn : {i}  len_vars : {len_vars_ + 1}  high_vars : {vars_[i][1]}')
                         print(f'opt_vars_list : {vars_[i][0]}')
                         self.tq.put(('변수정보', vars_, i))
                         for q in self.stq_list:
@@ -698,6 +702,7 @@ class Optimize:
                         for q in self.pq_list:
                             q.put(('변수정보', vars_, i))
 
+                        turn_stdk = {}
                         for _ in range(len_vars_):
                             data = mq.get()
                             if type(data) == str:
@@ -706,27 +711,69 @@ class Optimize:
                                 self.SysExit(True)
                             else:
                                 std, vars_key = data
-                                print('{:>13} : {:>2}, {:>9} : {:>16,.2f}'.format(' -   vars_key', vars_key, 'std_point', std))
                                 curr_typ = vars_type[i]
                                 curr_var = vars_[i][0][vars_key]
                                 preh_var = vars_[i][1]
-                                if std == -2_147_483_648:
-                                    del_list.append(curr_var)
+                                print('{:>16} = {:>6}, {:>9} : {:>15,.2f}'.format(f'self.vars[{i}]', curr_var, 'std_point', std))
                                 if std > hstd or (std == hstd and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
-                                    print(' * update_std :', f'{preh_var} -> {curr_var}')
+                                    print('{:>16} : {:>50}'.format('update_std', f'{preh_var} -> {curr_var}'))
                                     hstd = std
                                     vars_[i][1] = curr_var
                                     total_change += 1
                                     change_var_count += 1
-                        print(f' -  time_left : {(now() - start).total_seconds()} seconds')
+                                    last_change_turn = i
+
+                                if std == -2_147_483_648:
+                                    del_list.append(curr_var)
+                                if self.dict_set['범위자동관리']:
+                                    turn_stdk[curr_var] = std
+
+                        if self.dict_set['범위자동관리']:
+                            for curr_var, std in turn_stdk.items():
+                                if std < hstd / 2:
+                                    del_list.append(curr_var)
+
+                        print('{:>16} : {:>55}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
+
                     del_vars_list.append(del_list)
 
-                k += 1
+                last = len(del_vars_list)
                 for i in range(len_vars):
-                    if del_vars_list[i]:
+                    if i < last and del_vars_list[i] and len(vars_[i][0]) >= 7:
                         new_list = [x for x in vars_[i][0] if x not in del_vars_list[i]]
                         vars_[i][0] = new_list
-                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 불필요한 범위 {del_vars_list[i]} 삭제'))
+                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 불필요 범위값 {del_vars_list[i]} 삭제'))
+
+                if self.dict_set['범위자동관리']:
+                    for i in range(len_vars):
+                        if i < last and 7 <= len(vars_[i][0]) <= 18:
+                            first_var  = vars_[i][0][0]
+                            second_var = vars_[i][0][1]
+                            last_var   = vars_[i][0][-1]
+                            high_var   = vars_[i][1]
+                            gap        = second_var - first_var
+                            new_var_list = []
+                            if high_var == first_var:
+                                new_var = first_var - gap * 1
+                                if new_var not in del_vars_list[i]:
+                                    new_var_list.append(new_var)
+                                    new_var = first_var - gap * 2
+                                    if new_var not in del_vars_list[i]:
+                                        new_var_list.append(new_var)
+                                vars_[i][0] = new_var_list + vars_[i][0]
+                                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위값 {new_var_list} 추가'))
+                            elif high_var == last_var:
+                                new_var = last_var + gap * 1
+                                if new_var not in del_vars_list[i]:
+                                    new_var_list.append(new_var)
+                                    new_var = last_var + gap * 2
+                                    if new_var not in del_vars_list[i]:
+                                        new_var_list.append(new_var)
+                                vars_[i][0] = vars_[i][0] + new_var_list
+                                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위값 {new_var_list} 추가'))
+                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'불필요한 범위값 삭제 및 새로운 범위값 추가 완료'))
+
+                k += 1
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '최적값 백테스트 시작'))
         self.tq.put(('변수정보', vars_, -2))

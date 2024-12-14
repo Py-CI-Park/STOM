@@ -1,126 +1,19 @@
 import math
-import time
 # noinspection PyUnresolvedReferences
 import talib
 import sqlite3
 import numpy as np
 import pandas as pd
 from traceback import print_exc
+from stock.strategy_kiwoom import StrategyKiwoom
 # noinspection PyUnresolvedReferences
-from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, GetHogaunit
-from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, DB_STOCK_DAY, DB_STOCK_MIN, dict_min, \
-    dict_order_ratio, DB_STOCK_TICK
+from utility.static import now, strf_time, strp_time, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, GetHogaunit
+from utility.setting import ui_num, DB_STOCK_DAY, DB_STOCK_MIN, dict_min, dict_order_ratio
 
 
-class StrategyKiwoom2:
+class StrategyKiwoom2(StrategyKiwoom):
     def __init__(self, gubun, qlist):
-        self.gubun    = gubun
-        self.kwzservQ = qlist[0]
-        self.straderQ = qlist[2]
-        self.sstgQs   = qlist[3]
-        self.sstgQ    = qlist[3][self.gubun]
-        self.dict_set = DICT_SET
-
-        if self.gubun == 0 and self.dict_set['전략연산프로파일링']:
-            import cProfile
-            self.pr = cProfile.Profile()
-            self.pr.enable()
-
-        self.buystrategy1  = None
-        self.buystrategy2  = None
-        self.sellstrategy1 = None
-        self.sellstrategy2 = None
-
-        self.vars          = {}
-        self.vars2         = {}
-        self.dict_tik_ar   = {}
-        self.dict_day_ar   = {}
-        self.dict_min_ar   = {}
-        self.dict_day_data = {}
-        self.dict_min_data = {}
-        self.dict_buyinfo  = {}
-        self.dict_sgn_tik  = {}
-        self.dict_buy_tik  = {}
-
-        self.UpdateStringategy()
-
-        self.list_buy   = []
-        self.list_sell  = []
-        self.tuple_kosd = ()
-        self.tuple_gsjm = ()
-
-        self.int_tujagm = 0
-        self.stg_change = False
-        self.chart_code = None
-        self.dict_stgn  = None
-        self.day_start  = strp_time('%Y%m%d%H%M%S', strf_time('%Y%m%d') + '090000')
-        self.df_jg      = pd.DataFrame(columns=columns_jg)
-        self.df_gj      = pd.DataFrame(columns=columns_gj)
-
-        self.bhogainfo = {}
-        self.shogainfo = {}
-        self.dict_hilo = {}
-
-        self.jg_receiv_count = 0
-
-        self.Start()
-
-    def UpdateStringategy(self):
-        con  = sqlite3.connect(DB_STRATEGY)
-        dfb  = pd.read_sql('SELECT * FROM stockbuy', con).set_index('index')
-        dfs  = pd.read_sql('SELECT * FROM stocksell', con).set_index('index')
-        dfob = pd.read_sql('SELECT * FROM stockoptibuy', con).set_index('index')
-        dfos = pd.read_sql('SELECT * FROM stockoptisell', con).set_index('index')
-        con.close()
-
-        if self.dict_set['주식장초매수전략'] == '':
-            self.buystrategy1 = None
-        elif self.dict_set['주식장초매수전략'] in dfb.index:
-            self.buystrategy1 = compile(dfb['전략코드'][self.dict_set['주식장초매수전략']], '<string>', 'exec')
-        elif self.dict_set['주식장초매수전략'] in dfob.index:
-            self.buystrategy1 = compile(dfob['전략코드'][self.dict_set['주식장초매수전략']], '<string>', 'exec')
-            self.vars = {i: var for i, var in enumerate(list(dfob.loc[self.dict_set['주식장초매수전략']])[1:]) if var != 9999.}
-
-        if self.dict_set['주식장초매도전략'] == '':
-            self.sellstrategy1 = None
-        elif self.dict_set['주식장초매도전략'] in dfs.index:
-            self.sellstrategy1 = compile(dfs['전략코드'][self.dict_set['주식장초매도전략']], '<string>', 'exec')
-        elif self.dict_set['주식장초매도전략'] in dfos.index:
-            self.sellstrategy1 = compile(dfos['전략코드'][self.dict_set['주식장초매도전략']], '<string>', 'exec')
-
-        if self.dict_set['주식장중매수전략'] == '':
-            self.buystrategy2 = None
-        elif self.dict_set['주식장중매수전략'] in dfb.index:
-            self.buystrategy2 = compile(dfb['전략코드'][self.dict_set['주식장중매수전략']], '<string>', 'exec')
-        elif self.dict_set['주식장중매수전략'] in dfob.index:
-            self.buystrategy2 = compile(dfob['전략코드'][self.dict_set['주식장중매수전략']], '<string>', 'exec')
-            self.vars2 = {i: var for i, var in enumerate(list(dfob.loc[self.dict_set['주식장중매수전략']])[1:]) if var != 9999.}
-
-        if self.dict_set['주식장중매도전략'] == '':
-            self.sellstrategy2 = None
-        elif self.dict_set['주식장중매도전략'] in dfs.index:
-            self.sellstrategy2 = compile(dfs['전략코드'][self.dict_set['주식장중매도전략']], '<string>', 'exec')
-        elif self.dict_set['주식장중매도전략'] in dfos.index:
-            self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['주식장중매도전략']], '<string>', 'exec')
-
-    def Start(self):
-        if self.gubun == 7:
-            self.kwzservQ.put(('window', (ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 전략연산 시작')))
-        while True:
-            data = self.sstgQ.get()
-            if type(data) == tuple:
-                if len(data) != 2:
-                    self.Strategy(data)
-                else:
-                    self.UpdateTuple(data)
-            elif type(data) == str:
-                self.UpdateString(data)
-                if data == '프로세스종료':
-                    break
-
-        if self.gubun == 7:
-            self.kwzservQ.put(('window', (ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 전략연산 종료')))
-        time.sleep(1)
+        super().__init__(gubun, qlist)
 
     def LoadDayMinData(self):
         if self.dict_set['주식분봉데이터']:
@@ -217,71 +110,7 @@ class StrategyKiwoom2:
         ]
         return new_data
 
-    def UpdateTuple(self, data):
-        gubun, data = data
-        if gubun == '관심목록':
-            self.tuple_gsjm = data
-            drop_index_list = list(set(list(self.df_gj.index)) - set(data))
-            self.df_gj.drop(index=drop_index_list, inplace=True)
-        elif gubun in ('매수완료', '매수취소'):
-            if data in self.list_buy:
-                self.list_buy.remove(data)
-            if gubun == '매수완료':
-                self.dict_buy_tik[data] = self.dict_sgn_tik[data]
-        elif gubun in ('매도완료', '매도취소'):
-            if data in self.list_sell:
-                self.list_sell.remove(data)
-        elif gubun == '매수주문':
-            if data not in self.list_buy:
-                self.list_buy.append(data)
-        elif gubun == '매도주문':
-            if data not in self.list_sell:
-                self.list_sell.append(data)
-        elif gubun == '잔고목록':
-            self.df_jg = data
-            self.jg_receiv_count += 1
-            if self.jg_receiv_count == 2:
-                self.jg_receiv_count = 0
-                self.PutGsjmAndDeleteHilo()
-        elif gubun == '매수전략':
-            if int_hms() < self.dict_set['주식장초전략종료시간']:
-                self.buystrategy1 = compile(data, '<string>', 'exec')
-            else:
-                self.buystrategy2 = compile(data, '<string>', 'exec')
-        elif gubun == '매도전략':
-            if int_hms() < self.dict_set['주식장초전략종료시간']:
-                self.sellstrategy1 = compile(data, '<string>', 'exec')
-            else:
-                self.sellstrategy2 = compile(data, '<string>', 'exec')
-        elif gubun == '종목당투자금':
-            self.int_tujagm = data
-        elif gubun == '차트종목코드':
-            self.chart_code = data
-            self.UpdateStringategy()
-        elif gubun == '설정변경':
-            self.dict_set = data
-            self.UpdateStringategy()
-        elif gubun == '코스닥목록':
-            self.tuple_kosd = data
-        elif gubun == '종목구분번호':
-            self.dict_stgn = data
-        elif gubun == '틱데이터저장':
-            self.SaveTickData(data)
-
-    def UpdateString(self, data):
-        if data == '매수전략중지':
-            self.buystrategy1 = None
-            self.buystrategy2 = None
-        elif data == '매도전략중지':
-            self.sellstrategy1 = None
-            self.sellstrategy2 = None
-        elif data == '복기모드종료':
-            self.dict_tik_ar = {}
-        elif data == '프로파일링결과':
-            if self.gubun == 0:
-                self.pr.print_stats(sort='cumulative')
-
-    def ReloadData(self, data):
+    def UpdateTriple(self, data):
         gubun, code, dt = data
         if gubun == '분봉재로딩':
             con = sqlite3.connect(DB_STOCK_MIN)
@@ -307,11 +136,9 @@ class StrategyKiwoom2:
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
             매도수5호가잔량합, 종목코드, 종목명, 틱수신시간 = data
 
-        def Parameter_Previous(number, pre):
-            if pre != -1:
-                return self.dict_tik_ar[종목코드][index-pre, number]
-            else:
-                return self.dict_tik_ar[종목코드][매수틱번호, number]
+        def Parameter_Previous(aindex, pre):
+            pindex = (index - pre) if pre != -1 else 매수틱번호
+            return self.dict_tik_ar[종목코드][pindex, aindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -443,31 +270,24 @@ class StrategyKiwoom2:
             elif tick == 1200:
                 return Parameter_Previous(47, pre)
             else:
-                if pre != -1:
-                    return round(self.dict_tik_ar[종목코드][index+1-tick-pre:index+1-pre, 1].mean(), 3)
-                else:
-                    return round(self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, 1].mean(), 3)
+                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 3)
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                if pre != -1:
-                    if gubun_ == 'max':
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].min()
-                    elif gubun_ == 'sum':
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].sum()
-                    else:
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].mean()
+                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                if gubun_ == 'max':
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
+                elif gubun_ == 'min':
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].min()
+                elif gubun_ == 'sum':
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].sum()
                 else:
-                    if gubun_ == 'max':
-                        return self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, vindex].min()
-                    else:
-                        return self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, vindex].mean()
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(48, 1, tick, pre, 'max')
@@ -503,10 +323,9 @@ class StrategyKiwoom2:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                if pre != -1:
-                    dmp_gap = self.dict_tik_ar[종목코드][index-pre, vindex] - self.dict_tik_ar[종목코드][index+1-tick-pre, vindex]
-                else:
-                    dmp_gap = self.dict_tik_ar[종목코드][매수틱번호, vindex] - self.dict_tik_ar[종목코드][매수틱번호+1-tick, vindex]
+                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
@@ -800,8 +619,9 @@ class StrategyKiwoom2:
                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}')))
                 return
 
-            if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0):
-                매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else 0
+        if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0):
+            if 종목코드 in self.df_jg.index:
+                매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else len(self.dict_tik_ar[종목코드]) - 1
                 매입가 = self.df_jg['매입가'][종목코드]
                 보유수량 = self.df_jg['보유수량'][종목코드]
                 매입금액 = self.df_jg['매입금액'][종목코드]
@@ -809,6 +629,7 @@ class StrategyKiwoom2:
                 분할매도횟수 = int(self.df_jg['분할매도횟수'][종목코드])
                 _, 수익금, 수익률 = GetKiwoomPgSgSp(매입금액, 보유수량 * 현재가)
                 매수시간 = strp_time('%Y%m%d%H%M%S', self.df_jg['매수시간'][종목코드])
+                보유시간 = (now() - 매수시간).total_seconds()
                 if 종목코드 not in self.dict_hilo.keys():
                     self.dict_hilo[종목코드] = [수익률, 수익률]
                 else:
@@ -818,7 +639,7 @@ class StrategyKiwoom2:
                         self.dict_hilo[종목코드][1] = 수익률
                 최고수익률, 최저수익률 = self.dict_hilo[종목코드]
             else:
-                수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, now(), 0, 0
+                매수틱번호, 수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, 0, now(), 0, 0, 0
 
             BBT = not self.dict_set['주식매수금지시간'] or not (self.dict_set['주식매수금지시작시간'] < 시분초 < self.dict_set['주식매수금지종료시간'])
             BLK = not self.dict_set['주식매수금지블랙리스트'] or 종목코드 not in self.dict_set['주식블랙리스트']
@@ -832,13 +653,14 @@ class StrategyKiwoom2:
             D = NIB and self.dict_set['주식매도취소매수시그널'] and not NIS
 
             if BBT and BLK and (A or (B and C) or C or D):
+                매수 = True
                 매수수량 = 0
+
                 if A or (B and C) or C:
                     oc_ratio = dict_order_ratio[self.dict_set['주식매수분할방법']][self.dict_set['주식매수분할횟수']][분할매수횟수]
                     매수수량 = int(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100)
 
                 if A or (B and C) or D:
-                    매수 = True
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
@@ -857,13 +679,14 @@ class StrategyKiwoom2:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2')))
                 elif C:
-                    매수 = False
-                    분할매수기준수익률 = round((현재가 / self.dict_buyinfo[종목코드][9] - 1) * 100, 2) if self.dict_set['주식매수분할고정수익률'] else 수익률
-                    if self.dict_set['주식매수분할하방'] and 분할매수기준수익률 < -self.dict_set['주식매수분할하방수익률']:  매수 = True
-                    elif self.dict_set['주식매수분할상방'] and 분할매수기준수익률 > self.dict_set['주식매수분할상방수익률']: 매수 = True
+                    분할매수기준수익률 = round((현재가 / 현재가N(-1) - 1) * 100, 2) if self.dict_set['주식매수분할고정수익률'] else 수익률
+                    if self.dict_set['주식매수분할하방'] and 분할매수기준수익률 < -self.dict_set['주식매수분할하방수익률']:
+                        매수 = True
+                    elif self.dict_set['주식매수분할상방'] and 분할매수기준수익률 > self.dict_set['주식매수분할상방수익률']:
+                        매수 = True
 
                     if 매수:
-                        self.Buy(종목코드, 종목명, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)
+                        self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이)
 
             SBT = not self.dict_set['주식매도금지시간'] or not (self.dict_set['주식매도금지시작시간'] < 시분초 < self.dict_set['주식매도금지종료시간'])
             SCC = self.dict_set['주식매수분할횟수'] == 1 or not self.dict_set['주식매도금지매수횟수'] or 분할매수횟수 > self.dict_set['주식매도금지매수횟수값']
@@ -877,8 +700,10 @@ class StrategyKiwoom2:
             F = NIB and NIS and 매입가 != 0 and self.dict_set['주식매도손절수익금청산'] and 수익금 < -self.dict_set['주식매도손절수익금']
 
             if SBT and (A or (B and C) or C or D or E or F):
+                매도 = False
                 매도수량 = 0
                 강제청산 = E or F
+
                 if A or E or F:
                     매도수량 = 보유수량
                 elif (B and C) or C:
@@ -887,7 +712,6 @@ class StrategyKiwoom2:
                     if 매도수량 > 보유수량 or 분할매도횟수 + 1 == self.dict_set['주식매도분할횟수']: 매도수량 = 보유수량
 
                 if A or (B and C) or D:
-                    매도 = False
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.sellstrategy1 is not None:
                             try:
@@ -903,15 +727,16 @@ class StrategyKiwoom2:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2')))
                 elif C or E or F:
-                    매도 = False
                     if 강제청산:
                         매도 = True
                     elif C:
-                        if self.dict_set['주식매도분할하방'] and 수익률 < -self.dict_set['주식매도분할하방수익률'] * (분할매도횟수 + 1):  매도 = True
-                        elif self.dict_set['주식매도분할상방'] and 수익률 > self.dict_set['주식매도분할상방수익률'] * (분할매도횟수 + 1): 매도 = True
+                        if self.dict_set['주식매도분할하방'] and 수익률 < -self.dict_set['주식매도분할하방수익률'] * (분할매도횟수 + 1):
+                            매도 = True
+                        elif self.dict_set['주식매도분할상방'] and 수익률 > self.dict_set['주식매도분할상방수익률'] * (분할매도횟수 + 1):
+                            매도 = True
 
                     if 매도:
-                        self.Sell(종목코드, 종목명, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
+                        self.Sell(종목코드, 종목명, 매도수량, 현재가, 매도호가1, 매수호가1, 강제청산)
 
         if self.dict_set['주식분봉데이터']:
             if self.dict_min_ar[종목코드][-1, 0] == 분봉체결시간:
@@ -941,101 +766,8 @@ class StrategyKiwoom2:
             self.df_gj.loc[종목코드] = 종목명, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:
-            self.kwzservQ.put(('window', (ui_num['실시간차트'], 종목명, self.dict_tik_ar[종목코드])))
+            self.kwzservQ.put(('window', (ui_num['실시간차트'], 종목명, self.dict_tik_ar[종목코드][-1800:, :])))
 
         if 틱수신시간 != 0:
             gap = (now() - 틱수신시간).total_seconds()
             self.kwzservQ.put(('window', (ui_num['S단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.')))
-
-    def Buy(self, 종목코드, 종목명, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이):
-        if '지정가' in self.dict_set['주식매수주문구분']:
-            기준가격 = 현재가
-            if self.dict_set['주식매수지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
-            if self.dict_set['주식매수지정가기준가격'] == '매수1호가': 기준가격 = 매수호가1
-            self.list_buy.append(종목코드)
-            self.dict_sgn_tik[종목코드] = 데이터길이 - 1
-            self.straderQ.put(('매수', 종목코드, 종목명, 기준가격, 매수수량, now(), False))
-        else:
-            남은수량 = 매수수량
-            직전남은수량 = 매수수량
-            매수금액 = 0
-            for 매도호가, 매도잔량 in self.bhogainfo:
-                남은수량 -= 매도잔량
-                if 남은수량 <= 0:
-                    매수금액 += 매도호가 * 직전남은수량
-                    break
-                else:
-                    매수금액 += 매도호가 * 매도잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
-                예상체결가 = int(round(매수금액 / 매수수량)) if 매수수량 != 0 else 0
-                self.list_buy.append(종목코드)
-                self.dict_sgn_tik[종목코드] = 데이터길이 - 1
-                self.straderQ.put(('매수', 종목코드, 종목명, 예상체결가, 매수수량, now(), False))
-
-    def Sell(self, 종목코드, 종목명, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산):
-        if '지정가' in self.dict_set['주식매도주문구분'] and not 강제청산:
-            기준가격 = 현재가
-            if self.dict_set['주식매도지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
-            if self.dict_set['주식매도지정가기준가격'] == '매수1호가': 기준가격 = 매수호가1
-            self.list_sell.append(종목코드)
-            self.straderQ.put(('매도', 종목코드, 종목명, 기준가격, 매도수량, now(), False))
-        else:
-            남은수량 = 매도수량
-            직전남은수량 = 매도수량
-            매도금액 = 0
-            for 매수호가, 매수잔량 in self.shogainfo:
-                남은수량 -= 매수잔량
-                if 남은수량 <= 0:
-                    매도금액 += 매수호가 * 직전남은수량
-                    break
-                else:
-                    매도금액 += 매수호가 * 매수잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
-                예상체결가 = int(round(매도금액 / 매도수량)) if 매도수량 != 0 else 0
-                self.list_sell.append(종목코드)
-                self.straderQ.put(('매도', 종목코드, 종목명, 예상체결가, 매도수량, now(), True if 강제청산 else False))
-
-    def PutGsjmAndDeleteHilo(self):
-        if len(self.df_gj) > 0:
-            self.kwzservQ.put(('window', (ui_num[f'S관심종목'], self.df_gj)))
-        if len(self.dict_hilo) > 0:
-            for code in list(self.dict_hilo.keys()):
-                if code not in self.df_jg.index:
-                    del self.dict_hilo[code]
-
-    def SaveTickData(self, codes):
-        for code in list(self.dict_tik_ar.keys()):
-            if code not in codes:
-                del self.dict_tik_ar[code]
-
-        columns_ts = [
-            'index', '현재가', '시가', '고가', '저가', '등락율', '당일거래대금', '체결강도', '거래대금증감', '전일비', '회전율',
-            '전일동시간비', '시가총액', '라운드피겨위5호가이내', '초당매수수량', '초당매도수량', 'VI해제시간', 'VI가격', 'VI호가단위',
-            '초당거래대금', '고저평균대비등락율', '매도총잔량', '매수총잔량', '매도호가5', '매도호가4', '매도호가3', '매도호가2',
-            '매도호가1', '매수호가1', '매수호가2', '매수호가3', '매수호가4', '매수호가5', '매도잔량5', '매도잔량4', '매도잔량3',
-            '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합'
-        ]
-
-        last = len(self.dict_tik_ar)
-        con = sqlite3.connect(DB_STOCK_TICK)
-        if last > 0:
-            start = now()
-            for i, code in enumerate(list(self.dict_tik_ar.keys())):
-                df = pd.DataFrame(self.dict_tik_ar[code][:, :44], columns=columns_ts)
-                df[['index']] = df[['index']].astype('int64')
-                df.set_index('index', inplace=True)
-                df.to_sql(code, con, if_exists='append', chunksize=1000)
-                text = f'시스템 명령 실행 알림 - 전략연산 프로세스 틱데이터 저장 중 ... [{self.gubun + 1}]{i + 1}/{last}'
-                self.kwzservQ.put(('window', (ui_num['S단순텍스트'], text)))
-            save_time = (now() - start).total_seconds()
-            text = f'시스템 명령 실행 알림 - 틱데이터 저장 쓰기소요시간은 [{save_time:.6f}]초입니다.'
-            self.kwzservQ.put(('window', (ui_num['S단순텍스트'], text)))
-        con.close()
-
-        if self.gubun != 7:
-            self.sstgQs[self.gubun + 1].put(('틱데이터저장', codes))
-        else:
-            for q in self.sstgQs:
-                q.put('전략연산종료')

@@ -135,7 +135,7 @@ class ReceiverKiwoomClient:
         self.kwzservQ.put(('window', (ui_num['종목명데이터'], self.dict_name, self.dict_code, self.dict_sgbn, '더미')))
         self.straderQ.put(('종목구분번호', self.dict_sgbn))
         for q in self.sstgQs:
-            q.put(('종목구분번', self.dict_sgbn))
+            q.put(('종목구분번호', self.dict_sgbn))
             q.put(('코스닥목록', self.tuple_kosd))
 
     def UpdateOperation(self, data):

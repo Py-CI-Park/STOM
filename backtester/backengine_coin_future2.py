@@ -84,11 +84,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         def now_utc():
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
-        def Parameter_Previous(vindex, pre):
-            if pre != -1:
-                return self.array_tick[self.indexn - pre, vindex]
-            else:
-                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex]
+        def Parameter_Previous(aindex, pre):
+            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -202,36 +200,27 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             elif tick == 1200:
                 return Parameter_Previous(38, pre)
             else:
-                if pre != -1:
-                    return round(self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, 1].mean(), 8)
-                else:
-                    bindex = self.trade_info[self.vars_key]['매수틱번호']
-                    return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 8)
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                return round(self.array_tick[sindex:eindex, 1].mean(), 8)
 
-        def GetArrayIndex(bc):
-            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
+        def GetArrayIndex(aindex):
+            return aindex + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                if pre != -1:
-                    if gubun_ == 'max':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].min()
-                    elif gubun_ == 'sum':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].sum()
-                    else:
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].mean()
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                if gubun_ == 'max':
+                    return self.array_tick[sindex:eindex, vindex].max()
+                elif gubun_ == 'min':
+                    return self.array_tick[sindex:eindex, vindex].min()
+                elif gubun_ == 'sum':
+                    return self.array_tick[sindex:eindex, vindex].sum()
                 else:
-                    bindex = self.trade_info[self.vars_key]['매수틱번호']
-                    if gubun_ == 'max':
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].min()
-                    else:
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].mean()
+                    return self.array_tick[sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(39, 1, tick, pre, 'max')
@@ -267,10 +256,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                if pre != -1:
-                    dmp_gap = self.array_tick[self.indexn - pre, vindex] - self.array_tick[self.indexn + 1 - tick - pre, vindex]
-                else:
-                    dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, vindex]
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
@@ -468,45 +456,46 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     break
 
     def Buy(self, gubun):
-        if self.dict_set['코인매수주문구분'] == '시장가':
-            매수수량 = self.trade_info[self.vars_key]['주문수량']
-            if 매수수량 > 0:
-                남은수량 = 매수수량
-                직전남은수량 = 매수수량
+        주문수량 = 미체결수량 = self.trade_info[self.vars_key]['주문수량']
+        if 주문수량 > 0:
+            if self.dict_set['코인매수주문구분'] == '시장가':
                 매수금액 = 0
                 hogainfo = self.bhogainfo if gubun == 'BUY_LONG' else self.shogainfo
                 hogainfo = hogainfo[:self.dict_set['코인매수시장가잔량범위']]
                 for 호가, 잔량 in hogainfo:
-                    남은수량 -= 잔량
-                    if 남은수량 <= 0:
-                        매수금액 += 호가 * 직전남은수량
+                    if 미체결수량 - 잔량 <= 0:
+                        매수금액 += 호가 * 미체결수량
+                        미체결수량 -= 잔량
                         break
                     else:
                         매수금액 += 호가 * 잔량
-                        직전남은수량 = 남은수량
-                if 남은수량 <= 0:
+                        미체결수량 -= 잔량
+                if 미체결수량 <= 0:
                     gubun = 'LONG' if gubun == 'BUY_LONG' else 'SHORT'
                     if self.trade_info[self.vars_key]['보유수량'] == 0:
-                        self.trade_info[self.vars_key]['매수가'] = round(매수금액 / 매수수량, 4)
-                        self.trade_info[self.vars_key]['보유수량'] = 매수수량
+                        self.trade_info[self.vars_key]['매수가'] = round(매수금액 / 주문수량, 4)
+                        self.trade_info[self.vars_key]['보유수량'] = 주문수량
                         self.UpdateBuyInfo(gubun, True)
                     else:
-                        self.trade_info[self.vars_key]['추가매수가'] = round(매수금액 / 매수수량, 4)
-                        self.trade_info[self.vars_key]['매수가'] = round((self.trade_info[self.vars_key]['매수가'] * self.trade_info[self.vars_key]['보유수량'] + 매수금액) / (self.trade_info[self.vars_key]['보유수량'] + 매수수량), 4)
-                        self.trade_info[self.vars_key]['보유수량'] += 매수수량
+                        매수가 = self.trade_info[self.vars_key]['매수가']
+                        보유수량 = self.trade_info[self.vars_key]['보유수량']
+                        총수량 = 보유수량 + 주문수량
+                        self.trade_info[self.vars_key]['추가매수가'] = round(매수금액 / 주문수량, 4)
+                        self.trade_info[self.vars_key]['매수가'] = round((매수가 * 보유수량 + 매수금액) / 총수량, 4)
+                        self.trade_info[self.vars_key]['보유수량'] = 총수량
                         self.UpdateBuyInfo(gubun, False)
-        elif self.dict_set['코인매수주문구분'] == '지정가':
-            기준가격, 매도호가1, 매수호가1 = self.array_tick[self.indexn, 1], self.array_tick[self.indexn, 18], self.array_tick[self.indexn, 19]
-            if self.dict_set['코인매수지정가기준가격'] == '매도1호가':
-                기준가격 = 매도호가1 if gubun == 'BUY_LONG' else 매수호가1
-            elif self.dict_set['코인매수지정가기준가격'] == '매수1호가':
-                기준가격 = 매수호가1 if gubun == 'BUY_LONG' else 매도호가1
-            if gubun == 'BUY_LONG':
-                self.trade_info[self.vars_key]['롱매수호가'] = 기준가격 - self.dict_hg[self.code] * self.dict_set['코인매수지정가호가번호']
-            else:
-                self.trade_info[self.vars_key]['숏매수호가'] = 기준가격 + self.dict_hg[self.code] * self.dict_set['코인매수지정가호가번호']
-            self.trade_info[self.vars_key]['매수호가단위'] = self.dict_hg[self.code]
-            self.trade_info[self.vars_key]['매수주문시간'] = timedelta_sec(self.dict_set['코인매수취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
+            elif self.dict_set['코인매수주문구분'] == '지정가':
+                기준가격, 매도호가1, 매수호가1 = self.array_tick[self.indexn, 1], self.array_tick[self.indexn, 18], self.array_tick[self.indexn, 19]
+                if self.dict_set['코인매수지정가기준가격'] == '매도1호가':
+                    기준가격 = 매도호가1 if gubun == 'BUY_LONG' else 매수호가1
+                elif self.dict_set['코인매수지정가기준가격'] == '매수1호가':
+                    기준가격 = 매수호가1 if gubun == 'BUY_LONG' else 매도호가1
+                if gubun == 'BUY_LONG':
+                    self.trade_info[self.vars_key]['롱매수호가'] = 기준가격 - self.dict_hg[self.code] * self.dict_set['코인매수지정가호가번호']
+                else:
+                    self.trade_info[self.vars_key]['숏매수호가'] = 기준가격 + self.dict_hg[self.code] * self.dict_set['코인매수지정가호가번호']
+                self.trade_info[self.vars_key]['매수호가단위'] = self.dict_hg[self.code]
+                self.trade_info[self.vars_key]['매수주문시간'] = timedelta_sec(self.dict_set['코인매수취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
 
     def CheckBuy(self, gubun):
         현재가 = self.array_tick[self.indexn, 1]
@@ -561,21 +550,20 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
     def Sell(self, gubun, sell_cond):
         if self.dict_set['코인매도주문구분'] == '시장가':
-            남은수량 = self.trade_info[self.vars_key]['주문수량']
-            직전남은수량 = 남은수량
             매도금액 = 0
+            주문수량 = 미체결수량 = self.trade_info[self.vars_key]['주문수량']
             hogainfo = self.shogainfo if gubun == 'SELL_LONG' else self.bhogainfo
             hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
             for 호가, 잔량 in hogainfo:
-                남은수량 -= 잔량
-                if 남은수량 <= 0:
-                    매도금액 += 호가 * 직전남은수량
+                if 미체결수량 - 잔량 <= 0:
+                    매도금액 += 호가 * 미체결수량
+                    미체결수량 -= 잔량
                     break
                 else:
                     매도금액 += 호가 * 잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
-                self.trade_info[self.vars_key]['매도가'] = round(매도금액 / self.trade_info[self.vars_key]['주문수량'], 4)
+                    미체결수량 -= 잔량
+            if 미체결수량 <= 0:
+                self.trade_info[self.vars_key]['매도가'] = round(매도금액 / 주문수량, 4)
                 self.sell_cond = sell_cond
                 self.CalculationEyun()
         elif self.dict_set['코인매도주문구분'] == '지정가':
@@ -621,40 +609,6 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         self.Sell(gubun, 200)
         self.dict_set['코인매도주문구분'] = origin_sell_gubun
 
-    def LastSell(self):
-        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 14:34]
-        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
-        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
-
-        for k in range(self.vars_count):
-            self.vars_key = k
-            if self.trade_info[k]['보유중'] > 0:
-                남은수량 = self.trade_info[k]['보유수량']
-                직전남은수량 = 남은수량
-                매도금액 = 0
-                hogainfo = shogainfo if self.trade_info[k]['보유중'] == 1 else bhogainfo
-                hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
-                for 호가, 잔량 in hogainfo:
-                    남은수량 -= 잔량
-                    if 남은수량 <= 0:
-                        매도금액 += 호가 * 직전남은수량
-                        break
-                    else:
-                        매도금액 += 호가 * 잔량
-                        직전남은수량 = 남은수량
-
-                if 남은수량 <= 0:
-                    self.trade_info[k]['매도가'] = round(매도금액 / self.trade_info[k]['보유수량'], 4)
-                elif 매도금액 == 0:
-                    self.trade_info[k]['매도가'] = self.array_tick[self.indexn, 1]
-                else:
-                    self.trade_info[k]['매도가'] = round(매도금액 / (self.trade_info[k]['보유수량'] - 남은수량), 4)
-
-                self.trade_info[k]['주문수량'] = self.trade_info[k]['보유수량']
-                self.sell_cond = 0
-                self.CalculationEyun()
-
     def CalculationEyun(self):
         self.total_count += 1
         _, bp, sp, oc, bc, hp, lp, bi, _, abt, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[self.vars_key].values()
@@ -666,7 +620,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         else:
             ps = 'SHORT'
             sg, pg, pp = GetBinanceShortPgSgSp(bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
-        sc = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
+        sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
         abt, bcx = '^'.join(abt), bc - oc == 0
         data = ('백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
         self.stq_list[self.sell_count % 20].put(data)

@@ -514,7 +514,8 @@ class Window(QMainWindow):
                 self.ss_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
             elif self.ss_pushButtonn_01.isVisible():
                 self.ss_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
-                self.ss_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+                if (self.extend_window and self.ss_tableWidget_01.rowCount() < 60) or (not self.extend_window and self.ss_tableWidget_01.rowCount() < 32):
+                    self.ss_tableWidget_01.setRowCount(60 if self.extend_window else 32)
             elif self.svj_pushButton_01.isVisible():
                 self.ss_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
                 self.ss_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 1000, 602 if self.extend_window else 272)
@@ -548,7 +549,8 @@ class Window(QMainWindow):
                 self.cs_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
             elif self.cs_pushButtonn_01.isVisible():
                 self.cs_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
-                self.cs_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+                if (self.extend_window and self.cs_tableWidget_01.rowCount() < 60) or (not self.extend_window and self.cs_tableWidget_01.rowCount() < 32):
+                    self.cs_tableWidget_01.setRowCount(60 if self.extend_window else 32)
             elif self.cvj_pushButton_01.isVisible():
                 self.cs_textEditttt_01.setGeometry(7, 10, 1000, 740 if self.extend_window else 463)
                 self.cs_textEditttt_02.setGeometry(7, 756 if self.extend_window else 480, 1000, 602 if self.extend_window else 272)
@@ -710,7 +712,7 @@ class Window(QMainWindow):
 
     def UpdateProgressBar(self):
         self.progressBarrr.setValue(self.cpu_per)
-        self.counter = 0 if self.counter > 999 else self.counter + 1
+        self.counter = 0 if self.counter > 1200 else self.counter + 1
 
         self.kp_pushButton.setStyleSheet(style_bc_bb if not self.dialog_kimp.isVisible() else style_bc_bt)
         self.mb_pushButton.setStyleSheet(style_bc_bb if not self.dialog_chart_min.isVisible() else style_bc_bt)
@@ -847,7 +849,7 @@ class Window(QMainWindow):
             if self.counter % 5 == 0 and (self.dict_set['주식알림소리'] or self.dict_set['코인알림소리']):
                 soundQ.put('오류가 발생하였습니다. 로그탭을 확인하십시오.')
 
-        if not self.image_search or (self.counter % 60 == 0 and (self.image_label1.isVisible() or self.image_label2.isVisible())):
+        if not self.image_search or (self.counter % 600 == 0 and (self.image_label1.isVisible() or self.image_label2.isVisible())):
             if not self.image_search: self.image_search = True
             webcQ.put(('풍경사진요청', ''))
 
@@ -6956,7 +6958,8 @@ class Window(QMainWindow):
         self.ss_textEditttt_08.setVisible(False)
 
         self.ss_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
-        self.ss_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+        if (self.extend_window and self.ss_tableWidget_01.rowCount() < 60) or (not self.extend_window and self.ss_tableWidget_01.rowCount() < 32):
+            self.ss_tableWidget_01.setRowCount(60 if self.extend_window else 32)
 
         for item in self.stock_esczom_list:
             item.setVisible(False)
@@ -8561,7 +8564,8 @@ class Window(QMainWindow):
         self.cs_textEditttt_08.setVisible(False)
 
         self.cs_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
-        self.cs_tableWidget_01.setRowCount(60 if self.extend_window else 32)
+        if (self.extend_window and self.cs_tableWidget_01.rowCount() < 60) or (not self.extend_window and self.cs_tableWidget_01.rowCount() < 32):
+            self.cs_tableWidget_01.setRowCount(60 if self.extend_window else 32)
 
         for item in self.coin_esczom_list:
             item.setVisible(False)
@@ -9683,13 +9687,14 @@ class Window(QMainWindow):
         wdzservQ.put(('manager', '백테엔진구동'))
         for i in range(20):
             stq = Queue()
+            self.bact_pques.append(stq)
+        for i in range(20):
             if i < 10:
-                proc = Process(target=SubTotal, args=(totalQ, stq, self.dict_set['백테매수시간기준'], 1), daemon=True)
+                proc = Process(target=SubTotal, args=(i, totalQ, self.bact_pques, self.dict_set['백테매수시간기준'], 1), daemon=True)
             else:
-                proc = Process(target=SubTotal, args=(totalQ, stq, self.dict_set['백테매수시간기준'], 0), daemon=True)
+                proc = Process(target=SubTotal, args=(i, totalQ, self.bact_pques, self.dict_set['백테매수시간기준'], 0), daemon=True)
             proc.start()
             self.bact_procs.append(proc)
-            self.bact_pques.append(stq)
             windowQ.put((ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'))
 
         for i in range(multi):
@@ -10443,6 +10448,7 @@ class Window(QMainWindow):
                 self.sj_back_daEdit_01.setDate(QDate.fromString(self.dict_set['백테날짜'], 'yyyyMMdd'))
             else:
                 self.sj_back_liEdit_02.setText(df['백테날짜'][0])
+            self.sj_back_cheBox_20.setChecked(True) if df['범위자동관리'][0] else self.sj_back_cheBox_20.setChecked(False)
         else:
             QMessageBox.critical(self, '오류 알림', '백테 설정값이\n존재하지 않습니다.\n')
 
@@ -10818,6 +10824,7 @@ class Window(QMainWindow):
             bd = self.sj_back_daEdit_01.date().toString('yyyyMMdd')
         else:
             bd = self.sj_back_liEdit_02.text()
+        aa  = 1 if self.sj_back_cheBox_20.isChecked() else 0
 
         if '' in (dt, bd, bst):
             QMessageBox.critical(self, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
@@ -10830,7 +10837,7 @@ class Window(QMainWindow):
                         f"주식분봉데이터 = {smb}, 주식분봉기간 = {smp}, 주식일봉데이터다운 = {sab}, 주식일봉다운컴종료 = {de}, 일봉다운실행시간 = {dt}, " \
                         f"코인일봉데이터 = {cdb}, 코인분봉데이터 = {cmb}, 코인분봉기간 = {cmp}, 코인일봉데이터다운 = {cab}, 그래프저장하지않기 = {gsv}, " \
                         f"그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴실행 = {bss}, 백테스케쥴요일 = {bwd}, 백테스케쥴시간 = {bst}, " \
-                        f"백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', 백테날짜고정 = {bdf}, 백테날짜 = '{bd}'"
+                        f"백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', 백테날짜고정 = {bdf}, 백테날짜 = '{bd}', 범위자동관리 = {aa}"
                 queryQ.put(('설정디비', query))
             QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
@@ -10859,6 +10866,7 @@ class Window(QMainWindow):
             self.dict_set['백테스케쥴명']      = abn
             self.dict_set['백테날짜고정']      = bdf
             self.dict_set['백테날짜']         = bd
+            self.dict_set['범위자동관리']      = aa
             self.UpdateDictSet()
 
             if sab:

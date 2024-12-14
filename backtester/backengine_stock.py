@@ -66,10 +66,9 @@ class StockBackEngine:
         self.dict_mindex  = {}
         self.bhogainfo    = {}
         self.shogainfo    = {}
-        self.dict_cond    = {}
         self.dict_buystg  = {}
         self.dict_sellstg = {}
-        self.didict_cond  = {}
+        self.dict_sconds  = {}
         self.sell_cond    = 0
         self.vars_turn    = 0
         self.vars_count   = 0
@@ -102,7 +101,7 @@ class StockBackEngine:
                         self.starttime  = data[5]
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStg(data[7], self.gubun)
-                        self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
+                        self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -121,7 +120,7 @@ class StockBackEngine:
                         self.starttime  = data[3]
                         self.endtime    = data[4]
                         self.buystg     = GetBuyStg(data[5], self.gubun)
-                        self.sellstg, self.dict_cond = GetSellStg(data[6], self.gubun)
+                        self.sellstg, self.dict_sconds = GetSellStg(data[6], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -144,7 +143,7 @@ class StockBackEngine:
                         self.starttime  = data[5]
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStg(data[7], self.gubun)
-                        self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
+                        self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -165,14 +164,14 @@ class StockBackEngine:
                     elif data[0] == '조건정보':
                         self.dict_buystg  = {}
                         self.dict_sellstg = {}
-                        self.didict_cond  = {}
+                        self.dict_sconds  = {}
                         error = False
                         for i in range(10):
                             buystg = GetBuyConds(data[1][i], self.gubun)
                             sellstg, dict_cond = GetSellConds(data[2][i], self.gubun)
                             self.dict_buystg[i]  = buystg
                             self.dict_sellstg[i] = sellstg
-                            self.didict_cond[i]  = dict_cond
+                            self.dict_sconds[i]  = dict_cond
                             if buystg is None or sellstg is None: error = True
                         self.vars_count = 10
                         self.InitDivid()
@@ -190,7 +189,7 @@ class StockBackEngine:
                         self.starttime  = data[5]
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStg(data[7], self.gubun)
-                        self.sellstg, self.dict_cond = GetSellStg(data[8], self.gubun)
+                        self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
                         self.vars_count = 1
                         self.InitDivid()
                         self.InitTradeInfo()
@@ -263,7 +262,7 @@ class StockBackEngine:
                     self.total_ticks += len_df_tick
                     self.bq.put((code, len_df_tick))
                 elif len_df_tick > 0:
-                    AddAvgData(df_tick, 3, avg_list)
+                    df_tick = AddAvgData(df_tick, 3, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
@@ -299,7 +298,7 @@ class StockBackEngine:
                     except:
                         pass
                     if len_df_tick > 0:
-                        AddAvgData(df_tick, 3, avg_list)
+                        df_tick = AddAvgData(df_tick, 3, avg_list)
                         arry_tick = np.array(df_tick)
                         if self.dict_set['백테일괄로딩']:
                             self.dict_tik_ar[code] = arry_tick
@@ -327,7 +326,7 @@ class StockBackEngine:
                 except:
                     pass
                 if len_df_tick > 0:
-                    AddAvgData(df_tick, 3, avg_list)
+                    df_tick = AddAvgData(df_tick, 3, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
@@ -407,11 +406,9 @@ class StockBackEngine:
         def now():
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
-        def Parameter_Previous(vindex, pre):
-            if pre != -1:
-                return self.array_tick[self.indexn - pre, vindex]
-            else:
-                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex]
+        def Parameter_Previous(aindex, pre):
+            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -543,36 +540,27 @@ class StockBackEngine:
             elif tick == 1200:
                 return Parameter_Previous(47, pre)
             else:
-                if pre != -1:
-                    return round(self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, 1].mean(), 3)
-                else:
-                    bindex = self.trade_info[self.vars_key]['매수틱번호']
-                    return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 3)
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                return round(self.array_tick[sindex:eindex, 1].mean(), 3)
 
-        def GetArrayIndex(bc):
-            return bc + 13 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
+        def GetArrayIndex(aindex):
+            return aindex + 13 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                if pre != -1:
-                    if gubun_ == 'max':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].min()
-                    elif gubun_ == 'sum':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].sum()
-                    else:
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].mean()
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                if gubun_ == 'max':
+                    return self.array_tick[sindex:eindex, vindex].max()
+                elif gubun_ == 'min':
+                    return self.array_tick[sindex:eindex, vindex].min()
+                elif gubun_ == 'sum':
+                    return self.array_tick[sindex:eindex, vindex].sum()
                 else:
-                    bindex = self.trade_info[self.vars_key]['매수틱번호']
-                    if gubun_ == 'max':
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].min()
-                    else:
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].mean()
+                    return self.array_tick[sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(48, 1, tick, pre, 'max')
@@ -608,10 +596,9 @@ class StockBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                if pre != -1:
-                    dmp_gap = self.array_tick[self.indexn - pre, vindex] - self.array_tick[self.indexn + 1 - tick - pre, vindex]
-                else:
-                    dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, vindex]
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
@@ -622,6 +609,17 @@ class StockBackEngine:
 
         def 전일비각도(tick, pre=0):
             return Parameter_Dgree(60, 9, tick, pre, 1)
+
+        """
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
+           0      1     2    3    4     5         6         7         8        9      10       11        12           13
+        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            14         15          16      17       18         19            20            21        22
+        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           23       24       25        26       27        28       29        30       31        32
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           33       34       35        36       37        38       39        40       41       42          43
+        """
 
         종목명, 종목코드, 데이터길이, 시분초 = self.name, self.code, self.tick_count, int(str(self.index)[8:])
         현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내, \
@@ -702,26 +700,24 @@ class StockBackEngine:
                     break
 
     def Buy(self):
-        매수수량 = self.trade_info[self.vars_key]['주문수량']
-        if 매수수량 > 0:
-            남은수량 = 매수수량
-            직전남은수량 = 매수수량
-            매수금액 = 0
+        매수금액 = 0
+        주문수량 = 미체결수량 = self.trade_info[self.vars_key]['주문수량']
+        if 주문수량 > 0:
             for 매도호가, 매도잔량 in self.bhogainfo:
-                남은수량 -= 매도잔량
-                if 남은수량 <= 0:
-                    매수금액 += 매도호가 * 직전남은수량
+                if 미체결수량 - 매도잔량 <= 0:
+                    매수금액 += 매도호가 * 미체결수량
+                    미체결수량 -= 매도잔량
                     break
                 else:
                     매수금액 += 매도호가 * 매도잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
+                    미체결수량 -= 매도잔량
+            if 미체결수량 <= 0:
                 self.trade_info[self.vars_key] = {
                     '보유중': 1,
-                    '매수가': int(round(매수금액 / 매수수량)),
+                    '매수가': int(round(매수금액 / 주문수량)),
                     '매도가': 0,
-                    '주문수량': 매수수량,
-                    '보유수량': 매수수량,
+                    '주문수량': 0,
+                    '보유수량': 주문수량,
                     '최고수익률': 0.,
                     '최저수익률': 0.,
                     '매수틱번호': self.indexn,
@@ -729,19 +725,17 @@ class StockBackEngine:
                 }
 
     def Sell(self, sell_cond):
-        주문수량 = self.trade_info[self.vars_key]['주문수량']
-        남은수량 = 주문수량
-        직전남은수량 = 주문수량
         매도금액 = 0
+        주문수량 = 미체결수량 = self.trade_info[self.vars_key]['주문수량']
         for 매수호가, 매수잔량 in self.shogainfo:
-            남은수량 -= 매수잔량
-            if 남은수량 <= 0:
-                매도금액 += 매수호가 * 직전남은수량
+            if 미체결수량 - 매수잔량 <= 0:
+                매도금액 += 매수호가 * 미체결수량
+                미체결수량 -= 매수잔량
                 break
             else:
                 매도금액 += 매수호가 * 매수잔량
-                직전남은수량 = 남은수량
-        if 남은수량 <= 0:
+                미체결수량 -= 매수잔량
+        if 미체결수량 <= 0:
             self.trade_info[self.vars_key]['매도가'] = int(round(매도금액 / 주문수량))
             self.sell_cond = sell_cond
             self.CalculationEyun()
@@ -755,25 +749,23 @@ class StockBackEngine:
         for k in range(self.vars_count):
             self.vars_key = k
             if self.trade_info[k]['보유중']:
-                남은수량 = self.trade_info[k]['보유수량']
-                직전남은수량 = 남은수량
                 매도금액 = 0
+                보유수량 = 미체결수량 = self.trade_info[k]['보유수량']
                 for 매수호가, 매수잔량 in shogainfo:
-                    남은수량 -= 매수잔량
-                    if 남은수량 <= 0:
-                        매도금액 += 매수호가 * 직전남은수량
+                    if 미체결수량 - 매수잔량 <= 0:
+                        매도금액 += 매수호가 * 미체결수량
+                        미체결수량 -= 매수잔량
                         break
                     else:
                         매도금액 += 매수호가 * 매수잔량
-                        직전남은수량 = 남은수량
+                        미체결수량 -= 매수잔량
 
-                보유수량 = self.trade_info[k]['보유수량']
-                if 남은수량 <= 0:
+                if 미체결수량 <= 0:
                     self.trade_info[k]['매도가'] = int(round(매도금액 / 보유수량))
                 elif 매도금액 == 0:
                     self.trade_info[k]['매도가'] = self.array_tick[self.indexn, 1]
                 else:
-                    self.trade_info[k]['매도가'] = int(round(매도금액 / (보유수량 - 남은수량)))
+                    self.trade_info[k]['매도가'] = int(round(매도금액 / (보유수량 - 미체결수량)))
 
                 self.trade_info[k]['주문수량'] = 보유수량
                 self.sell_cond = 0
@@ -786,7 +778,7 @@ class StockBackEngine:
         ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
         bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
         sg, pg, pp = GetKiwoomPgSgSp(bg, oc * sp)
-        sc = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
+        sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
         abt, bcx = '', True
         data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
         self.stq_list[self.sell_count % self.divid].put(data)

@@ -102,10 +102,11 @@ class ReceiverKiwoom:
             '거래대금순위기록': curr_time
         }
 
+        self.recvservQ = Queue()
+
         self.kw = Kiwoom(self, 'Receiver')
         self.KiwoomLogin()
 
-        self.recvservQ = Queue()
         if self.dict_set['리시버공유'] == 1:
             self.zmqserver = ZmqServ(self.recvservQ)
             self.zmqserver.start()

@@ -110,8 +110,10 @@ class StrategyKiwoom:
             if type(data) == tuple:
                 if len(data) != 2:
                     self.Strategy(data)
-                else:
+                elif len(data) == 2:
                     self.UpdateTuple(data)
+                elif len(data) == 3:
+                    self.UpdateTriple(data)
             elif type(data) == str:
                 self.UpdateString(data)
                 if data == '프로세스종료':
@@ -171,8 +173,15 @@ class StrategyKiwoom:
             self.tuple_kosd = data
         elif gubun == '종목구분번호':
             self.dict_stgn = data
+            self.LoadDayMinData()
         elif gubun == '틱데이터저장':
             self.SaveTickData(data)
+
+    def LoadDayMinData(self):
+        pass
+
+    def UpdateTriple(self, data):
+        pass
 
     def UpdateString(self, data):
         if data == '매수전략중지':
@@ -194,11 +203,9 @@ class StrategyKiwoom:
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
             매도수5호가잔량합, 종목코드, 종목명, 틱수신시간 = data
 
-        def Parameter_Previous(number, pre):
-            if pre != -1:
-                return self.dict_tik_ar[종목코드][index-pre, number]
-            else:
-                return self.dict_tik_ar[종목코드][매수틱번호, number]
+        def Parameter_Previous(aindex, pre):
+            pindex = (index - pre) if pre != -1 else 매수틱번호
+            return self.dict_tik_ar[종목코드][pindex, aindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -330,31 +337,24 @@ class StrategyKiwoom:
             elif tick == 1200:
                 return Parameter_Previous(47, pre)
             else:
-                if pre != -1:
-                    return round(self.dict_tik_ar[종목코드][index+1-tick-pre:index+1-pre, 1].mean(), 3)
-                else:
-                    return round(self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, 1].mean(), 3)
+                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 3)
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                if pre != -1:
-                    if gubun_ == 'max':
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].min()
-                    elif gubun_ == 'sum':
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].sum()
-                    else:
-                        return self.dict_tik_ar[종목코드][index+1-pre-tick:index+1-pre, vindex].mean()
+                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                if gubun_ == 'max':
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
+                elif gubun_ == 'min':
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].min()
+                elif gubun_ == 'sum':
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].sum()
                 else:
-                    if gubun_ == 'max':
-                        return self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, vindex].min()
-                    else:
-                        return self.dict_tik_ar[종목코드][매수틱번호+1-tick:매수틱번호+1, vindex].mean()
+                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(48, 1, tick, pre, 'max')
@@ -390,10 +390,9 @@ class StrategyKiwoom:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                if pre != -1:
-                    dmp_gap = self.dict_tik_ar[종목코드][index-pre, vindex] - self.dict_tik_ar[종목코드][index+1-tick-pre, vindex]
-                else:
-                    dmp_gap = self.dict_tik_ar[종목코드][매수틱번호, vindex] - self.dict_tik_ar[종목코드][매수틱번호+1-tick, vindex]
+                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
@@ -476,8 +475,8 @@ class StrategyKiwoom:
             self.dict_tik_ar[종목코드] = np.delete(self.dict_tik_ar[종목코드], 0, 0)
 
         if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0):
-            매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else 0
             if 종목코드 in self.df_jg.index:
+                매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else len(self.dict_tik_ar[종목코드]) - 1
                 매입가 = self.df_jg['매입가'][종목코드]
                 보유수량 = self.df_jg['보유수량'][종목코드]
                 매입금액 = self.df_jg['매입금액'][종목코드]
@@ -495,7 +494,7 @@ class StrategyKiwoom:
                         self.dict_hilo[종목코드][1] = 수익률
                 최고수익률, 최저수익률 = self.dict_hilo[종목코드]
             else:
-                수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, now(), 0, 0, 0
+                매수틱번호, 수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, 0, now(), 0, 0, 0
 
             BBT = not self.dict_set['주식매수금지시간'] or not (self.dict_set['주식매수금지시작시간'] < 시분초 < self.dict_set['주식매수금지종료시간'])
             BLK = not self.dict_set['주식매수금지블랙리스트'] or 종목코드 not in self.dict_set['주식블랙리스트']
@@ -613,18 +612,17 @@ class StrategyKiwoom:
             self.dict_sgn_tik[종목코드] = 데이터길이 - 1
             self.straderQ.put(('매수', 종목코드, 종목명, 기준가격, 매수수량, now(), False))
         else:
-            남은수량 = 매수수량
-            직전남은수량 = 매수수량
             매수금액 = 0
+            미체결수량 = 매수수량
             for 매도호가, 매도잔량 in self.bhogainfo:
-                남은수량 -= 매도잔량
-                if 남은수량 <= 0:
-                    매수금액 += 매도호가 * 직전남은수량
+                if 미체결수량 - 매도잔량 <= 0:
+                    매수금액 += 매도호가 * 미체결수량
+                    미체결수량 -= 매도잔량
                     break
                 else:
                     매수금액 += 매도호가 * 매도잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
+                    미체결수량 -= 매도잔량
+            if 미체결수량 <= 0:
                 예상체결가 = int(round(매수금액 / 매수수량)) if 매수수량 != 0 else 0
                 self.list_buy.append(종목코드)
                 self.dict_sgn_tik[종목코드] = 데이터길이 - 1
@@ -638,18 +636,17 @@ class StrategyKiwoom:
             self.list_sell.append(종목코드)
             self.straderQ.put(('매도', 종목코드, 종목명, 기준가격, 매도수량, now(), False))
         else:
-            남은수량 = 매도수량
-            직전남은수량 = 매도수량
             매도금액 = 0
+            미체결수량 = 매도수량
             for 매수호가, 매수잔량 in self.shogainfo:
-                남은수량 -= 매수잔량
-                if 남은수량 <= 0:
-                    매도금액 += 매수호가 * 직전남은수량
+                if 미체결수량 - 매수잔량 <= 0:
+                    매도금액 += 매수호가 * 미체결수량
+                    미체결수량 -= 매수잔량
                     break
                 else:
                     매도금액 += 매수호가 * 매수잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
+                    미체결수량 -= 매수잔량
+            if 미체결수량 <= 0:
                 예상체결가 = int(round(매도금액 / 매도수량)) if 매도수량 != 0 else 0
                 self.list_sell.append(종목코드)
                 self.straderQ.put(('매도', 종목코드, 종목명, 예상체결가, 매도수량, now(), True if 강제청산 else False))

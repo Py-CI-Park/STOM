@@ -209,6 +209,7 @@ class SetSetupTap:
         self.ui.sj_back_liEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_07)
         self.ui.sj_back_cheBox_18 = self.wc.setCheckBox('                                        고정', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_18)
         self.ui.sj_back_daEdit_01 = self.wc.setDateEdit(self.ui.sj_bs_groupBox_07)
+        self.ui.sj_back_cheBox_20 = self.wc.setCheckBox('그리드 범위 자동 관리', self.ui.sj_bs_groupBox_07, tip='그리드 최적화 시에 범위에서 불필요한 값을 제거하고\n최소최대가 최적값일 경우 자동으로 범위를 추가한다.')
 
         self.ui.sj_ilbunback_listtt = [self.ui.sj_back_cheBox_04, self.ui.sj_back_cheBox_05]
 
@@ -417,6 +418,7 @@ class SetSetupTap:
         self.ui.sj_back_liEdit_02.setGeometry(1060, 100, 50, 20)
         self.ui.sj_back_cheBox_18.setGeometry(1150, 100, 220, 20)
         self.ui.sj_back_daEdit_01.setGeometry(1170, 100, 110, 20)
+        self.ui.sj_back_cheBox_20.setGeometry(1175, 75, 145, 20)
 
         self.ui.sj_etc_labelll_01.setGeometry(10, 25, 300, 20)
         self.ui.sj_etc_comBoxx_01.setGeometry(100, 25, 85, 20)

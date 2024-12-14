@@ -58,7 +58,7 @@ class StockBackEngine4(StockBackEngine2):
                     except:
                         pass
                     if len_df_tick > 0:
-                        AddAvgData(df_tick, 3, avg_list)
+                        df_tick = AddAvgData(df_tick, 3, avg_list)
                         arry_tick = np.array(df_tick)
                         arry_min  = np.array(df_min)
                         arry_day  = np.array(df_day)
@@ -125,7 +125,7 @@ class StockBackEngine4(StockBackEngine2):
                     except:
                         pass
                     if len_df_tick > 0:
-                        AddAvgData(df_tick, 3, avg_list)
+                        df_tick = AddAvgData(df_tick, 3, avg_list)
                         arry_tick = np.array(df_tick)
                         arry_min  = np.array(df_min)
                         arry_day  = np.array(df_day)
@@ -184,7 +184,7 @@ class StockBackEngine4(StockBackEngine2):
                 except:
                     pass
                 if len_df_tick > 0:
-                    AddAvgData(df_tick, 3, avg_list)
+                    df_tick = AddAvgData(df_tick, 3, avg_list)
                     arry_tick = np.array(df_tick)
                     arry_min  = np.array(df_min)
                     arry_day  = np.array(df_day)
@@ -298,11 +298,9 @@ class StockBackEngine4(StockBackEngine2):
         def now():
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
-        def Parameter_Previous(vindex, pre):
-            if pre != -1:
-                return self.array_tick[self.indexn - pre, vindex]
-            else:
-                return self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex]
+        def Parameter_Previous(aindex, pre):
+            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -434,36 +432,27 @@ class StockBackEngine4(StockBackEngine2):
             elif tick == 1200:
                 return Parameter_Previous(47, pre)
             else:
-                if pre != -1:
-                    return round(self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, 1].mean(), 3)
-                else:
-                    bindex = self.trade_info[self.vars_key]['매수틱번호']
-                    return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 3)
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                return round(self.array_tick[sindex:eindex, 1].mean(), 3)
 
-        def GetArrayIndex(bc):
-            return bc + 13 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
+        def GetArrayIndex(aindex):
+            return aindex + 13 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                if pre != -1:
-                    if gubun_ == 'max':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].min()
-                    elif gubun_ == 'sum':
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].sum()
-                    else:
-                        return self.array_tick[self.indexn + 1 - tick - pre:self.indexn + 1 - pre, vindex].mean()
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                if gubun_ == 'max':
+                    return self.array_tick[sindex:eindex, vindex].max()
+                elif gubun_ == 'min':
+                    return self.array_tick[sindex:eindex, vindex].min()
+                elif gubun_ == 'sum':
+                    return self.array_tick[sindex:eindex, vindex].sum()
                 else:
-                    bindex = self.trade_info[self.vars_key]['매수틱번호']
-                    if gubun_ == 'max':
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].max()
-                    elif gubun_ == 'min':
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].min()
-                    else:
-                        return self.array_tick[bindex + 1 - tick:bindex + 1, vindex].mean()
+                    return self.array_tick[sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(48, 1, tick, pre, 'max')
@@ -499,10 +488,9 @@ class StockBackEngine4(StockBackEngine2):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                if pre != -1:
-                    dmp_gap = self.array_tick[self.indexn - pre, vindex] - self.array_tick[self.indexn + 1 - tick - pre, vindex]
-                else:
-                    dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], vindex] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, vindex]
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
@@ -829,11 +817,8 @@ class StockBackEngine4(StockBackEngine2):
                         if self.dict_set['주식매수분할횟수'] == 1:
                             self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
                         else:
-                            oc_ratio = dict_order_ratio[self.dict_set['주식매수분할방법']][self.dict_set['주식매수분할횟수']][
-                                self.trade_info[j]['매수분할횟수']]
-                            self.trade_info[j]['주문수량'] = int(self.betting / (
-                                현재가 if not self.trade_info[j]['보유중'] else self.trade_info[j][
-                                    '매수가']) * oc_ratio / 100)
+                            oc_ratio = dict_order_ratio[self.dict_set['주식매수분할방법']][self.dict_set['주식매수분할횟수']][self.trade_info[j]['매수분할횟수']]
+                            self.trade_info[j]['주문수량'] = int(self.betting / (현재가 if not self.trade_info[j]['보유중'] else self.trade_info[j]['매수가']) * oc_ratio / 100)
 
                         if self.dict_set['주식매수주문구분'] == '지정가':
                             기준가격 = 현재가

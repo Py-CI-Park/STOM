@@ -144,6 +144,8 @@ def AddAvgData(df, r, avg_list):
             df2['당일거래대금차이'] = df2['당일거래대금'] - df2[f'당일거래대금N{avg}']
             df['등락율각도'] = df2['등락율차이'].apply(lambda x: round(math.atan2(x * 10, avg) / (2 * math.pi) * 360, 2))
             df['당일거래대금각도'] = df2['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100_000_000, avg) / (2 * math.pi) * 360, 2))
+    return df
+
 
 def LoadOrderSetting(gubun):
     con = sqlite3.connect(DB_SETTING)
@@ -479,12 +481,17 @@ def GetBackResult(df_tsg, df_bct, betting, optistd, day_count):
         ah  = round(df_tsg['보유시간'].sum() / tc, 2)
         ap  = round(df_tsg['수익률'].sum() / tc, 2)
         tsg = int(df_tsg['수익금'].sum())
-        tpg = df_tsg[df_tsg['수익률'] >= 0]['수익률'].mean()
-        tmg = abs(df_tsg[df_tsg['수익률'] < 0]['수익률'].mean())
+        df_plus  = df_tsg[df_tsg['수익률'] >= 0]
+        df_minus = df_tsg[df_tsg['수익률'] < 0]
+        tpg = df_plus['수익률'].mean()
+        tmg = abs(df_minus['수익률'].mean()) if len(df_minus) > 0 else tpg
 
         df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
         mhct   = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
-        onegm  = int(betting * mhct) if int(betting * mhct) > betting else betting
+        try:
+            onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
+        except:
+            onegm = betting
         tsp    = round(tsg / onegm * 100, 2)
         cname  = df_tsg['종목명'].iloc[0]
         cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
@@ -723,46 +730,64 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
 
 
 class SubTotal:
-    def __init__(self, tq, stq, buystd, gubun):
-        self.tq       = tq
-        self.stq      = stq
-        self.buystd   = buystd
-        self.gubun    = gubun
-        self.dict_tsg = {}
-        self.dict_bct = {}
-        self.arry_bct = None
-        self.betting  = None
-        self.optistd  = None
-        self.complete = False
+    def __init__(self, vk, tq, stqs, buystd, gubun):
+        self.vars_key  = vk
+        self.tq        = tq
+        self.stqs      = stqs
+        self.stq       = self.stqs[self.vars_key]
+        self.buystd    = buystd
+        self.gubun     = gubun
+        self.dict_tsg  = {}
+        self.dict_bct  = {}
+        self.list_tsg  = None
+        self.arry_bct  = None
+        self.arry_bct_ = None
+        self.betting   = None
+        self.optistd   = None
+        self.complete1 = False
+        self.complete2 = False
         self.Start()
 
     def Start(self):
         while True:
             data = self.stq.get()
-            if data[0] == '백테결과':
-                self.CollectData(data)
-            elif data[0] == '결과집계':
-                self.SendSubTotal(data)
-            elif data[0] == '백테정보':
-                self.arry_bct = data[1]
-                self.betting  = data[2]
-                self.optistd  = data[3]
+            if data[0] == '백테정보':
+                self.arry_bct_ = data[1]
+                self.betting   = data[2]
+                self.optistd   = data[3]
             elif data == '백테시작':
-                self.complete = False
+                self.complete1 = False
+                self.complete2 = False
                 self.dict_tsg = {}
                 self.dict_bct = {}
+                self.list_tsg = None
+                self.arry_bct = None
+            elif data[0] == '백테결과':
+                self.CollectData(data)
             elif data == '백테완료':
-                self.complete = True
+                self.complete1 = True
+            elif data == '결과분리':
+                self.DivideData()
+            elif data[0] == '분리결과':
+                self.ConcatData(data)
+            elif data == '결과전송':
+                self.complete2 = True
+            elif data[0] == '결과집계':
+                self.SendSubTotal(data)
 
-            if self.complete and self.stq.empty():
-                self.tq.put(('백테결과', self.dict_tsg, self.dict_bct))
-                self.complete = False
+            if self.complete1 and self.stq.empty():
+                self.tq.put('집계완료')
+                self.complete1 = False
+
+            if self.complete2 and self.stq.empty():
+                self.tq.put(('백테결과', self.vars_key, self.list_tsg, self.arry_bct))
+                self.complete2 = False
 
     def CollectData(self, data):
         _, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, vars_key = data
         if vars_key not in self.dict_tsg.keys():
             self.dict_tsg[vars_key] = [[] for _ in range(14)]
-            self.dict_bct[vars_key] = self.arry_bct.copy()
+            self.dict_bct[vars_key] = self.arry_bct_.copy()
 
         index = str(매수시간) if self.buystd else str(매도시간)
         # while index in self.dict_tsg[vars_key][0]:
@@ -788,6 +813,31 @@ class SubTotal:
             arry_bct_[:, 1] += 1
             arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)] = arry_bct_
             self.dict_bct[vars_key] = arry_bct
+
+    def DivideData(self):
+        if self.dict_tsg:
+            for vars_key, list_tsg in self.dict_tsg.items():
+                arry_bct = self.dict_bct[vars_key]
+                self.stqs[vars_key].put(('분리결과', list_tsg, arry_bct))
+        self.tq.put('분리완료')
+
+    def ConcatData(self, data):
+        _, list_tsg, arry_bct = data
+        if self.list_tsg is None:
+            self.list_tsg = [[] for _ in range(14)]
+            self.arry_bct = self.arry_bct_.copy()
+        else:
+            self.arry_bct[:, 1] += arry_bct[:, 1]
+        for i, list_ in enumerate(list_tsg):
+            self.list_tsg[i] += list_
+            # if i == 0:
+            #     for index in list_:
+            #         index_ = index
+            #         while index_ in self.list_tsg[i]:
+            #             index_ = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index_)))
+            #         self.list_tsg[i].append(index_)
+            # else:
+            #     self.list_tsg[i] += list_
 
     def SendSubTotal(self, data):
         _, columns, list_data, arry_bct = data[:4]

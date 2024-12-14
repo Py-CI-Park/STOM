@@ -52,60 +52,11 @@ class Total:
         bc  = 0
         tbc = 0
         sc  = 0
-        total_dict_tsg = {}
-        total_dict_bct = {}
+        dict_tsg = {}
+        dict_bct = {}
         while True:
             data = self.tq.get()
-            if data[0] == '백테결과':
-                _, dict_tsg, dict_bct = data
-                if dict_tsg:
-                    for vars_key, list_tsg in dict_tsg.items():
-                        arry_bct = dict_bct[vars_key]
-                        if vars_key not in total_dict_tsg.keys():
-                            total_dict_tsg[vars_key] = [[] for _ in range(14)]
-                            total_dict_bct[vars_key] = arry_bct
-                        else:
-                            total_dict_bct[vars_key][:, 1] += arry_bct[:, 1]
-
-                        for j, tsg_data in enumerate(list_tsg):
-                            total_dict_tsg[vars_key][j] += tsg_data
-                            # if j == 0:
-                            #     for index in tsg_data:
-                            #         index_ = index
-                            #         while index_ in total_dict_tsg[vars_key][j]:
-                            #             index_ = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index_)))
-                            #         total_dict_tsg[vars_key][j].append(index_)
-                            # else:
-                            #     total_dict_tsg[vars_key][j] += tsg_data
-                sc += 1
-                if sc < 20:
-                    continue
-
-                sc = 0
-                columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-                           '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                k  = 0
-                for vars_key, list_tsg in total_dict_tsg.items():
-                    data = ('결과집계', columns, list_tsg, total_dict_bct[vars_key])
-                    if self.valid_days is not None:
-                        for i, vdays in enumerate(self.valid_days):
-                            data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key)
-                            self.tdq_list[k % 10].put(data_)
-                            self.vdq_list[k % 10].put(data_)
-                            k += 1
-                    else:
-                        data_ = data + (self.day_count, vars_key)
-                        self.stq_list[k % 20].put(data_)
-                        k += 1
-
-                if len(total_dict_tsg) < 10:
-                    zero_key_list = [x for x in range(10) if x not in total_dict_tsg.keys()]
-                    for vars_key in zero_key_list:
-                        self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
-                total_dict_tsg = {}
-                total_dict_bct = {}
-
-            elif data[0] == '백테완료':
+            if data[0] == '백테완료':
                 bc  += 1
                 tbc += 1
                 if data[1]: tc += 1
@@ -120,6 +71,52 @@ class Total:
                     else:
                         for vars_key in range(10):
                             self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+
+            elif data == '집계완료':
+                sc += 1
+                if sc == 20:
+                    sc = 0
+                    for stq in self.stq_list:
+                        stq.put('결과분리')
+
+            elif data == '분리완료':
+                sc += 1
+                if sc == 20:
+                    sc = 0
+                    for stq in self.stq_list:
+                        stq.put('결과전송')
+
+            elif data[0] == '백테결과':
+                _, vars_key, list_tsg, arry_bct = data
+                if list_tsg is not None:
+                    dict_tsg[vars_key] = list_tsg
+                    dict_bct[vars_key] = arry_bct
+
+                sc += 1
+                if sc == 20:
+                    sc = 0
+                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
+                    k  = 0
+                    for vars_key, list_tsg in dict_tsg.items():
+                        data = ('결과집계', columns, list_tsg, dict_bct[vars_key])
+                        if self.valid_days is not None:
+                            for i, vdays in enumerate(self.valid_days):
+                                data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key)
+                                self.tdq_list[k % 10].put(data_)
+                                self.vdq_list[k % 10].put(data_)
+                                k += 1
+                        else:
+                            data_ = data + (self.day_count, vars_key)
+                            self.stq_list[k % 20].put(data_)
+                            k += 1
+
+                    if len(dict_tsg) < 10:
+                        zero_key_list = [x for x in range(10) if x not in dict_tsg.keys()]
+                        for vars_key in zero_key_list:
+                            self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                    dict_tsg = {}
+                    dict_bct = {}
 
             elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
