@@ -248,6 +248,8 @@ class KiwoomManager:
             print('리시버 및 트레이더가 실행 중일 경우에는 실행할 수 없습니다.')
         else:
             self.daydata_download = True
+            if self.dict_set['주식알림소리']:
+                self.kwmservQ.put(['sound', '예약된 데이터 다운로드를 시작합니다.'])
             subprocess.Popen('python download_kiwoom.py')
 
     @staticmethod
@@ -320,7 +322,8 @@ class KiwoomManager:
 
                 with open('C:/OpenAPI/system/ip_api.dat') as file:
                     text = file.read()
-                fixed_ip = text.split('IP=')[1].split('PORT=')[0].strip()[:7]
+                fast_ip1 = text.split('IP=')[1].split('PORT=')[0].strip()[:7]
+                fast_ip2 = text.split('IP=')[2].split('PORT=')[0].strip()[:7]
 
                 while True:
                     qtest_qwait(0.1)
@@ -332,10 +335,10 @@ class KiwoomManager:
                                 text = file.read()
                             server_ip_select = text.split('SERVER_IP_SELECT=')[1].split('PROBLEM_CONNECTIP=')[0].strip()
                             inthms = int_hms()
-                            if inthms < 73000 or 85800 < inthms or now().weekday() > 4:
+                            if inthms < 73000 or 85500 < inthms or now().weekday() > 4:
                                 print(f'접속 시간 초과, 마지막 접속 유지 [{server_ip_select}]')
                                 break
-                            elif fixed_ip in server_ip_select:
+                            elif fast_ip1 in server_ip_select or fast_ip2 in server_ip_select:
                                 print(f'빠른 서버 접속 완료 [{server_ip_select}]')
                                 break
                             else:

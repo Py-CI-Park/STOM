@@ -12,6 +12,54 @@ from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time, timedelta_sec
 from utility.setting import ui_num, GRAPH_PATH, columns_btf, columns_bt, DICT_SET, DB_SETTING
 
+def GetTradeInfo(gubun):
+    if gubun == 1:
+        v = {
+            '보유중': 0,
+            '매수가': 0,
+            '매도가': 0,
+            '주문수량': 0,
+            '보유수량': 0,
+            '최고수익률': 0.,
+            '최저수익률': 0.,
+            '매수틱번호': 0,
+            '매수시간': strp_time('%Y%m%d', '20000101')
+        }
+    elif gubun == 2:
+        v = {
+            '보유중': 0,
+            '매수가': 0,
+            '매도가': 0,
+            '주문수량': 0,
+            '보유수량': 0,
+            '최고수익률': 0.,
+            '최저수익률': 0.,
+            '매수틱번호': 0,
+            '매수시간': strp_time('%Y%m%d', '20000101'),
+            '추가매수시간': [],
+            '매수호가': 0,
+            '매도호가': 0,
+            '매수호가_': 0,
+            '매도호가_': 0,
+            '추가매수가': 0,
+            '매수호가단위': 0,
+            '매도호가단위': 0,
+            '매수정정횟수': 0,
+            '매도정정횟수': 0,
+            '매수분할횟수': 0,
+            '매도분할횟수': 0,
+            '매수주문시간': strp_time('%Y%m%d', '20000101'),
+            '매도주문시간': strp_time('%Y%m%d', '20000101')
+        }
+    else:
+        v = {
+            '손절횟수': 0,
+            '거래횟수': 0,
+            '직전거래시간': strp_time('%Y%m%d', '20000101'),
+            '손절매도시간': strp_time('%Y%m%d', '20000101')
+        }
+    return v
+
 
 def GetBackloadCodeQuery(code, days, starttime, endtime):
     last      = len(days) - 1
@@ -244,7 +292,7 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
             wq.put([ui_num[f'{ui_gubun}백테스트'], text])
         for text in valid_text:
             wq.put([ui_num[f'{ui_gubun}백테스트'], text])
-    else:
+    elif dict_train is not None:
         if gubun in ['GA최적화', '조건최적화']:
             text2, std   = GetText2('', optistd, std_list, betting, dict_train)
             text3, stdp_ = GetText3(False, std, stdp)
@@ -253,6 +301,10 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
             text2, std = GetText2('TEST', optistd, std_list, betting, dict_train)
         else:
             text2, std = GetText2('TOTAL', optistd, std_list, betting, dict_train)
+        wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
+    else:
+        std = 0
+        text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
 
     if vars_turn >= 0:

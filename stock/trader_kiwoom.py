@@ -530,7 +530,7 @@ class TraderKiwoom:
     def RemoveAllRealreg(self):
         self.kw.SetRealRemove(['ALL', 'ALL'])
         if self.dict_set['주식알림소리']:
-            self.kwmservQ.put(['sound', '실시간 데이터의 수신을 중단하였습니다.'])
+            self.kwmservQ.put(['sound', '실시간 주문체결 데이터의 수신을 중단하였습니다.'])
         self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 실시간 데이터 중단 완료']])
 
     def SaveDayData(self):

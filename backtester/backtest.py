@@ -90,9 +90,8 @@ class Total:
                         for ctq in self.ctq_list:
                             ctq.put('백테완료')
                     else:
-                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'])
-                        self.mq.put('백테중지')
-                        break
+                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'])
+                        self.mq.put('백테스트 완료')
 
             elif data[0] == '백테정보':
                 self.betting     = data[1]
@@ -151,7 +150,6 @@ class Total:
         if self.buystg_name == '벤치전략':
             self.mq.put('벤치테스트 완료')
         else:
-            tc = len(self.df_tsg)
             self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, '', self.day_count)
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
 

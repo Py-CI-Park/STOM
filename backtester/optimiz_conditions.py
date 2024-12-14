@@ -71,7 +71,7 @@ class Total:
                         data = [columns, list_k, list_k, arry_bct, self.day_count, vars_key]
                         self.tdq_list[vars_key].put(data)
 
-            elif data == '백테완료':
+            elif data[0] == '백테완료':
                 bc  += 1
                 tbc += 1
                 if data[1]: tc += 1
@@ -84,14 +84,16 @@ class Total:
                         for ctq in self.ctq_list:
                             ctq.put('백테완료')
                     else:
-                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'])
-                        self.BackStop()
-                        break
+                        if self.valid_days is not None:
+                            for i, _ in enumerate(self.valid_days):
+                                self.stdp = SendTextAndStd(self.GetSendData(i), self.std_list, self.betting, None)
+                        else:
+                            self.stdp = SendTextAndStd(self.GetSendData(0), self.std_list, self.betting, None)
 
             elif data[0] in ['TRAIN', 'VALID', 'ALL']:
                 vars_key = data[-1]
                 if data[0] == 'ALL':
-                    self.stdp = SendTextAndStd(self.GetSendData(data[-1]), self.std_list, self.betting, data[2])
+                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, data[2])
                 else:
                     if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
                     if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
@@ -186,7 +188,7 @@ class OptimizeConditions:
         self.scount   = int(data[9])
         rcount        = int(data[10])
         back_count        = data[11]
-        weeks_train   = int(data[12])
+        weeks_train       = data[12]
         weeks_valid   = int(data[13])
         _             = int(data[14])
         backengin_sday    = data[15]

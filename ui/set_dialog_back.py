@@ -16,8 +16,8 @@ class SetDialogBack:
 
         self.ui.be_groupBoxxxxx_01 = QGroupBox('', self.ui.dialog_backengine)
         self.ui.be_labellllllll_04 = QLabel('▣ 백테엔진의 데이터 로딩 시 분류 방법을 선택하십시오. 한종목 백테 시 우측 콤보박스 선택', self.ui.be_groupBoxxxxx_01)
-        self.ui.be_comboBoxxxxx_01 = self.wc.setCombobox(self.ui.dialog_backengine, items=['종목코드별 분류', '일자별 분류', '한종목 로딩'])
-        self.ui.be_comboBoxxxxx_02 = self.wc.setCombobox(self.ui.dialog_backengine, items=['데이터없음'])
+        self.ui.be_comboBoxxxxx_01 = self.wc.setCombobox(self.ui.be_groupBoxxxxx_01, items=['종목코드별 분류', '일자별 분류', '한종목 로딩'])
+        self.ui.be_comboBoxxxxx_02 = self.wc.setCombobox(self.ui.be_groupBoxxxxx_01, items=['데이터없음'])
         self.ui.be_labellllllll_01 = QLabel('▣ 백테엔진에 로딩할 데이터의 시작 및 종료 날짜와 시간를 입력하십시오.', self.ui.be_groupBoxxxxx_01)
         if self.ui.dict_set['백테날짜고정']:
             self.ui.be_dateEdittttt_01 = self.wc.setDateEdit(self.ui.be_groupBoxxxxx_01, qday=QDate.fromString(self.ui.dict_set['백테날짜'], 'yyyyMMdd'))

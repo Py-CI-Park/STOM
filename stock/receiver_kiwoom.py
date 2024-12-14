@@ -239,12 +239,16 @@ class ReceiverKiwoom:
         self.straderQ.put('프로세스종료')
         self.RemoveAllRealreg()
         QTimer.singleShot(180 * 1000, self.SysExit)
+        if self.dict_set['주식알림소리']:
+            self.kwmservQ.put(['sound', '키움증권 시스템을 3분 후 종료합니다.'])
 
     def RemoveAllRealreg(self):
         if self.dict_set['장중전략조건검색식사용']:
             self.kw.SendConditionStop([sn_cond, self.list_cond[2][1], self.list_cond[2][0]])
             self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 2번 중단 완료']])
         self.kw.SetRealRemove(['ALL', 'ALL'])
+        if self.dict_set['주식알림소리']:
+            self.kwmservQ.put(['sound', '조건검색 및 실시간데이터의 수신을 중단하였습니다.'])
 
     def OperationRealreg(self):
         self.dict_bool['리시버시작'] = True
@@ -325,6 +329,8 @@ class ReceiverKiwoom:
             self.list_prmt = list_mtop
             self.qtimer2.start()
         self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 장중 단타 전략 시작']])
+        if self.dict_set['주식알림소리']:
+            self.kwmservQ.put(['sound', '키움증권 시스템 장중 전략을 시작합니다.'])
 
     def SysExit(self):
         self.dict_bool['프로세스종료'] = True

@@ -8,13 +8,15 @@ class SetLogFile:
         self.set()
 
     def set(self):
-        self.ui.log1 = self.setLog('TraderStock', f"./_log/TS_{strf_time('%Y%m%d')}.txt")
-        self.ui.log2 = self.setLog('ReceiverStock', f"./_log/RS_{strf_time('%Y%m%d')}.txt")
-        self.ui.log3 = self.setLog('TraderCoin', f"./_log/TC_{strf_time('%Y%m%d')}.txt")
-        self.ui.log4 = self.setLog('ReceiverCoin', f"./_log/RC_{strf_time('%Y%m%d')}.txt")
-        self.ui.log5 = self.setLog('BacktesterStock', f"./_log/BS_{strf_time('%Y%m%d')}.txt")
-        self.ui.log6 = self.setLog('BacktesterCoin', f"./_log/BC_{strf_time('%Y%m%d')}.txt")
-        self.ui.log7 = self.setLog('StockOrder', f"./_log/OD_{strf_time('%Y%m%d')}.txt")
+        name = strf_time('%Y%m%d')
+        if self.ui.dict_set['주식트레이더']:
+            self.ui.log1 = self.setLog('TraderStock', f"./_log/ST_{name}.txt")
+            self.ui.log2 = self.setLog('ReceiverStock', f"./_log/SR_{name}.txt")
+            self.ui.log3 = self.setLog('StockOrder', f"./_log/SO_{name}.txt")
+        if self.ui.dict_set['코인트레이더']:
+            self.ui.log4 = self.setLog('TraderCoin', f"./_log/CT_{name}.txt")
+            self.ui.log5 = self.setLog('ReceiverCoin', f"./_log/CT_{name}.txt")
+        self.ui.log6 = self.setLog('BacktesterStock', f"./_log/BK_{name}.txt")
 
     @staticmethod
     def setLog(name, filename):

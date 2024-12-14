@@ -21,11 +21,10 @@ class BackCodeTest:
                 vars_number = 0
                 for i, v in enumerate(list(self.vars.values())):
                     len_var = 0
-                    if v[0][2] != 0:
-                        if ga:
-                            len_var = len(v[0])
-                        else:
-                            len_var = (v[0][1] - v[0][0]) / v[0][2] + 1
+                    if ga:
+                        len_var = len(v[0])
+                    elif v[0][2] != 0:
+                        len_var = (v[0][1] - v[0][0]) / v[0][2] + 1
                     if len_var > max_len_var:
                         max_len_var = len_var
                         vars_number = i

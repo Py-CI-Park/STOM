@@ -711,8 +711,6 @@ class Window(QMainWindow):
                         self.dialog_backengine.close()
                     qtest_qwait(2)
                     self.AutoBackSchedule(2)
-            elif data[0] == ui_num['S오더텍스트']:
-                self.log7.info(text)
             elif data[0] == ui_num['S로그텍스트']:
                 self.sst_textEditttt_01.append(text)
                 self.log1.info(text)
@@ -721,22 +719,24 @@ class Window(QMainWindow):
                 self.log2.info(text)
                 if '전략연산 프로세스 틱데이터 저장 중 ... [8]' in text:
                     self.tickdata_save = True
+            elif data[0] == ui_num['S오더텍스트']:
+                self.log3.info(text)
             elif data[0] == ui_num['C로그텍스트']:
                 self.cst_textEditttt_01.append(text)
-                self.log3.info(text)
+                self.log4.info(text)
             elif data[0] == ui_num['C단순텍스트']:
                 self.crc_textEditttt_01.append(text)
-                self.log4.info(text)
+                self.log5.info(text)
             elif data[0] == ui_num['S백테스트']:
                 if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or '벤치점수' in data[1]:
                     color = color_fg_rt
-                elif ('A' in data[1] and '-' in data[1].split('A')[1]) or ('수익률' in data[1] and '-' in data[1].split('수익률')[1]):
+                elif ('AP' in data[1] and '-' in data[1].split('AP')[1]) or ('수익률' in data[1] and '-' in data[1].split('수익률')[1]):
                     color = color_fg_dk
                 else:
                     color = color_fg_bt
                 self.ss_textEditttt_09.setTextColor(color)
                 self.ss_textEditttt_09.append(text)
-                self.log5.info(re.sub('(<([^>]+)>)', '', text))
+                self.log6.info(re.sub('(<([^>]+)>)', '', text))
                 if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.back_condition: self.BacktestProcessKill()
                 if data[1] in ['백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화OH 완료', '최적화OV 완료', '최적화OVC 완료',
                                '최적화OHT 완료', '최적화OVT 완료', '최적화OVCT 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
@@ -757,7 +757,7 @@ class Window(QMainWindow):
             elif data[0] in [ui_num['C백테스트'], ui_num['CF백테스트']]:
                 if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1]:
                     color = color_fg_rt
-                elif ('A' in data[1] and '-' in data[1].split('A')[1]) or \
+                elif ('AP' in data[1] and '-' in data[1].split('AP')[1]) or \
                         ('수익률' in data[1] and '-' in data[1].split('수익률')[1].split('KRW')[0]):
                     color = color_fg_dk
                 else:
@@ -790,8 +790,10 @@ class Window(QMainWindow):
                 wdservQ.put(['manager', '리시버 종료'])
             elif data[0] == ui_num['S로그텍스트'] and '전략연산 종료' in data[1]:
                 wdservQ.put(['manager', '전략연산 종료'])
-                self.AutoDataBase(1)
-                self.StockShutDownCheck()
+                if self.tickdata_save and self.dict_set['디비자동관리']:
+                    self.AutoDataBase(1)
+                else:
+                    self.StockShutDownCheck()
             elif data[0] == ui_num['S로그텍스트'] and '트레이더 종료' in data[1]:
                 wdservQ.put(['manager', '트레이더 종료'])
             elif data[0] == ui_num['C단순텍스트'] and '리시버 종료' in data[1]:
@@ -841,28 +843,32 @@ class Window(QMainWindow):
                         self.cs_progressBar_01.setRange(0, data[2])
 
     def AutoDataBase(self, gubun):
-        if self.tickdata_save and self.dict_set['디비자동관리']:
-            if gubun == 1:
-                self.auto_mode = True
-                if not self.dialog_db.isVisible():
-                    self.dialog_db.show()
-                qtest_qwait(2)
-                self.dbButtonClicked_08()
-            elif gubun == 2:
-                if not self.dialog_db.isVisible():
-                    self.dialog_db.show()
-                qtest_qwait(2)
-                self.dbButtonClicked_07()
-            elif gubun == 3:
-                if self.dialog_db.isVisible():
-                    self.dialog_db.close()
-                teleQ.put('데이터베이스 자동관리 완료')
-                qtest_qwait(2)
-                self.auto_mode = False
+        if gubun == 1:
+            self.auto_mode = True
+            if self.dict_set['주식알림소리'] or self.dict_set['코인알림소리']:
+                soundQ.put('데이터베이스 자동관리를 시작합니다.')
+            if not self.dialog_db.isVisible():
+                self.dialog_db.show()
+            qtest_qwait(2)
+            self.dbButtonClicked_08()
+        elif gubun == 2:
+            if not self.dialog_db.isVisible():
+                self.dialog_db.show()
+            qtest_qwait(2)
+            self.dbButtonClicked_07()
+        elif gubun == 3:
+            if self.dialog_db.isVisible():
+                self.dialog_db.close()
+            teleQ.put('데이터베이스 자동관리 완료')
+            qtest_qwait(2)
+            self.auto_mode = False
+            self.StockShutDownCheck()
 
     def AutoBackSchedule(self, gubun):
         if gubun == 1:
             self.auto_mode = True
+            if self.dict_set['주식알림소리'] or self.dict_set['코인알림소리']:
+                soundQ.put('예약된 백테스트 스케쥴러를 시작합니다.')
             if not self.dialog_backengine.isVisible():
                 self.BackengineShow(self.dict_set['백테스케쥴구분'])
             qtest_qwait(2)
@@ -1030,7 +1036,8 @@ class Window(QMainWindow):
         if tableWidget is None:
             return
 
-        if len(df) == 0:
+        len_df = len(df)
+        if len_df == 0:
             tableWidget.clearContents()
             return
 
@@ -1039,7 +1046,7 @@ class Window(QMainWindow):
                      ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']]:
             tableWidget.setSortingEnabled(False)
 
-        tableWidget.setRowCount(len(df))
+        tableWidget.setRowCount(len_df)
         arry = df.values
         for i, index in enumerate(df.index):
             for j, column in enumerate(df.columns):
@@ -1133,11 +1140,20 @@ class Window(QMainWindow):
                                     elif hg == low: item.setIcon(self.icon_low)
                                     elif hg == uvi: item.setIcon(self.icon_vi)
 
-                if '수익률' in df.columns and gubun not in [ui_num['S상세기록'], ui_num['C상세기록']]:
-                    color = color_fg_bt if df['수익률'].iloc[i] >= 0 else color_fg_dk
+                if '수익금' in df.columns and gubun not in [ui_num['S상세기록'], ui_num['C상세기록']]:
+                    color = color_fg_bt if arry[i, list(df.columns).index('수익금')] >= 0 else color_fg_dk
                     item.setForeground(color)
-                elif '누적수익률' in df.columns:
-                    color = color_fg_bt if arry[i, 5] > 0 else color_fg_dk
+                elif '누적수익금' in df.columns and gubun not in [ui_num['S상세기록'], ui_num['C상세기록']]:
+                    color = color_fg_bt if arry[i, list(df.columns).index('누적수익금')] >= 0 else color_fg_dk
+                    item.setForeground(color)
+                elif '수익금합계' in df.columns and gubun not in [ui_num['S상세기록'], ui_num['C상세기록']]:
+                    color = color_fg_bt if arry[i, list(df.columns).index('수익금합계')] >= 0 else color_fg_dk
+                    item.setForeground(color)
+                elif '평가손익' in df.columns and gubun not in [ui_num['S상세기록'], ui_num['C상세기록']]:
+                    color = color_fg_bt if arry[i, list(df.columns).index('평가손익')] >= 0 else color_fg_dk
+                    item.setForeground(color)
+                elif '총평가손익' in df.columns and gubun not in [ui_num['S상세기록'], ui_num['C상세기록']]:
+                    color = color_fg_bt if arry[i, list(df.columns).index('총평가손익')] >= 0 else color_fg_dk
                     item.setForeground(color)
                 elif gubun in [ui_num['S체결목록'], ui_num['C체결목록']]:
                     order_gubun = arry[i, 1]
@@ -1190,29 +1206,29 @@ class Window(QMainWindow):
                     item.setForeground(color)
                 tableWidget.setItem(i, j, item)
 
-        if len(df) < 13 and gubun in [ui_num['S거래목록'], ui_num['S잔고목록'], ui_num['C거래목록'], ui_num['C잔고목록']]:
+        if len_df < 13 and gubun in [ui_num['S거래목록'], ui_num['S잔고목록'], ui_num['C거래목록'], ui_num['C잔고목록']]:
             tableWidget.setRowCount(13)
-        elif len(df) < 15 and gubun in [ui_num['S체결목록'], ui_num['C체결목록'], ui_num['S관심종목'], ui_num['C관심종목']]:
+        elif len_df < 15 and gubun in [ui_num['S체결목록'], ui_num['C체결목록'], ui_num['S관심종목'], ui_num['C관심종목']]:
             tableWidget.setRowCount(15)
-        elif len(df) < 19 and gubun in [ui_num['S당일상세'], ui_num['C당일상세']]:
+        elif len_df < 19 and gubun in [ui_num['S당일상세'], ui_num['C당일상세']]:
             tableWidget.setRowCount(19)
-        elif len(df) < 28 and gubun in [ui_num['S누적상세'], ui_num['C누적상세']]:
+        elif len_df < 28 and gubun in [ui_num['S누적상세'], ui_num['C누적상세']]:
             tableWidget.setRowCount(28)
-        elif len(df) < 20 and gubun == ui_num['기업공시']:
+        elif len_df < 20 and gubun == ui_num['기업공시']:
             tableWidget.setRowCount(20)
-        elif len(df) < 10 and gubun == ui_num['기업뉴스']:
+        elif len_df < 10 and gubun == ui_num['기업뉴스']:
             tableWidget.setRowCount(10)
-        elif len(df) < 32 and gubun in [ui_num['S상세기록'], ui_num['C상세기록']]:
+        elif len_df < 32 and gubun in [ui_num['S상세기록'], ui_num['C상세기록']]:
             tableWidget.setRowCount(32)
-        elif len(df) < 30 and gubun in [ui_num['스톰라이브1'], ui_num['스톰라이브4']]:
+        elif len_df < 30 and gubun in [ui_num['스톰라이브1'], ui_num['스톰라이브4']]:
             tableWidget.setRowCount(30)
-        elif len(df) < 28 and gubun in [ui_num['스톰라이브3'], ui_num['스톰라이브6']]:
+        elif len_df < 28 and gubun in [ui_num['스톰라이브3'], ui_num['스톰라이브6']]:
             tableWidget.setRowCount(28)
-        elif len(df) < 26 and gubun == ui_num['스톰라이브7']:
+        elif len_df < 26 and gubun == ui_num['스톰라이브7']:
             tableWidget.setRowCount(26)
-        elif len(df) < 50 and gubun == ui_num['김프']:
+        elif len_df < 50 and gubun == ui_num['김프']:
             tableWidget.setRowCount(50)
-        elif len(df) < 12 and gubun in [ui_num['C호가체결2'], ui_num['S호가체결2']]:
+        elif len_df < 12 and gubun in [ui_num['C호가체결2'], ui_num['S호가체결2']]:
             tableWidget.setRowCount(12)
 
         if gubun in [ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'],
@@ -4742,6 +4758,8 @@ class Window(QMainWindow):
             if self.dict_set['아이디1'] is None:
                 QMessageBox.critical(self, '오류 알림', '첫번째 계정이 설정되지 않아\n트레이더를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
             if self.dict_set['주식리시버'] and self.dict_set['주식트레이더']:
+                if self.dict_set['주식알림소리']:
+                    soundQ.put('키움증권 OPEN API에 로그인을 시작합니다.')
                 wdservQ.put(['manager', '주식수동시작'])
         self.ms_pushButton.setStyleSheet(style_bc_bt)
 
@@ -11065,6 +11083,7 @@ class Window(QMainWindow):
                 creceivQ.put(self.dict_set)
             if self.CoinTraderProcessAlive():
                 ctraderQ.put(self.dict_set)
+            SetLogFile(self)
 
     def sjButtonClicked_10(self):
         id1 = self.sj_sacc_liEdit_01.text()

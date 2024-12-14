@@ -2,249 +2,20 @@ import math
 # noinspection PyUnresolvedReferences
 import talib
 import sqlite3
-import datetime
 # noinspection PyUnresolvedReferences
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData
-from utility.setting import DB_STOCK_BACK, BACK_TEMP, DICT_SET, DB_STOCK_DAY, DB_STOCK_MIN, ui_num, dict_min
+from backtester.backengine_stock import StockBackEngine
+from backtester.back_static import GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData
+from utility.setting import DB_STOCK_BACK, BACK_TEMP, DB_STOCK_DAY, DB_STOCK_MIN, dict_min
 # noinspection PyUnresolvedReferences
 from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, strf_time, timedelta_day, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit
 
 
-class StockBackEngine3:
+class StockBackEngine3(StockBackEngine):
     def __init__(self, gubun, wq, pq, tq, bq, ctq_list, profile=False):
-        self.gubun        = gubun
-        self.wq           = wq
-        self.pq           = pq
-        self.tq           = tq
-        self.bq           = bq
-        self.ctq_list     = ctq_list
-        self.profile      = profile
-        self.dict_set     = DICT_SET
-
-        self.total_ticks  = 0
-        self.total_secds  = 0
-        self.total_count  = 0
-
-        self.pr           = None
-        self.back_type    = None
-        self.betting      = None
-        self.avgtime      = None
-        self.avg_list     = None
-        self.startday     = None
-        self.endday       = None
-        self.starttime    = None
-        self.endtime      = None
-
-        self.startday_    = None
-        self.endday_      = None
-        self.starttime_   = None
-        self.endtime_     = None
-
-        self.buystg       = None
-        self.sellstg      = None
-        self.dict_cn      = None
-        self.dict_mt      = None
-        self.dict_kd      = None
-        self.array_tick   = None
-
-        self.code_list    = []
-        self.vars         = []
-        self.vars_list    = []
-        self.vars_lists   = []
-        self.buy_info     = []
-        self.dict_tik_ar  = {}
-        self.dict_day_ar  = {}
-        self.dict_min_ar  = {}
-        self.dict_dindex  = {}
-        self.dict_mindex  = {}
-        self.bhogainfo    = {}
-        self.shogainfo    = {}
-        self.dict_cond    = {}
-        self.dict_buystg  = {}
-        self.dict_sellstg = {}
-        self.didict_cond  = {}
-        self.sell_cond    = 0
-        self.vars_turn    = 0
-        self.vars_count   = 0
-        self.vars_key     = 0
-
-        self.code         = None
-        self.name         = None
-        self.day_info     = None
-        self.trade_info   = None
-        self.current_min  = None
-        self.index        = 0
-        self.indexn       = 0
-        self.dindex       = 0
-        self.mindex       = 0
-        self.tick_count   = 0
-
-        self.Start()
-
-    def Start(self):
-        while True:
-            data = self.pq.get()
-            if '정보' in data[0]:
-                if self.back_type == '최적화':
-                    if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
-                        self.CheckAvglist(avg_list)
-                        if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
-                    elif data[0] == '변수정보':
-                        self.vars_list  = data[1]
-                        self.vars_turn  = data[2]
-                        self.vars       = [var[-1] for var in self.vars_list]
-                        self.vars_count = 1 if self.vars_turn < 0 else len(self.vars_list[self.vars_turn]) - 1
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        self.BackTest()
-                elif self.back_type == 'GA최적화':
-                    if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
-                        self.CheckAvglist(avg_list)
-                        if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
-                    elif data[0] == '변수정보':
-                        self.vars_lists = data[1]
-                        self.vars_count = 10
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        self.BackTest()
-                elif self.back_type == '조건최적화':
-                    if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        self.avgtime    = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                    elif data[0] == '조건정보':
-                        self.dict_buystg  = {}
-                        self.dict_sellstg = {}
-                        self.didict_cond  = {}
-                        error = False
-                        for i in range(10):
-                            buystg = GetBuyConds(data[1][i])
-                            sellstg, dict_cond = GetSellConds(data[2][i])
-                            self.dict_buystg[i]  = buystg
-                            self.dict_sellstg[i] = sellstg
-                            self.didict_cond[i]  = dict_cond
-                            if buystg is None or sellstg is None: error = True
-                        self.vars_count = 10
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        if error:
-                            self.BackStop()
-                        else:
-                            self.BackTest()
-                elif self.back_type == '전진분석':
-                    if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.starttime  = data[3]
-                        self.endtime    = data[4]
-                        self.buystg     = GetBuyStg(data[5])
-                        self.sellstg, self.dict_cond = GetSellStg(data[6])
-                        self.CheckAvglist(avg_list)
-                        if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
-                    elif data[0] == '변수정보':
-                        self.vars_list  = data[1]
-                        self.vars_turn  = data[2]
-                        self.vars       = [var[-1] for var in self.vars_list]
-                        self.vars_count = 1 if self.vars_turn < 0 else len(self.vars_list[self.vars_turn]) - 1
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        self.BackTest()
-                elif self.back_type == '백테스트':
-                    if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        self.avgtime    = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
-                        self.vars_turn  = -1
-                        self.vars_count = 1
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        if self.buystg is None or self.sellstg is None:
-                            self.BackStop()
-                        else:
-                            start = datetime.datetime.now()
-                            self.BackTest()
-                            self.total_secds = (datetime.datetime.now() - start).total_seconds()
-                elif self.back_type == '백파인더':
-                    if data[0] == '백테정보':
-                        self.avgtime    = data[1]
-                        self.startday   = data[2]
-                        self.endday     = data[3]
-                        self.starttime  = data[4]
-                        self.endtime    = data[5]
-                        self.vars_count = 1
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        try:
-                            self.buystg = compile(data[6], '<string>', 'exec')
-                        except:
-                            if self.gubun == 0: print_exc()
-                            self.BackStop()
-                        else:
-                            self.BackTest()
-            elif data[0] == '백테유형':
-                self.back_type = data[1]
-            elif data[0] == '설정변경':
-                self.dict_set = data[1]
-            elif data[0] == '종목명거래대금순위':
-                self.dict_cn = data[1]
-                self.dict_mt = data[2]
-                self.dict_kd = data[3]
-            elif data[0] in ['데이터크기', '데이터로딩']:
-                self.DataLoad(data)
-            elif data[0] == '벤치점수요청':
-                self.bq.put([self.total_ticks, self.total_secds, round(self.total_ticks / self.total_secds, 2)])
-
-    def InitDayInfo(self):
-        self.tick_count = 0
-
-    def InitTradeInfo(self):
-        v = {
-            '보유중': 0,
-            '매수가': 0,
-            '매도가': 0,
-            '주문수량': 0,
-            '보유수량': 0,
-            '최고수익률': 0.,
-            '최저수익률': 0.,
-            '매수틱번호': 0,
-            '매수시간': strp_time('%Y%m%d', '20000101')
-        }
-        if self.vars_count == 1:
-            self.trade_info = {0: v}
-        else:
-            self.trade_info = {k: v for k in range(self.vars_count)}
+        super().__init__(gubun, wq, pq, tq, bq, ctq_list, profile)
 
     def DataLoad(self, data):
         bk = 0
@@ -425,19 +196,8 @@ class StockBackEngine3:
         con.close()
         if gubun == '데이터로딩':
             self.bq.put_nowait(bk)
-        self.avg_list = avg_list
-        self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
-
-    def CheckAvglist(self, avg_list):
-        not_in_list = [x for x in avg_list if x not in self.avg_list]
-        if len(not_in_list) > 0 and self.gubun == 0:
-            self.wq.put([ui_num['S백테스트'], '백테엔진 구동 시 포함되지 않은 평균값 틱수를 사용하여 중지되었습니다.'])
-            self.wq.put([ui_num['S백테스트'], '누락된 평균값 틱수를 추가하여 백테엔진을 재시작하십시오.'])
-            self.BackStop()
-
-    def BackStop(self):
-        self.back_type = None
-        if self.gubun == 0: self.wq.put([ui_num['S백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'])
+            self.avg_list = avg_list
+            self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
 
     def BackTest(self):
         if self.profile:
@@ -492,6 +252,7 @@ class StockBackEngine3:
                     else:
                         self.LastSell()
                         self.InitDayInfo()
+                        self.InitTradeInfo()
 
             self.tq.put(['백테완료', 1 if self.total_count > 0 else 0])
 
@@ -1025,99 +786,3 @@ class StockBackEngine3:
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
-
-    def Buy(self):
-        매수수량 = self.trade_info[self.vars_key]['주문수량']
-        if 매수수량 > 0:
-            남은수량 = 매수수량
-            직전남은수량 = 매수수량
-            매수금액 = 0
-            for 매도호가, 매도잔량 in self.bhogainfo.items():
-                남은수량 -= 매도잔량
-                if 남은수량 <= 0:
-                    매수금액 += 매도호가 * 직전남은수량
-                    break
-                else:
-                    매수금액 += 매도호가 * 매도잔량
-                    직전남은수량 = 남은수량
-            if 남은수량 <= 0:
-                self.trade_info[self.vars_key] = {
-                    '보유중': 1,
-                    '매수가': int(round(매수금액 / 매수수량)),
-                    '매도가': 0,
-                    '주문수량': 매수수량,
-                    '보유수량': 매수수량,
-                    '최고수익률': 0.,
-                    '최저수익률': 0.,
-                    '매수틱번호': self.indexn,
-                    '매수시간': strp_time('%Y%m%d%H%M%S', str(self.index))
-                }
-
-    def Sell(self, sell_cond):
-        주문수량 = self.trade_info[self.vars_key]['주문수량']
-        남은수량 = 주문수량
-        직전남은수량 = 주문수량
-        매도금액 = 0
-        for 매수호가, 매수잔량 in self.shogainfo.items():
-            남은수량 -= 매수잔량
-            if 남은수량 <= 0:
-                매도금액 += 매수호가 * 직전남은수량
-                break
-            else:
-                매도금액 += 매수호가 * 매수잔량
-                직전남은수량 = 남은수량
-        if 남은수량 <= 0:
-            self.trade_info[self.vars_key]['매도가'] = int(round(매도금액 / 주문수량))
-            self.sell_cond = sell_cond
-            self.CalculationEyun()
-
-    def LastSell(self):
-        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 23:43]
-        self.shogainfo = {
-            1: {매수호가1: 매수잔량1},
-            2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-            3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-            4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-            5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-        }
-        self.shogainfo = self.shogainfo[self.dict_set['주식매도시장가잔량범위']]
-
-        for k in range(self.vars_count):
-            self.vars_key = k
-            if self.trade_info[self.vars_key]['보유중']:
-                남은수량 = self.trade_info[self.vars_key]['보유수량']
-                직전남은수량 = 남은수량
-                매도금액 = 0
-                for 매수호가, 매수잔량 in self.shogainfo.items():
-                    남은수량 -= 매수잔량
-                    if 남은수량 <= 0:
-                        매도금액 += 매수호가 * 직전남은수량
-                        break
-                    else:
-                        매도금액 += 매수호가 * 매수잔량
-                        직전남은수량 = 남은수량
-
-                보유수량 = self.trade_info[self.vars_key]['보유수량']
-                if 남은수량 <= 0:
-                    self.trade_info[self.vars_key]['매도가'] = int(round(매도금액 / 보유수량))
-                elif 매도금액 == 0:
-                    self.trade_info[self.vars_key]['매도가'] = self.array_tick[self.indexn, 1]
-                else:
-                    self.trade_info[self.vars_key]['매도가'] = int(round(매도금액 / (보유수량 - 남은수량)))
-
-                self.trade_info[self.vars_key]['주문수량'] = 보유수량
-                self.sell_cond = 0
-                self.CalculationEyun()
-
-    def CalculationEyun(self):
-        self.total_count += 1
-        _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _ = self.trade_info[self.vars_key].values()
-        시가총액 = int(self.array_tick[self.indexn, 12])
-        매수시간, 매도시간, 보유시간, 매수금액 = int(self.array_tick[매수틱번호, 0]), self.index, self.indexn - 매수틱번호, 주문수량 * 매수가
-        매도금액, 수익금, 수익률 = GetKiwoomPgSgSp(매수금액, 주문수량 * 매도가)
-        매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
-        추가매수시간, 잔량없음 = '', True
-        data = ['백테결과', self.name, 시가총액, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
-        self.ctq_list[self.vars_key].put(data)
-        self.trade_info[self.vars_key]['보유중'] = 0

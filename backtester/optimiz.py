@@ -112,9 +112,16 @@ class Total:
                         for ctq in self.ctq_list:
                             ctq.put('백테완료')
                     else:
-                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'])
-                        self.BackStop()
-                        break
+                        if self.vars_turn >= 0:
+                            _, valid_days, _ = self.list_days
+                            if valid_days is not None:
+                                for i, _ in enumerate(valid_days):
+                                    self.stdp = SendTextAndStd(self.GetSendData(i), self.std_list, self.betting, None)
+                            else:
+                                self.stdp = SendTextAndStd(self.GetSendData(0), self.std_list, self.betting, None)
+                        else:
+                            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'])
+                            self.mq.put('백테스트 완료')
 
             elif data[0] in ['TRAIN', 'VALID']:
                 vars_key = data[-1]
@@ -201,71 +208,70 @@ class Total:
             SendTextAndStd(senddata, self.std_list, self.betting, result)
 
         self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, self.optistandard, self.day_count)
-        if len(self.df_tsg) > 0:
-            SendTextAndStd(self.GetSendData(), self.std_list, self.betting, result)
-            tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
+        SendTextAndStd(self.GetSendData(), self.std_list, self.betting, result)
+        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
 
-            startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
-            startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
-            endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
-            starttime = starttime[:2] + ':' + starttime[2:4] + ':' + starttime[4:]
-            endtime   = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
-            bet_unit  = '원' if self.ui_gubun != 'CF' else 'USDT'
+        startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
+        startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
+        endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
+        starttime = starttime[:2] + ':' + starttime[2:4] + ':' + starttime[4:]
+        endtime   = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
+        bet_unit  = '원' if self.ui_gubun != 'CF' else 'USDT'
 
-            if self.weeks_valid == 0 and self.weeks_test == 0:
-                back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습+검증기간 : {self.weeks_train}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
-            elif self.weeks_valid == 0 and self.weeks_test != 0:
-                back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습+검증/확인기간 : {self.weeks_train}/{self.weeks_test}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
-            elif self.weeks_test == 0:
-                back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증기간 : {self.weeks_train}/{self.weeks_valid}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
-            else:
-                back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증/확인기간 : {self.weeks_train}/{self.weeks_valid}/{self.weeks_test}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
+        if self.weeks_valid == 0 and self.weeks_test == 0:
+            back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습+검증기간 : {self.weeks_train}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
+        elif self.weeks_valid == 0 and self.weeks_test != 0:
+            back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습+검증/확인기간 : {self.weeks_train}/{self.weeks_test}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
+        elif self.weeks_test == 0:
+            back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증기간 : {self.weeks_train}/{self.weeks_valid}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
+        else:
+            back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증/확인기간 : {self.weeks_train}/{self.weeks_valid}/{self.weeks_test}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
 
-            mdd_ = f'최대낙폭금액 {mdd:,.0f}{bet_unit}' if 'G' in self.optistandard else f'최대낙폭률 {mdd:,.2f}%'
-            label_text = f'변수 {self.vars}\n종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {onegm:,}{bet_unit}, ' \
-                         f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
-                         f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, ' \
-                         f'{mdd_}, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
+        mdd_ = f'최대낙폭금액 {mdd:,.0f}{bet_unit}' if 'G' in self.optistandard else f'최대낙폭률 {mdd:,.2f}%'
+        label_text = f'변수 {self.vars}\n종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {onegm:,}{bet_unit}, ' \
+                     f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
+                     f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, ' \
+                     f'{mdd_}, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
 
-            if self.dict_set['스톰라이브']:
-                backlive_text = f'back;{startday}~{endday};{starttime}~{endtime};{self.day_count};{self.vars[0]};{int(self.betting)};'\
-                                f'{onegm};{tc};{atc};{mhct};{ah:.2f};{pc};{mc};{wr:.2f};{ap:.2f};{tsp:.2f};{mdd:.2f};{tsg};{cagr:.2f}'
-                self.lq.put(backlive_text)
+        if self.dict_set['스톰라이브']:
+            backlive_text = f'back;{startday}~{endday};{starttime}~{endtime};{self.day_count};{self.vars[0]};{int(self.betting)};'\
+                            f'{onegm};{tc};{atc};{mhct};{ah:.2f};{pc};{mc};{wr:.2f};{ap:.2f};{tsp:.2f};{mdd:.2f};{tsg};{cagr:.2f}'
+            self.lq.put(backlive_text)
 
-            if 'T' not in self.backname:
-                con = sqlite3.connect(DB_SETTING)
-                cur = con.cursor()
-                df = pd.read_sql(f'SELECT * FROM {self.gubun}', con).set_index('index')
-                gubun = '주식' if self.gubun == 'stock' else '코인'
-                if self.buystg_name == df[f'{gubun}장초매수전략'][0]:
-                    cur.execute(f'UPDATE {self.gubun} SET {gubun}장초평균값계산틱수={self.vars[0]}')
-                if self.buystg_name == df[f'{gubun}장중매수전략'][0]:
-                    cur.execute(f'UPDATE {self.gubun} SET {gubun}장중평균값계산틱수={self.vars[0]}')
-                con.commit()
-                con.close()
-
-                con = sqlite3.connect(DB_STRATEGY)
-                cur = con.cursor()
-                for i, value in enumerate(self.vars):
-                    cur.execute(f"UPDATE {self.gubun}optibuy SET 변수{i}={value} WHERE `index`='{self.buystg_name}'")
-                con.commit()
-                con.close()
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'최적화전략 {self.buystg_name}의 최적값 및 평균틱수 갱신 완료'])
-
-            save_file_name = f'{self.savename}_{self.buystg_name}_{self.optistandard}_{self.file_name}'
-            data = [f'{self.vars}', int(self.betting), onegm, tc, atc, mhct, ah, pc, mc, wr, ap, tsp, mdd, tsg, tpi, cagr, self.buystg, self.sellstg, self.optivars]
-            df = pd.DataFrame([data], columns=columns_vc, index=[self.file_name])
-            con = sqlite3.connect(DB_BACKTEST)
-            df.to_sql(self.savename, con, if_exists='append', chunksize=1000)
-            self.df_tsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
+        if 'T' not in self.backname:
+            con = sqlite3.connect(DB_SETTING)
+            cur = con.cursor()
+            df = pd.read_sql(f'SELECT * FROM {self.gubun}', con).set_index('index')
+            gubun = '주식' if self.gubun == 'stock' else '코인'
+            if self.buystg_name == df[f'{gubun}장초매수전략'][0]:
+                cur.execute(f'UPDATE {self.gubun} SET {gubun}장초평균값계산틱수={self.vars[0]}')
+            if self.buystg_name == df[f'{gubun}장중매수전략'][0]:
+                cur.execute(f'UPDATE {self.gubun} SET {gubun}장중평균값계산틱수={self.vars[0]}')
+            con.commit()
             con.close()
-            self.wq.put([ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_tsg])
 
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 소요시간 {now() - self.start}'])
-            self.sq.put(f'{self.backname} 백테스트를 완료하였습니다.')
+            con = sqlite3.connect(DB_STRATEGY)
+            cur = con.cursor()
+            for i, value in enumerate(self.vars):
+                cur.execute(f"UPDATE {self.gubun}optibuy SET 변수{i}={value} WHERE `index`='{self.buystg_name}'")
+            con.commit()
+            con.close()
+            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'최적화전략 {self.buystg_name}의 최적값 및 평균틱수 갱신 완료'])
 
-            PltShow('최적화', self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
-                    self.df_kp, self.df_kd, self.list_days, self.backname, back_text, label_text, save_file_name, self.schedul, False)
+        save_file_name = f'{self.savename}_{self.buystg_name}_{self.optistandard}_{self.file_name}'
+        data = [f'{self.vars}', int(self.betting), onegm, tc, atc, mhct, ah, pc, mc, wr, ap, tsp, mdd, tsg, tpi, cagr, self.buystg, self.sellstg, self.optivars]
+        df = pd.DataFrame([data], columns=columns_vc, index=[self.file_name])
+        con = sqlite3.connect(DB_BACKTEST)
+        df.to_sql(self.savename, con, if_exists='append', chunksize=1000)
+        self.df_tsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
+        con.close()
+        self.wq.put([ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_tsg])
+
+        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 소요시간 {now() - self.start}'])
+        self.sq.put(f'{self.backname} 백테스트를 완료하였습니다.')
+
+        PltShow('최적화', self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
+                self.df_kp, self.df_kd, self.list_days, self.backname, back_text, label_text, save_file_name, self.schedul, False)
 
         self.mq.put('백테스트 완료')
 
@@ -306,7 +312,7 @@ class Optimize:
         schedul         = data[11]
         df_kp           = data[12]
         df_kq           = data[13]
-        weeks_train = int(data[14])
+        weeks_train     = data[14]
         weeks_valid = int(data[15])
         weeks_test  = int(data[16])
         backengin_sday  = data[17]

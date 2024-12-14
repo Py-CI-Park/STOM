@@ -7,10 +7,10 @@ import datetime
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData
-from utility.setting import DB_COIN_BACK, BACK_TEMP, DICT_SET, ui_num
+from utility.setting import DB_COIN_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
 from utility.static import strp_time, timedelta_sec, strf_time, timedelta_day, GetUpbitHogaunit, pickle_read, pickle_write, GetUpbitPgSgSp
+from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData, GetTradeInfo
 
 
 class CoinUpbitBackEngine:
@@ -50,6 +50,9 @@ class CoinUpbitBackEngine:
         self.dict_kd      = None
         self.array_tick   = None
 
+        self.is_long      = None
+        self.dict_hg      = None
+
         self.code_list    = []
         self.vars         = []
         self.vars_list    = []
@@ -71,11 +74,11 @@ class CoinUpbitBackEngine:
         self.vars_count   = 0
         self.vars_key     = 0
 
-        self.code         = None
-        self.name         = None
-        self.day_info     = None
-        self.trade_info   = None
-        self.current_min  = None
+        self.code         = ''
+        self.name         = ''
+        self.day_info     = {}
+        self.trade_info   = {}
+        self.current_min  = []
         self.index        = 0
         self.indexn       = 0
         self.dindex       = 0
@@ -228,17 +231,7 @@ class CoinUpbitBackEngine:
         self.tick_count = 0
 
     def InitTradeInfo(self):
-        v = {
-            '보유중': 0,
-            '매수가': 0,
-            '매도가': 0,
-            '주문수량': 0,
-            '보유수량': 0,
-            '최고수익률': 0.,
-            '최저수익률': 0.,
-            '매수틱번호': 0,
-            '매수시간': strp_time('%Y%m%d', '20000101')
-        }
+        v = GetTradeInfo(1)
         if self.vars_count == 1:
             self.trade_info = {0: v}
         else:
@@ -340,8 +333,8 @@ class CoinUpbitBackEngine:
         con.close()
         if gubun == '데이터로딩':
             self.bq.put_nowait(bk)
-        self.avg_list = avg_list
-        self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
+            self.avg_list = avg_list
+            self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
 
     def CheckAvglist(self, avg_list):
         not_in_list = [x for x in avg_list if x not in self.avg_list]
@@ -397,6 +390,7 @@ class CoinUpbitBackEngine:
                     else:
                         self.LastSell()
                         self.InitDayInfo()
+                        self.InitTradeInfo()
 
             self.tq.put(['백테완료', 1 if self.total_count > 0 else 0])
 
@@ -703,6 +697,7 @@ class CoinUpbitBackEngine:
                     매수금액 += 매도호가 * 직전남은수량
                     break
                 else:
+                    # noinspection PyTypeChecker
                     매수금액 += 매도호가 * 매도잔량
                     직전남은수량 = 남은수량
             if 남은수량 <= 0:
@@ -729,6 +724,7 @@ class CoinUpbitBackEngine:
                 매도금액 += 매수호가 * 직전남은수량
                 break
             else:
+                # noinspection PyTypeChecker
                 매도금액 += 매수호가 * 매수잔량
                 직전남은수량 = 남은수량
         if 남은수량 <= 0:
@@ -785,4 +781,4 @@ class CoinUpbitBackEngine:
         추가매수시간, 잔량없음 = '', True
         data = ['백테결과', self.name, 시가총액, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
         self.ctq_list[self.vars_key].put(data)
-        self.trade_info[self.vars_key]['보유중'] = 0
+        self.trade_info[self.vars_key] = GetTradeInfo(1)
