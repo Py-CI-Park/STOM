@@ -298,7 +298,7 @@ class Chart:
             df = df[columns]
             df.fillna(0, inplace=True)
 
-            ar = df.to_numpy()
+            ar = np.array(df)
             xticks = [strp_time('%Y%m%d%H%M%S', str(x)).timestamp() for x in df.index]
             self.windowQ.put([ui_num['차트'], coin, xticks, ar, buy_index, sell_index])
 
@@ -318,7 +318,7 @@ class Chart:
             if len(df) > 0:
                 df = df[['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']].copy()
                 df = df[::-1]
-                self.windowQ.put([ui_num['일봉차트'], name, df.to_numpy()])
+                self.windowQ.put([ui_num['일봉차트'], name, np.array(df)])
         else:
             if coin:
                 db_name = DB_COIN_MIN
@@ -333,4 +333,4 @@ class Chart:
             if len(df) > 0:
                 df = df[['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']].copy()
                 df = df[::-1]
-                self.windowQ.put([ui_num['분봉차트'], name, df.to_numpy()])
+                self.windowQ.put([ui_num['분봉차트'], name, np.array(df)])

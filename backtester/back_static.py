@@ -125,8 +125,6 @@ def AddAvgData(df, r, avg_list):
         df[f'누적초당매수수량{avg}'] = df['초당매수수량'].rolling(window=avg).sum()
         df[f'누적초당매도수량{avg}'] = df['초당매도수량'].rolling(window=avg).sum()
         df[f'초당거래대금평균{avg}'] = df['초당거래대금'].rolling(window=avg).mean()
-    return df
-
 
 def LoadOrderSetting(gubun):
     con = sqlite3.connect(DB_SETTING)

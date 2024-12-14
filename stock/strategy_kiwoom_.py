@@ -159,7 +159,7 @@ class StrategyKiwoom2:
                         ]
                         """
                         df = df[columns][::-1]
-                        self.dict_min_ar[code] = df.to_numpy()
+                        self.dict_min_ar[code] = np.array(df)
                         print(f'[{now()}] 주식 분봉데이터 로딩 중 ... [{i + 1}/{last}]')
                 for code in self.dict_min_ar.keys():
                     self.dict_min_data[code] = self.GetNewLineData(self.dict_min_ar[code], self.dict_set['주식분봉개수'])
@@ -186,7 +186,7 @@ class StrategyKiwoom2:
                         ]
                         """
                         df = df[columns][::-1]
-                        self.dict_day_ar[code] = df.to_numpy()
+                        self.dict_day_ar[code] = np.array(df)
                         print(f'[{now()}] 주식 일봉데이터 로딩 중 ... [{i + 1}/{last}]')
                 for code in self.dict_day_ar.keys():
                     self.dict_day_data[code] = self.GetNewLineData(self.dict_day_ar[code], 250)
@@ -287,7 +287,7 @@ class StrategyKiwoom2:
             df = pd.read_sql(f"SELECT * FROM '{code}' WHERE 체결시간 < {dt} ORDER BY 체결시간 DESC LIMIT {self.dict_set['주식분봉개수']}", con)
             columns = ['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
             df = df[columns][::-1]
-            self.dict_min_ar[code] = df.to_numpy()
+            self.dict_min_ar[code] = np.array(df)
             self.dict_min_data[code] = self.GetNewLineData(self.dict_min_ar[code], self.dict_set['주식분봉개수'])
             con.close()
         elif gubun == '일봉재로딩':
@@ -295,7 +295,7 @@ class StrategyKiwoom2:
             df = pd.read_sql(f"SELECT * FROM '{code}' WHERE 일자 < {dt} ORDER BY 일자 DESC LIMIT 250", con)
             columns = ['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
             df = df[columns][::-1]
-            self.dict_day_ar[code] = df.to_numpy()
+            self.dict_day_ar[code] = np.array(df)
             self.dict_day_data[code] = self.GetNewLineData(self.dict_day_ar[code], 250)
             con.close()
 
@@ -659,22 +659,10 @@ class StrategyKiwoom2:
             def 일봉이평240N(pre):
                 return self.dict_day_ar[종목코드][-pre, 11]
 
-        bhogainfo = {
-            1: {매도호가1: 매도잔량1},
-            2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-            3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-            4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-            5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-        }
-        shogainfo = {
-            1: {매수호가1: 매수잔량1},
-            2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-            3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-            4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-            5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-        }
-        self.bhogainfo = bhogainfo[self.dict_set['주식매수시장가잔량범위']]
-        self.shogainfo = shogainfo[self.dict_set['주식매도시장가잔량범위']]
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+        self.bhogainfo = bhogainfo[:self.dict_set['주식매수시장가잔량범위']]
+        self.shogainfo = shogainfo[:self.dict_set['주식매도시장가잔량범위']]
 
         시분초 = int(str(체결시간)[8:])
         호가단위 = GetHogaunit(종목코드 in self.list_kosd, 현재가, 체결시간)
@@ -698,8 +686,8 @@ class StrategyKiwoom2:
                 최저체결강도_    = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
                 최고초당매수수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].max(), 초당매수수량)
                 최고초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].min(), 초당매도수량)
-                누적초당매수수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].sum(), 초당매수수량)
-                누적초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].sum(), 초당매도수량)
+                누적초당매수수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].sum() + 초당매수수량
+                누적초당매도수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].sum() + 초당매도수량
                 초당거래대금평균_ =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 19].sum() + 초당거래대금) / 평균값계산틱수
                 당일거래대금각도_ = round(math.atan2(당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6], 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 전일비각도_      = round(math.atan2(전일비 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 9], 평균값계산틱수) / (2 * math.pi) * 360, 2)
@@ -834,7 +822,6 @@ class StrategyKiwoom2:
                 분할매도횟수 = int(self.df_jg['분할매도횟수'][종목코드])
                 _, 수익금, 수익률 = GetKiwoomPgSgSp(매입금액, 보유수량 * 현재가)
                 매수시간 = strp_time('%Y%m%d%H%M%S', self.df_jg['매수시간'][종목코드])
-
                 if 종목코드 not in self.dict_hilo.keys():
                     self.dict_hilo[종목코드] = [수익률, 수익률]
                 else:
@@ -985,7 +972,7 @@ class StrategyKiwoom2:
             남은수량 = 매수수량
             직전남은수량 = 매수수량
             매수금액 = 0
-            for 매도호가, 매도잔량 in self.bhogainfo.items():
+            for 매도호가, 매도잔량 in self.bhogainfo:
                 남은수량 -= 매도잔량
                 if 남은수량 <= 0:
                     매수금액 += 매도호가 * 직전남은수량
@@ -1010,7 +997,7 @@ class StrategyKiwoom2:
             남은수량 = 매도수량
             직전남은수량 = 매도수량
             매도금액 = 0
-            for 매수호가, 매수잔량 in self.shogainfo.items():
+            for 매수호가, 매수잔량 in self.shogainfo:
                 남은수량 -= 매수잔량
                 if 남은수량 <= 0:
                     매도금액 += 매수호가 * 직전남은수량

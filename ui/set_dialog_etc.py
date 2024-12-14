@@ -234,7 +234,7 @@ class SetDialogEtc:
         '''
         self.ui.op_labelllllll_01 = QLabel(text, self.ui.op_groupBoxxxx_01)
         self.ui.op_labelllllll_01.setAlignment(Qt.AlignCenter)
-        item_list = ['BaseSampler', 'BruteForceSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
+        item_list = ['BaseSampler', 'BruteForceSampler', 'CmaEsSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
         self.ui.op_comboBoxxxx_01 = self.wc.setCombobox(self.ui.op_groupBoxxxx_01, items=item_list)
         text = '''
         optuna로 실행된 최적화의 정보는

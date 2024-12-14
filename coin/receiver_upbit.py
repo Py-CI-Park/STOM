@@ -477,7 +477,7 @@ class ReceiverUpbit:
 
                     columns = ['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
                     df2 = df[columns][-self.dict_set['코인분봉개수']:]
-                    dict_min_ar[code] = df2.to_numpy()
+                    dict_min_ar[code] = np.array(df2)
 
                     if code in dict_lastmin.keys():
                         df = df[df['체결시간'] > dict_lastmin[code]]
@@ -556,7 +556,7 @@ class ReceiverUpbit:
 
                     columns = ['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
                     df2 = df[columns][-250:]
-                    dict_day_ar[code] = df2.to_numpy()
+                    dict_day_ar[code] = np.array(df2)
 
                     if code in dict_lastday.keys():
                         df = df[df['일자'] > dict_lastday[code]]

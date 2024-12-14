@@ -304,22 +304,11 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                 if self.gubun == 0: print_exc()
                 self.BackStop()
         else:
-            self.bhogainfo = {
-                1: {매도호가1: 매도잔량1},
-                2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-                3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-                4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-                5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-            }
-            self.shogainfo = {
-                1: {매수호가1: 매수잔량1},
-                2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-                3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-                4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-                5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-            }
+            self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+            self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
             for j in range(self.vars_count):
+                if self.back_type is None: return
                 self.vars_key = j
                 if self.back_type in ['백테스트', '조건최적화']:
                     if self.tick_count < self.avgtime:
@@ -341,7 +330,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
                 포지션, 수익금, 수익률, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 보유시간 = None, 0, 0., 0, 0., 0., 0, strp_time('%Y%m%d', '20000101'), 0
                 if self.trade_info[j]['보유중']:
-                    _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())[:9]
+                    _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[j].values()
                     매수금액 = 보유수량 * 매수가
                     평가금액 = 보유수량 * 현재가
                     if self.trade_info[j]['보유중'] == 1:
@@ -349,11 +338,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     else:
                         _, 수익금, 수익률 = GetBinanceShortPgSgSp(매수금액, 평가금액, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
                     if 수익률 > 최고수익률:
-                        최고수익률 = 수익률
-                        self.trade_info[j]['최고수익률'] = 수익률
+                        self.trade_info[j]['최고수익률'] = 최고수익률 = 수익률
                     elif 수익률 < 최저수익률:
-                        최저수익률 = 수익률
-                        self.trade_info[j]['최저수익률'] = 수익률
+                        self.trade_info[j]['최저수익률'] = 최저수익률 = 수익률
                     보유시간 = (now_utc() - 매수시간).total_seconds()
                     포지션 = 'LONG' if self.trade_info[j]['보유중'] == 1 else 'SHORT'
 
@@ -498,6 +485,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
+                    return
 
     def Buy(self, gubun):
         if self.dict_set['코인매수주문구분'] == '시장가':
@@ -507,8 +495,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                 직전남은수량 = 매수수량
                 매수금액 = 0
                 hogainfo = self.bhogainfo if gubun == 'BUY_LONG' else self.shogainfo
-                hogainfo = hogainfo[self.dict_set['코인매수시장가잔량범위']]
-                for 호가, 잔량 in hogainfo.items():
+                hogainfo = hogainfo[:self.dict_set['코인매수시장가잔량범위']]
+                for 호가, 잔량 in hogainfo:
                     남은수량 -= 잔량
                     if 남은수량 <= 0:
                         매수금액 += 호가 * 직전남은수량
@@ -597,8 +585,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             직전남은수량 = 남은수량
             매도금액 = 0
             hogainfo = self.shogainfo if gubun == 'SELL_LONG' else self.bhogainfo
-            hogainfo = hogainfo[self.dict_set['코인매도시장가잔량범위']]
-            for 호가, 잔량 in hogainfo.items():
+            hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
+            for 호가, 잔량 in hogainfo:
                 남은수량 -= 잔량
                 if 남은수량 <= 0:
                     매도금액 += 호가 * 직전남은수량
@@ -656,20 +644,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
     def LastSell(self):
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 14:34]
-        self.bhogainfo = {
-            1: {매도호가1: 매도잔량1},
-            2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-            3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-            4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-            5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-        }
-        self.shogainfo = {
-            1: {매수호가1: 매수잔량1},
-            2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-            3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-            4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-            5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-        }
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
         for k in range(self.vars_count):
             self.vars_key = k
@@ -677,9 +653,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                 남은수량 = self.trade_info[self.vars_key]['보유수량']
                 직전남은수량 = 남은수량
                 매도금액 = 0
-                hogainfo = self.shogainfo if self.trade_info[self.vars_key]['보유중'] == 1 else self.bhogainfo
-                hogainfo = hogainfo[self.dict_set['코인매도시장가잔량범위']]
-                for 호가, 잔량 in hogainfo.items():
+                hogainfo = shogainfo if self.trade_info[self.vars_key]['보유중'] == 1 else bhogainfo
+                hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
+                for 호가, 잔량 in hogainfo:
                     남은수량 -= 잔량
                     if 남은수량 <= 0:
                         매도금액 += 호가 * 직전남은수량

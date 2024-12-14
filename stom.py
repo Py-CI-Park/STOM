@@ -2247,6 +2247,7 @@ class Window(QMainWindow):
 
                 self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
                 self.SetPosLegendLabel(i, coin, hms)
+                if i == chart_count - 1: break
 
         if self.database_chart: self.database_chart = False
 
@@ -9802,21 +9803,30 @@ class Window(QMainWindow):
         qtest_qwait(3)
         if self.proc_backtester_bb is not None and   self.proc_backtester_bb.is_alive():   self.proc_backtester_bb.kill()
         if self.proc_backtester_bf is not None and   self.proc_backtester_bf.is_alive():   self.proc_backtester_bf.kill()
-        if self.proc_backtester_o is not None and   self.proc_backtester_o.is_alive():   self.proc_backtester_o.kill()
+        if self.proc_backtester_o is not None and    self.proc_backtester_o.is_alive():    self.proc_backtester_o.kill()
         if self.proc_backtester_ov is not None and   self.proc_backtester_ov.is_alive():   self.proc_backtester_ov.kill()
         if self.proc_backtester_ovc is not None and  self.proc_backtester_ovc.is_alive():  self.proc_backtester_ovc.kill()
-        if self.proc_backtester_og is not None and   self.proc_backtester_og.is_alive():   self.proc_backtester_og.kill()
-        if self.proc_backtester_ogv is not None and  self.proc_backtester_ogv.is_alive():  self.proc_backtester_ogv.kill()
-        if self.proc_backtester_ogvc is not None and self.proc_backtester_ogvc.is_alive(): self.proc_backtester_ogvc.kill()
-        if self.proc_backtester_ot is not None and  self.proc_backtester_ot.is_alive():  self.proc_backtester_ot.kill()
+        if self.proc_backtester_ot is not None and   self.proc_backtester_ot.is_alive():   self.proc_backtester_ot.kill()
         if self.proc_backtester_ovt is not None and  self.proc_backtester_ovt.is_alive():  self.proc_backtester_ovt.kill()
         if self.proc_backtester_ovct is not None and self.proc_backtester_ovct.is_alive(): self.proc_backtester_ovct.kill()
+        if self.proc_backtester_or is not None and   self.proc_backtester_or.is_alive():   self.proc_backtester_or.kill()
+        if self.proc_backtester_orv is not None and  self.proc_backtester_orv.is_alive():  self.proc_backtester_orv.kill()
+        if self.proc_backtester_orvc is not None and self.proc_backtester_orvc.is_alive(): self.proc_backtester_orvc.kill()
+        if self.proc_backtester_b is not None and    self.proc_backtester_b.is_alive():    self.proc_backtester_b.kill()
+        if self.proc_backtester_bv is not None and   self.proc_backtester_bv.is_alive():   self.proc_backtester_bv.kill()
+        if self.proc_backtester_bvc is not None and  self.proc_backtester_bvc.is_alive():  self.proc_backtester_bvc.kill()
+        if self.proc_backtester_bt is not None and   self.proc_backtester_bt.is_alive():   self.proc_backtester_bt.kill()
+        if self.proc_backtester_bvt is not None and  self.proc_backtester_bvt.is_alive():  self.proc_backtester_bvt.kill()
+        if self.proc_backtester_bvct is not None and self.proc_backtester_bvct.is_alive(): self.proc_backtester_bvct.kill()
+        if self.proc_backtester_br is not None and   self.proc_backtester_br.is_alive():   self.proc_backtester_br.kill()
+        if self.proc_backtester_brv is not None and  self.proc_backtester_brv.is_alive():  self.proc_backtester_brv.kill()
+        if self.proc_backtester_brvc is not None and self.proc_backtester_brvc.is_alive(): self.proc_backtester_brvc.kill()
         if self.proc_backtester_oc is not None and   self.proc_backtester_oc.is_alive():   self.proc_backtester_oc.kill()
         if self.proc_backtester_ocv is not None and  self.proc_backtester_ocv.is_alive():  self.proc_backtester_ocv.kill()
         if self.proc_backtester_ocvc is not None and self.proc_backtester_ocvc.is_alive(): self.proc_backtester_ocvc.kill()
-        if self.proc_backtester_or is not None and   self.proc_backtester_or.is_alive():   self.proc_backtester_or.kill()
-        if self.proc_backtester_orv is not None and   self.proc_backtester_orv.is_alive():   self.proc_backtester_orv.kill()
-        if self.proc_backtester_orvc is not None and  self.proc_backtester_orvc.is_alive():  self.proc_backtester_orvc.kill()
+        if self.proc_backtester_og is not None and   self.proc_backtester_og.is_alive():   self.proc_backtester_og.kill()
+        if self.proc_backtester_ogv is not None and  self.proc_backtester_ogv.is_alive():  self.proc_backtester_ogv.kill()
+        if self.proc_backtester_ogvc is not None and self.proc_backtester_ogvc.is_alive(): self.proc_backtester_ogvc.kill()
         if self.main_btn == 2:   self.ss_pushButtonn_08.setStyleSheet(style_bc_dk)
         elif self.main_btn == 3: self.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
         self.back_condition = True
@@ -11413,8 +11423,6 @@ class Window(QMainWindow):
                     QMessageBox.critical(self.dialog_test, '오류 알림', '코인 전략연산 프로세스가 실행중입니다.\n 트레이더을 작동 중지 설정하여 프로그램을 재구동하십시오.')
                     return
 
-            if gubun == '주식':
-                wdservQ.put(['manager', '시뮬레이터구동'])
             elif gubun == '업비트':
                 self.proc_simulator_rv  = Process(target=ReceiverUpbit2, args=(qlist,), daemon=True)
                 self.proc_simulator_td  = Process(target=TraderUpbit2, args=(qlist,), daemon=True)
@@ -11424,9 +11432,12 @@ class Window(QMainWindow):
                 self.proc_simulator_td  = Process(target=TraderBinanceFuture2, args=(qlist,), daemon=True)
                 self.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(qlist,), daemon=True)
 
-            self.proc_strategy_stock1.start() if gubun == '주식' else self.proc_strategy_coin.start()
-            self.proc_simulator_td.start()
-            self.proc_simulator_rv.start()
+            if gubun == '주식':
+                wdservQ.put(['manager', '시뮬레이터구동'])
+            else:
+                self.proc_strategy_coin.start()
+                self.proc_simulator_td.start()
+                self.proc_simulator_rv.start()
             qtest_qwait(2)
             QMessageBox.information(self.dialog_test, '알림', '시뮬레이터 엔진 구동 완료')
         else:
@@ -11532,10 +11543,6 @@ class Window(QMainWindow):
             self.ChartClear()
 
     def ChartClear(self):
-        wdservQ.put(['simul_strategy', '000000'])
-        if self.CoinStrategyProcessAlive():
-            cstgQ.put('000000')
-
         self.ctpg_tik_name         = None
         self.ctpg_tik_cline        = None
         self.ctpg_tik_hline        = None
@@ -11544,6 +11551,8 @@ class Window(QMainWindow):
         self.ctpg_tik_legend       = {}
         self.ctpg_tik_item         = {}
         self.ctpg_tik_data         = {}
+        self.ctpg_tik_factors      = []
+        self.ctpg_tik_labels       = []
 
         self.ctpg_day_name         = None
         self.ctpg_day_index        = None

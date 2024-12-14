@@ -130,6 +130,7 @@ class StockBackEngine:
                     elif data[0] == '변수정보':
                         self.vars_lists = data[1]
                         self.vars_count = 10
+                        self.vars_turn  = 0
                         self.InitDayInfo()
                         self.InitTradeInfo()
                         self.BackTest()
@@ -192,7 +193,6 @@ class StockBackEngine:
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStg(data[7])
                         self.sellstg, self.dict_cond = GetSellStg(data[8])
-                        self.vars_turn  = -1
                         self.vars_count = 1
                         self.InitDayInfo()
                         self.InitTradeInfo()
@@ -250,18 +250,18 @@ class StockBackEngine:
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
             for code in code_list:
-                df, len_df = None, 0
+                df_tick, len_df_tick = None, 0
                 try:
-                    df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
-                    len_df = len(df)
+                    df_tick = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                    len_df_tick = len(df_tick)
                 except:
                     pass
                 if gubun == '데이터크기':
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([code, len_df])
-                elif len_df > 0:
-                    df = AddAvgData(df, 3, avg_list)
-                    arry_tick = df.to_numpy()
+                    self.total_ticks += len_df_tick
+                    self.bq.put([code, len_df_tick])
+                elif len_df_tick > 0:
+                    AddAvgData(df_tick, 3, avg_list)
+                    arry_tick = np.array(df_tick)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -272,15 +272,15 @@ class StockBackEngine:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, code_days, day_codes, _, _ = data
             if gubun == '데이터크기':
                 for day in day_list:
-                    len_df = 0
+                    len_df_tick = 0
                     for code in day_codes[day]:
                         try:
-                            df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
-                            len_df += len(df)
+                            df_tick = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                            len_df_tick += len(df_tick)
                         except:
                             pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([day, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([day, len_df_tick])
             elif gubun == '데이터로딩':
                 code_list = []
                 for day in day_list:
@@ -289,15 +289,15 @@ class StockBackEngine:
                             code_list.append(code)
                 for code in code_list:
                     days = [day for day in day_list if day in code_days[code]]
-                    df, len_df = None, 0
+                    df_tick, len_df_tick = None, 0
                     try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
-                        len_df += len(df)
+                        df_tick = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
+                        len_df_tick += len(df_tick)
                     except:
                         pass
-                    if len_df > 0:
-                        df = AddAvgData(df, 3, avg_list)
-                        arry_tick = df.to_numpy()
+                    if len_df_tick > 0:
+                        AddAvgData(df_tick, 3, avg_list)
+                        arry_tick = np.array(df_tick)
                         if self.dict_set['백테일괄로딩']:
                             self.dict_tik_ar[code] = arry_tick
                         else:
@@ -308,24 +308,24 @@ class StockBackEngine:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, _, _, _, code = data
             if gubun == '데이터크기':
                 for day in day_list:
-                    len_df = 0
+                    len_df_tick = 0
                     try:
-                        df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
-                        len_df = len(df)
+                        df_tick = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                        len_df_tick = len(df_tick)
                     except:
                         pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([day, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([day, len_df_tick])
             elif gubun == '데이터로딩':
-                df, len_df = None, 0
+                df_tick, len_df_tick = None, 0
                 try:
-                    df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
-                    len_df = len(df)
+                    df_tick = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                    len_df_tick = len(df_tick)
                 except:
                     pass
-                if len_df > 0:
-                    df = AddAvgData(df, 3, avg_list)
-                    arry_tick = df.to_numpy()
+                if len_df_tick > 0:
+                    AddAvgData(df_tick, 3, avg_list)
+                    arry_tick = np.array(df_tick)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -335,7 +335,7 @@ class StockBackEngine:
 
         con.close()
         if gubun == '데이터로딩':
-            self.bq.put_nowait(bk)
+            self.bq.put(bk)
             self.avg_list = avg_list
             self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
 
@@ -651,22 +651,10 @@ class StockBackEngine:
                 if self.gubun == 0: print_exc()
                 self.BackStop()
         else:
-            bhogainfo = {
-                1: {매도호가1: 매도잔량1},
-                2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-                3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-                4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-                5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-            }
-            shogainfo = {
-                1: {매수호가1: 매수잔량1},
-                2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-                3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-                4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-                5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-            }
-            self.bhogainfo = bhogainfo[self.dict_set['주식매수시장가잔량범위']]
-            self.shogainfo = shogainfo[self.dict_set['주식매도시장가잔량범위']]
+            bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+            shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+            self.bhogainfo = bhogainfo[:self.dict_set['주식매수시장가잔량범위']]
+            self.shogainfo = shogainfo[:self.dict_set['주식매도시장가잔량범위']]
 
             for j in range(self.vars_count):
                 self.vars_key = j
@@ -703,16 +691,14 @@ class StockBackEngine:
                         else:
                             exec(self.dict_buystg[j], None, locals())
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())
+                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
                         _, 수익금, 수익률 = GetKiwoomPgSgSp(매수금액, 평가금액)
                         if 수익률 > 최고수익률:
-                            최고수익률 = 수익률
-                            self.trade_info[j]['최고수익률'] = 수익률
+                            self.trade_info[j]['최고수익률'] = 최고수익률 = 수익률
                         elif 수익률 < 최저수익률:
-                            최저수익률 = 수익률
-                            self.trade_info[j]['최저수익률'] = 수익률
+                            self.trade_info[j]['최저수익률'] = 최저수익률 = 수익률
                         보유시간 = (now() - 매수시간).total_seconds()
 
                         self.trade_info[j]['주문수량'] = 보유수량
@@ -724,6 +710,7 @@ class StockBackEngine:
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
+                    return
 
     def Buy(self):
         매수수량 = self.trade_info[self.vars_key]['주문수량']
@@ -731,7 +718,7 @@ class StockBackEngine:
             남은수량 = 매수수량
             직전남은수량 = 매수수량
             매수금액 = 0
-            for 매도호가, 매도잔량 in self.bhogainfo.items():
+            for 매도호가, 매도잔량 in self.bhogainfo:
                 남은수량 -= 매도잔량
                 if 남은수량 <= 0:
                     매수금액 += 매도호가 * 직전남은수량
@@ -757,7 +744,7 @@ class StockBackEngine:
         남은수량 = 주문수량
         직전남은수량 = 주문수량
         매도금액 = 0
-        for 매수호가, 매수잔량 in self.shogainfo.items():
+        for 매수호가, 매수잔량 in self.shogainfo:
             남은수량 -= 매수잔량
             if 남은수량 <= 0:
                 매도금액 += 매수호가 * 직전남은수량
@@ -773,14 +760,8 @@ class StockBackEngine:
     def LastSell(self):
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 23:43]
-        shogainfo = {
-            1: {매수호가1: 매수잔량1},
-            2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-            3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-            4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-            5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-        }
-        self.shogainfo = shogainfo[self.dict_set['주식매도시장가잔량범위']]
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+        shogainfo = shogainfo[:self.dict_set['주식매도시장가잔량범위']]
 
         for k in range(self.vars_count):
             self.vars_key = k
@@ -788,7 +769,7 @@ class StockBackEngine:
                 남은수량 = self.trade_info[self.vars_key]['보유수량']
                 직전남은수량 = 남은수량
                 매도금액 = 0
-                for 매수호가, 매수잔량 in self.shogainfo.items():
+                for 매수호가, 매수잔량 in shogainfo:
                     남은수량 -= 매수잔량
                     if 남은수량 <= 0:
                         매도금액 += 매수호가 * 직전남은수량

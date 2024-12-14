@@ -361,6 +361,8 @@ class RollingWalkForwardTest:
         optunasampl     = data[21]
         if optunasampl == 'BruteForceSampler':
             sampler = optuna.samplers.BruteForceSampler()
+        elif optunasampl == 'CmaEsSampler':
+            sampler = optuna.samplers.CmaEsSampler()
         elif optunasampl == 'QMCSampler':
             sampler = optuna.samplers.QMCSampler()
         elif optunasampl == 'RandomSampler':
@@ -534,7 +536,7 @@ class RollingWalkForwardTest:
             q.put(data)
 
         if 'B' in self.backname:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'OPTUNA Sampler : {optunasampl}'])
+            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optunasampl}</font>'])
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 시작'])
 
         hstd_list = []

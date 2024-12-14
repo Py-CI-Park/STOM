@@ -193,6 +193,7 @@ class KiwoomManager:
         if self.SimulatorProcessAlive():
             self.proc_simulator_td.kill()
             self.proc_simulator_rv.kill()
+            self.proc_strategy_stock1.kill()
 
     def StockReceiverProcessKill(self):
         if self.StockReceiverProcessAlive():

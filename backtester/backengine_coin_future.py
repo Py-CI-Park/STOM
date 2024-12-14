@@ -187,7 +187,6 @@ class CoinFutureBackEngine:
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStgFuture(data[7])
                         self.sellstg, self.dict_cond = GetSellStgFuture(data[8])
-                        self.vars_turn  = -1
                         self.vars_count = 1
                         self.InitDayInfo()
                         self.InitTradeInfo()
@@ -241,18 +240,18 @@ class CoinFutureBackEngine:
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
             for code in code_list:
-                df, len_df = None, 0
+                df_tick, len_df_tick = None, 0
                 try:
-                    df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
-                    len_df = len(df)
+                    df_tick = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                    len_df_tick = len(df_tick)
                 except:
                     pass
                 if gubun == '데이터크기':
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([code, len_df])
-                elif len_df > 0:
-                    df = AddAvgData(df, 8, avg_list)
-                    arry_tick = df.to_numpy()
+                    self.total_ticks += len_df_tick
+                    self.bq.put([code, len_df_tick])
+                elif len_df_tick > 0:
+                    AddAvgData(df_tick, 8, avg_list)
+                    arry_tick = np.array(df_tick)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -263,15 +262,15 @@ class CoinFutureBackEngine:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, code_days, day_codes, _, _ = data
             if gubun == '데이터크기':
                 for day in day_list:
-                    len_df = 0
+                    len_df_tick = 0
                     for code in day_codes[day]:
                         try:
-                            df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
-                            len_df += len(df)
+                            df_tick = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                            len_df_tick += len(df_tick)
                         except:
                             pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([day, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([day, len_df_tick])
             elif gubun == '데이터로딩':
                 code_list = []
                 for day in day_list:
@@ -280,15 +279,15 @@ class CoinFutureBackEngine:
                             code_list.append(code)
                 for code in code_list:
                     days = [day for day in day_list if day in code_days[code]]
-                    df, len_df = None, 0
+                    df_tick, len_df_tick = None, 0
                     try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
-                        len_df += len(df)
+                        df_tick = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
+                        len_df_tick += len(df_tick)
                     except:
                         pass
-                    if len_df > 0:
-                        df = AddAvgData(df, 8, avg_list)
-                        arry_tick = df.to_numpy()
+                    if len_df_tick > 0:
+                        AddAvgData(df_tick, 8, avg_list)
+                        arry_tick = np.array(df_tick)
                         if self.dict_set['백테일괄로딩']:
                             self.dict_tik_ar[code] = arry_tick
                         else:
@@ -299,24 +298,24 @@ class CoinFutureBackEngine:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, _, _, _, code = data
             if gubun == '데이터크기':
                 for day in day_list:
-                    len_df = 0
+                    len_df_tick = 0
                     try:
-                        df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
-                        len_df = len(df)
+                        df_tick = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                        len_df_tick = len(df_tick)
                     except:
                         pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([day, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([day, len_df_tick])
             elif gubun == '데이터로딩':
-                df, len_df = None, 0
+                df_tick, len_df_tick = None, 0
                 try:
-                    df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
-                    len_df = len(df)
+                    df_tick = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                    len_df_tick = len(df_tick)
                 except:
                     pass
-                if len_df > 0:
-                    df = AddAvgData(df, 8, avg_list)
-                    arry_tick = df.to_numpy()
+                if len_df_tick > 0:
+                    AddAvgData(df_tick, 8, avg_list)
+                    arry_tick = np.array(df_tick)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -326,7 +325,7 @@ class CoinFutureBackEngine:
 
         con.close()
         if gubun == '데이터로딩':
-            self.bq.put_nowait(bk)
+            self.bq.put(bk)
             self.avg_list = avg_list
             self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
 
@@ -612,22 +611,11 @@ class CoinFutureBackEngine:
                 if self.gubun == 0: print_exc()
                 self.BackStop()
         else:
-            self.bhogainfo = {
-                1: {매도호가1: 매도잔량1},
-                2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-                3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-                4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-                5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-            }
-            self.shogainfo = {
-                1: {매수호가1: 매수잔량1},
-                2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-                3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-                4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-                5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-            }
+            self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+            self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
             for j in range(self.vars_count):
+                if self.back_type is None: return
                 self.vars_key = j
                 if self.back_type in ['백테스트', '조건최적화']:
                     if self.tick_count < self.avgtime:
@@ -662,7 +650,7 @@ class CoinFutureBackEngine:
                         else:
                             exec(self.dict_buystg[j], None, locals())
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())
+                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
                         if self.trade_info[j]['보유중'] == 1:
@@ -670,11 +658,9 @@ class CoinFutureBackEngine:
                         else:
                             _, 수익금, 수익률 = GetBinanceShortPgSgSp(매수금액, 평가금액, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
                         if 수익률 > 최고수익률:
-                            최고수익률 = 수익률
-                            self.trade_info[j]['최고수익률'] = 수익률
+                            self.trade_info[j]['최고수익률'] = 최고수익률 = 수익률
                         elif 수익률 < 최저수익률:
-                            최저수익률 = 수익률
-                            self.trade_info[j]['최저수익률'] = 수익률
+                            self.trade_info[j]['최저수익률'] = 최저수익률 = 수익률
                         보유시간 = (now_utc() - 매수시간).total_seconds()
                         포지션 = 'LONG' if self.trade_info[j]['보유중'] == 1 else 'SHORT'
 
@@ -687,6 +673,7 @@ class CoinFutureBackEngine:
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
+                    return
 
     def Buy(self, gubun):
         매수수량 = self.trade_info[self.vars_key]['주문수량']
@@ -695,7 +682,7 @@ class CoinFutureBackEngine:
             직전남은수량 = 매수수량
             매수금액 = 0
             hogainfo = self.bhogainfo if gubun == 'BUY_LONG' else self.shogainfo
-            hogainfo = hogainfo[self.dict_set['코인매수시장가잔량범위']]
+            hogainfo = hogainfo[:self.dict_set['코인매수시장가잔량범위']]
             for 호가, 잔량 in hogainfo.items():
                 남은수량 -= 잔량
                 if 남은수량 <= 0:
@@ -723,7 +710,7 @@ class CoinFutureBackEngine:
         직전남은수량 = 주문수량
         매도금액 = 0
         hogainfo = self.shogainfo if gubun == 'SELL_LONG' else self.bhogainfo
-        hogainfo = hogainfo[self.dict_set['코인매도시장가잔량범위']]
+        hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
         for 호가, 잔량 in hogainfo.items():
             남은수량 -= 잔량
             if 남은수량 <= 0:
@@ -740,20 +727,8 @@ class CoinFutureBackEngine:
     def LastSell(self):
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 14:34]
-        self.bhogainfo = {
-            1: {매도호가1: 매도잔량1},
-            2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-            3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-            4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-            5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-        }
-        self.shogainfo = {
-            1: {매수호가1: 매수잔량1},
-            2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-            3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-            4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-            5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-        }
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
         for k in range(self.vars_count):
             self.vars_key = k
@@ -761,9 +736,9 @@ class CoinFutureBackEngine:
                 남은수량 = self.trade_info[self.vars_key]['보유수량']
                 직전남은수량 = 남은수량
                 매도금액 = 0
-                hogainfo = self.shogainfo if self.trade_info[self.vars_key]['보유중'] == 1 else self.bhogainfo
-                hogainfo = hogainfo[self.dict_set['코인매도시장가잔량범위']]
-                for 호가, 잔량 in hogainfo.items():
+                hogainfo = shogainfo if self.trade_info[self.vars_key]['보유중'] == 1 else bhogainfo
+                hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
+                for 호가, 잔량 in hogainfo:
                     남은수량 -= 잔량
                     if 남은수량 <= 0:
                         매도금액 += 호가 * 직전남은수량

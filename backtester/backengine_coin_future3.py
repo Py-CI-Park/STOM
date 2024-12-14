@@ -28,22 +28,21 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
             if gubun == '데이터크기':
                 for code in code_list:
-                    df, len_df = None, 0
+                    len_df_tick = None, 0
                     try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
-                        len_df = len(df)
+                        df_tick = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                        len_df_tick = len(df_tick)
                     except:
                         pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([code, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([code, len_df_tick])
             elif gubun == '데이터로딩':
                 for code in code_list:
-                    df, len_df, arry_min, arry_day = None, 0, None, None
+                    df_tick, len_df_tick, df_min, df_day = None, 0, None, None
                     try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
-                        len_df = len(df)
+                        df_tick = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                        len_df_tick = len(df_tick)
                         if self.dict_set['코인분봉데이터']:
-                            df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
                             df_min = []
                             query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}"
                             df_ = pd.read_sql(query, con3)
@@ -52,17 +51,17 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                             df_ = pd.read_sql(query, con3)
                             df_min.append(df_)
                             df_min = pd.concat(df_min)
-                            arry_min = df_min.to_numpy()
                         if self.dict_set['코인일봉데이터']:
                             startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday)))))
                             query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday}"
-                            df_ = pd.read_sql(query, con2)
-                            arry_day = df_.to_numpy()
+                            df_day = pd.read_sql(query, con2)
                     except:
                         pass
-                    if len_df > 0:
-                        df = AddAvgData(df, 8, avg_list)
-                        arry_tick = df.to_numpy()
+                    if len_df_tick > 0:
+                        AddAvgData(df_tick, 8, avg_list)
+                        arry_tick = np.array(df_tick)
+                        arry_min  = np.array(df_min)
+                        arry_day  = np.array(df_day)
                         if self.dict_set['코인분봉데이터']:
                             self.dict_mindex[code] = {}
                             for i, index in enumerate(arry_min[:, 0]):
@@ -82,20 +81,20 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                             pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_min', arry_min)
                             pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_day', arry_day)
                         self.code_list.append(code)
-                bk += 1
+                        bk += 1
         elif divid_mode == '일자별 분류':
             gubun, startday, endday, starttime, endtime, day_list, avg_list, code_days, day_codes, _, _ = data
             if gubun == '데이터크기':
                 for day in day_list:
-                    len_df = 0
+                    len_df_tick = 0
                     for code in day_codes[day]:
                         try:
-                            df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
-                            len_df += len(df)
+                            df_tick = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                            len_df_tick += len(df_tick)
                         except:
                             pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([day, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([day, len_df_tick])
             elif gubun == '데이터로딩':
                 code_list = []
                 for day in day_list:
@@ -106,10 +105,10 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                     days      = [day for day in day_list if day in code_days[code]]
                     startday_ = days[0]
                     endday_   = days[-1]
-                    df, len_df, arry_min, arry_day = None, 0, None, None
+                    df_tick, len_df_tick, df_min, df_day = None, 0, None, None
                     try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
-                        len_df = len(df)
+                        df_tick = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
+                        len_df_tick = len(df_tick)
                         if self.dict_set['코인분봉데이터']:
                             df_min = []
                             query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}"
@@ -119,17 +118,17 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                             df_ = pd.read_sql(query, con3)
                             df_min.append(df_)
                             df_min = pd.concat(df_min)
-                            arry_min = df_min.to_numpy()
                         if self.dict_set['코인일봉데이터']:
                             startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
                             query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
-                            df_ = pd.read_sql(query, con2)
-                            arry_day = df_.to_numpy()
+                            df_day = pd.read_sql(query, con2)
                     except:
                         pass
-                    if len_df > 0:
-                        df = AddAvgData(df, 8, avg_list)
-                        arry_tick = df.to_numpy()
+                    if len_df_tick > 0:
+                        AddAvgData(df_tick, 8, avg_list)
+                        arry_tick = np.array(df_tick)
+                        arry_min  = np.array(df_min)
+                        arry_day  = np.array(df_day)
                         if self.dict_set['코인분봉데이터']:
                             self.dict_mindex[code] = {}
                             for i, index in enumerate(arry_min[:, 0]):
@@ -154,21 +153,21 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
             gubun, startday, endday, starttime, endtime, day_list, avg_list, _, _, _, code = data
             if gubun == '데이터크기':
                 for day in day_list:
-                    len_df = 0
+                    len_df_tick = 0
                     try:
-                        df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
-                        len_df = len(df)
+                        df_tick = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                        len_df_tick = len(df_tick)
                     except:
                         pass
-                    self.total_ticks += len_df
-                    self.bq.put_nowait([day, len_df])
+                    self.total_ticks += len_df_tick
+                    self.bq.put([day, len_df_tick])
             elif gubun == '데이터로딩':
                 startday_ = day_list[0]
                 endday_   = day_list[-1]
-                df, len_df, arry_min, arry_day = None, 0, None, None
+                df_tick, len_df_tick, df_min, df_day = None, 0, None, None
                 try:
-                    df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
-                    len_df = len(df)
+                    df_tick = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                    len_df_tick = len(df_tick)
                     if self.dict_set['코인분봉데이터']:
                         df_min = []
                         query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}"
@@ -178,17 +177,17 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                         df_ = pd.read_sql(query, con3)
                         df_min.append(df_)
                         df_min = pd.concat(df_min)
-                        arry_min = df_min.to_numpy()
                     if self.dict_set['코인일봉데이터']:
                         startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
                         query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
-                        df_ = pd.read_sql(query, con2)
-                        arry_day = df_.to_numpy()
+                        df_day = pd.read_sql(query, con2)
                 except:
                     pass
-                if len_df > 0:
-                    df = AddAvgData(df, 8, avg_list)
-                    arry_tick = df.to_numpy()
+                if len_df_tick > 0:
+                    AddAvgData(df_tick, 8, avg_list)
+                    arry_tick = np.array(df_tick)
+                    arry_min  = np.array(df_min)
+                    arry_day  = np.array(df_day)
                     if self.dict_set['코인분봉데이터']:
                         self.dict_mindex[code] = {}
                         for i, index in enumerate(arry_min[:, 0]):
@@ -214,7 +213,7 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
         con2.close()
         con.close()
         if gubun == '데이터로딩':
-            self.bq.put_nowait(bk)
+            self.bq.put(bk)
             self.avg_list = avg_list
             self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
 
@@ -615,22 +614,11 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                 if self.gubun == 0: print_exc()
                 self.BackStop()
         else:
-            self.bhogainfo = {
-                1: {매도호가1: 매도잔량1},
-                2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
-                3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
-                4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
-                5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
-            }
-            self.shogainfo = {
-                1: {매수호가1: 매수잔량1},
-                2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
-                3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
-                4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
-                5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
-            }
+            self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+            self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
             for j in range(self.vars_count):
+                if self.back_type is None: return
                 self.vars_key = j
                 if self.back_type in ['백테스트', '조건최적화']:
                     if self.tick_count < self.avgtime:
@@ -665,7 +653,7 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                         else:
                             exec(self.dict_buystg[j], None, locals())
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())
+                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
                         if self.trade_info[j]['보유중'] == 1:
@@ -673,11 +661,9 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                         else:
                             _, 수익금, 수익률 = GetBinanceShortPgSgSp(매수금액, 평가금액, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
                         if 수익률 > 최고수익률:
-                            최고수익률 = 수익률
-                            self.trade_info[j]['최고수익률'] = 수익률
+                            self.trade_info[j]['최고수익률'] = 최고수익률 = 수익률
                         elif 수익률 < 최저수익률:
-                            최저수익률 = 수익률
-                            self.trade_info[j]['최저수익률'] = 수익률
+                            self.trade_info[j]['최저수익률'] = 최저수익률 = 수익률
                         보유시간 = (now_utc() - 매수시간).total_seconds()
                         포지션 = 'LONG' if self.trade_info[j]['보유중'] == 1 else 'SHORT'
 
@@ -690,3 +676,4 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
+                    return
