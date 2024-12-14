@@ -81,12 +81,12 @@ class Total:
         while True:
             data = self.tq.get()
             if data[0] == '백테결과':
-                _, vars_key, list_k, list_c, arry_bct = data
+                _, vars_key, list_data, arry_bct = data
                 if vars_key is not None:
-                    columns = ['종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간',
+                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간',
                                '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    if self.vars_turn >= 0:
-                        data = [columns, list_c, list_k, arry_bct]
+                    if self.vars_turn >= -1:
+                        data = [columns, list_data, arry_bct]
                         train_days, valid_days, test_days = self.list_days[self.in_out_count]
                         if valid_days is not None:
                             for i, vdays in enumerate(valid_days):
@@ -98,7 +98,8 @@ class Total:
                             self.tdq_list[0].put(data_)
                             self.vdq_list[0].put(data_)
                     else:
-                        self.df_tsg = pd.DataFrame(dict(zip(columns, list_c)), index=list_k)
+                        self.df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
+                        self.df_tsg.set_index('index', inplace=True)
                         self.df_tsg.sort_index(inplace=True)
                         arry_bct = arry_bct[arry_bct[:, 1] > 0]
                         self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
@@ -433,32 +434,34 @@ class RollingWalkForwardTest:
             self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - 최적화 변수설정 1단계 {e}'])
             self.SysExit(True)
 
+        total_count = 0
         vars_type = []
         vars_ = []
         for var in list(self.vars.values()):
             low, high, gap = var[0]
             opti = var[1]
             vars_list = []
-            k = 0
-            while True:
-                v = low + gap * k
-                if (low < high and v <= high) or (low > high and v >= high):
-                    vars_list.append(v)
-                elif low == high and gap == 0:
-                    vars_list.append(v)
-                    vars_list.append(opti)
-                    break
-                else:
-                    vars_list.append(opti)
-                    break
-                k += 1
+            if gap == 0:
+                vars_list.append(low)
+                vars_list.append(opti)
+            else:
+                k = 0
+                while True:
+                    v = low + gap * k
+                    if (low < high and v <= high) or (low > high and v >= high):
+                        vars_list.append(v)
+                    else:
+                        vars_list.append(opti)
+                        break
+                    k += 1
             vars_type.append(1 if low < high else 0)
             vars_.append(vars_list)
+            if gap != 0: total_count += 1
 
         out_count   = len(list_days)
         avg_list    = vars_[0][:-1]
-        total_count = len(vars_)
         total_count *= ccount if ccount != 0 else 1
+        total_count += 1
         total_count *= out_count
         total_count += out_count
         total_count *= back_count
@@ -497,11 +500,17 @@ class RollingWalkForwardTest:
         for j, day_data in enumerate(list_days):
             train_days, _, _ = day_data
             startday, endday = train_days[0], train_days[1]
-            k    = 1
-            hstd = -2147483648
-            change_var_count = None
             self.tq.put(['경우의수', total_count, back_count, startday, endday, j])
 
+            self.tq.put(['변수정보', vars_, -1])
+            for q in self.ctq_list:
+                q.put('백테시작')
+            for q in self.pq_list:
+                q.put(['변수정보', vars_, -1])
+            hstd, _ = mq.get()
+
+            k = 1
+            change_var_count = None
             for _ in range(ccount if ccount != 0 else 100):
                 if ccount == 0:
                     if change_var_count == 0:
@@ -511,33 +520,28 @@ class RollingWalkForwardTest:
                         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'])
 
                 change_var_count = 0
-                vars_turn = 0
-                last = len(vars_) - 1
-                while True:
-                    self.tq.put(['변수정보', vars_, vars_turn])
-                    for q in self.ctq_list:
-                        q.put('백테시작')
-                    for q in self.pq_list:
-                        q.put(['변수정보', vars_, vars_turn, startday, endday])
+                for i, vars_list in enumerate(vars_):
+                    len_vars_list = len(vars_list) - 2
+                    if len_vars_list > 0:
+                        self.tq.put(['변수정보', vars_, i])
+                        for q in self.ctq_list:
+                            q.put('백테시작')
+                        for q in self.pq_list:
+                            q.put(['변수정보', vars_, i, startday, endday])
 
-                    for _ in range(len(vars_[vars_turn]) - 1):
-                        data = mq.get()
-                        if type(data) == str:
-                            self.SysExit(True)
-                        else:
-                            std, vars_key = data
-                            curr_typ = vars_type[vars_turn]
-                            curr_var = vars_[vars_turn][vars_key]
-                            high_var = vars_[vars_turn][-1]
-                            if std > hstd or (std == hstd and ((curr_typ and curr_var > high_var) or (not curr_typ and curr_var < high_var))):
-                                hstd = std
-                                vars_[vars_turn][-1] = curr_var
-                                change_var_count += 1
-
-                    if vars_turn < last:
-                        vars_turn += 1
-                    else:
-                        break
+                        for _ in range(len_vars_list):
+                            data = mq.get()
+                            if type(data) == str:
+                                self.SysExit(True)
+                            else:
+                                std, vars_key = data
+                                curr_typ = vars_type[i]
+                                curr_var = vars_list[vars_key]
+                                high_var = vars_list[-1]
+                                if std > hstd or (std == hstd and ((curr_typ and curr_var > high_var) or (not curr_typ and curr_var < high_var))):
+                                    hstd = std
+                                    vars_list[-1] = curr_var
+                                    change_var_count += 1
                 k += 1
 
             hvar_list.append(vars_)
@@ -549,11 +553,11 @@ class RollingWalkForwardTest:
         for i, data in enumerate(list_days):
             startday, endday = data[2]
             self.tq.put(['경우의수', total_count, back_count, startday, endday, out_count])
-            self.tq.put(['변수정보', hvar_list[i], -1])
+            self.tq.put(['변수정보', hvar_list[i], -2])
             for q in self.ctq_list:
                 q.put('백테시작')
             for q in self.pq_list:
-                q.put(['변수정보', hvar_list[i], -1, startday, endday])
+                q.put(['변수정보', hvar_list[i], -2, startday, endday])
             _ = mq.get()
 
         mq.close()

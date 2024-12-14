@@ -67,11 +67,12 @@ class Total:
         while True:
             data = self.tq.get()
             if data[0] == '백테결과':
-                vars_key, list_k, list_c, arry_bct = data[1:]
+                _, vars_key, list_data, arry_bct = data
                 if vars_key is not None:
-                    columns = ['종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간',
-                               '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    self.df_tsg = pd.DataFrame(dict(zip(columns, list_c)), index=list_k)
+                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
+                    self.df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
+                    self.df_tsg.set_index('index', inplace=True)
                     self.df_tsg.sort_index(inplace=True)
                     arry_bct = arry_bct[arry_bct[:, 1] > 0]
                     self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])

@@ -187,5 +187,5 @@ class ReceiverKiwoomClient:
         if self.qtimer1.isActive():  self.qtimer1.stop()
         if self.updater.isRunning(): self.updater.quit()
         for q in self.sstgQs:
-            q.put('전략연산종료')
+            q.put('프로세스종료')
         self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료']])

@@ -146,6 +146,8 @@ class ZmqRecv(QThread):
                 self.soundQ.put(data)
             elif msg == 'query':
                 self.queryQ.put(data)
+            elif msg == 'tele':
+                self.teleQ.put(data)
             elif msg == 'chart':
                 self.chartQ.put(data)
             elif msg == 'hoga':
@@ -904,7 +906,7 @@ class Window(QMainWindow):
 
     def CoinShutDownCheck(self):
         if not self.dict_set['백테스케쥴실행'] or now().weekday() != self.dict_set['백테스케쥴요일']:
-            if self.dict_set['프로그램종료'] and self.dict_set['리시버공유'] < 2:
+            if self.dict_set['프로그램종료']:
                 QTimer.singleShot(180 * 1000, self.ProcessKill)
             if self.dict_set['리시버공유'] < 2:
                 if self.dict_set['코인장초컴퓨터종료'] or self.dict_set['코인장중컴퓨터종료']:
@@ -1957,9 +1959,9 @@ class Window(QMainWindow):
             chart_count = 16
 
         if self.ctpg_tik_name != name:
-            self.ctpg_tik_item   = {}
-            self.ctpg_tik_data   = {}
-            self.ctpg_tik_legend = {}
+            self.ctpg_tik_item    = {}
+            self.ctpg_tik_data    = {}
+            self.ctpg_tik_legend  = {}
             self.ctpg_tik_factors = []
             if self.ct_checkBoxxxxx_01.isChecked():     self.ctpg_tik_factors.append('현재가')
             if self.ct_checkBoxxxxx_02.isChecked():     self.ctpg_tik_factors.append('체결강도')
@@ -4234,7 +4236,7 @@ class Window(QMainWindow):
                 self.StartBacktestEngine('주식')
             else:
                 buttonReply = QMessageBox.question(
-                    self, '백테엔진', '이미 백테스트 엔진이 구동중입니다.\n엔진을 재시작하시겠습니까?\n',
+                    self.dialog_backengine, '백테엔진', '이미 백테스트 엔진이 구동중입니다.\n엔진을 재시작하시겠습니까?\n',
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
                 if buttonReply == QMessageBox.Yes:
@@ -4251,7 +4253,7 @@ class Window(QMainWindow):
                 self.StartBacktestEngine('코인')
             else:
                 buttonReply = QMessageBox.question(
-                    self, '백테엔진', '이미 백테스트 엔진이 구동중입니다.\n엔진을 재시작하시겠습니까?\n',
+                    self.dialog_backengine, '백테엔진', '이미 백테스트 엔진이 구동중입니다.\n엔진을 재시작하시겠습니까?\n',
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
                 if buttonReply == QMessageBox.Yes:
@@ -4287,7 +4289,7 @@ class Window(QMainWindow):
 
     def sdButtonClicked_02(self):
         if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+            QMessageBox.critical(self.dialog_scheduler, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
             bt_gubun = self.sd_pushButtonnn_01.text()
             if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
@@ -4324,7 +4326,7 @@ class Window(QMainWindow):
 
                     if int(avgtime) not in self.avg_list:
                         self.StopScheduler()
-                        QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                        QMessageBox.critical(self.dialog_scheduler, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
                         return
 
                     for bpq in self.back_pques:
@@ -10255,6 +10257,7 @@ class Window(QMainWindow):
         multi          = int(self.be_lineEdittttt_04.text())
         divid_mode     = self.be_comboBoxxxxx_01.currentText()
         one_code       = self.be_comboBoxxxxx_02.currentText()
+        one_code       = self.dict_code[one_code] if one_code in self.dict_code.keys() else one_code
 
         wdservQ.put(['manager', '백테엔진구동'])
         for i in range(20):
@@ -10497,7 +10500,10 @@ class Window(QMainWindow):
                 self.back_pques[i].put(['데이터로딩', self.startday, self.endday, self.starttime, self.endtime, days, self.avg_list, code_days, day_codes, divid_mode, one_code])
         else:
             windowQ.put([ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 시작'])
-            day_lists = code_days[one_code]
+            day_list = code_days[one_code]
+            day_lists = []
+            for i in range(multi):
+                day_lists.append([day for j, day in enumerate(day_list) if j % multi == i])
             for i, days in enumerate(day_lists):
                 self.back_pques[i].put(['데이터크기', self.startday, self.endday, self.starttime, self.endtime, days, self.avg_list, code_days, day_codes, divid_mode, one_code])
 

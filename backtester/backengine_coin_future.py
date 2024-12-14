@@ -73,6 +73,7 @@ class CoinFutureBackEngine:
         self.vars_turn    = 0
         self.vars_count   = 0
         self.vars_key     = 0
+        self.high_var     = 0
 
         self.code         = ''
         self.name         = ''
@@ -108,6 +109,7 @@ class CoinFutureBackEngine:
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
                         self.vars       = [var[-1] for var in self.vars_list]
+                        self.high_var   = self.vars[self.vars_turn]
                         self.vars_count = 1 if self.vars_turn < 0 else len(self.vars_list[self.vars_turn]) - 1
                         self.InitDayInfo()
                         self.InitTradeInfo()
@@ -168,6 +170,7 @@ class CoinFutureBackEngine:
                         self.vars_list  = data[1]
                         self.vars_turn  = data[2]
                         self.vars       = [var[-1] for var in self.vars_list]
+                        self.high_var   = self.vars[self.vars_turn]
                         self.vars_count = 1 if self.vars_turn < 0 else len(self.vars_list[self.vars_turn]) - 1
                         self.startday   = data[3]
                         self.endday     = data[4]
@@ -238,25 +241,24 @@ class CoinFutureBackEngine:
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
             for code in code_list:
-                len_df = 0
+                df, len_df = None, 0
                 try:
                     df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                    len_df = len(df)
                 except:
                     pass
-                else:
-                    len_df = len(df)
-                    if len_df > 0 and gubun == '데이터로딩':
-                        df = AddAvgData(df, 8, avg_list)
-                        data = df.to_numpy()
-                        if self.dict_set['백테일괄로딩']:
-                            self.dict_tik_ar[code] = data
-                        else:
-                            pickle_write(f'{BACK_TEMP}/{code}', data)
-                        self.code_list.append(code)
-                        bk += 1
                 if gubun == '데이터크기':
                     self.total_ticks += len_df
                     self.bq.put_nowait([code, len_df])
+                elif len_df > 0:
+                    df = AddAvgData(df, 8, avg_list)
+                    arry_tick = df.to_numpy()
+                    if self.dict_set['백테일괄로딩']:
+                        self.dict_tik_ar[code] = arry_tick
+                    else:
+                        pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_tick', arry_tick)
+                    self.code_list.append(code)
+                    bk += 1
         elif divid_mode == '일자별 분류':
             gubun, startday, endday, starttime, endtime, day_list, avg_list, code_days, day_codes, _, _ = data
             if gubun == '데이터크기':
@@ -265,10 +267,9 @@ class CoinFutureBackEngine:
                     for code in day_codes[day]:
                         try:
                             df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                            len_df += len(df)
                         except:
                             pass
-                        else:
-                            len_df += len(df)
                     self.total_ticks += len_df
                     self.bq.put_nowait([day, len_df])
             elif gubun == '데이터로딩':
@@ -278,21 +279,22 @@ class CoinFutureBackEngine:
                         if code not in code_list:
                             code_list.append(code)
                 for code in code_list:
-                    days      = [day for day in day_list if day in code_days[code]]
+                    days = [day for day in day_list if day in code_days[code]]
+                    df, len_df = None, 0
                     try:
                         df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
+                        len_df += len(df)
                     except:
                         pass
-                    else:
-                        if len(df) > 0:
-                            df = AddAvgData(df, 8, avg_list)
-                            arry = df.to_numpy()
-                            if self.dict_set['백테일괄로딩']:
-                                self.dict_tik_ar[code] = arry
-                            else:
-                                pickle_write(f'{BACK_TEMP}/{code}', arry)
-                            self.code_list.append(code)
-                            bk += 1
+                    if len_df > 0:
+                        df = AddAvgData(df, 8, avg_list)
+                        arry_tick = df.to_numpy()
+                        if self.dict_set['백테일괄로딩']:
+                            self.dict_tik_ar[code] = arry_tick
+                        else:
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_tick', arry_tick)
+                        self.code_list.append(code)
+                        bk += 1
         else:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, _, _, _, code = data
             if gubun == '데이터크기':
@@ -300,28 +302,27 @@ class CoinFutureBackEngine:
                     len_df = 0
                     try:
                         df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                        len_df = len(df)
                     except:
                         pass
-                    else:
-                        len_df = len(df)
                     self.total_ticks += len_df
                     self.bq.put_nowait([day, len_df])
             elif gubun == '데이터로딩':
-                for code in self.code_list:
-                    try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
-                    except:
-                        pass
+                df, len_df = None, 0
+                try:
+                    df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                    len_df = len(df)
+                except:
+                    pass
+                if len_df > 0:
+                    df = AddAvgData(df, 8, avg_list)
+                    arry_tick = df.to_numpy()
+                    if self.dict_set['백테일괄로딩']:
+                        self.dict_tik_ar[code] = arry_tick
                     else:
-                        if len(df) > 0:
-                            df = AddAvgData(df, 8, avg_list)
-                            arry = df.to_numpy()
-                            if self.dict_set['백테일괄로딩']:
-                                self.dict_tik_ar[code] = arry
-                            else:
-                                pickle_write(f'{BACK_TEMP}/{code}', arry)
-                            self.code_list.append(code)
-                            bk += 1
+                        pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_tick', arry_tick)
+                    self.code_list.append(code)
+                    bk += 1
 
         con.close()
         if gubun == '데이터로딩':
@@ -353,7 +354,7 @@ class CoinFutureBackEngine:
             self.total_count = 0
 
             if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{code}')}
+                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
 
             if same_days and same_time:
                 self.array_tick = self.dict_tik_ar[code]
@@ -634,18 +635,25 @@ class CoinFutureBackEngine:
                 else:
                     if self.back_type == 'GA최적화':
                         self.vars = self.vars_lists[j]
-                    else:
-                        self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
+                    elif self.vars_turn >= 0:
+                        curr_var = self.vars_list[self.vars_turn][j]
+                        if curr_var == self.high_var:
+                            continue
+                        self.vars[self.vars_turn] = curr_var
+
                     if self.tick_count < self.vars[0]:
-                        return
+                        if self.vars_turn == 0:
+                            continue
+                        else:
+                            return
 
                 try:
                     if not self.trade_info[j]['보유중']:
                         try:
                             if self.code not in self.dict_mt[self.index]:
-                                return
+                                continue
                         except:
-                            return
+                            continue
 
                         self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
                         매수 = True
@@ -654,7 +662,7 @@ class CoinFutureBackEngine:
                         else:
                             exec(self.dict_buystg[j], None, locals())
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
+                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
                         if self.trade_info[j]['보유중'] == 1:

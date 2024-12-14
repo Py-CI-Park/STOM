@@ -57,18 +57,18 @@ class Total:
         while True:
             data = self.tq.get()
             if data[0] == '백테결과':
-                _, vars_key, list_k, list_c, arry_bct = data
+                _, vars_key, list_data, arry_bct = data
                 if vars_key is not None:
-                    columns = ['종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간',
-                               '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
+                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
                     if self.valid_days is not None:
-                        data = [columns, list_c, list_k, arry_bct]
+                        data = [columns, list_data, arry_bct]
                         for i, vdays in enumerate(self.valid_days):
                             data_ = data + [vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key]
                             self.tdq_list[i].put(data_)
                             self.vdq_list[i].put(data_)
                     else:
-                        data = [columns, list_k, list_k, arry_bct, self.day_count, vars_key]
+                        data = [columns, list_data, arry_bct, self.day_count, vars_key]
                         self.tdq_list[vars_key].put(data)
 
             elif data[0] == '백테완료':

@@ -307,7 +307,7 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
 
-    if vars_turn >= 0:
+    if vars_turn >= -1:
         mq.put([std, vars_key])
     return stdp_
 
@@ -465,8 +465,7 @@ def GetBackResult(df_tsg, df_bct, betting, optistd, day_count):
         tpi    = round(wr / 100 * (1 + tpg / tmg), 2)
 
         df_bct.index = df_bct.index.astype(str)
-        df_bct = df_bct.sort_index()
-        df_tsg = df_tsg.sort_index()
+        df_bct.sort_index(inplace=True)
         df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
         df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
 
@@ -701,13 +700,12 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
 
 class CollectTotal:
     def __init__(self, tq, ctq, buystd, gubun):
-        self.tq       = tq
-        self.ctq      = ctq
-        self.buystd   = buystd
-        self.gubun    = gubun
-        self.arry_bct = None
-        self.list_k   = []
-        self.list_c   = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.tq        = tq
+        self.ctq       = ctq
+        self.buystd    = buystd
+        self.gubun     = gubun
+        self.arry_bct  = None
+        self.list_data = [[], [], [], [], [], [], [], [], [], [], [], [], [], []]
         self.Start()
 
     def Start(self):
@@ -716,10 +714,10 @@ class CollectTotal:
             if data[0] == '백테결과':
                 self.Collect(data)
             elif data == '백테완료':
-                if self.list_k:
-                    data = ['백테결과', self.gubun, self.list_k, self.list_c, self.arry_bct]
+                if self.list_data[0]:
+                    data = ['백테결과', self.gubun, self.list_data, self.arry_bct]
                 else:
-                    data = ['백테결과', None, None, None, None]
+                    data = ['백테결과', None, None, None]
                 self.tq.put(data)
             elif data == '백테시작':
                 self.InitData()
@@ -731,23 +729,23 @@ class CollectTotal:
 
     def Collect(self, data):
         index = str(data[3]) if self.buystd else str(data[4])
-        while index in self.list_k:
-            index += strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
+        while index in self.list_data[0]:
+            index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
 
-        self.list_k.append(index)
-        self.list_c[0].append(data[1])
-        self.list_c[1].append(data[2])
-        self.list_c[2].append(data[3])
-        self.list_c[3].append(data[4])
-        self.list_c[4].append(data[5])
-        self.list_c[5].append(data[6])
-        self.list_c[6].append(data[7])
-        self.list_c[7].append(data[8])
-        self.list_c[8].append(data[9])
-        self.list_c[9].append(data[10])
-        self.list_c[10].append(data[11])
-        self.list_c[11].append(data[12])
-        self.list_c[12].append(data[13])
+        self.list_data[0].append(index)
+        self.list_data[1].append(data[1])
+        self.list_data[2].append(data[2])
+        self.list_data[3].append(data[3])
+        self.list_data[4].append(data[4])
+        self.list_data[5].append(data[5])
+        self.list_data[6].append(data[6])
+        self.list_data[7].append(data[7])
+        self.list_data[8].append(data[8])
+        self.list_data[9].append(data[9])
+        self.list_data[10].append(data[10])
+        self.list_data[11].append(data[11])
+        self.list_data[12].append(data[12])
+        self.list_data[13].append(data[13])
 
         if data[14]:
             arry_bct = self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])]
@@ -756,8 +754,7 @@ class CollectTotal:
 
     def InitData(self):
         self.arry_bct[:, 1] = 0
-        self.list_k = []
-        self.list_c = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.list_data = [[], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
 
 class SubTotal:
@@ -779,14 +776,15 @@ class SubTotal:
         sys.exit()
 
     def SendSubTotal(self, data):
-        columns, list_c, list_k, arry_bct = data[:4]
-        df_tsg = pd.DataFrame(dict(zip(columns, list_c), index=list_k))
+        columns, list_data, arry_bct = data[:3]
+        df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
+        df_tsg.set_index('index', inplace=True)
         df_tsg.sort_index(inplace=True)
         arry_bct = arry_bct[arry_bct[:, 1] > 0]
         df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
 
-        if len(data) == 11:
-            vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_key = data[4:]
+        if len(data) == 10:
+            vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_key = data[3:]
             if self.gubun:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | ((df_tsg['매도시간'] > veday * 1000000 + 240000) & (df_tsg['매도시간'] < tsday * 1000000))]
                 df_bct = df_bct[(df_bct.index < vsday * 1000000) | ((df_bct.index > veday * 1000000 + 240000) & (df_bct.index < tsday * 1000000))]
@@ -795,8 +793,8 @@ class SubTotal:
                 df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
-        elif len(data) == 10:
-            vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[4:]
+        elif len(data) == 9:
+            vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[3:]
             if self.gubun:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | (df_tsg['매도시간'] > veday * 1000000 + 240000)]
                 df_bct = df_bct[(df_bct.index < vsday * 1000000) | (df_bct.index > veday * 1000000 + 240000)]
@@ -805,8 +803,8 @@ class SubTotal:
                 df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
-        elif len(data) == 7:
-            teday, daycnt, vars_key = data[4:]
+        elif len(data) == 6:
+            teday, daycnt, vars_key = data[3:]
             df_tsg['구분'] = df_tsg['매도시간'].apply(lambda x: 0 if int(x / 1000000) % 2 == 0 else 1)
             df_bct['구분'] = df_bct.index
             df_bct['구분'] = df_bct['구분'].apply(lambda x: 0 if int(x / 1000000) % 2 == 0 else 1)
@@ -820,6 +818,6 @@ class SubTotal:
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', 0, result, vars_key])
         else:
-            daycnt, vars_key = data[4:]
+            daycnt, vars_key = data[3:]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
             self.tq.put(['ALL', 0, result, vars_key])

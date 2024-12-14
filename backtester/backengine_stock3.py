@@ -26,51 +26,63 @@ class StockBackEngine3(StockBackEngine):
 
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
-            for code in code_list:
-                len_df = 0
-                df_min = None
-                df_day = None
-                try:
-                    df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
-                    if self.dict_set['주식분봉데이터']:
-                        df1 = []
-                        query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['주식분봉개수']}"
-                        df2 = pd.read_sql(query, con3)
-                        df1.append(df2[::-1])
-                        query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday * 1000000} and 체결시간 <= {endday * 1000000 + 240000}"
-                        df2 = pd.read_sql(query, con3)
-                        df1.append(df2)
-                        df_min = pd.concat(df1)
-                    if self.dict_set['주식일봉데이터']:
-                        startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday)))))
-                        query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday}"
-                        df_day = pd.read_sql(query, con2)
-                except:
-                    pass
-                else:
-                    len_df = len(df)
-                    if len_df > 0 and gubun == '데이터로딩':
-                        df = AddAvgData(df, 3, avg_list)
-                        data = df.to_numpy()
-                        if self.dict_set['백테일괄로딩']:
-                            self.dict_tik_ar[code] = data
-                        else:
-                            pickle_write(f'{BACK_TEMP}/{code}', data)
-                        if self.dict_set['주식분봉데이터']:
-                            self.dict_min_ar[code] = df_min.to_numpy()
-                            self.dict_mindex[code] = {}
-                            for i, index in enumerate(self.dict_min_ar[code][:, 0]):
-                                self.dict_mindex[code][index] = i
-                        if self.dict_set['주식일봉데이터']:
-                            self.dict_day_ar[code] = df_day.to_numpy()
-                            self.dict_dindex[code] = {}
-                            for i, index in enumerate(self.dict_day_ar[code][:, 0]):
-                                self.dict_dindex[code][index] = i
-                        self.code_list.append(code)
-                        bk += 1
-                if gubun == '데이터크기':
+            if gubun == '데이터크기':
+                for code in code_list:
+                    df, len_df = None, 0
+                    try:
+                        df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                        len_df = len(df)
+                    except:
+                        pass
                     self.total_ticks += len_df
                     self.bq.put_nowait([code, len_df])
+            elif gubun == '데이터로딩':
+                for code in code_list:
+                    df, len_df, arry_min, arry_day = None, 0, None, None
+                    try:
+                        df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                        len_df = len(df)
+                        if self.dict_set['주식분봉데이터']:
+                            df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                            df_min = []
+                            query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['주식분봉개수']}"
+                            df_ = pd.read_sql(query, con3)
+                            df_min.append(df_[::-1])
+                            query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday * 1000000} and 체결시간 <= {endday * 1000000 + 240000}"
+                            df_ = pd.read_sql(query, con3)
+                            df_min.append(df_)
+                            df_min = pd.concat(df_min)
+                            arry_min = df_min.to_numpy()
+                        if self.dict_set['주식일봉데이터']:
+                            startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday)))))
+                            query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday}"
+                            df_ = pd.read_sql(query, con2)
+                            arry_day = df_.to_numpy()
+                    except:
+                        pass
+                    if len_df > 0:
+                        df = AddAvgData(df, 3, avg_list)
+                        arry_tick = df.to_numpy()
+                        if self.dict_set['주식분봉데이터']:
+                            self.dict_mindex[code] = {}
+                            for i, index in enumerate(arry_min[:, 0]):
+                                self.dict_mindex[code][index] = i
+                        if self.dict_set['주식일봉데이터']:
+                            self.dict_dindex[code] = {}
+                            for i, index in enumerate(arry_day[:, 0]):
+                                self.dict_dindex[code][index] = i
+                        if self.dict_set['백테일괄로딩']:
+                            self.dict_tik_ar[code] = arry_tick
+                            if self.dict_set['주식분봉데이터']:
+                                self.dict_min_ar[code] = arry_min
+                            if self.dict_set['주식일봉데이터']:
+                                self.dict_day_ar[code] = arry_day
+                        else:
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_tick', arry_tick)
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_min', arry_min)
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_day', arry_day)
+                        self.code_list.append(code)
+                bk += 1
         elif divid_mode == '일자별 분류':
             gubun, startday, endday, starttime, endtime, day_list, avg_list, code_days, day_codes, _, _ = data
             if gubun == '데이터크기':
@@ -79,10 +91,9 @@ class StockBackEngine3(StockBackEngine):
                     for code in day_codes[day]:
                         try:
                             df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                            len_df += len(df)
                         except:
                             pass
-                        else:
-                            len_df += len(df)
                     self.total_ticks += len_df
                     self.bq.put_nowait([day, len_df])
             elif gubun == '데이터로딩':
@@ -95,45 +106,50 @@ class StockBackEngine3(StockBackEngine):
                     days      = [day for day in day_list if day in code_days[code]]
                     startday_ = days[0]
                     endday_   = days[-1]
-                    df_min    = None
-                    df_day    = None
+                    df, len_df, arry_min, arry_day = None, 0, None, None
                     try:
                         df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
+                        len_df = len(df)
                         if self.dict_set['주식분봉데이터']:
-                            df1 = []
+                            df_min = []
                             query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['주식분봉개수']}"
-                            df2 = pd.read_sql(query, con3)
-                            df1.append(df2[::-1])
+                            df_ = pd.read_sql(query, con3)
+                            df_min.append(df_[::-1])
                             query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday_ * 1000000} and 체결시간 <= {endday_ * 1000000 + 240000}"
-                            df2 = pd.read_sql(query, con3)
-                            df1.append(df2)
-                            df_min = pd.concat(df1)
+                            df_ = pd.read_sql(query, con3)
+                            df_min.append(df_)
+                            df_min = pd.concat(df_min)
+                            arry_min = df_min.to_numpy()
                         if self.dict_set['주식일봉데이터']:
                             startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
                             query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
-                            df_day = pd.read_sql(query, con2)
+                            df_ = pd.read_sql(query, con2)
+                            arry_day = df_.to_numpy()
                     except:
                         pass
-                    else:
-                        if len(df) > 0:
-                            df = AddAvgData(df, 3, avg_list)
-                            arry = df.to_numpy()
-                            if self.dict_set['백테일괄로딩']:
-                                self.dict_tik_ar[code] = arry
-                            else:
-                                pickle_write(f'{BACK_TEMP}/{code}', arry)
+                    if len_df > 0:
+                        df = AddAvgData(df, 3, avg_list)
+                        arry_tick = df.to_numpy()
+                        if self.dict_set['주식분봉데이터']:
+                            self.dict_mindex[code] = {}
+                            for i, index in enumerate(arry_min[:, 0]):
+                                self.dict_mindex[code][index] = i
+                        if self.dict_set['주식일봉데이터']:
+                            self.dict_dindex[code] = {}
+                            for i, index in enumerate(arry_day[:, 0]):
+                                self.dict_dindex[code][index] = i
+                        if self.dict_set['백테일괄로딩']:
+                            self.dict_tik_ar[code] = arry_tick
                             if self.dict_set['주식분봉데이터']:
-                                self.dict_min_ar[code] = df_min.to_numpy()
-                                self.dict_mindex[code] = {}
-                                for i, index in enumerate(self.dict_min_ar[code][:, 0]):
-                                    self.dict_mindex[code][index] = i
+                                self.dict_min_ar[code] = arry_min
                             if self.dict_set['주식일봉데이터']:
-                                self.dict_day_ar[code] = df_day.to_numpy()
-                                self.dict_dindex[code] = {}
-                                for i, index in enumerate(self.dict_day_ar[code][:, 0]):
-                                    self.dict_dindex[code][index] = i
-                            self.code_list.append(code)
-                            bk += 1
+                                self.dict_day_ar[code] = arry_day
+                        else:
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_tick', arry_tick)
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_min', arry_min)
+                            pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_day', arry_day)
+                        self.code_list.append(code)
+                        bk += 1
         else:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, _, _, _, code = data
             if gubun == '데이터크기':
@@ -141,55 +157,58 @@ class StockBackEngine3(StockBackEngine):
                     len_df = 0
                     try:
                         df = pd.read_sql(GetBackloadDayQuery(day, code, starttime, endtime), con)
+                        len_df = len(df)
                     except:
                         pass
-                    else:
-                        len_df = len(df)
                     self.total_ticks += len_df
                     self.bq.put_nowait([day, len_df])
             elif gubun == '데이터로딩':
-                for code in self.code_list:
-                    startday_ = day_list[0]
-                    endday_   = day_list[-1]
-                    df_min    = None
-                    df_day    = None
-                    try:
-                        df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                startday_ = day_list[0]
+                endday_   = day_list[-1]
+                df, len_df, arry_min, arry_day = None, 0, None, None
+                try:
+                    df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                    len_df = len(df)
+                    if self.dict_set['주식분봉데이터']:
+                        df_min = []
+                        query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['주식분봉개수']}"
+                        df_ = pd.read_sql(query, con3)
+                        df_min.append(df_[::-1])
+                        query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday_ * 1000000} and 체결시간 <= {endday_ * 1000000 + 240000}"
+                        df_ = pd.read_sql(query, con3)
+                        df_min.append(df_)
+                        df_min = pd.concat(df_min)
+                        arry_min = df_min.to_numpy()
+                    if self.dict_set['주식일봉데이터']:
+                        startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
+                        query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
+                        df_ = pd.read_sql(query, con2)
+                        arry_day = df_.to_numpy()
+                except:
+                    pass
+                if len_df > 0:
+                    df = AddAvgData(df, 3, avg_list)
+                    arry_tick = df.to_numpy()
+                    if self.dict_set['주식분봉데이터']:
+                        self.dict_mindex[code] = {}
+                        for i, index in enumerate(arry_min[:, 0]):
+                            self.dict_mindex[code][index] = i
+                    if self.dict_set['주식일봉데이터']:
+                        self.dict_dindex[code] = {}
+                        for i, index in enumerate(arry_day[:, 0]):
+                            self.dict_dindex[code][index] = i
+                    if self.dict_set['백테일괄로딩']:
+                        self.dict_tik_ar[code] = arry_tick
                         if self.dict_set['주식분봉데이터']:
-                            df1 = []
-                            query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['주식분봉개수']}"
-                            df2 = pd.read_sql(query, con3)
-                            df1.append(df2[::-1])
-                            query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday_ * 1000000} and 체결시간 <= {endday_ * 1000000 + 240000}"
-                            df2 = pd.read_sql(query, con3)
-                            df1.append(df2)
-                            df_min = pd.concat(df1)
+                            self.dict_min_ar[code] = arry_min
                         if self.dict_set['주식일봉데이터']:
-                            startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
-                            query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
-                            df_day = pd.read_sql(query, con2)
-                    except:
-                        pass
+                            self.dict_day_ar[code] = arry_day
                     else:
-                        if len(df) > 0:
-                            df = AddAvgData(df, 3, avg_list)
-                            arry = df.to_numpy()
-                            if self.dict_set['백테일괄로딩']:
-                                self.dict_tik_ar[code] = arry
-                            else:
-                                pickle_write(f'{BACK_TEMP}/{code}', arry)
-                            if self.dict_set['주식분봉데이터']:
-                                self.dict_min_ar[code] = df_min.to_numpy()
-                                self.dict_mindex[code] = {}
-                                for i, index in enumerate(self.dict_min_ar[code][:, 0]):
-                                    self.dict_mindex[code][index] = i
-                            if self.dict_set['주식일봉데이터']:
-                                self.dict_day_ar[code] = df_day.to_numpy()
-                                self.dict_dindex[code] = {}
-                                for i, index in enumerate(self.dict_day_ar[code][:, 0]):
-                                    self.dict_dindex[code][index] = i
-                            self.code_list.append(code)
-                            bk += 1
+                        pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_tick', arry_tick)
+                        pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_min', arry_min)
+                        pickle_write(f'{BACK_TEMP}/{self.gubun}_{code}_day', arry_day)
+                    self.code_list.append(code)
+                    bk += 1
 
         con3.close()
         con2.close()
@@ -213,7 +232,9 @@ class StockBackEngine3(StockBackEngine):
             self.total_count = 0
 
             if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{code}')}
+                self.dict_tik_ar = {code: pickle_read(f'{self.gubun}_{BACK_TEMP}/{code}_tick')}
+                self.dict_min_ar = {code: pickle_read(f'{self.gubun}_{BACK_TEMP}/{code}_min')}
+                self.dict_day_ar = {code: pickle_read(f'{self.gubun}_{BACK_TEMP}/{code}_day')}
 
             if same_days and same_time:
                 self.array_tick = self.dict_tik_ar[code]
@@ -744,45 +765,52 @@ class StockBackEngine3(StockBackEngine):
                         return
                 else:
                     if self.back_type == 'GA최적화':
-                        self.vars = self.vars_lists[self.vars_key]
-                    else:
-                        self.vars[self.vars_turn] = self.vars_list[self.vars_turn][self.vars_key]
-                    if self.tick_count < self.vars[0]:
-                        return
+                        self.vars = self.vars_lists[j]
+                    elif self.vars_turn >= 0:
+                        curr_var = self.vars_list[self.vars_turn][j]
+                        if curr_var == self.high_var:
+                            continue
+                        self.vars[self.vars_turn] = curr_var
 
-                try:
-                    if not self.trade_info[self.vars_key]['보유중']:
-                        try:
-                            if self.code not in self.dict_mt[self.index]:
-                                return
-                        except:
+                    if self.tick_count < self.vars[0]:
+                        if self.vars_turn == 0:
+                            continue
+                        else:
                             return
 
-                        self.trade_info[self.vars_key]['주문수량'] = int(self.betting / 현재가)
+                try:
+                    if not self.trade_info[j]['보유중']:
+                        try:
+                            if self.code not in self.dict_mt[self.index]:
+                                continue
+                        except:
+                            continue
+
+                        self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
                         매수 = True
                         if self.back_type != '조건최적화':
                             exec(self.buystg, None, locals())
                         else:
-                            exec(self.dict_buystg[self.vars_key], None, locals())
+                            exec(self.dict_buystg[j], None, locals())
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[self.vars_key].values()
+                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
                         _, 수익금, 수익률 = GetKiwoomPgSgSp(매수금액, 평가금액)
                         if 수익률 > 최고수익률:
                             최고수익률 = 수익률
-                            self.trade_info[self.vars_key]['최고수익률'] = 수익률
+                            self.trade_info[j]['최고수익률'] = 수익률
                         elif 수익률 < 최저수익률:
                             최저수익률 = 수익률
-                            self.trade_info[self.vars_key]['최저수익률'] = 수익률
+                            self.trade_info[j]['최저수익률'] = 수익률
                         보유시간 = (now() - 매수시간).total_seconds()
 
-                        self.trade_info[self.vars_key]['주문수량'] = 보유수량
+                        self.trade_info[j]['주문수량'] = 보유수량
                         매도 = False
                         if self.back_type != '조건최적화':
                             exec(self.sellstg, None, locals())
                         else:
-                            exec(self.dict_sellstg[self.vars_key], None, locals())
+                            exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()

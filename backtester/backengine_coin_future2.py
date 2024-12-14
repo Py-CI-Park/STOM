@@ -46,7 +46,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                 continue
 
             if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{code}')}
+                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
 
             if same_days and same_time:
                 self.array_tick = self.dict_tik_ar[code]
@@ -327,10 +327,17 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                 else:
                     if self.back_type == 'GA최적화':
                         self.vars = self.vars_lists[j]
-                    else:
-                        self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
+                    elif self.vars_turn >= 0:
+                        curr_var = self.vars_list[self.vars_turn][j]
+                        if curr_var == self.high_var:
+                            continue
+                        self.vars[self.vars_turn] = curr_var
+
                     if self.tick_count < self.vars[0]:
-                        return
+                        if self.vars_turn == 0:
+                            continue
+                        else:
+                            return
 
                 포지션, 수익금, 수익률, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 보유시간 = None, 0, 0., 0, 0., 0., 0, strp_time('%Y%m%d', '20000101'), 0
                 if self.trade_info[j]['보유중']:
@@ -388,9 +395,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     if gubun == 'BUY_LONG or SELL_SHORT':
                         try:
                             if self.code not in self.dict_mt[self.index]:
-                                return
+                                continue
                         except:
-                            return
+                            continue
 
                         cancel = False
                         if self.dict_set['코인매수금지거래횟수'] and self.dict_set['코인매수금지거래횟수값'] <= self.trade_info[j]['거래횟수']:
@@ -448,7 +455,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                             if (self.dict_set['코인매도손절수익률청산'] and 수익률 < -self.dict_set['코인매도손절수익률']) or \
                                     (self.dict_set['코인매도손절수익금청산'] and 수익금 < -self.dict_set['코인매도손절수익금']):
                                 self.Sonjeol()
-                                return
+                                continue
 
                             cancel = False
                             if self.dict_set['코인매도금지시간'] and self.dict_set['코인매도금지시작시간'] < int(str(self.index)[8:]) < self.dict_set['코인매도금지종료시간']:
@@ -457,7 +464,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                                 cancel = True
                             elif self.dict_set['코인매수분할횟수'] > 1 and self.dict_set['코인매도금지매수횟수'] and self.trade_info[j]['매수분할횟수'] <= self.dict_set['코인매도금지매수횟수값']:
                                 cancel = True
-                            if cancel: return
+                            if cancel: continue
 
                             if self.dict_set['코인매도분할횟수'] == 1:
                                 self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']

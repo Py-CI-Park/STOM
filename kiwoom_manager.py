@@ -91,7 +91,7 @@ class ZmqServ(QThread):
                 self.sock.send_string('qsize', zmq.SNDMORE)
                 self.sock.send_pyobj(qsize_list)
                 int_hms_ = int_hms()
-            if data == '통신종료':
+            if type(data) == str and data == '통신종료':
                 QThread.sleep(1)
                 break
         self.sock.close()
