@@ -765,7 +765,7 @@ class StockBackEngine3(StockBackEngine):
                         else:
                             exec(self.dict_buystg[self.vars_key], None, locals())
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, _, 매수시간 = self.trade_info[self.vars_key].values()
+                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[self.vars_key].values()
                         매수금액 = 보유수량 * 매수가
                         평가금액 = 보유수량 * 현재가
                         _, 수익금, 수익률 = GetKiwoomPgSgSp(매수금액, 평가금액)

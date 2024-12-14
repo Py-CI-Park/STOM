@@ -364,9 +364,9 @@ class StockBackEngine2(StockBackEngine):
                     if self.tick_count < self.vars[0]:
                         return
 
-                수익금, 수익률, 보유수량, 최고수익률, 최저수익률, 매수시간, 보유시간 = 0, 0., 0, 0., 0., strp_time('%Y%m%d', '20000101'), 0
+                수익금, 수익률, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 보유시간 = 0, 0., 0, 0., 0., 0, strp_time('%Y%m%d', '20000101'), 0
                 if self.trade_info[j]['보유중']:
-                    _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, _, 매수시간 = list(self.trade_info[j].values())[:9]
+                    _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = list(self.trade_info[j].values())[:9]
                     매수금액 = 보유수량 * 매수가
                     평가금액 = 보유수량 * 현재가
                     _, 수익금, 수익률 = GetKiwoomPgSgSp(매수금액, 평가금액)

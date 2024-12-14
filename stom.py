@@ -1516,16 +1516,16 @@ class Window(QMainWindow):
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 31], pen=(200, 50, 50))
 
             if self.ct_checkBoxxxxx_22.isChecked():
-                legend = pg.TextItem(anchor=(0, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
+                legend = pg.TextItem(anchor=(1, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
                 legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, False))
                 legend.setFont(qfont12)
-                legend.setPos(xmin, ymax)
+                legend.setPos(xmax, ymax)
                 self.ctpg[i].addItem(legend)
                 self.ctpg_tik_legend[i] = legend
 
             if i != 0: self.ctpg[i].setXLink(self.ctpg[0])
             self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
-            if self.ct_checkBoxxxxx_22.isChecked(): self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][1])
+            if self.ct_checkBoxxxxx_22.isChecked(): self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][1], self.ctpg_cvb[i].state['viewRange'][1][1])
             if i == chart_count - 1: break
 
         if self.ct_checkBoxxxxx_21.isChecked():
