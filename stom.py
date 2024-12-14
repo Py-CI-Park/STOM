@@ -509,9 +509,9 @@ class Window(QMainWindow):
         if self.main_btn == 2:
             self.ss_tab.setGeometry(45, 0, 1353, 1362 if self.extend_window else 757)
             if self.ss_pushButtonn_08.isVisible():
-                self.ss_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
-                self.ss_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
-                self.ss_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+                self.ss_textEditttt_09.setGeometry(7, 10, 1000, 1313 if self.extend_window else 703)
+                self.ss_progressBar_01.setGeometry(7, 1328 if self.extend_window else 718, 830, 30)
+                self.ss_pushButtonn_08.setGeometry(842, 1328 if self.extend_window else 718, 165, 30)
             elif self.ss_pushButtonn_01.isVisible():
                 self.ss_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
                 if (self.extend_window and self.ss_tableWidget_01.rowCount() < 60) or (not self.extend_window and self.ss_tableWidget_01.rowCount() < 32):
@@ -544,9 +544,9 @@ class Window(QMainWindow):
         else:
             self.cs_tab.setGeometry(45, 0, 1353, 1362 if self.extend_window else 757)
             if self.cs_pushButtonn_08.isVisible():
-                self.cs_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
-                self.cs_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
-                self.cs_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+                self.cs_textEditttt_09.setGeometry(7, 10, 1000, 1313 if self.extend_window else 703)
+                self.cs_progressBar_01.setGeometry(7, 1328 if self.extend_window else 718, 830, 30)
+                self.cs_pushButtonn_08.setGeometry(842, 1328 if self.extend_window else 718, 165, 30)
             elif self.cs_pushButtonn_01.isVisible():
                 self.cs_tableWidget_01.setGeometry(7, 40, 1000, 1318 if self.extend_window else 713)
                 if (self.extend_window and self.cs_tableWidget_01.rowCount() < 60) or (not self.extend_window and self.cs_tableWidget_01.rowCount() < 32):
@@ -712,7 +712,7 @@ class Window(QMainWindow):
 
     def UpdateProgressBar(self):
         self.progressBarrr.setValue(self.cpu_per)
-        self.counter = 0 if self.counter > 1200 else self.counter + 1
+        self.counter = 0 if self.counter == 599 else self.counter + 1
 
         self.kp_pushButton.setStyleSheet(style_bc_bb if not self.dialog_kimp.isVisible() else style_bc_bt)
         self.mb_pushButton.setStyleSheet(style_bc_bb if not self.dialog_chart_min.isVisible() else style_bc_bt)
@@ -854,18 +854,16 @@ class Window(QMainWindow):
             webcQ.put(('풍경사진요청', ''))
 
     def ImageUpdate(self, data):
-        if self.image_label1.isVisible():
-            self.image_label1.clear()
-            qpix = QPixmap()
-            qpix.loadFromData(data[1])
-            qpix = qpix.scaled(QSize(335, 105), Qt.IgnoreAspectRatio)
-            self.image_label1.setPixmap(qpix)
-        if self.image_label2.isVisible():
-            self.image_label2.clear()
-            qpix = QPixmap()
-            qpix.loadFromData(data[2])
-            qpix = qpix.scaled(QSize(335, 605), Qt.IgnoreAspectRatio)
-            self.image_label2.setPixmap(qpix)
+        self.image_label1.clear()
+        qpix = QPixmap()
+        qpix.loadFromData(data[1])
+        qpix = qpix.scaled(QSize(335, 105), Qt.IgnoreAspectRatio)
+        self.image_label1.setPixmap(qpix)
+        self.image_label2.clear()
+        qpix = QPixmap()
+        qpix.loadFromData(data[2])
+        qpix = qpix.scaled(QSize(335, 602), Qt.IgnoreAspectRatio)
+        self.image_label2.setPixmap(qpix)
 
     def UpdateSQsize(self, data):
         self.srqsize, self.stqsize, self.ssqsize = data
@@ -1846,6 +1844,7 @@ class Window(QMainWindow):
             press_keys(int(date[5]))
             press_keys(int(date[6]))
             press_keys(int(date[7]))
+            # noinspection PyUnresolvedReferences
             win32api.Sleep(200)
 
             leftClick(15, 15, win32gui.GetDlgItem(hwnd_mid3, 0x838))
@@ -3042,11 +3041,11 @@ class Window(QMainWindow):
             elif not self.sj_main_cheBox_11.isChecked() and not self.sj_main_cheBox_10.isChecked() and not self.sj_main_cheBox_09.isChecked():
                 self.sj_main_cheBox_09.nextCheckState()
 
-    def CheckboxChanged_21(self, state):
-        if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
-            if self.focusWidget() == self.sj_main_cheBox_09:
-                if not self.sj_main_cheBox_11.isChecked() and not self.sj_main_cheBox_10.isChecked():
-                    self.sj_main_cheBox_09.nextCheckState()
+    # def CheckboxChanged_21(self, state):
+    #     if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
+    #         if self.focusWidget() == self.sj_main_cheBox_09:
+    #             if not self.sj_main_cheBox_11.isChecked() and not self.sj_main_cheBox_10.isChecked():
+    #                 self.sj_main_cheBox_09.nextCheckState()
 
     # noinspection PyUnusedLocal
     def CheckboxChanged_22(self, state):
@@ -3925,7 +3924,7 @@ class Window(QMainWindow):
         for i, stock_stg in enumerate(stock_stg_list):
             df = pd.read_sql(f'SELECT * FROM {stock_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort()
+            stg_names.sort(reverse=True)
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_01.setRowCount(maxlow)
@@ -3941,7 +3940,7 @@ class Window(QMainWindow):
         for i, stock_stg in enumerate(stock_stg_list):
             df = pd.read_sql(f'SELECT * FROM {stock_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort()
+            stg_names.sort(reverse=True)
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_02.setRowCount(maxlow)
@@ -3957,7 +3956,7 @@ class Window(QMainWindow):
         for i, coin_stg in enumerate(coin_stg_list):
             df = pd.read_sql(f'SELECT * FROM {coin_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort()
+            stg_names.sort(reverse=True)
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_03.setRowCount(maxlow)
@@ -3973,7 +3972,7 @@ class Window(QMainWindow):
         for i, stock_stg in enumerate(stock_stg_list):
             df = pd.read_sql(f'SELECT * FROM {stock_stg}', con)
             stg_names = df['index'].to_list()
-            stg_names.sort()
+            stg_names.sort(reverse=True)
             if len(df) > maxlow:
                 maxlow = len(df)
                 self.db_tableWidgett_04.setRowCount(maxlow)
@@ -5940,7 +5939,7 @@ class Window(QMainWindow):
             df = pd.read_sql(f'SELECT * FROM {gubun2}buy', con).set_index('index')
             if len(df) > 0:
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.list_bcomboBoxxxxx[gubun].addItem(index)
 
@@ -5948,7 +5947,7 @@ class Window(QMainWindow):
             con.close()
             if len(df) > 0:
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.list_scomboBoxxxxx[gubun].addItem(index)
             self.list_alineEdittttt[gubun].setText('30')
@@ -5958,14 +5957,14 @@ class Window(QMainWindow):
                 df = pd.read_sql(f'SELECT * FROM {gubun2}buyconds', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort()
+                    indexs.sort(reverse=True)
                     for i, index in enumerate(indexs):
                         self.list_bcomboBoxxxxx[gubun].addItem(index)
 
                 df = pd.read_sql(f'SELECT * FROM {gubun2}sellconds', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort()
+                    indexs.sort(reverse=True)
                     for i, index in enumerate(indexs):
                         self.list_scomboBoxxxxx[gubun].addItem(index)
                 self.list_alineEdittttt[gubun].setText('30')
@@ -5973,14 +5972,14 @@ class Window(QMainWindow):
                 df = pd.read_sql(f'SELECT * FROM {gubun2}optibuy', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort()
+                    indexs.sort(reverse=True)
                     for i, index in enumerate(indexs):
                         self.list_bcomboBoxxxxx[gubun].addItem(index)
 
                 df = pd.read_sql(f'SELECT * FROM {gubun2}optisell', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort()
+                    indexs.sort(reverse=True)
                     for i, index in enumerate(indexs):
                         self.list_scomboBoxxxxx[gubun].addItem(index)
 
@@ -5990,7 +5989,7 @@ class Window(QMainWindow):
                     df = pd.read_sql(f'SELECT * FROM {gubun2}optivars', con).set_index('index')
                 if len(df) > 0:
                     indexs = list(df.index)
-                    indexs.sort()
+                    indexs.sort(reverse=True)
                     for i, index in enumerate(indexs):
                         self.list_vcomboBoxxxxx[gubun].addItem(index)
                 self.list_alineEdittttt[gubun].setText('')
@@ -6449,7 +6448,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svjb_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.svjb_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -6934,9 +6933,9 @@ class Window(QMainWindow):
         self.ss_textEditttt_07.setVisible(False)
         self.ss_textEditttt_08.setVisible(False)
 
-        self.ss_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
-        self.ss_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
-        self.ss_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+        self.ss_textEditttt_09.setGeometry(7, 10, 1000, 1313 if self.extend_window else 703)
+        self.ss_progressBar_01.setGeometry(7, 1328 if self.extend_window else 718, 830, 30)
+        self.ss_pushButtonn_08.setGeometry(842, 1328 if self.extend_window else 718, 165, 30)
 
         for item in self.stock_esczom_list:
             item.setVisible(False)
@@ -7609,7 +7608,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svjs_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.svjs_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -7695,7 +7694,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svc_comboBoxxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.svc_comboBoxxx_01.addItem(index)
                     if i == 0:
@@ -7781,7 +7780,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svc_comboBoxxx_02.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.svc_comboBoxxx_02.addItem(index)
                     if i == 0:
@@ -7813,7 +7812,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.svc_comboBoxxx_08.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.svc_comboBoxxx_08.addItem(index)
                     if i == 0:
@@ -7957,7 +7956,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.sva_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort()
+            indexs.sort(reverse=True)
             for i, index in enumerate(indexs):
                 self.sva_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -7987,7 +7986,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.svo_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort()
+            indexs.sort(reverse=True)
             for i, index in enumerate(indexs):
                 self.svo_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -8017,7 +8016,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.svo_comboBoxxx_02.clear()
             indexs = list(df.index)
-            indexs.sort()
+            indexs.sort(reverse=True)
             for i, index in enumerate(indexs):
                 self.svo_comboBoxxx_02.addItem(index)
                 if i == 0:
@@ -8053,7 +8052,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvjb_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.cvjb_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -8540,9 +8539,9 @@ class Window(QMainWindow):
         self.cs_textEditttt_07.setVisible(False)
         self.cs_textEditttt_08.setVisible(False)
 
-        self.cs_textEditttt_09.setGeometry(7, 10, 1000, 1308 if self.extend_window else 703)
-        self.cs_progressBar_01.setGeometry(7, 1323 if self.extend_window else 718, 830, 30)
-        self.cs_pushButtonn_08.setGeometry(842, 1323 if self.extend_window else 718, 165, 30)
+        self.cs_textEditttt_09.setGeometry(7, 10, 1000, 1313 if self.extend_window else 703)
+        self.cs_progressBar_01.setGeometry(7, 1328 if self.extend_window else 718, 830, 30)
+        self.cs_pushButtonn_08.setGeometry(842, 1328 if self.extend_window else 718, 165, 30)
 
         for item in self.coin_esczom_list:
             item.setVisible(False)
@@ -9209,7 +9208,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvjs_comboBoxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.cvjs_comboBoxx_01.addItem(index)
                     if i == 0:
@@ -9297,7 +9296,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvc_comboBoxxx_01.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.cvc_comboBoxxx_01.addItem(index)
                     if i == 0:
@@ -9383,7 +9382,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvc_comboBoxxx_02.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.cvc_comboBoxxx_02.addItem(index)
                     if i == 0:
@@ -9415,7 +9414,7 @@ class Window(QMainWindow):
             if len(df) > 0:
                 self.cvc_comboBoxxx_08.clear()
                 indexs = list(df.index)
-                indexs.sort()
+                indexs.sort(reverse=True)
                 for i, index in enumerate(indexs):
                     self.cvc_comboBoxxx_08.addItem(index)
                     if i == 0:
@@ -9559,7 +9558,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.cva_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort()
+            indexs.sort(reverse=True)
             for i, index in enumerate(indexs):
                 self.cva_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -9589,7 +9588,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.cvo_comboBoxxx_01.clear()
             indexs = list(df.index)
-            indexs.sort()
+            indexs.sort(reverse=True)
             for i, index in enumerate(indexs):
                 self.cvo_comboBoxxx_01.addItem(index)
                 if i == 0:
@@ -9619,7 +9618,7 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.cvo_comboBoxxx_02.clear()
             indexs = list(df.index)
-            indexs.sort()
+            indexs.sort(reverse=True)
             for i, index in enumerate(indexs):
                 self.cvo_comboBoxxx_02.addItem(index)
                 if i == 0:
@@ -10283,13 +10282,13 @@ class Window(QMainWindow):
             self.sj_stock_cbBox_04.addItem('사용안함')
             if len(dfb) > 0:
                 stg_list = list(dfb.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_stock_cbBox_01.addItem(stg)
                     self.sj_stock_cbBox_03.addItem(stg)
             if len(dfob) > 0:
                 stg_list = list(dfob.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_stock_cbBox_01.addItem(stg)
                     self.sj_stock_cbBox_03.addItem(stg)
@@ -10299,13 +10298,13 @@ class Window(QMainWindow):
                 self.sj_stock_cbBox_03.setCurrentText(df['주식장중매수전략'][0])
             if len(dfs) > 0:
                 stg_list = list(dfs.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_stock_cbBox_02.addItem(stg)
                     self.sj_stock_cbBox_04.addItem(stg)
             if len(dfos) > 0:
                 stg_list = list(dfos.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_stock_cbBox_02.addItem(stg)
                     self.sj_stock_cbBox_04.addItem(stg)
@@ -10361,13 +10360,13 @@ class Window(QMainWindow):
             self.sj_coin_comBox_04.addItem('사용안함')
             if len(dfb) > 0:
                 stg_list = list(dfb.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_coin_comBox_01.addItem(stg)
                     self.sj_coin_comBox_03.addItem(stg)
             if len(dfob) > 0:
                 stg_list = list(dfob.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_coin_comBox_01.addItem(stg)
                     self.sj_coin_comBox_03.addItem(stg)
@@ -10377,13 +10376,13 @@ class Window(QMainWindow):
                 self.sj_coin_comBox_03.setCurrentText(df['코인장중매수전략'][0])
             if len(dfs) > 0:
                 stg_list = list(dfs.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_coin_comBox_02.addItem(stg)
                     self.sj_coin_comBox_04.addItem(stg)
             if len(dfos) > 0:
                 stg_list = list(dfos.index)
-                stg_list.sort()
+                stg_list.sort(reverse=True)
                 for stg in stg_list:
                     self.sj_coin_comBox_02.addItem(stg)
                     self.sj_coin_comBox_04.addItem(stg)
@@ -12407,10 +12406,8 @@ class Window(QMainWindow):
 
         if self.CoinKimpProcessAlive():
             kimpQ.put('프로세스종료')
-            qtest_qwait(3)
         if self.CoinReceiverProcessAlive():
             creceivQ.put('프로세스종료')
-            qtest_qwait(3)
             self.proc_receiver_coin.kill()
         if self.CoinTraderProcessAlive():
             if self.dict_set['거래소'] == '바이낸스선물':
@@ -12431,9 +12428,8 @@ class Window(QMainWindow):
         if self.back_procs:
             for proc in self.back_procs:
                 proc.kill()
-        if self.back_procs or self.bact_procs:
-            qtest_qwait(3)
 
+        qtest_qwait(3)
         sys.exit()
 
 

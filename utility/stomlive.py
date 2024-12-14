@@ -85,6 +85,7 @@ class StomLiveClient:
         if data1 is not None:
             data1 = [[int(x) if '.' not in x else float(x) for x in d.split(';')] for i, d in enumerate(data1)]
             df1 = pd.DataFrame(dict(zip(columns_tt, data1)))
+            df1.sort_values(by=['수익금합계'], ascending=False, inplace=True)
 
         if data2 is not None:
             data2 = [[self.tatal_text_conv(i, x) for x in d.split(';')] for i, d in enumerate(data2)]

@@ -95,8 +95,8 @@ class ReceiverBinanceFutureClient:
             c, o, h, low, per, _, ch, bids, asks = data[1:10]
             hogadata = data[12:34]
             self.hogaQ.put((code, c, per, 0, 0, o, h, low))
-            self.hogaQ.put((bids, ch))
             self.hogaQ.put((-asks, ch))
+            self.hogaQ.put((bids, ch))
             self.hogaQ.put((code,) + hogadata + (0, 0))
 
     def UpdateTuple(self, data):

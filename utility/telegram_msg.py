@@ -27,11 +27,11 @@ class TelegramMsg:
                 self.SendMsg(data)
             elif type(data) == pd.DataFrame:
                 self.UpdateDataframe(data)
-            elif type(data) == dict:
+            elif data[0] == '설정변경':
                 if self.updater is not None:
                     self.updater.stop()
                     self.updater = None
-                self.UpdateBot(data)
+                self.UpdateBot(data[1])
 
     def __del__(self):
         if self.updater is not None:

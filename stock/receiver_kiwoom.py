@@ -769,9 +769,9 @@ class ReceiverKiwoom:
                     self.dict_sghg[code] = (shg, hhg)
                 c, o, h, low, per, _, ch, _, _, _, _, sgta, _, bids, asks, _, uvi, _ = self.dict_tick[code]
                 self.kwzservQ.put(('hoga', (self.dict_name[code], c, per, sgta, self.dict_vipr[code][2], o, h, low)))
+                self.kwzservQ.put(('hoga', (-asks, ch)))
+                self.kwzservQ.put(('hoga', (bids, ch)))
                 self.kwzservQ.put(('hoga', (name,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5] + (shg, hhg)))
-                self.kwzservQ.put(('hoga', (int(asks), ch)))
-                self.kwzservQ.put(('hoga', (int(bids), ch)))
 
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][13:15] = [0, 0]

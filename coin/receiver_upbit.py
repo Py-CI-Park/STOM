@@ -263,6 +263,7 @@ class ReceiverUpbit:
         bids  = round(prebids + bids_, 8)  if tbids >= pretbids else bids_
         asks  = round(preasks + asks_, 8)  if tasks >= pretasks else asks_
         self.dict_tick[code] = [c, o, h, low, per, dm, ch, bids, asks, tbids, tasks]
+
         if tbids > pretbids:
             self.dict_hgbs[code] = (0, c)
         elif tasks > pretasks:
@@ -276,13 +277,6 @@ class ReceiverUpbit:
             if len(self.dict_arry[code]) == self.dict_set['코인순위시간'] * 6:
                 self.dict_tm5m[code] = dm - self.dict_arry[code][0, 1]
                 self.dict_arry[code] = np.delete(self.dict_arry[code], 0, 0)
-
-        if self.hoga_code == code and (tbids > pretbids or tasks > pretasks):
-            self.hogaQ.put((code, c, per, 0, 0, o, h, low))
-            if tbids > pretbids:
-                self.hogaQ.put((bids_, ch))
-            if tasks > pretasks:
-                self.hogaQ.put((-asks_, ch))
 
     def UpdateHogaData(self, dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, receivetime):
         sm = 0
@@ -348,8 +342,12 @@ class ReceiverUpbit:
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][7:9] = [0, 0]
 
-        if self.hoga_code == code:
-            self.hogaQ.put((code,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
+            if self.hoga_code == code:
+                c, o, h, low, per, _, ch, bids, asks, _, _ = self.dict_tick[code]
+                self.hogaQ.put((code, c, per, 0, 0, o, h, low))
+                self.hogaQ.put(('hoga', (-asks, ch)))
+                self.hogaQ.put(('hoga', (bids, ch)))
+                self.hogaQ.put((code,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
 
         if self.int_logt < int_logt:
             gap = (now() - receivetime).total_seconds()

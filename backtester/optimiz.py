@@ -68,6 +68,9 @@ class Total:
         self.total_count  = 0
         self.zero_key_list = []
 
+        self.arry_pattern_buy  = None
+        self.arry_pattern_sell = None
+
         self.Start()
 
     def Start(self):
@@ -175,6 +178,36 @@ class Total:
             elif data[0] == 'ALL':
                 _, _, data, vars_key = data
                 self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, data)
+
+            # elif '패턴' in data[0]:
+            #     new_arry = np.array([data[1]])
+            #     if data[0] == '매수패턴':
+            #         if self.arry_pattern_buy is None:
+            #             self.arry_pattern_buy = new_arry
+            #         elif new_arry not in self.arry_pattern_buy:
+            #             self.arry_pattern_buy = np.r_[self.arry_pattern_buy, new_arry]
+            #     elif data[0] == '매도패턴':
+            #         if self.arry_pattern_sell is None:
+            #             self.arry_pattern_sell = new_arry
+            #         elif new_arry not in self.arry_pattern_sell:
+            #             self.arry_pattern_sell = np.r_[self.arry_pattern_sell, new_arry]
+            #
+            # elif data == '학습완료':
+            #     bc += 1
+            #     self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 중 ... [{bc}/{self.back_count}]'])
+            #     if bc == self.back_count:
+            #         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 데이터 중 매도패턴에 있는 매수패턴 삭제 중 ...'])
+            #         delete_index = []
+            #         for i, pattern_buy in enumerate(self.arry_pattern_buy):
+            #             if pattern_buy in self.arry_pattern_sell:
+            #                 delete_index.append(i)
+            #         if delete_index:
+            #             self.arry_pattern_buy = np.delete(self.arry_pattern_buy, delete_index, 0)
+            #         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'매도패턴에 있는 매수패턴 [{len(delete_index)}]개 삭제 완료'])
+            #         data = [self.arry_pattern_buy, self.arry_pattern_sell]
+            #         self.mq.put(data)
+            #         self.arry_pattern_buy, self.arry_pattern_sell = None, None
+            #         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 완료'])
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
@@ -567,6 +600,19 @@ class Optimize:
         Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
+        # # ==============================================================================================================
+        # if 'T' in self.backname:
+        #     self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 패턴학습 시작'])
+        #     for q in self.pq_list:
+        #         q.put(['패턴학습', train_days[0], train_days[1]])
+        #     arry_pattern_buy, arry_pattern_sell = mq.get()
+        #     data = ['패턴모델', arry_pattern_buy, arry_pattern_sell]
+        #     for q in self.pq_list:
+        #         q.put(data)
+        #     arry_pattern_buy, arry_pattern_sell = None, None
+        #     self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 패턴학습 완료'])
+        # # ==============================================================================================================
+
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars, dict_cn, std_text,
                      optistandard, schedul, df_kp, df_kq, list_days, len(day_list), weeks_train, weeks_valid, weeks_test))
         data = ('백테정보', betting, avg_list, startday, endday, starttime, endtime, buystg, sellstg)
@@ -684,6 +730,7 @@ class Optimize:
                         self.tq.put(('재최적화',))
                         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'))
 
+                fix_vars_list = []
                 del_vars_list = []
                 change_var_count = 0
                 for i in range(len_vars):
@@ -695,7 +742,7 @@ class Optimize:
                     if len_vars_ > 0:
                         start = now()
                         print('========================================================================')
-                        print(f'opt_vars_turn : {i},  len_vars : {len_vars_ + 1},  high_vars : {vars_[i][1]},  high_std : {hstd}')
+                        print(f'opt_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}, high_std : {hstd}')
                         print(f'opt_vars_list : {vars_[i][0]}')
                         self.tq.put(('변수정보', vars_, i))
                         for q in self.stq_list:
@@ -732,15 +779,21 @@ class Optimize:
                         print('{:>16} : {:>55}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
 
                         if self.dict_set['범위자동관리'] and hstd > 0:
-                            for curr_var, std in turn_stdk.items():
-                                if std < hstd / 2:
-                                    del_list.append(curr_var)
+                            set_std = len(set(list(turn_stdk.values())))
+                            if set_std > 2:
+                                for curr_var, std in turn_stdk.items():
+                                    if std < hstd / 2:
+                                        del_list.append(curr_var)
+                            else:
+                                fix_vars_list.append(i)
+                                print('{:>16} : {}'.format('fixed_vars', 'this vars is fixed at next time'))
 
                     del_vars_list.append(del_list)
                     if self.dict_set['범위자동관리']:
                         total_del_vars_list[i] += del_list
 
                     if del_list:
+                        del_list.sort()
                         print('{:>16} : {}'.format('delete_list', del_list))
 
                 last = len(del_vars_list)
@@ -771,6 +824,11 @@ class Optimize:
                                     prev_list = vars_[i][0] if len_vars_turn < 20 else vars_[i][0][1:]
                                     vars_[i][0] = vars_[i][0] + [new]
                                     self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 [{new}] 추가'))
+                    for i in range(len_vars):
+                        if i in fix_vars_list:
+                            high_var = vars_[i][1]
+                            vars_[i] = [[high_var],  high_var]
+                            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 [{high_var}] 고정'))
                     self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'불필요한 범위값 삭제 및 새로운 범위값 추가 완료'))
 
                 k += 1
@@ -797,7 +855,11 @@ class Optimize:
                 curh_var = vars_[i][1]
                 if preh_var != curh_var:
                     self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 {preh_var} -> {curh_var}'))
-                optivars += f'self.vars[{i}] = [[{vars_[i][0][0]}, {vars_[i][0][-1]}, {self.vars[i][0][2]}], {curh_var}]\n'
+                first   = vars_[i][0][0]
+                last    = vars_[i][0][-1]
+                gap_ori = self.vars[i][0][2]
+                gap     = gap_ori if first != last else 0
+                optivars += f'self.vars[{i}] = [[{first}, {last}, {gap}], {curh_var}]\n'
 
             if 'T' not in self.backname:
                 optivars = optivars[:-1]

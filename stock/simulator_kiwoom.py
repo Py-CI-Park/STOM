@@ -48,8 +48,8 @@ class ReceiverKiwoom2:
         if code in self.tuple_janng:
             self.straderQ.put((code, c))
         self.kwzservQ.put(('hoga', (name, c, per, sgta, uvi, o, h, low)))
-        self.kwzservQ.put(('hoga', (bids, ch)))
         self.kwzservQ.put(('hoga', (-asks, ch)))
+        self.kwzservQ.put(('hoga', (bids, ch)))
         self.kwzservQ.put(('hoga', (name,) + hogadata + (0, 0)))
 
     def UpdateTuple(self, data):

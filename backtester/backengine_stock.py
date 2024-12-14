@@ -86,6 +86,11 @@ class StockBackEngine:
         self.tick_count   = 0
         self.divid        = 0
 
+        self.pm_ticks          = 30
+        self.sc_ticks          = 600
+        self.arry_pattern_buy  = None
+        self.arry_pattern_sell = None
+
         self.Start()
 
     def Start(self):
@@ -113,6 +118,13 @@ class StockBackEngine:
                         self.InitDivid()
                         self.InitTradeInfo()
                         self.BackTest()
+                    elif data[0] == '패턴학습':
+                        self.startday   = data[1]
+                        self.endday     = data[2]
+                        self.PatternBacktest()
+                    elif data[0] == '패턴모델':
+                        self.arry_pattern_buy  = data[1]
+                        self.arry_pattern_sell = data[2]
                 elif self.back_type == '전진분석':
                     if data[0] == '백테정보':
                         self.betting    = data[1]
@@ -351,6 +363,43 @@ class StockBackEngine:
     def BackStop(self):
         self.back_type = None
         if self.gubun == 0: self.wq.put((ui_num['S백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'))
+
+    def PatternBacktest(self):
+        for code in self.code_list:
+            self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] >= self.startday * 1000000) &
+                                                     (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000)]
+            if len(self.array_tick) > 0:
+                last = len(self.array_tick) - 1
+                for i, index in enumerate(self.array_tick[:, 0]):
+                    if self.back_type is None: return
+                    next_day_change = i != last and index + 500000 < self.array_tick[i + 1, 0]
+                    self.tick_count += 1
+                    self.index  = int(index)
+                    self.indexn = i
+                    if not next_day_change:
+                        if str(self.index)[:8] == str(self.array_tick[self.indexn + self.sc_ticks, 0])[:8]:
+                            self.PatternModeling()
+                    else:
+                        self.tick_count = 0
+
+            self.tq.put('학습완료')
+
+    def PatternModeling(self):
+        curr_price     = self.array_tick[self.indexn, 1]
+        uplimit_per    = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 5].max() >= 29.5
+        high_price     = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 1].max()
+        low_price      = self.array_tick[self.indexn + 1:self.indexn + 1 + self.sc_ticks, 1].min()
+        high_price_per = round((high_price / curr_price - 1) * 100, 2)
+        low_price_per  = round((low_price / curr_price - 1) * 100, 2)
+        if high_price_per > 10 or uplimit_per:
+            self.tq.put(['매수패턴', self.GetPatternPer()])
+        elif low_price_per < -10 or curr_price >= high_price:
+            self.tq.put(['매도패턴', self.GetPatternPer()])
+
+    def GetPatternPer(self):
+        pattern = self.array_tick[self.indexn + 1 - self.pm_ticks:self.indexn + 1, 5]
+        pattern = pattern.astype(int)
+        return pattern
 
     def BackTest(self):
         if self.profile:

@@ -6,8 +6,7 @@ import pandas as pd
 from matplotlib import font_manager
 from matplotlib import pyplot as plt
 from utility.static import strp_time, timedelta_sec, strf_time
-from utility.setting import ui_num, DB_COIN_TICK, DB_STOCK_TICK, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH, \
-    DB_STOCK_BACK, DB_COIN_BACK, DB_BACKTEST, DB_STOCK_MIN, DB_STOCK_DAY, DB_COIN_MIN, DB_COIN_DAY
+from utility.setting import ui_num, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH, DB_STOCK_BACK, DB_COIN_BACK, DB_BACKTEST, DB_STOCK_MIN, DB_STOCK_DAY, DB_COIN_MIN, DB_COIN_DAY
 
 
 class Chart:
@@ -43,7 +42,7 @@ class Chart:
         while True:
             data = self.chartQ.get()
             if data[0] == '설정변경':
-                self.dict_set = data
+                self.dict_set = data[1]
             if data[0] == '그래프비교':
                 self.GraphComparison(data[1])
             elif len(data) == 3:
@@ -101,11 +100,9 @@ class Chart:
         if coin:
             db_name1 = f'{DB_PATH}/coin_tick_{searchdate}.db'
             db_name2 = DB_COIN_BACK
-            db_name3 = DB_COIN_TICK
         else:
             db_name1 = f'{DB_PATH}/stock_tick_{searchdate}.db'
             db_name2 = DB_STOCK_BACK
-            db_name3 = DB_STOCK_TICK
 
         query1 = f"SELECT * FROM '{code}' WHERE `index` LIKE '{searchdate}%' and " \
                  f"`index` % 1000000 >= {starttime} and " \
@@ -124,11 +121,6 @@ class Chart:
             elif os.path.isfile(db_name2):
                 db = '백테디비'
                 con = sqlite3.connect(db_name2)
-                df = pd.read_sql(query1 if starttime != '' and endtime != '' else query2, con).set_index('index')
-                con.close()
-            elif os.path.isfile(db_name3):
-                db = '기본디비'
-                con = sqlite3.connect(db_name3)
                 df = pd.read_sql(query1 if starttime != '' and endtime != '' else query2, con).set_index('index')
                 con.close()
         except:
@@ -214,10 +206,8 @@ class Chart:
             df['거래대금순위'] = 0
             if db == '개별디비':
                 con = sqlite3.connect(db_name1)
-            elif db == '백테디비':
-                con = sqlite3.connect(db_name2)
             else:
-                con = sqlite3.connect(db_name3)
+                con = sqlite3.connect(db_name2)
             df_mt = pd.read_sql(f'SELECT * FROM moneytop WHERE `index` LIKE "{searchdate}%"', con)
             con.close()
 
@@ -286,17 +276,18 @@ class Chart:
                                 sell_index.append(cgtime)
                                 df.loc[cgtime, '매도가2'] = df2['체결가'][index]
             else:
-                buy_index.append(detail[0])
-                sell_index.append(detail[2])
-                df.loc[detail[0], '매수가'] = detail[1]
-                df.loc[detail[2], '매도가'] = detail[3]
+                매수시간, 매수가, 매도시간, 매도가 = detail
+                buy_index.append(매수시간)
+                sell_index.append(매도시간)
+                df.loc[매수시간, '매수가'] = 매수가
+                df.loc[매도시간, '매도가'] = 매도가
                 if buytimes != '':
                     buytimes = buytimes.split('^')
                     buytimes = [x.split(';') for x in buytimes]
                     for x in buytimes:
-                        index, buy_price = int(x[0]), int(x[1]) if not coin else float(x[1])
-                        buy_index.append(index)
-                        df.loc[index, '매수가'] = buy_price
+                        추가매수시간, 추가매수가 = int(x[0]), int(x[1]) if not coin else float(x[1])
+                        buy_index.append(추가매수시간)
+                        df.loc[추가매수시간, '매수가'] = 추가매수가
 
             if not coin:
                 columns = [

@@ -61,7 +61,7 @@ class SetSetupTap:
         self.ui.sj_main_comBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_01, items=['격리', '교차'], activated=self.ui.cActivated_12)
         self.ui.sj_main_comBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_01, items=['단방향', '양방향'], activated=self.ui.cActivated_13)
 
-        self.ui.sj_main_cheBox_09 = self.wc.setCheckBox('주식 버전 업그레이드 실행', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_21, tip='버전업을 실행합니다. 멀티 스톰일 경우 첫번째 실행할 클라이언트에서 실행하십시오.')
+        self.ui.sj_main_cheBox_09 = self.wc.setCheckBox('주식 버전 업그레이드 실행', self.ui.sj_bs_groupBox_01, tip='버전업을 실행합니다. 멀티 스톰일 경우 첫번째 실행할 클라이언트에서 실행하십시오.')
         self.ui.sj_main_cheBox_10 = self.wc.setCheckBox('서버 (동일PC에서 하나만 지정)', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_20, tip='로컬에서 서버 역활을 한다. 이 리시버에서 받은 데이터를 ZMQ를 이용하여 클라이언트로 보낸다.')
         self.ui.sj_main_cheBox_11 = self.wc.setCheckBox('클라이언트 (동일PC에서 여러개 가능)', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_20, tip='로컬에서 클라이언트 역활을 한다. 동일 PC에서 서버는 하나만 가능하지만, 클라이언트는 여러개 가능하다.')
 

@@ -643,6 +643,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
 
     plt.figure(f'{backname} 부가정보', figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=2, height_ratios=[1, 1])
+    # noinspection PyTypeChecker
     plt.subplot(gs[0])
     for i in range(30):
         plt.plot(df_tsg.index, df_tsg[f'수익금합계{i}'], linewidth=0.5, label=f'MDD {mdd_list[i]}%')
@@ -654,6 +655,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     count = int(len(df_tsg) / 15) if int(len(df_tsg) / 15) >= 1 else 1
     plt.xticks(list(df_tsg.index[::count]), rotation=45)
     plt.grid()
+    # noinspection PyTypeChecker
     plt.subplot(gs[1])
     plt.plot(df_ts.index, df_ts['수익금합계'], linewidth=2, label='수익률', color='orange')
     if dict_cn is not None:
@@ -666,6 +668,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     plt.xticks(list(df_ts.index[::count]), rotation=45)
     plt.legend(loc='best')
     plt.grid()
+    # noinspection PyTypeChecker
     plt.subplot(gs[2])
     plt.bar(df_st.index, df_st['이익금액'], label='이익금액', color='r')
     plt.bar(df_st.index, df_st['손실금액'], label='손실금액', color='b')
@@ -673,6 +676,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     plt.xticks(list(df_st.index), rotation=45)
     plt.legend(loc='best')
     plt.grid()
+    # noinspection PyTypeChecker
     plt.subplot(gs[3])
     plt.bar(wt_index, wt_datap, label='이익금액', color='r')
     plt.bar(wt_index, wt_datam, label='손실금액', color='b')
@@ -692,6 +696,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     else:
         plt.figure(f'{backname} 결과', figsize=(12, 12))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 4])
+    # noinspection PyTypeChecker
     plt.subplot(gs[0])
     plt.plot(df_bct.index, df_bct['보유종목수'], label='보유종목수', color='g')
     plt.xticks([])
@@ -701,6 +706,7 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
         plt.xlabel('\n' + back_text + '\n' + label_text + '\n\n' + buy_vars + '\n\n' + sell_vars)
     plt.legend(loc='best')
     plt.grid()
+    # noinspection PyTypeChecker
     plt.subplot(gs[1])
     plt.bar(df_tsg.index, df_tsg['이익금액'], label='이익금액', color='r')
     plt.bar(df_tsg.index, df_tsg['손실금액'], label='손실금액', color='b')

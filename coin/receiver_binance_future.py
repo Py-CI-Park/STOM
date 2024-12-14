@@ -313,13 +313,6 @@ class ReceiverBinanceFuture:
         if code not in self.dict_dlhp.keys() or dt_ != self.dict_dlhp[code][0]:
             self.dict_dlhp[code] = [dt_, round((h / low - 1) * 100, 2)]
 
-        if self.hoga_code == code:
-            self.hogaQ.put((code, c, per, 0, 0, o, h, low))
-            if not m:
-                self.hogaQ.put((bids_, ch))
-            else:
-                self.hogaQ.put((-asks_, ch))
-
     def UpdateHogaData(self, dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, receivetime):
         sm = 0
         int_logt = int(str(dt)[:12])
@@ -384,8 +377,12 @@ class ReceiverBinanceFuture:
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][7:9] = [0, 0]
 
-        if self.hoga_code == code:
-            self.hogaQ.put((code,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
+            if self.hoga_code == code:
+                c, o, h, low, per, _, ch, bids, asks, _, _ = self.dict_tick[code]
+                self.hogaQ.put((code, c, per, 0, 0, o, h, low))
+                self.hogaQ.put(('hoga', (-asks, ch)))
+                self.hogaQ.put(('hoga', (bids, ch)))
+                self.hogaQ.put((code,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
 
         if self.int_logt < int_logt:
             gap = (now() - receivetime).total_seconds()

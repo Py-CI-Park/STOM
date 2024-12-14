@@ -2,7 +2,6 @@ import os
 import sqlite3
 import numpy as np
 import pandas as pd
-from utility.static import now, timedelta_sec
 from utility.setting import ui_num, columns_hj, DB_PATH, DB_COIN_TICK, DB_STOCK_TICK, DB_COIN_BACK, DB_STOCK_BACK
 
 
@@ -14,14 +13,11 @@ class Hoga:
         """
         self.windowQ   = qlist[0]
         self.hogaQ     = qlist[5]
+        self.gubun     = None
         self.hoga_name = None
         self.df_hj     = None
         self.df_hc     = None
         self.df_hg     = None
-        self.bool_hjup = False
-        self.bool_hcup = False
-        self.bool_hgup = False
-        self.time_uphg = now()
         self.InitHoga('S')
         self.Start()
 
@@ -36,27 +32,12 @@ class Hoga:
                 self.UpdateHogaForChart(data)
             else:
                 self.UpdateHogajalryang(data)
-
-            if now() > self.time_uphg:
-                if self.bool_hjup and self.df_hc is not None:
-                    if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-                        self.windowQ.put((ui_num['C호가종목'], self.df_hj))
-                    else:
-                        self.windowQ.put((ui_num['S호가종목'], self.df_hj))
-                    self.bool_hjup = False
-                if self.bool_hcup and self.df_hc is not None:
-                    if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-                        self.windowQ.put((ui_num['C호가체결'], self.df_hc))
-                    else:
-                        self.windowQ.put((ui_num['S호가체결'], self.df_hc))
-                    self.bool_hcup = False
-                if self.bool_hgup and self.df_hg is not None:
-                    if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-                        self.windowQ.put((ui_num['C호가잔량'], self.df_hg))
-                    else:
-                        self.windowQ.put((ui_num['S호가잔량'], self.df_hg))
-                    self.bool_hgup = False
-                self.time_uphg = timedelta_sec(0.25)
+                if self.df_hc is not None:
+                    self.windowQ.put((ui_num[f'{self.gubun}호가종목'], self.df_hj))
+                if self.df_hc is not None:
+                    self.windowQ.put((ui_num[f'{self.gubun}호가체결'], self.df_hc))
+                if self.df_hg is not None:
+                    self.windowQ.put((ui_num[f'{self.gubun}호가잔량'], self.df_hg))
 
     def InitHoga(self, gubun):
         zero_list = np.zeros(12).tolist()
@@ -70,26 +51,25 @@ class Hoga:
 
     def UpdateHogaJongmok(self, data):
         hoga_name = data[0]
-        gubun = 'C' if 'KRW' in hoga_name or 'USDT' in hoga_name else 'S'
+        self.gubun = 'C' if 'KRW' in hoga_name or 'USDT' in hoga_name else 'S'
         if self.hoga_name != hoga_name:
-            self.InitHoga(gubun)
+            self.InitHoga(self.gubun)
             self.hoga_name = hoga_name
         self.df_hj = pd.DataFrame([list(data)], columns=columns_hj)
-        self.bool_hjup = True
 
     def UpdateChegeolcount(self, data):
         v, ch = data
-        if v > 0:
-            if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
+        if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
+            if v > 0:
                 tbc = round(self.df_hc['체결수량'][0] + v, 8)
                 tsc = round(self.df_hc['체결수량'][11], 8)
             else:
-                tbc = self.df_hc['체결수량'][0] + v
-                tsc = self.df_hc['체결수량'][11]
-        else:
-            if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
                 tbc = round(self.df_hc['체결수량'][0], 8)
                 tsc = round(self.df_hc['체결수량'][11] + abs(v), 8)
+        else:
+            if v > 0:
+                tbc = self.df_hc['체결수량'][0] + v
+                tsc = self.df_hc['체결수량'][11]
             else:
                 tbc = self.df_hc['체결수량'][0]
                 tsc = self.df_hc['체결수량'][11] + abs(v)
@@ -103,26 +83,17 @@ class Hoga:
             lch = ch
 
         self.df_hc = self.df_hc.shift(1)
-        self.df_hc.loc[0] = tbc, hch
-        self.df_hc.loc[1] = v, ch
+        self.df_hc.loc[0]  = tbc, hch
+        self.df_hc.loc[1]  = v, ch
         self.df_hc.loc[11] = tsc, lch
-        self.bool_hcup = True
 
     def UpdateHogajalryang(self, data):
-        hoga_name = data[0]
-        gubun = 'C' if 'KRW' in hoga_name or 'USDT' in hoga_name else 'S'
-        if self.hoga_name != hoga_name:
-            self.InitHoga(gubun)
-            self.hoga_name = hoga_name
-
         jr = [data[1]] + list(data[13:23]) + [data[2]]
         if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
             hg = [self.df_hj['고가'][0]] + list(data[3:13]) + [self.df_hj['저가'][0]]
         else:
             hg = [data[23]] + list(data[3:13]) + [data[24]]
-
         self.df_hg = pd.DataFrame({'잔량': jr, '호가': hg})
-        self.bool_hgup = True
 
     def UpdateHogaForChart(self, data):
         cmd, code, name, index = data
