@@ -175,21 +175,21 @@ class StomLiveClient:
             df8.loc[2] = 'MY', mbk, mbf, moh, mov, movc, moht, movt, movct, mog, mogv, mogvc, moc, mocv, mocvc, mrh, mrv, mrvc, ttm
 
         if df1 is not None:
-            self.windowQ.put([ui_num['스톰라이브1'], df1])
+            self.windowQ.put((ui_num['스톰라이브1'], df1))
         if df2 is not None:
-            self.windowQ.put([ui_num['스톰라이브2'], df2])
+            self.windowQ.put((ui_num['스톰라이브2'], df2))
         if df3 is not None:
-            self.windowQ.put([ui_num['스톰라이브3'], df3])
+            self.windowQ.put((ui_num['스톰라이브3'], df3))
         if df4 is not None:
-            self.windowQ.put([ui_num['스톰라이브4'], df4])
+            self.windowQ.put((ui_num['스톰라이브4'], df4))
         if df5 is not None:
-            self.windowQ.put([ui_num['스톰라이브5'], df5])
+            self.windowQ.put((ui_num['스톰라이브5'], df5))
         if df6 is not None:
-            self.windowQ.put([ui_num['스톰라이브6'], df6])
+            self.windowQ.put((ui_num['스톰라이브6'], df6))
         if df7 is not None:
-            self.windowQ.put([ui_num['스톰라이브7'], df7])
+            self.windowQ.put((ui_num['스톰라이브7'], df7))
         if df8 is not None:
-            self.windowQ.put([ui_num['스톰라이브8'], df8])
+            self.windowQ.put((ui_num['스톰라이브8'], df8))
 
     @staticmethod
     def tatal_text_conv(i, t):
@@ -206,9 +206,9 @@ class StomLiveClient:
     @staticmethod
     def back_text_conv(i, t):
         try:
-            if i in [0, 1]:
+            if i in (0, 1):
                 return str(t)
-            elif i in [2, 3, 4, 5, 6, 7, 8, 10, 11, 16]:
+            elif i in (2, 3, 4, 5, 6, 7, 8, 10, 11, 16):
                 return int(float(t))
             else:
                 return float(t)

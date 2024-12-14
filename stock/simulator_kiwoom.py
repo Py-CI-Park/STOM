@@ -13,18 +13,18 @@ class ReceiverKiwoom2:
         self.dict_set  = DICT_SET
 
         self.dict_name = {}
-        self.list_jang = []
+        self.tuple_janng = []
         self.LoadCodename()
         self.Start()
 
     def Start(self):
         while True:
             data = self.sreceivQ.get()
-            if type(data) == list:
+            if type(data) == tuple:
                 if len(data) != 2:
                     self.UpdateTestMode(data)
                 else:
-                    self.UpdateList(data)
+                    self.UpdateTuple(data)
 
     def LoadCodename(self):
         con = sqlite3.connect(DB_STOCK_BACK)
@@ -32,27 +32,29 @@ class ReceiverKiwoom2:
         con.close()
         self.dict_name = df_cn['종목명'].to_dict()
         dict_sgbn = {code: 0 for code, _ in self.dict_name.items()}
-        list_kosd = list(df_cn[df_cn['코스닥'] == 1].index)
+        tuple_kosd = list(df_cn[df_cn['코스닥'] == 1].index)
         self.sstgQ.put(dict_sgbn)
-        self.sstgQ.put(['코스닥목록', list_kosd])
+        self.sstgQ.put(('코스닥목록', tuple_kosd))
 
     def UpdateTestMode(self, data):
         code = data[-1]
         c, o, h, low, per, _, ch, _, _, _, _, sgta, _, bids, asks, vitime, uvi = data[1:18]
+        data = list(data)
         data[16] = strp_time('%Y%m%d%H%M%S', str(int(vitime)))
+        data = tuple(data)
         hogadata = data[21:43]
         name = self.dict_name[code]
-        self.sstgQ.put(data + [code, name, 0])
-        if code in self.list_jang:
-            self.straderQ.put([code, c])
-        self.kwzservQ.put(['hoga', [name, c, per, sgta, uvi, o, h, low]])
-        self.kwzservQ.put(['hoga', [bids, ch]])
-        self.kwzservQ.put(['hoga', [-asks, ch]])
-        self.kwzservQ.put(['hoga', [name] + hogadata + [0, 0]])
+        self.sstgQ.put(data + (code, name, 0))
+        if code in self.tuple_janng:
+            self.straderQ.put((code, c))
+        self.kwzservQ.put(('hoga', (name, c, per, sgta, uvi, o, h, low)))
+        self.kwzservQ.put(('hoga', (bids, ch)))
+        self.kwzservQ.put(('hoga', (-asks, ch)))
+        self.kwzservQ.put(('hoga', (name,) + hogadata + (0, 0)))
 
-    def UpdateList(self, data):
+    def UpdateTuple(self, data):
         gubun, data = data
-        self.list_jang = data
+        self.tuple_janng = data
 
 
 class TraderKiwoom2:
@@ -88,7 +90,6 @@ class TraderKiwoom2:
             '잔고목록전송': curr_time
         }
         self.int_hgtime = int(strf_time('%Y%m%d%H%M%S'))
-        self.test_mode  = False
         self.test_time  = None
 
         self.LoadCodename()
@@ -98,12 +99,7 @@ class TraderKiwoom2:
     def Start(self):
         while True:
             data = self.straderQ.get()
-            if type(data) == list:
-                self.UpdateList(data)
-            elif type(data) == dict:
-                self.UpdateDictset(data)
-            elif type(data) == str:
-                self.UpdateStr(data)
+            self.UpdateTuple(data)
 
             curr_time = now()
             if curr_time > self.dict_time['계좌평가계산']:
@@ -111,7 +107,7 @@ class TraderKiwoom2:
                 self.UpdateTotaljango(inthms)
                 self.dict_time['계좌평가계산'] = timedelta_sec(1)
             if curr_time > self.dict_time['잔고목록전송']:
-                self.sstgQ.put(self.df_jg.copy())
+                self.sstgQ.put(('잔고목록', self.df_jg))
                 self.dict_time['잔고목록전송'] = timedelta_sec(0.5)
 
     def LoadCodename(self):
@@ -126,28 +122,27 @@ class TraderKiwoom2:
         self.dict_intg['예수금'] = self.dict_intg['추정예수금'] = self.dict_intg['추정예탁자산'] = 100_000_000
         self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], 0, 0, 0, 0, 0
 
-    def UpdateList(self, data):
+    def UpdateTuple(self, data):
         if len(data) == 7:
             self.CheckOrder(data[0], data[1], data[2], data[3], data[4])
         elif len(data) == 2:
-            code, c = data
-            self.dict_curc[code] = c
-            try:
-                if c != self.df_jg['현재가'][code]:
-                    jg = self.df_jg['매입금액'][code]
-                    jc = int(self.df_jg['보유수량'][code])
-                    pg, sg, sp = GetKiwoomPgSgSp(jg, jc * c)
-                    columns = ['현재가', '수익률', '평가손익', '평가금액']
-                    self.df_jg.loc[code, columns] = c, sp, sg, pg
-            except:
-                pass
-
-    def UpdateDictset(self, data):
-        self.dict_set = data
-
-    def UpdateStr(self, data):
-        self.test_time  = data.split(' ')[1]
-        self.int_hgtime = int(self.test_time)
+            if type(data[1]) == int:
+                code, c = data
+                self.dict_curc[code] = c
+                try:
+                    if c != self.df_jg['현재가'][code]:
+                        jg = self.df_jg['매입금액'][code]
+                        jc = int(self.df_jg['보유수량'][code])
+                        pg, sg, sp = GetKiwoomPgSgSp(jg, jc * c)
+                        columns = ['현재가', '수익률', '평가손익', '평가금액']
+                        self.df_jg.loc[code, columns] = c, sp, sg, pg
+                except:
+                    pass
+            elif data[0] == '설정변경':
+                self.dict_set = data[1]
+            elif data[0] == '복기모드시간':
+                self.test_time = data[1]
+                self.int_hgtime = int(self.test_time)
 
     def CheckOrder(self, gubun, code, name, op, oc):
         NIJ = code not in self.df_jg.index
@@ -218,7 +213,7 @@ class TraderKiwoom2:
             while index in self.df_cj.index:
                 index = str(int(index) + 1)
 
-        if ot == '체결' and og in ['매수', '매도']:
+        if ot == '체결' and og in ('매수', '매도'):
             if og == '매수':
                 if code in self.df_jg.index:
                     jc = self.df_jg['보유수량'][code] + cc
@@ -270,7 +265,7 @@ class TraderKiwoom2:
             self.df_jg[columns] = self.df_jg[columns].astype(int)
             self.df_jg.sort_values(by=['매입금액'], ascending=False, inplace=True)
 
-            self.sstgQ.put(self.df_jg.copy())
+            self.sstgQ.put(('잔고목록', self.df_jg))
             if mc == 0:
                 self.PutOrderComplete(og + '완료', code)
 
@@ -283,17 +278,17 @@ class TraderKiwoom2:
                 self.dict_intg['추정예수금'] += jg + sg
 
             if self.dict_set['주식알림소리']:
-                self.kwzservQ.put(['sound', f'{name} {cc}주를 {og}하였습니다'])
-            self.kwzservQ.put(['window', [ui_num['S로그텍스트'], f'주문 관리 시스템 알림 - [{ot}] {name} | {cp} | {cc} | {og}']])
+                self.kwzservQ.put(('sound', f'{name} {cc}주를 {og}하였습니다'))
+            self.kwzservQ.put(('window', (ui_num['S로그텍스트'], f'주문 관리 시스템 알림 - [{ot}] {name} | {cp} | {cc} | {og}')))
 
         elif ot == '체결' and og == '시드부족':
             self.UpdateChegeollist(index, code, name, og, oc, cc, mc, cp, ct, op, on)
 
-        self.sreceivQ.put(['잔고목록', list(self.df_jg.index)])
+        self.sreceivQ.put(('잔고목록', tuple(self.df_jg.index)))
 
     def UpdateTradelist(self, index, name, jg, pg, cc, sp, sg, ct):
         self.df_td.loc[index] = name, jg, pg, cc, sp, sg, ct
-        self.kwzservQ.put(['window', [ui_num['S거래목록'], self.df_td[::-1]]])
+        self.kwzservQ.put(('window', (ui_num['S거래목록'], self.df_td[::-1])))
         self.UpdateTotaltradelist()
 
     def UpdateTotaltradelist(self):
@@ -305,12 +300,12 @@ class TraderKiwoom2:
         sg  = self.df_td['수익금'].sum()
         sp  = round(sg / self.dict_intg['추정예탁자산'] * 100, 2)
         self.df_tt = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.dict_strg['당일날짜']])
-        self.kwzservQ.put(['window', [ui_num['S실현손익'], self.df_tt]])
+        self.kwzservQ.put(('window', (ui_num['S실현손익'], self.df_tt)))
 
     def UpdateChegeollist(self, index, code, name, og, oc, cc, mc, cp, ct, op, on):
         self.dict_name[code][2] = timedelta_sec(self.dict_set['주식매수금지간격초'])
         self.df_cj.loc[index] = name, og, oc, cc, mc, cp, ct, op, on
-        self.kwzservQ.put(['window', [ui_num['S체결목록'], self.df_cj[::-1]]])
+        self.kwzservQ.put(('window', (ui_num['S체결목록'], self.df_cj[::-1])))
 
     def UpdateTotaljango(self, inthms):
         if len(self.df_jg) > 0:
@@ -324,8 +319,8 @@ class TraderKiwoom2:
         else:
             self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['예수금'], self.dict_intg['예수금'], 0, 0.0, 0, 0, 0
 
-        self.kwzservQ.put(['window', [ui_num['S잔고목록'], self.df_jg.copy()]])
-        self.kwzservQ.put(['window', [ui_num['S잔고평가'], self.df_tj.copy()]])
+        self.kwzservQ.put(('window', (ui_num['S잔고목록'], self.df_jg)))
+        self.kwzservQ.put(('window', (ui_num['S잔고평가'], self.df_tj)))
 
         if self.dict_set['주식투자금고정']:
             if inthms < self.dict_set['주식장초전략종료시간']:
@@ -346,7 +341,7 @@ class TraderKiwoom2:
 
         if self.dict_intg['종목당투자금'] != tujagm:
             self.dict_intg['종목당투자금'] = tujagm
-            self.sstgQ.put(self.dict_intg['종목당투자금'])
+            self.sstgQ.put(('종목당투자금', self.dict_intg['종목당투자금']))
 
     def PutOrderComplete(self, cmsg, code):
-        self.sstgQ.put([cmsg, code])
+        self.sstgQ.put((cmsg, code))

@@ -71,7 +71,7 @@ class DataDownload:
         df = df[['체결시간', '현재가', '시가', '고가', '저가', '전일대비', '거래량', '등락율']]
         df.set_index('체결시간', inplace=True)
 
-        self.q.put([code, df])
+        self.q.put((code, df))
         time.sleep(3)
         sys.exit()
 

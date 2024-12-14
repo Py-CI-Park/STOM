@@ -29,7 +29,7 @@ class DataDownload:
     def Download(self):
         def code_delete(code):
             ret = self.kw.ocx.dynamicCall('KOA_Functions(QString, QString)', 'GetStockMarketKind', code)
-            if int(ret) in [3, 4, 6, 8, 9, 14, 16, 19, 30, 60]:
+            if int(ret) in (3, 4, 6, 8, 9, 14, 16, 19, 30, 60):
                 return True
             if code[-1] != '0':
                 return True
@@ -138,7 +138,7 @@ class DataDownload:
                 """
 
                 df.fillna(0, inplace=True)
-                self.q.put(['분봉데이터', code, df])
+                self.q.put(('분봉데이터', code, df))
                 print(f'[{now()}] 주식 분봉데이터 다운로드 중 ... [{self.gubun}][{i+1}/{last}]')
 
         if DICT_SET['주식일봉데이터']:
@@ -228,7 +228,7 @@ class DataDownload:
                 """
 
                 df.fillna(0, inplace=True)
-                self.q.put(['일봉데이터', code, df])
+                self.q.put(('일봉데이터', code, df))
                 print(f'[{now()}] 주식 일봉데이터 다운로드 중 ... [{self.gubun}][{i+1}/{last}]')
 
         self.q.put('다운로드완료')

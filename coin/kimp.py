@@ -34,7 +34,7 @@ class Kimp:
         self.codes = pyupbit.get_tickers(fiat="KRW")
         self.ConvertedCurrency()
         self.WebsSocketsStart(wsq)
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 김프 감시 시작'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 김프 감시 시작'))
         while True:
             if not self.kimpQ.empty():
                 data = self.kimpQ.get()
@@ -65,12 +65,12 @@ class Kimp:
                     self.df['대비율(%)'] = self.df['대비(원)'] / self.df['업비트(원)'] * 100
                     self.df.dropna(inplace=True)
                     self.df.sort_values(by=['대비율(%)'], ascending=False, inplace=True)
-                    self.windowQ.put([ui_num['김프'], self.usdtokrw, self.df.copy()])
+                    self.windowQ.put((ui_num['김프'], self.usdtokrw, self.df))
 
             if self.kimpQ.empty() and wsq.empty():
                 time.sleep(0.001)
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 김프 프로세스 종료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 김프 프로세스 종료'))
         time.sleep(3)
 
     def ConvertedCurrency(self):
@@ -110,7 +110,7 @@ class WebSocketManager:
                 try:
                     recv_data = await websocket.recv()
                     recv_data = json.loads(recv_data.decode('utf8'))
-                    self.q.put(['upbit', recv_data])
+                    self.q.put(('upbit', recv_data))
                 except:
                     self.q.put('ConnectionClosedError')
 
@@ -122,7 +122,7 @@ class WebSocketManager:
             while True:
                 try:
                     recv_data = await ticker_socket.recv()
-                    self.q.put(['binance', recv_data])
+                    self.q.put(('binance', recv_data))
                 except:
                     self.q.put('ConnectionClosedError')
 

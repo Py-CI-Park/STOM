@@ -284,7 +284,7 @@ def SetSellCondFuture(selllist):
 
 def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, exponential=False):
     gubun, ui_gubun, wq, mq, stdp, optistd, vars_turn, vars_key, vars_list, startday, endday = back_list
-    if gubun in ['최적화', '최적화테스트']:
+    if gubun in ('최적화', '최적화테스트'):
         text1 = GetText1(vars_turn, vars_list)
     elif gubun == 'GA최적화':
         text1 = f'<font color=white> V{vars_list} </font>'
@@ -314,11 +314,11 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
         std = GetOptiValidStd(train_data, valid_data, optistd, betting, exponential)
         text3, stdp_ = GetText3(True, std, stdp)
 
-        wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text3}'])
+        wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text3}'))
         for text in train_text:
-            wq.put([ui_num[f'{ui_gubun}백테스트'], text])
+            wq.put((ui_num[f'{ui_gubun}백테스트'], text))
         for text in valid_text:
-            wq.put([ui_num[f'{ui_gubun}백테스트'], text])
+            wq.put((ui_num[f'{ui_gubun}백테스트'], text))
     elif dict_train is not None:
         if gubun == '최적화테스트':
             text2, std = GetText2('TEST', optistd, std_list, betting, dict_train)
@@ -326,15 +326,15 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
         else:
             text2, std   = GetText2('TOTAL', optistd, std_list, betting, dict_train)
             text3, stdp_ = GetText3(False, std, stdp)
-        wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'])
+        wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'))
     else:
         stdp_ = stdp
         std   = -2_147_483_648
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
-        wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
+        wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'))
 
     if vars_turn >= -1:
-        mq.put([std, vars_key])
+        mq.put((std, vars_key))
     return stdp_
 
 
@@ -755,7 +755,7 @@ class SubTotal:
                 self.complete = True
 
             if self.complete and self.stq.empty():
-                self.tq.put(['백테결과', self.dict_tsg, self.dict_bct])
+                self.tq.put(('백테결과', self.dict_tsg, self.dict_bct))
                 self.complete = False
 
     def CollectData(self, data):
@@ -807,7 +807,7 @@ class SubTotal:
                 df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
                 df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
-            self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
+            self.tq.put(('TRAIN' if self.gubun else 'VALID', index, result, vars_key))
         elif len(data) == 10:
             vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
@@ -817,8 +817,8 @@ class SubTotal:
                 df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
                 df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
-            self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
+            self.tq.put(('TRAIN' if self.gubun else 'VALID', index, result, vars_key))
         else:
             daycnt, vars_key = data[4:]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
-            self.tq.put(['ALL', 0, result, vars_key])
+            self.tq.put(('ALL', 0, result, vars_key))

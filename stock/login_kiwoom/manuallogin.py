@@ -92,22 +92,22 @@ def manual_login(gubun):
     gubun == 8 : 네번째 계정 본서버
     """
     hwnd = find_window('Open API login')
-    if gubun in [1, 3, 5, 7]:
+    if gubun in (1, 3, 5, 7):
         if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
         if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-    elif gubun in [2, 4, 6, 8]:
+    elif gubun in (2, 4, 6, 8):
         if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
         if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
 
     count = 0
-    if gubun in [1, 2]:   count = 1
-    elif gubun in [3, 4]: count = 2
-    elif gubun in [5, 6]: count = 3
-    elif gubun in [7, 8]: count = 4
+    if gubun in (1, 2):   count = 1
+    elif gubun in (3, 4): count = 2
+    elif gubun in (5, 6): count = 3
+    elif gubun in (7, 8): count = 4
 
     if count != 0:
         enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{count}'])

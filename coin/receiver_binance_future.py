@@ -66,11 +66,11 @@ class ReceiverBinanceFuture:
             '저가대비고가등락율갱신': curr_time
         }
 
-        self.list_gsjm1 = []
-        self.list_gsjm2 = []
-        self.list_jang  = []
-        self.list_oder  = []
-        self.list_prmt  = []
+        self.list_prmt   = []
+        self.list_gsjm1  = []
+        self.list_gsjm2  = []
+        self.tuple_jang  = ()
+        self.tuple_order = ()
 
         self.int_logt  = int(strf_time('%Y%m%d%H%M', timedelta_sec(-32400)))
         self.int_jcct  = int(strf_time('%Y%m%d%H%M%S', timedelta_sec(-32400)))
@@ -86,13 +86,13 @@ class ReceiverBinanceFuture:
             self.zmqserver = ZmqServ(self.zq)
             self.zmqserver.start()
 
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         text = '코인 리시버를 시작하였습니다.'
         if self.dict_set['코인알림소리']: self.soundQ.put(text)
         self.teleQ.put(text)
-        self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'])
+        self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'))
         self.codes = self.GetTickers(first=True)
         if self.dict_set['코인일봉데이터다운']: self.DaydataDownload()
         wsq = Queue()
@@ -105,23 +105,17 @@ class ReceiverBinanceFuture:
 
             if not self.creceivQ.empty():
                 data = self.creceivQ.get()
-                if type(data) == list:
-                    self.UpdateList(data)
-                elif type(data) == dict:
-                    self.dict_set = data
-                elif type(data) == str:
-                    if data == '프로세스종료':
-                        self.ctraderQ.put('프로세스종료')
-                        self.cstgQ.put('프로세스종료')
-                        self.WebProcessKill()
-                        break
-                    else:
-                        self.hoga_code = data
+                self.UpdateTuple(data)
+                if data == '프로세스종료':
+                    self.ctraderQ.put('프로세스종료')
+                    self.cstgQ.put('프로세스종료')
+                    self.WebProcessKill()
+                    break
 
             if not wsq.empty():
                 data = wsq.get()
                 if data == 'ConnectionClosedError':
-                    self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 웹소켓 연결 끊김으로 다시 연결합니다.'])
+                    self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 웹소켓 연결 끊김으로 다시 연결합니다.'))
                     self.WebProcessKill()
                 elif data[0] == 'trade':
                     try:
@@ -132,7 +126,7 @@ class ReceiverBinanceFuture:
                         m    = data['m']
                         dt   = int(strf_time('%Y%m%d%H%M%S', from_timestamp(int(data['T']) / 1000 - 32400)))
                     except Exception as e:
-                        self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 trade {e}'])
+                        self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 trade {e}'))
                     else:
                         self.UpdateTradeData(code, c, v, m, dt)
                 elif data[0] == 'depth':
@@ -160,7 +154,7 @@ class ReceiverBinanceFuture:
                             round(sum(hoga_samount), 8), round(sum(hoga_bamount), 8)
                         ]
                     except Exception as e:
-                        self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 depth {e}'])
+                        self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 depth {e}'))
                     else:
                         self.UpdateHogaData(dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, curr_time)
 
@@ -171,13 +165,13 @@ class ReceiverBinanceFuture:
             if curr_time > self.dict_time['거래대금순위저장']:
                 self.MoneyTopSearch()
                 df = pd.DataFrame(self.dict_mtop.values(), columns=['거래대금순위'], index=list(self.dict_mtop.keys()))
-                self.queryQ.put(['코인디비', df, 'moneytop', 'append'])
+                self.queryQ.put(('코인디비', df, 'moneytop', 'append'))
                 self.dict_mtop = {}
                 self.dict_time['거래대금순위저장'] = timedelta_sec(10)
 
             if not self.dict_set['바이낸스선물고정레버리지'] and curr_time > self.dict_time['저가대비고가등락율갱신']:
                 if len(self.dict_dlhp) > 0:
-                    self.ctraderQ.put(['저가대비고가등락율', self.dict_dlhp])
+                    self.ctraderQ.put(('저가대비고가등락율', self.dict_dlhp))
                 self.dict_time['저가대비고가등락율갱신'] = timedelta_sec(300)
 
             if self.dict_set['코인장초전략종료시간'] < inthmsutc < self.dict_set['코인장초전략종료시간'] + 10:
@@ -194,14 +188,14 @@ class ReceiverBinanceFuture:
                     self.codes = codes
                     self.ctraderQ.put('코인명갱신')
                     if self.dict_set['리시버공유'] == 1:
-                        self.zq.put(['updatecodes', ''])
+                        self.zq.put(('updatecodes', '코인명갱신'))
                     self.WebProcessKill()
                 self.dict_time['티커리스트재조회'] = timedelta_sec(600)
 
             if self.creceivQ.empty() and wsq.empty():
                 time.sleep(0.001)
 
-        self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료'])
+        self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료'))
         time.sleep(1)
 
     def ReceiverProcKill(self):
@@ -245,19 +239,24 @@ class ReceiverBinanceFuture:
             for code in self.list_prmt:
                 self.InsertGsjmlist(code)
             self.list_gsjm1 = self.list_prmt[:-3]
-            data1, data2 = self.list_gsjm1.copy(), self.list_gsjm2.copy()
-            self.cstgQ.put(['관심목록', data1, data2])
+            self.list_gsjm2 = self.list_prmt
+            data1, data2 = tuple(self.list_gsjm1), tuple(self.list_gsjm2)
+            self.cstgQ.put(('관심목록', data1, data2))
             if self.dict_set['리시버공유'] == 1:
-                self.zq.put(['focuscodes', [data1, data2]])
+                self.zq.put(('focuscodes', ('관심목록', data1, data2)))
 
         return list(self.dict_tick.keys())
 
-    def UpdateList(self, data):
-        gubun, code_list = data
+    def UpdateTuple(self, data):
+        gubun, data = data
         if gubun == '잔고목록':
-            self.list_jang = code_list
+            self.tuple_jang = data
         elif gubun == '주문목록':
-            self.list_oder = code_list
+            self.tuple_order = data
+        elif gubun == '호가종목코드':
+            self.hoga_code = data
+        elif gubun == '설정변경':
+            self.dict_set = data
 
     def UpdateTradeData(self, code, c, v, m, dt):
         if dt != self.int_jcct and dt > self.int_jcct:
@@ -300,7 +299,7 @@ class ReceiverBinanceFuture:
 
         per = round((c / self.dict_tddt[code][1] - 1) * 100, 2)
         self.dict_tick[code] = [c, o, h, low, per, dm, ch, bids, asks, tbids, tasks]
-        self.dict_hgbs[code] = [0, c] if not m else [c, 0]
+        self.dict_hgbs[code] = (0, c) if not m else (c, 2147483648)
 
         dt_ = int(str(dt)[:13])
         if code not in self.dict_arry.keys():
@@ -315,11 +314,11 @@ class ReceiverBinanceFuture:
             self.dict_dlhp[code] = [dt_, round((h / low - 1) * 100, 2)]
 
         if self.hoga_code == code:
-            self.hogaQ.put([code, c, per, 0, 0, o, h, low])
+            self.hogaQ.put((code, c, per, 0, 0, o, h, low))
             if not m:
-                self.hogaQ.put([bids_, ch])
+                self.hogaQ.put((bids_, ch))
             else:
-                self.hogaQ.put([-asks_, ch])
+                self.hogaQ.put((-asks_, ch))
 
     def UpdateHogaData(self, dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, receivetime):
         sm = 0
@@ -349,8 +348,8 @@ class ReceiverBinanceFuture:
                     hoga_seprice = hoga_seprice[5 - index:10 - index]
                     hoga_samount = hoga_samount[5 - index:10 - index]
                 else:
-                    hoga_seprice = list(np.zeros(index - 5)) + hoga_seprice[:10 - index]
-                    hoga_samount = list(np.zeros(index - 5)) + hoga_samount[:10 - index]
+                    hoga_seprice = tuple(np.zeros(index - 5)) + hoga_seprice[:10 - index]
+                    hoga_samount = tuple(np.zeros(index - 5)) + hoga_samount[:10 - index]
             else:
                 hoga_seprice = hoga_seprice[-5:]
                 hoga_samount = hoga_samount[-5:]
@@ -364,8 +363,8 @@ class ReceiverBinanceFuture:
                 hoga_buprice = hoga_buprice[index:index + 5]
                 hoga_bamount = hoga_bamount[index:index + 5]
                 if index > 5:
-                    hoga_buprice = hoga_buprice + list(np.zeros(index - 5))
-                    hoga_bamount = hoga_bamount + list(np.zeros(index - 5))
+                    hoga_buprice = hoga_buprice + tuple(np.zeros(index - 5))
+                    hoga_bamount = hoga_bamount + tuple(np.zeros(index - 5))
             else:
                 hoga_buprice = hoga_buprice[:5]
                 hoga_bamount = hoga_bamount[:5]
@@ -374,30 +373,30 @@ class ReceiverBinanceFuture:
             hlp   = round((c / ((self.dict_tick[code][2] + self.dict_tick[code][3]) / 2) - 1) * 100, 2)
             hgjrt = sum(hoga_samount + hoga_bamount)
             logt  = now() if self.int_logt < int_logt else 0
-            data  = [dt] + self.dict_tick[code][:9] + [sm, hlp] + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + [hgjrt, code, logt]
+            data  = (dt,) + tuple(self.dict_tick[code][:9]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, code, logt)
 
             self.cstgQ.put(data)
-            if code in self.list_oder or code in self.list_jang:
-                self.ctraderQ.put([code, c])
+            if code in self.tuple_order or code in self.tuple_jang:
+                self.ctraderQ.put((code, c))
             if self.dict_set['리시버공유'] == 1:
-                self.zq.put(['tickdata', data])
+                self.zq.put(('tickdata', data))
 
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][7:9] = [0, 0]
 
         if self.hoga_code == code:
-            self.hogaQ.put([code] + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
+            self.hogaQ.put((code,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
 
         if self.int_logt < int_logt:
             gap = (now() - receivetime).total_seconds()
-            self.windowQ.put([ui_num['C단순텍스트'], f'리시버 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'])
+            self.windowQ.put((ui_num['C단순텍스트'], f'리시버 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'))
             self.int_logt = int_logt
 
     def UpdateMoneyTop(self):
-        data1, data2 = self.list_gsjm1.copy(), self.list_gsjm2.copy()
-        self.cstgQ.put(['관심목록', data1, data2])
+        data1, data2 = tuple(self.list_gsjm1), tuple(self.list_gsjm2)
+        self.cstgQ.put(('관심목록', data1, data2))
         if self.dict_set['리시버공유'] == 1:
-            self.zq.put(['focuscodes', [data1, data2]])
+            self.zq.put(('focuscodes', ('관심목록', data1, data2)))
 
         text_gsjm = ';'.join(self.list_gsjm1)
         curr_strtime = str(self.int_jcct)
@@ -435,13 +434,13 @@ class ReceiverBinanceFuture:
         if code not in self.list_gsjm2:
             self.list_gsjm2.append(code)
             if self.dict_set['코인매도취소관심진입']:
-                self.ctraderQ.put(['관심진입', code])
+                self.ctraderQ.put(('관심진입', code))
 
     def DeleteGsjmlist(self, code):
         if code in self.list_gsjm2:
             self.list_gsjm2.remove(code)
             if self.dict_set['코인매수취소관심이탈']:
-                self.ctraderQ.put(['관심이탈', code])
+                self.ctraderQ.put(('관심이탈', code))
 
     def DaydataDownload(self):
         last = len(self.codes)
@@ -519,13 +518,13 @@ class ReceiverBinanceFuture:
                         df = df[df['체결시간'] > dict_lastmin[code]]
                     df = df.set_index('체결시간')
                     if len(df) > 0:
-                        self.queryQ.put(['코인분봉', df, code, 'append'])
+                        self.queryQ.put(('코인분봉', df, code, 'append'))
                 print(f'코인 분봉데이터 다운로드 중 ... [{i + 1}/{last}]')
 
             print('코인 분봉데이터 다운로드 완료')
-            self.cstgQ.put(['분봉데이터', dict_min_ar])
+            self.cstgQ.put(('분봉데이터', dict_min_ar))
             if self.dict_set['리시버공유'] == 1:
-                self.zq.put(['mindata', dict_min_ar])
+                self.zq.put(('mindata', ('분봉데이터', dict_min_ar)))
             con.close()
 
         if self.dict_set['코인일봉데이터']:
@@ -601,13 +600,13 @@ class ReceiverBinanceFuture:
                         df = df[df['일자'] > dict_lastday[code]]
                     df = df.set_index('일자')
                     if len(df) > 0:
-                        self.queryQ.put(['코인일봉', df, code, 'append'])
+                        self.queryQ.put(('코인일봉', df, code, 'append'))
                 print(f'코인 일봉데이터 다운로드 중 ... [{i + 1}/{last}]')
 
             print('코인 일봉데이터 다운로드 완료')
-            self.cstgQ.put(['일봉데이터', dict_day_ar])
+            self.cstgQ.put(('일봉데이터', dict_day_ar))
             if self.dict_set['리시버공유'] == 1:
-                self.zq.put(['daydata', dict_day_ar])
+                self.zq.put(('daydata', ('일봉데이터', dict_day_ar)))
             con.close()
 
 
@@ -628,7 +627,7 @@ class WebSocketManager:
             while True:
                 try:
                     recv_data = await trade_socket.recv()
-                    self.q.put(['trade', recv_data])
+                    self.q.put(('trade', recv_data))
                 except:
                     self.q.put('ConnectionClosedError')
 
@@ -643,7 +642,7 @@ class WebSocketManager:
             while True:
                 try:
                     recv_data = await depth_socket.recv()
-                    self.q.put(['depth', recv_data])
+                    self.q.put(('depth', recv_data))
                 except:
                     self.q.put('ConnectionClosedError')
 

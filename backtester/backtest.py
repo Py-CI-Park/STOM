@@ -108,7 +108,7 @@ class Total:
             elif data[0] == '백테완료':
                 bc  += 1
                 if data[1]: tc += 1
-                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start))
 
                 if bc == self.back_count:
                     bc = 0
@@ -117,7 +117,7 @@ class Total:
                         for ctq in self.stq_list:
                             ctq.put('백테완료')
                     else:
-                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'])
+                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'))
                         self.mq.put('백테스트 완료')
 
             elif data[0] == '백테정보':
@@ -173,7 +173,7 @@ class Total:
                     f.write(''.join(coinreadlines))
 
     def Report(self):
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - self.start}'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - self.start}'))
         if self.buystg_name == '벤치전략':
             self.mq.put('벤치테스트 완료')
         else:
@@ -193,7 +193,7 @@ class Total:
                          f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
                          f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, '\
                          f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테스팅 결과\n' + label_text])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테스팅 결과\n' + label_text))
 
             if self.dict_set['스톰라이브']:
                 backlive_text = f'back;{startday}~{endday};{starttime}~{endtime};{self.day_count};{self.avgtime};{int(self.betting)};'\
@@ -208,10 +208,10 @@ class Total:
             df.to_sql(self.savename, con, if_exists='append', chunksize=1000)
             self.df_tsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
             con.close()
-            self.wq.put([ui_num[f'{self.ui_gubun.replace("F", "")}상세기록' if self.ui_gubun == 'CF' else f'{self.ui_gubun}상세기록'], self.df_tsg])
+            self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록' if self.ui_gubun == 'CF' else f'{self.ui_gubun}상세기록'], self.df_tsg))
 
             if self.blacklist:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'블랙리스트 추가 {self.insertlist}'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'블랙리스트 추가 {self.insertlist}'))
             self.sq.put(f'{self.backname}를 완료하였습니다.')
 
             if self.back_club:
@@ -295,19 +295,19 @@ class BackTest:
         con.close()
 
         if len(df_mt) == 0 or back_count == 0:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'))
             self.SysExit(True)
 
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
         day_count = len(list(set(df_mt['일자'].to_list())))
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ['백테정보', arry_bct, betting, None]
+        data = ('백테정보', arry_bct, betting, None)
         for q in self.stq_list:
             q.put(data)
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
 
         if buystg_name != '벤치전략':
             con = sqlite3.connect(DB_STRATEGY)
@@ -320,16 +320,15 @@ class BackTest:
             buystg  = example_stock_buy
             sellstg = example_stock_sell
 
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
 
         mq = Queue()
         Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, self.bq, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
-        self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
-                     dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club])
-        data = ['백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None]
-
+        self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
+                     dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
+        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None)
         for q in self.stq_list:
             q.put('백테시작')
         for q in self.pq_list:
@@ -340,13 +339,13 @@ class BackTest:
             bench_point = 0
             total_ticks = 0
             for pq in self.pq_list:
-                pq.put(['벤치점수요청'])
+                pq.put(('벤치점수요청',))
             for i, _ in enumerate(self.pq_list):
                 tc, ts, bp = self.bq.get()
                 total_ticks += tc
                 bench_point += bp
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'프로세스[{i + 1}] 틱수 [{tc:,.0f}] 초당연산틱수 [{bp:,.0f}]'])
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'벤치점수 집계 전체틱수 [{total_ticks:,.0f}] 초당연산틱수합계 [{bench_point:,.0f}]'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'프로세스[{i + 1}] 틱수 [{tc:,.0f}] 초당연산틱수 [{bp:,.0f}]'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'벤치점수 집계 전체틱수 [{total_ticks:,.0f}] 초당연산틱수합계 [{bench_point:,.0f}]'))
 
         if self.dict_set['스톰라이브']: self.lq.put(self.backname)
         if data == f'{self.backname} 완료':
@@ -359,10 +358,10 @@ class BackTest:
 
     def SysExit(self, cancel, bench=False):
         if cancel:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         elif bench:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '벤치테스트 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '벤치테스트 완료'))
         else:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
         time.sleep(1)
         sys.exit()

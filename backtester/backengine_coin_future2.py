@@ -42,7 +42,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             self.total_count = 0
 
             if self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
-                self.tq.put(['백테완료', 0])
+                self.tq.put(('백테완료', 0))
                 continue
 
             if not self.dict_set['백테일괄로딩']:
@@ -78,7 +78,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                         self.InitDayInfo()
                         self.InitTradeInfo()
 
-            self.tq.put(['백테완료', 1 if self.total_count > 0 else 0])
+            self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
 
         if self.profile:
             self.pr.print_stats(sort='cumulative')
@@ -212,7 +212,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 8)
 
         def GetArrayIndex(bc):
-            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
+            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
@@ -303,7 +303,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
             for j in range(self.vars_count):
                 self.vars_key = j
-                if self.back_type in ['백테스트', '조건최적화']:
+                if self.back_type in ('백테스트', '조건최적화'):
                     if self.tick_count < self.avgtime:
                         break
                 elif self.back_type == 'GA최적화':
@@ -311,10 +311,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.vars_turn >= 0:
-                    curr_var = self.vars_list[self.vars_turn][j]
-                    if curr_var == self.high_var:
-                        continue
-                    self.vars[self.vars_turn] = curr_var
+                    self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
                     if self.tick_count < self.vars[0]:
                         if self.vars_turn != 0:
                             break

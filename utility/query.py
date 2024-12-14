@@ -72,7 +72,7 @@ class Query:
                             df.to_sql('codename', con2, if_exists='replace', chunksize=1000)
                             con2.close()
                 except Exception as e:
-                    self.windowQ.put([ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 설정디비 {e}'])
+                    self.windowQ.put((ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 설정디비 {e}'))
             elif query[0] == '거래디비':
                 try:
                     if len(query) == 2:
@@ -82,7 +82,7 @@ class Query:
                         query[1].to_sql(query[2], self.con2, if_exists=query[3], chunksize=1000)
                 except Exception as e:
                     ui_text = 'S로그텍스트' if 's_' in query[2] else 'C로그텍스트'
-                    self.windowQ.put([ui_num[ui_text], f'시스템 명령 오류 알림 - Query 거래디비 {e}'])
+                    self.windowQ.put((ui_num[ui_text], f'시스템 명령 오류 알림 - Query 거래디비 {e}'))
             elif query[0] == '전략디비':
                 try:
                     if len(query) == 2:
@@ -91,7 +91,7 @@ class Query:
                     elif len(query) == 4:
                         query[1].to_sql(query[2], self.con3, if_exists=query[3], chunksize=1000)
                 except Exception as e:
-                    self.windowQ.put([ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 전략디비 {e}'])
+                    self.windowQ.put((ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 전략디비 {e}'))
             elif query[0] == '백테디비':
                 try:
                     con = sqlite3.connect(DB_BACKTEST)
@@ -100,7 +100,7 @@ class Query:
                     con.commit()
                     con.close()
                 except Exception as e:
-                    self.windowQ.put([ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 백테디비 {e}'])
+                    self.windowQ.put((ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 백테디비 {e}'))
             elif query[0] == '코인일봉':
                 try:
                     if len(query) == 4:
@@ -114,7 +114,7 @@ class Query:
                             df.set_index('일자', inplace=True)
                             df.to_sql(query[2], self.con5, if_exists=query[3], chunksize=1000)
                 except Exception as e:
-                    self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - Query 코인일봉 {e}'])
+                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - Query 코인일봉 {e}'))
             elif query[0] == '코인분봉':
                 try:
                     if len(query) == 4:
@@ -128,7 +128,7 @@ class Query:
                             df.set_index('체결시간', inplace=True)
                             df.to_sql(query[2], self.con6, if_exists=query[3], chunksize=1000)
                 except Exception as e:
-                    self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - Query 코인분봉 {e}'])
+                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - Query 코인분봉 {e}'))
             elif query[0] == '코인디비':
                 try:
                     if len(query) == 2:
@@ -155,11 +155,11 @@ class Query:
                             self.cur4.execute('INSERT INTO "dist" ("cnt") values (1);')
                         save_time = (now() - start).total_seconds()
                         text = f'시스템 명령 실행 알림 - 틱데이터 저장 쓰기소요시간은 [{save_time:.6f}]초입니다.'
-                        self.windowQ.put([ui_num['C단순텍스트'], text])
+                        self.windowQ.put((ui_num['C단순텍스트'], text))
                     elif len(query) == 4:
                         query[1].to_sql(query[2], self.con4, if_exists=query[3], chunksize=1000)
                 except Exception as e:
-                    self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - Query 코인디비 {e}'])
+                    self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - Query 코인디비 {e}'))
             elif '백테DB지정일자삭제' in query[0]:
                 BACK_FILE = DB_STOCK_BACK if '주식' in query[0] else DB_COIN_BACK
                 con = sqlite3.connect(BACK_FILE)
@@ -170,25 +170,25 @@ class Query:
                 for i, code in enumerate(table_list):
                     query_del = f"DELETE FROM '{code}' WHERE `index` LIKE '{query[1]}%'"
                     cur.execute(query_del)
-                    self.windowQ.put([ui_num['DB관리'], f'백테DB {code} 지정일자 데이터 삭제 완료 [{i + 1}/{last}]'])
+                    self.windowQ.put((ui_num['DB관리'], f'백테DB {code} 지정일자 데이터 삭제 완료 [{i + 1}/{last}]'))
                 con.commit()
                 con.close()
-                self.windowQ.put([ui_num['DB관리'], '백테DB 지정일자 데이터 삭제 완료'])
+                self.windowQ.put((ui_num['DB관리'], '백테DB 지정일자 데이터 삭제 완료'))
             elif '일자DB지정일자삭제' in query[0]:
                 firstname = 'stock_tick_' if '주식' in query[0] else 'coin_tick_'
                 file_name = f'{DB_PATH}/{firstname}' + query[1] + '.db'
                 if os.path.isfile(file_name):
                     os.remove(file_name)
-                    self.windowQ.put([ui_num['DB관리'], f'{file_name} 삭제 완료'])
+                    self.windowQ.put((ui_num['DB관리'], f'{file_name} 삭제 완료'))
                 else:
-                    self.windowQ.put([ui_num['DB관리'], '해당 날짜에 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '해당 날짜에 데이터가 존재하지 않습니다.'))
             elif '일자DB지정시간이후삭제' in query[0]:
                 file_list = os.listdir(DB_PATH)
                 firstname = 'stock_tick_' if '주식' in query[0] else 'coin_tick_'
                 file_list = [x for x in file_list if firstname in x and 'back' not in x and '.zip' not in x]
                 last = len(file_list)
                 if last == 0:
-                    self.windowQ.put([ui_num['DB관리'], '날짜별 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '날짜별 데이터가 존재하지 않습니다.'))
                 else:
                     for i, db_name in enumerate(file_list):
                         con = sqlite3.connect(f'{DB_PATH}/{db_name}')
@@ -217,8 +217,8 @@ class Query:
                                 cur.execute(f'DROP TABLE "{code}"')
                         cur.execute('VACUUM;')
                         con.close()
-                        self.windowQ.put([ui_num['DB관리'], f'{db_name} 데이터 갱신 완료 [{i + 1}/{last}]'])
-                    self.windowQ.put([ui_num['DB관리'], '지정시간 이후 데이터 삭제 완료'])
+                        self.windowQ.put((ui_num['DB관리'], f'{db_name} 데이터 갱신 완료 [{i + 1}/{last}]'))
+                    self.windowQ.put((ui_num['DB관리'], '지정시간 이후 데이터 삭제 완료'))
             elif '당일데이터지정시간이후삭제' in query[0]:
                 if '코인' in query[0]:
                     self.con4.close()
@@ -227,7 +227,7 @@ class Query:
                     con = sqlite3.connect(DB_FILE)
                     cur = con.cursor()
                 except:
-                    self.windowQ.put([ui_num['DB관리'], '데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '데이터가 존재하지 않습니다.'))
                 else:
                     df = pd.read_sql('SELECT * FROM moneytop', con)
                     df['시간'] = df['index'].apply(lambda x: int(str(x)[8:]))
@@ -262,10 +262,10 @@ class Query:
                                     cur.execute(f'DROP TABLE "{code}"')
                             elif code != 'moneytop':
                                 cur.execute(f'DROP TABLE "{code}"')
-                            self.windowQ.put([ui_num['DB관리'], f'{code} 데이터 갱신 완료 [{i + 1}/{last}]'])
+                            self.windowQ.put((ui_num['DB관리'], f'{code} 데이터 갱신 완료 [{i + 1}/{last}]'))
                         cur.execute('VACUUM;')
                     con.close()
-                    self.windowQ.put([ui_num['DB관리'], '지정시간 이후 데이터 삭제 완료'])
+                    self.windowQ.put((ui_num['DB관리'], '지정시간 이후 데이터 삭제 완료'))
                 if '코인' in query[0]:
                     self.con4 = sqlite3.connect(DB_COIN_TICK)
                     self.cur4 = self.con4.cursor()
@@ -276,7 +276,7 @@ class Query:
                     con = sqlite3.connect(DB_STOCK_TICK)
                     cur = con.cursor()
                 except:
-                    self.windowQ.put([ui_num['DB관리'], '데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '데이터가 존재하지 않습니다.'))
                 else:
                     df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
                     table_list = df['name'].to_list()
@@ -289,20 +289,20 @@ class Query:
                             df['index'] = df['index'] - 10000
                             df.set_index('index', inplace=True)
                             df.to_sql(code, con, if_exists='append', chunksize=1000)
-                            self.windowQ.put([ui_num['DB관리'], f'{code} 데이터 갱신 완료 [{i + 1}/{last}]'])
+                            self.windowQ.put((ui_num['DB관리'], f'{code} 데이터 갱신 완료 [{i + 1}/{last}]'))
                     con.close()
-                    self.windowQ.put([ui_num['DB관리'], '체결시간 조정 완료'])
+                    self.windowQ.put((ui_num['DB관리'], '체결시간 조정 완료'))
             elif '백테DB생성' in query[0]:
                 file_list = os.listdir(DB_PATH)
                 firstname = 'stock_tick_' if '주식' in query[0] else 'coin_tick_'
                 BACK_FILE = DB_STOCK_BACK if '주식' in query[0] else DB_COIN_BACK
                 file_list = [x for x in file_list if firstname in x and 'back' not in x and '.zip' not in x]
                 if len(file_list) == 0:
-                    self.windowQ.put([ui_num['DB관리'], '날짜별 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '날짜별 데이터가 존재하지 않습니다.'))
                 else:
                     if os.path.isfile(BACK_FILE):
                         os.remove(BACK_FILE)
-                        self.windowQ.put([ui_num['DB관리'], f'{BACK_FILE} 삭제 완료'])
+                        self.windowQ.put((ui_num['DB관리'], f'{BACK_FILE} 삭제 완료'))
                     con = sqlite3.connect(BACK_FILE)
                     if firstname == 'stock_tick_':
                         df = pd.read_sql('SELECT * FROM codename', self.con1).set_index('index')
@@ -318,16 +318,16 @@ class Query:
                                 if len(df) > 0:
                                     df.to_sql(code, con, if_exists='append', chunksize=1000)
                             con2.close()
-                            self.windowQ.put([ui_num['DB관리'], f'{db_name} 데이터 추가 완료'])
+                            self.windowQ.put((ui_num['DB관리'], f'{db_name} 데이터 추가 완료'))
                     con.close()
-                    self.windowQ.put([ui_num['DB관리'], f'{BACK_FILE} 생성 완료'])
+                    self.windowQ.put((ui_num['DB관리'], f'{BACK_FILE} 생성 완료'))
             elif '백테디비추가1' in query[0]:
                 file_list = os.listdir(DB_PATH)
                 firstname = 'stock_tick_' if '주식' in query[0] else 'coin_tick_'
                 BACK_FILE = DB_STOCK_BACK if '주식' in query[0] else DB_COIN_BACK
                 file_list = [x for x in file_list if firstname in x and 'back' not in x and '.zip' not in x]
                 if len(file_list) == 0:
-                    self.windowQ.put([ui_num['DB관리'], '날짜별 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '날짜별 데이터가 존재하지 않습니다.'))
                 else:
                     con = sqlite3.connect(BACK_FILE)
                     if firstname == 'stock_tick_':
@@ -344,16 +344,16 @@ class Query:
                                 if len(df) > 0:
                                     df.to_sql(code, con, if_exists='append', chunksize=1000)
                             con2.close()
-                            self.windowQ.put([ui_num['DB관리'], f'{db_name} 데이터 추가 완료'])
+                            self.windowQ.put((ui_num['DB관리'], f'{db_name} 데이터 추가 완료'))
                     con.close()
-                    self.windowQ.put([ui_num['DB관리'], f'{query[1]} ~ {query[2]} 추가 완료'])
+                    self.windowQ.put((ui_num['DB관리'], f'{query[1]} ~ {query[2]} 추가 완료'))
             elif '백테디비추가2' in query[0]:
                 DB_FILE = DB_STOCK_TICK if '주식' in query[0] else DB_COIN_TICK
                 con = sqlite3.connect(DB_FILE)
                 try:
                     df = pd.read_sql('SELECT * FROM moneytop', con)
                 except:
-                    self.windowQ.put([ui_num['DB관리'], '저장한 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '저장한 데이터가 존재하지 않습니다.'))
                 else:
                     BACK_FILE = DB_STOCK_BACK if '주식' in query[0] else DB_COIN_BACK
                     con2 = sqlite3.connect(BACK_FILE)
@@ -363,8 +363,8 @@ class Query:
                     firstname = 'stock_tick_' if '주식' in query[0] else 'coin_tick_'
                     file_day_list = [x.strip(firstname).strip('.db') for x in file_list if firstname in x and 'back' not in x and '.zip' not in x]
                     if len(list(set(day_list) - set(file_day_list))) > 0:
-                        self.windowQ.put([ui_num['DB관리'], '경고! 추가 후 당일 DB가 삭제됩니다.'])
-                        self.windowQ.put([ui_num['DB관리'], '날짜별 분리 후 재실행하십시오.'])
+                        self.windowQ.put((ui_num['DB관리'], '경고! 추가 후 당일 DB가 삭제됩니다.'))
+                        self.windowQ.put((ui_num['DB관리'], '날짜별 분리 후 재실행하십시오.'))
                     else:
                         if firstname == 'stock_tick_':
                             df = pd.read_sql('SELECT * FROM codename', self.con1).set_index('index')
@@ -385,15 +385,15 @@ class Query:
                             df = pd.read_sql(f'SELECT * FROM "{code}"', con).set_index('index')
                             if len(df) > 0:
                                 df.to_sql(code, con2, if_exists='append', chunksize=1000)
-                            self.windowQ.put([ui_num['DB관리'], f'{code} 데이터 추가 완료 [{i + 1}/{last}]'])
+                            self.windowQ.put((ui_num['DB관리'], f'{code} 데이터 추가 완료 [{i + 1}/{last}]'))
                         con2.close()
                         con.close()
-                        self.windowQ.put([ui_num['DB관리'], '당일 데이터 백테디비로 추가 완료'])
+                        self.windowQ.put((ui_num['DB관리'], '당일 데이터 백테디비로 추가 완료'))
                         if '코인' in query[0]:
                             self.con4.close()
                         if os.path.isfile(DB_FILE):
                             os.remove(DB_FILE)
-                            self.windowQ.put([ui_num['DB관리'], f'{DB_FILE} 삭제 완료'])
+                            self.windowQ.put((ui_num['DB관리'], f'{DB_FILE} 삭제 완료'))
                         if '코인' in query[0]:
                             self.con4 = sqlite3.connect(DB_COIN_TICK)
                             self.cur4 = self.con4.cursor()
@@ -405,7 +405,7 @@ class Query:
                 try:
                     df = pd.read_sql('SELECT * FROM moneytop', con)
                 except:
-                    self.windowQ.put([ui_num['DB관리'], '당일 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put((ui_num['DB관리'], '당일 데이터가 존재하지 않습니다.'))
                 else:
                     df['일자'] = df['index'].apply(lambda x: int(str(x)[:8]))
                     day_list = list(set(df['일자'].to_list()))
@@ -429,10 +429,10 @@ class Query:
                                 con2 = sqlite3.connect(f'{DB_PATH}/{firstname}{day}.db')
                                 df.to_sql(code, con2, if_exists='replace', chunksize=1000)
                                 con2.close()
-                        self.windowQ.put([ui_num['DB관리'], f'{code} 데이터 분리 완료 [{i + 1}/{last}]'])
+                        self.windowQ.put((ui_num['DB관리'], f'{code} 데이터 분리 완료 [{i + 1}/{last}]'))
                     con.close()
-                    self.windowQ.put([ui_num['DB관리'], '날짜별 DB 생성 완료'])
-            self.windowQ.put([ui_num['DB관리'], 'DB업데이트완료'])
+                    self.windowQ.put((ui_num['DB관리'], '날짜별 DB 생성 완료'))
+            self.windowQ.put((ui_num['DB관리'], 'DB업데이트완료'))
 
     def create_trigger(self):
         res = self.cur4.execute("SELECT name FROM sqlite_master WHERE type='table';")

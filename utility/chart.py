@@ -42,17 +42,16 @@ class Chart:
     def Start(self):
         while True:
             data = self.chartQ.get()
-            if type(data) == dict:
+            if data[0] == '설정변경':
                 self.dict_set = data
-            elif type(data) == list:
-                if data[0] == '그래프비교':
-                    self.GraphComparison(data[1])
-                elif len(data) == 3:
-                    self.UpdateRealJisu(data)
-                elif len(data) == 5:
-                    self.UpdateChartDayMin(data)
-                elif len(data) >= 6:
-                    self.UpdateChart(data)
+            if data[0] == '그래프비교':
+                self.GraphComparison(data[1])
+            elif len(data) == 3:
+                self.UpdateRealJisu(data)
+            elif len(data) == 5:
+                self.UpdateChartDayMin(data)
+            elif len(data) >= 6:
+                self.UpdateChart(data)
 
     @staticmethod
     def GraphComparison(backdetail_list):
@@ -81,14 +80,14 @@ class Chart:
                 else:
                     self.arry_kosp = np.r_[self.arry_kosp, np.array([jisu_data])]
                 xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.arry_kosp[:, 0]]
-                self.windowQ.put([ui_num['코스피'], xticks, self.arry_kosp[:, 1]])
+                self.windowQ.put((ui_num['코스피'], xticks, self.arry_kosp[:, 1]))
             elif gubun == '코스닥':
                 if self.arry_kosd is None:
                     self.arry_kosd = np.array([jisu_data])
                 else:
                     self.arry_kosd = np.r_[self.arry_kosd, np.array([jisu_data])]
                 xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.arry_kosd[:, 0]]
-                self.windowQ.put([ui_num['코스닥'], xticks, self.arry_kosd[:, 1]])
+                self.windowQ.put((ui_num['코스닥'], xticks, self.arry_kosd[:, 1]))
         except:
             pass
 
@@ -136,7 +135,7 @@ class Chart:
             pass
 
         if df is None or len(df) == 0:
-            self.windowQ.put([ui_num['차트'], '차트오류', '', '', '', ''])
+            self.windowQ.put((ui_num['차트'], '차트오류', '', '', '', ''))
         else:
             if coin:
                 gubun = '코인'
@@ -328,7 +327,7 @@ class Chart:
             df.fillna(0, inplace=True)
             arry = np.array(df)
             xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
-            self.windowQ.put([ui_num['차트'], coin, xticks, arry, buy_index, sell_index])
+            self.windowQ.put((ui_num['차트'], coin, xticks, arry, buy_index, sell_index))
 
     def UpdateChartDayMin(self, data):
         gubun, coin, code, name, searchdate = data
@@ -346,7 +345,7 @@ class Chart:
             if len(df) > 0:
                 df = df[['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']].copy()
                 df = df[::-1]
-                self.windowQ.put([ui_num['일봉차트'], name, np.array(df)])
+                self.windowQ.put((ui_num['일봉차트'], name, np.array(df)))
         else:
             if coin:
                 db_name = DB_COIN_MIN
@@ -361,4 +360,4 @@ class Chart:
             if len(df) > 0:
                 df = df[['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']].copy()
                 df = df[::-1]
-                self.windowQ.put([ui_num['분봉차트'], name, np.array(df)])
+                self.windowQ.put((ui_num['분봉차트'], name, np.array(df)))

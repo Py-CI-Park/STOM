@@ -66,13 +66,13 @@ class TelegramMsg:
             return
         cmd = update.message.text
         if cmd == 'S전략중지':
-            self.wdzservQ.put(['strategy', ['매수전략중지', '']])
+            self.wdzservQ.put(('strategy', '매수전략중지'))
             self.SendMsg('주식 전략 중지 완료')
         elif cmd == 'C전략중지':
-            self.cstgQ.put(['매수전략중지', ''])
+            self.cstgQ.put('매수전략중지')
             self.SendMsg('코인 전략 중지 완료')
         elif 'S' in cmd:
-            self.wdzservQ.put(['trader', cmd])
+            self.wdzservQ.put(('trader', cmd))
         elif 'C' in cmd:
             self.ctraderQ.put(cmd)
 
@@ -95,7 +95,7 @@ class TelegramMsg:
                 name  = df['종목명'][index]
                 text += f'{ct} {per:.2f}% {sg:,.0f}원 {name}\n'
             self.SendMsg(text)
-        elif df.columns[1] in ['매입가', '포지션']:
+        elif df.columns[1] in ('매입가', '포지션'):
             text   = ''
             m_unit = '원' if df.columns[1] == '매입가' else 'USDT'
             for index in df.index:

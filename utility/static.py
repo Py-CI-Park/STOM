@@ -379,7 +379,7 @@ def GetUvilower5(uvi, hogaunit, index):
     if GetHogaunit(True, upper5, index) != hogaunit:
         k = 0
         hogaunit2 = 0
-        for i in [1, 2, 3, 4, 5]:
+        for i in (1, 2, 3, 4, 5):
             hogaunit_ = GetHogaunit(True, uvi - hogaunit * i, index)
             if hogaunit_ != hogaunit:
                 hogaunit2 = hogaunit_

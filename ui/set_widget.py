@@ -58,7 +58,7 @@ class CustomViewBox(pg.ViewBox):
                     ymd  = self.ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
                     hms  = self.ui.ctpg_tik_labels[0].toPlainText()
                     hms  = hms.split('시간')[1].split('이평')[0].strip().replace(':', '')
-                    self.ui.hogaQ.put(['차트용호가정보요청', code, name, ymd + hms])
+                    self.ui.hogaQ.put(('차트용호가정보요청', code, name, ymd + hms))
             except:
                 pass
 
@@ -97,8 +97,10 @@ class WidgetCreater:
             pushbutton.setVisible(False)
         if click is not None:
             if cmd is not None:
+                # noinspection PyUnresolvedReferences
                 pushbutton.clicked.connect(lambda: click(cmd))
             else:
+                # noinspection PyUnresolvedReferences
                 pushbutton.clicked.connect(click)
         return pushbutton
 
@@ -141,6 +143,7 @@ class WidgetCreater:
         if not visible:
             combobox.setVisible(visible)
         if activated is not None:
+            # noinspection PyUnresolvedReferences
             combobox.currentTextChanged.connect(activated)
         return combobox
 
@@ -155,6 +158,7 @@ class WidgetCreater:
             checkbox.setFont(qfont12)
             checkbox.setStyleSheet(style)
         if changed is not None:
+            # noinspection PyUnresolvedReferences
             checkbox.stateChanged.connect(changed)
         return checkbox
 
@@ -179,8 +183,10 @@ class WidgetCreater:
         if tip is not None:
             lineedit.setToolTip(tip)
         if enter:
+            # noinspection PyUnresolvedReferences
             lineedit.returnPressed.connect(enter)
         if change:
+            # noinspection PyUnresolvedReferences
             lineedit.textChanged.connect(change)
         return lineedit
 
@@ -204,6 +210,7 @@ class WidgetCreater:
         dateEdit.setDate(qdate)
         dateEdit.setCalendarPopup(True)
         if changed is not None:
+            # noinspection PyUnresolvedReferences
             dateEdit.dateChanged.connect(changed)
         return dateEdit
 
@@ -263,6 +270,7 @@ class WidgetCreater:
         if not visible:
             tableWidget.setVisible(False)
         if clicked is not None:
+            # noinspection PyUnresolvedReferences
             tableWidget.cellClicked.connect(clicked)
         if columns[-1] == 'ch_high':
             if tab == self.ui.st_tab:
@@ -297,8 +305,8 @@ class WidgetCreater:
                 tableWidget.setColumnWidth(12, 55)
                 tableWidget.setColumnWidth(13, 55)
                 tableWidget.setColumnWidth(14, 55)
-        elif columns in [columns_nt, columns_nd]:
-            if tab in [self.ui.slv_tab, self.ui.clv_tab]:
+        elif columns in (columns_nt, columns_nd):
+            if tab in (self.ui.slv_tab, self.ui.clv_tab):
                 tableWidget.setColumnWidth(0, 94)
             else:
                 tableWidget.setColumnWidth(0, 100)
@@ -416,7 +424,7 @@ class WidgetCreater:
             tableWidget.setColumnWidth(5, 140)
             tableWidget.setColumnWidth(6, 140)
             tableWidget.setColumnWidth(7, 140)
-        elif columns in [columns_hc, columns_hc2, columns_hg]:
+        elif columns in (columns_hc, columns_hc2, columns_hg):
             tableWidget.setColumnWidth(0, 140)
             tableWidget.setColumnWidth(1, 140)
         elif columns == columns_ns:
@@ -457,7 +465,7 @@ class WidgetCreater:
             tableWidget.setColumnWidth(11, 90)
             tableWidget.setColumnWidth(12, 600)
             tableWidget.setColumnWidth(13, 100)
-        elif columns in [columns_stg1, columns_stg2]:
+        elif columns in (columns_stg1, columns_stg2):
             tableWidget.setColumnWidth(0, 125)
             tableWidget.setColumnWidth(1, 125)
             tableWidget.setColumnWidth(2, 125)
@@ -469,7 +477,7 @@ class WidgetCreater:
         elif columns == ['백테스트 상세기록']:
             tableWidget.setColumnWidth(0, 333)
         else:
-            if tab in [self.ui.slv_tab, self.ui.clv_tab]:
+            if tab in (self.ui.slv_tab, self.ui.clv_tab):
                 tableWidget.setColumnWidth(0, 121)
             elif tab == self.ui.ct_tab:
                 tableWidget.setColumnWidth(0, 96)

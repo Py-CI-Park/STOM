@@ -41,25 +41,26 @@ class StrategyUpbit:
         self.dict_sgn_tik  = {}
         self.dict_buy_tik  = {}
 
-        self.list_gsjm1 = []
-        self.list_gsjm2 = []
-        self.list_buy   = []
-        self.list_sell  = []
+        self.tuple_gsjm1 = []
+        self.tuple_gsjm2 = []
+        self.list_buy    = []
+        self.list_sell   = []
 
         self.bhogainfo  = {}
         self.shogainfo  = {}
         self.dict_hilo  = {}
 
+        self.jgrv_count = 0
         self.int_tujagm = 0
         self.stg_change = False
         self.chart_code = None
         self.df_jg      = pd.DataFrame(columns=columns_jg)
         self.df_gj      = pd.DataFrame(columns=columns_gj)
 
-        self.UpdateStrategy()
-        self.Start()
+        self.UpdateStringategy()
+        self.MainLoop()
 
-    def UpdateStrategy(self):
+    def UpdateStringategy(self):
         con  = sqlite3.connect(DB_STRATEGY)
         dfb  = pd.read_sql('SELECT * FROM coinbuy', con).set_index('index')
         dfs  = pd.read_sql('SELECT * FROM coinsell', con).set_index('index')
@@ -97,112 +98,110 @@ class StrategyUpbit:
         elif self.dict_set['코인장중매도전략'] in dfos.index:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['코인장중매도전략']], '<string>', 'exec')
 
-    def Start(self):
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 전략 연산 시작'])
-        jg_receiv_count = 0
+    def MainLoop(self):
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 전략 연산 시작'))
         while True:
             data = self.cstgQ.get()
-            if type(data) == list:
-                if len(data) == 3:
-                    if '재로딩' in data[0]:
-                        self.ReloadData(data)
-                    else:
-                        self.UpdateGsjm(data)
-                elif len(data) == 2:
-                    self.UpdateList(data)
-                else:
+            if type(data) == tuple:
+                if len(data) > 3:
                     self.Strategy(data)
-            elif type(data) == pd.DataFrame:
-                self.df_jg = data
-                jg_receiv_count += 1
-                if jg_receiv_count == 2:
-                    jg_receiv_count = 0
-                    self.PutGsjmAndDeleteHilo()
-            elif type(data) == int:
-                self.int_tujagm = data
-            elif type(data) == dict:
-                self.dict_set = data
-                self.UpdateStrategy()
+                elif len(data) == 2:
+                    self.UpdateTuple(data)
+                elif len(data) == 3:
+                    self.UpdateTriple(data)
             elif type(data) == str:
+                self.UpdateString(data)
                 if data == '프로세스종료':
                     break
-                elif data == '복기모드종료':
-                    self.dict_tik_ar = {}
-                else:
-                    self.chart_code = data
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 전략연산 종료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 전략연산 종료'))
         time.sleep(1)
 
-    def ReloadData(self, data):
-        gubun, code, dt = data
-        if gubun == '분봉재로딩':
+    def UpdateTuple(self, data):
+        gubun, data = data
+        if gubun in ('매수완료', '매수취소'):
+            if data in self.list_buy:
+                self.list_buy.remove(data)
+            if gubun == '매수완료':
+                if data in self.dict_sgn_tik.keys():
+                    self.dict_buy_tik[data] = self.dict_sgn_tik[data]
+                else:
+                    self.dict_buy_tik[data] = len(self.dict_tik_ar[data]) - 1
+        elif gubun in ('매도완료', '매도취소'):
+            if data in self.list_sell:
+                self.list_sell.remove(data)
+        elif gubun == '매수주문':
+            if data not in self.list_buy:
+                self.list_buy.append(data)
+        elif gubun == '매도주문':
+            if data not in self.list_sell:
+                self.list_sell.append(data)
+        elif gubun == '잔고목록':
+            self.df_jg = data
+            self.jgrv_count += 1
+            if self.jgrv_count == 2:
+                self.jgrv_count = 0
+                self.PutGsjmAndDeleteHilo()
+        elif gubun == '매수전략':
+            if int_hms_utc() < self.dict_set['코인장초전략종료시간']:
+                self.buystrategy1 = compile(data, '<string>', 'exec')
+            else:
+                self.buystrategy2 = compile(data, '<string>', 'exec')
+        elif gubun == '매도전략':
+            if int_hms_utc() < self.dict_set['코인장초전략종료시간']:
+                self.sellstrategy1 = compile(data, '<string>', 'exec')
+            else:
+                self.sellstrategy2 = compile(data, '<string>', 'exec')
+        elif gubun == '종목당투자금':
+            self.int_tujagm = data
+        elif gubun == '차트종목코드':
+            self.chart_code = data
+        elif gubun == '설정변경':
+            self.dict_set = data
+            self.UpdateStringategy()
+        elif gubun == '일봉데이터':
+            self.dict_day_ar = data
+            for data in self.dict_day_ar.keys():
+                self.dict_day_data[data] = self.GetNewLineData(self.dict_day_ar[data], 250)
+            self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 일봉데이터 로딩 완료'))
+        elif gubun == '분봉데이터':
+            self.dict_min_ar = data
+            for data in self.dict_min_ar.keys():
+                self.dict_min_data[data] = self.GetNewLineData(self.dict_min_ar[data], self.dict_set['코인분봉개수'])
+            self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 분봉데이터 로딩 완료'))
+
+    def UpdateTriple(self, data):
+        gubun, data1, data2 = data
+        if gubun == '관심목록':
+            self.tuple_gsjm1, self.tuple_gsjm2 = data1, data2
+            drop_index_list = list(set(list(self.df_gj.index)) - set(self.tuple_gsjm2))
+            self.df_gj.drop(index=drop_index_list, inplace=True)
+        elif gubun == '분봉재로딩':
             con = sqlite3.connect(DB_COIN_MIN)
-            df = pd.read_sql(f"SELECT * FROM '{code}' WHERE 체결시간 < {dt} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}", con)
+            df = pd.read_sql(f"SELECT * FROM '{data1}' WHERE 체결시간 < {data2} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}", con)
             columns = ['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
             df = df[columns][::-1]
-            self.dict_min_ar[code] = np.array(df)
-            self.dict_min_data[code] = self.GetNewLineData(self.dict_min_ar[code], self.dict_set['코인분봉개수'])
+            self.dict_min_ar[data1] = np.array(df)
+            self.dict_min_data[data1] = self.GetNewLineData(self.dict_min_ar[data1], self.dict_set['코인분봉개수'])
             con.close()
         elif gubun == '일봉재로딩':
             con = sqlite3.connect(DB_COIN_DAY)
-            df = pd.read_sql(f"SELECT * FROM '{code}' WHERE 일자 < {dt} ORDER BY 일자 DESC LIMIT 250", con)
+            df = pd.read_sql(f"SELECT * FROM '{data1}' WHERE 일자 < {data2} ORDER BY 일자 DESC LIMIT 250", con)
             columns = ['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
             df = df[columns][::-1]
-            self.dict_day_ar[code] = np.array(df)
-            self.dict_day_data[code] = self.GetNewLineData(self.dict_day_ar[code], 250)
+            self.dict_day_ar[data1] = np.array(df)
+            self.dict_day_data[data1] = self.GetNewLineData(self.dict_day_ar[data1], 250)
             con.close()
 
-    def UpdateGsjm(self, data):
-        self.list_gsjm1, self.list_gsjm2 = data[1:]
-        drop_index_list = list(set(list(self.df_gj.index)) - set(self.list_gsjm2))
-        self.df_gj.drop(index=drop_index_list, inplace=True)
-
-    def UpdateList(self, data):
-        gubun, codeorlist = data
-        if gubun in ['매수완료', '매수취소']:
-            if codeorlist in self.list_buy:
-                self.list_buy.remove(codeorlist)
-            if gubun == '매수완료':
-                if codeorlist in self.dict_sgn_tik.keys():
-                    self.dict_buy_tik[codeorlist] = self.dict_sgn_tik[codeorlist]
-                else:
-                    self.dict_buy_tik[codeorlist] = len(self.dict_tik_ar[codeorlist]) - 1
-        elif gubun in ['매도완료', '매도취소']:
-            if codeorlist in self.list_sell:
-                self.list_sell.remove(codeorlist)
-        elif gubun == '매수주문':
-            if codeorlist not in self.list_buy:
-                self.list_buy.append(codeorlist)
-        elif gubun == '매도주문':
-            if codeorlist not in self.list_sell:
-                self.list_sell.append(codeorlist)
-        elif gubun == '매수전략':
-            if int_hms_utc() < self.dict_set['코인장초전략종료시간']:
-                self.buystrategy1 = compile(codeorlist, '<string>', 'exec')
-            else:
-                self.buystrategy2 = compile(codeorlist, '<string>', 'exec')
-        elif gubun == '매도전략':
-            if int_hms_utc() < self.dict_set['코인장초전략종료시간']:
-                self.sellstrategy1 = compile(codeorlist, '<string>', 'exec')
-            else:
-                self.sellstrategy2 = compile(codeorlist, '<string>', 'exec')
-        elif gubun == '매수전략중지':
+    def UpdateString(self, data):
+        if data == '매수전략중지':
             self.buystrategy1 = None
             self.buystrategy2 = None
-        elif gubun == '매도전략중지':
+        elif data == '매도전략중지':
             self.sellstrategy1 = None
             self.sellstrategy2 = None
-        elif gubun == '일봉데이터':
-            self.dict_day_ar = codeorlist
-            for codeorlist in self.dict_day_ar.keys():
-                self.dict_day_data[codeorlist] = self.GetNewLineData(self.dict_day_ar[codeorlist], 250)
-            self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 일봉데이터 로딩 완료'])
-        elif gubun == '분봉데이터':
-            self.dict_min_ar = codeorlist
-            for codeorlist in self.dict_min_ar.keys():
-                self.dict_min_data[codeorlist] = self.GetNewLineData(self.dict_min_ar[codeorlist], self.dict_set['코인분봉개수'])
-            self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 분봉데이터 로딩 완료'])
+        elif data == '복기모드종료':
+            self.dict_tik_ar = {}
 
     @staticmethod
     def GetNewLineData(ar, hmcount):
@@ -672,7 +671,7 @@ class StrategyUpbit:
                 분봉이평240 = round((분봉종가합계239 + 현재가) / 240, 8)
                 분봉최고거래대금대비 = round(분봉거래대금 / 분봉최고거래대금 * 100, 2) if 분봉최고거래대금 != 0 else 0.
             except Exception as e:
-                self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 분봉데이터 {e}'])
+                self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 분봉데이터 {e}'))
                 return
 
         if self.dict_set['코인일봉데이터']:
@@ -697,7 +696,7 @@ class StrategyUpbit:
                 일봉이평240 = round((일봉종가합계239 + 현재가) / 240, 8)
                 일봉최고거래대금대비 = round(당일거래대금 / 일봉최고거래대금 * 100, 2) if 일봉최고거래대금 != 0 else 0.
             except Exception as e:
-                self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}'])
+                self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}'))
                 return
 
         if 체결강도평균_ != 0:
@@ -725,7 +724,7 @@ class StrategyUpbit:
             BBT = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분초 < self.dict_set['코인매수금지종료시간'])
             BLK = not self.dict_set['코인매수금지블랙리스트'] or 종목코드 not in self.dict_set['코인블랙리스트']
             C20 = not self.dict_set['코인매수금지200원이하'] or 현재가 > 200
-            ING = 종목코드 in self.list_gsjm1
+            ING = 종목코드 in self.tuple_gsjm1
             NIB = 종목코드 not in self.list_buy
             NIS = 종목코드 not in self.list_sell
 
@@ -749,7 +748,7 @@ class StrategyUpbit:
                                 exec(self.buystrategy1, None, locals())
                             except:
                                 print_exc()
-                                self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy1'])
+                                self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy1'))
                     elif self.dict_set['코인장초전략종료시간'] <= 시분초 < self.dict_set['코인장중전략종료시간']:
                         if self.buystrategy2 is not None:
                             if not self.stg_change:
@@ -759,7 +758,7 @@ class StrategyUpbit:
                                 exec(self.buystrategy2, None, locals())
                             except:
                                 print_exc()
-                                self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2'])
+                                self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2'))
                 elif C:
                     분할매수기준수익률 = round((현재가 / self.dict_buyinfo[종목코드][9] - 1) * 100, 2) if self.dict_set['코인매수분할고정수익률'] else 수익률
                     if self.dict_set['코인매수분할하방'] and 분할매수기준수익률 < -self.dict_set['코인매수분할하방수익률']:  매수 = True
@@ -798,14 +797,14 @@ class StrategyUpbit:
                                 exec(self.sellstrategy1, None, locals())
                             except:
                                 print_exc()
-                                self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 오류 알림 - SellStrategy1'])
+                                self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - SellStrategy1'))
                     elif self.dict_set['코인장초전략종료시간'] <= 시분초 < self.dict_set['코인장중전략종료시간']:
                         if self.sellstrategy2 is not None:
                             try:
                                 exec(self.sellstrategy2, None, locals())
                             except:
                                 print_exc()
-                                self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2'])
+                                self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2'))
                 elif C or E or F:
                     if 강제청산:
                         매도 = True
@@ -816,13 +815,13 @@ class StrategyUpbit:
                     if 매도:
                         self.Sell(종목코드, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
 
-        if 종목코드 in self.list_gsjm2:
+        if 종목코드 in self.tuple_gsjm2:
             self.df_gj.loc[종목코드] = 종목코드, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:
-            self.windowQ.put([ui_num['실시간차트'], 종목코드, self.dict_tik_ar[종목코드]])
+            self.windowQ.put((ui_num['실시간차트'], 종목코드, self.dict_tik_ar[종목코드]))
 
-        if self.dict_set['코인틱데이터저장'] and 종목코드 in self.list_gsjm2:
+        if self.dict_set['코인틱데이터저장'] and 종목코드 in self.tuple_gsjm2:
             if 종목코드 not in self.dict_tik_ar2.keys():
                 self.dict_tik_ar2[종목코드] = np.array([new_data_tick[:35]])
             else:
@@ -836,10 +835,10 @@ class StrategyUpbit:
                 self.dict_min_ar[종목코드] = np.r_[self.dict_min_ar[종목코드], np.array([new_data])]
                 if len(self.dict_min_ar[종목코드]) > self.dict_set['코인분봉개수']:
                     self.dict_min_ar[종목코드] = np.delete(self.dict_min_ar[종목코드], 0, 0)
-                self.queryQ.put(['코인분봉', new_dbdata_min, 종목코드, 'append'])
+                self.queryQ.put(('코인분봉', new_dbdata_min, 종목코드, 'append'))
 
             if self.chart_code == 종목코드:
-                self.windowQ.put([ui_num['분봉차트'], 종목코드, self.dict_min_ar[종목코드][-120:]])
+                self.windowQ.put((ui_num['분봉차트'], 종목코드, self.dict_min_ar[종목코드][-120:]))
 
         if self.dict_set['코인일봉데이터']:
             if new_dbdata_day is None:
@@ -849,19 +848,19 @@ class StrategyUpbit:
                 self.dict_day_ar[종목코드] = np.r_[self.dict_day_ar[종목코드], np.array([new_data])]
                 if len(self.dict_day_ar[종목코드]) > 250:
                     self.dict_day_ar[종목코드] = np.delete(self.dict_day_ar[종목코드], 0, 0)
-                self.queryQ.put(['코인일봉', new_dbdata_day, 종목코드, 'append'])
+                self.queryQ.put(('코인일봉', new_dbdata_day, 종목코드, 'append'))
 
             if self.chart_code == 종목코드:
-                self.windowQ.put([ui_num['일봉차트'], 종목코드, self.dict_day_ar[종목코드][-120:]])
+                self.windowQ.put((ui_num['일봉차트'], 종목코드, self.dict_day_ar[종목코드][-120:]))
 
         if 틱수신시간 != 0:
             if self.dict_tik_ar2:
-                data = ['코인디비', self.dict_tik_ar2]
+                data = ('코인디비', self.dict_tik_ar2)
                 self.queryQ.put(data)
                 self.dict_tik_ar2 = {}
 
             gap = (now() - 틱수신시간).total_seconds()
-            self.windowQ.put([ui_num['C단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'])
+            self.windowQ.put((ui_num['C단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'))
 
     def Buy(self, 종목코드, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이):
         if '지정가' in self.dict_set['코인매수주문구분']:
@@ -870,7 +869,7 @@ class StrategyUpbit:
             if self.dict_set['코인매수지정가기준가격'] == '매수1호가': 기준가격 = 매수호가1
             self.list_buy.append(종목코드)
             self.dict_sgn_tik[종목코드] = 데이터길이 - 1
-            self.ctraderQ.put(['매수', 종목코드, 기준가격, 매수수량, now(), False])
+            self.ctraderQ.put(('매수', 종목코드, 기준가격, 매수수량, now(), False))
         else:
             남은수량 = 매수수량
             직전남은수량 = 매수수량
@@ -887,7 +886,7 @@ class StrategyUpbit:
                 예상체결가 = round(매수금액 / 매수수량, 4) if 매수수량 != 0 else 0
                 self.list_buy.append(종목코드)
                 self.dict_sgn_tik[종목코드] = 데이터길이 - 1
-                self.ctraderQ.put(['매수', 종목코드, 예상체결가, 매수수량, now(), False])
+                self.ctraderQ.put(('매수', 종목코드, 예상체결가, 매수수량, now(), False))
 
     def Sell(self, 종목코드, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산):
         if '지정가' in self.dict_set['코인매도주문구분'] and not 강제청산:
@@ -895,7 +894,7 @@ class StrategyUpbit:
             if self.dict_set['코인매도지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
             if self.dict_set['코인매도지정가기준가격'] == '매수1호가': 기준가격 = 매수호가1
             self.list_sell.append(종목코드)
-            self.ctraderQ.put(['매도', 종목코드, 기준가격, 매도수량, now(), False])
+            self.ctraderQ.put(('매도', 종목코드, 기준가격, 매도수량, now(), False))
         else:
             남은수량 = 매도수량
             직전남은수량 = 매도수량
@@ -911,11 +910,11 @@ class StrategyUpbit:
             if 남은수량 <= 0:
                 예상체결가 = round(매도금액 / 매도수량, 4) if 매도수량 != 0 else 0
                 self.list_sell.append(종목코드)
-                self.ctraderQ.put(['매도', 종목코드, 예상체결가, 매도수량, now(), True if 강제청산 else False])
+                self.ctraderQ.put(('매도', 종목코드, 예상체결가, 매도수량, now(), True if 강제청산 else False))
 
     def PutGsjmAndDeleteHilo(self):
         self.df_gj.sort_values(by=['d_money'], ascending=False, inplace=True)
-        self.windowQ.put([ui_num['C관심종목'], self.df_gj.copy()])
+        self.windowQ.put((ui_num['C관심종목'], self.df_gj))
         for code in list(self.dict_hilo.keys()):
             if code not in self.df_jg.index:
                 del self.dict_hilo[code]

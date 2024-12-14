@@ -118,7 +118,7 @@ class Receiver:
         self.collectorQ.put('가공된 실시간데이터')
         self.strategyQ.put('가공된 실시간데이터')
         if code in self.list_jang and 현재가 != 직전현재가:
-            self.traderQ.put(['잔고갱신', code, 현재가])
+            self.traderQ.put(('잔고갱신', code, 현재가))
 
 
 class Collector:
@@ -174,10 +174,10 @@ class Strategy:
                 self.Strategy(data)
             elif data[0] == '잔고정보':
                 self.df_jg = data[1]
-            elif data[0] in ['매수완료', '매수취소']:
+            elif data[0] in ('매수완료', '매수취소'):
                 if data[1] in self.list_buy_signal:
                     self.list_buy_signal.remove(data[1])
-            elif data[0] in ['매도완료', '매도취소']:
+            elif data[0] in ('매도완료', '매도취소'):
                 if data[1] in self.list_sell_signal:
                     self.list_sell_signal.remove(data[1])
 
@@ -187,11 +187,11 @@ class Strategy:
         if code not in self.df_jg.index:
             if code not in self.list_buy_signal:
                 self.list_buy_signal.append(code)
-                self.traderQ.put(['매수 시그널', code])
+                self.traderQ.put(('매수 시그널', code))
         else:
             if code not in self.list_sell_signal:
                 self.list_sell_signal.append(code)
-                self.traderQ.put(['매도 시그널', code])
+                self.traderQ.put(('매도 시그널', code))
 
 
 class Updater2(QThread):
@@ -205,7 +205,7 @@ class Updater2(QThread):
     def run(self):
         while True:
             data = self.traderQ.get()
-            if data[0] in ['매수 시그널', '매도 시그널']:
+            if data[0] in ('매수 시그널', '매도 시그널'):
                 # noinspection PyUnresolvedReferences
                 self.signal1.emit(data)
             elif data[0] == '잔고갱신':
@@ -258,7 +258,7 @@ class Trader:
                 # 주문체결을 받았다고 가정한다.
                 self.OnReceiveChejanData('매수체결')
             else:
-                self.strategyQ.put(['매수취소', code])
+                self.strategyQ.put(('매수취소', code))
         elif gubun == '매도 시그널':
             if code not in self.list_sell_order:
                 self.list_sell_order.append(code)
@@ -267,7 +267,7 @@ class Trader:
                 # 서버로 부터 주문체결을 받았다고 가정한다.
                 self.OnReceiveChejanData('매도체결')
             else:
-                self.strategyQ.put(['매도취소', code])
+                self.strategyQ.put(('매도취소', code))
 
     @staticmethod
     def UpdateJango(data):
@@ -283,20 +283,20 @@ class Trader:
                 self.list_buy_order.remove(code)
             # 잔고갱신(수익률, 평가금액, 평가손익)
             self.df_jg.loc[code] = '삼성전자'
-            self.strategyQ.put(['매수완료', code])
-            self.receiverQ.put(['잔고편입', code])
+            self.strategyQ.put(('매수완료', code))
+            self.receiverQ.put(('잔고편입', code))
         elif data == '매도체결':
             print(' {:>20} : {:<100}'.format('Trader Process', '매도 주문 체결 수신'))
             if code in self.list_sell_order:
                 self.list_sell_order.remove(code)
             self.df_jg.drop(index=code, inplace=True)
-            self.strategyQ.put(['매도완료', code])
-            self.receiverQ.put(['잔고청산', code])
-        self.strategyQ.put(['잔고정보', self.df_jg])
+            self.strategyQ.put(('매도완료', code))
+            self.receiverQ.put(('잔고청산', code))
+        self.strategyQ.put(('잔고정보', self.df_jg))
 
     def Scheduler(self):
-        self.windowQ.put(['잔고정보', self.df_jg])
-        self.strategyQ.put(['잔고정보', self.df_jg])
+        self.windowQ.put(('잔고정보', self.df_jg))
+        self.strategyQ.put(('잔고정보', self.df_jg))
 
 
 class CoinReceiver:

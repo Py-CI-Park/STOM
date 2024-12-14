@@ -249,7 +249,7 @@ class SetCoinBack:
         ]
 
         for widget in self.ui.coin_rwftvd_list:
-            if widget not in [self.ui.cvjb_labelllll_01, self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02]:
+            if widget not in (self.ui.cvjb_labelllll_01, self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02):
                 widget.setVisible(False)
 
     # =================================================================================================================

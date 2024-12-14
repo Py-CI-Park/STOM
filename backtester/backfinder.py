@@ -36,12 +36,12 @@ class Total:
             data = self.tq.get()
             if data[0] == '백파결과':
                 data = data[1:]
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], data])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], data))
                 self.df_back.loc[index] = data
                 index += 1
             elif data[0] == '백테완료':
                 bc += 1
-                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start))
                 if bc == self.back_count:
                     break
             elif data[0] == '백테정보':
@@ -61,15 +61,15 @@ class Total:
                 time.sleep(1)
                 sys.exit()
 
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'백파인더 소요시간 {now() - self.start}'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'백파인더 소요시간 {now() - self.start}'))
         if len(self.df_back) > 0:
             save_time = strf_time('%Y%m%d%H%M%S')
             con = sqlite3.connect(DB_BACKTEST)
             self.df_back.to_sql(f"{self.gubun}_bf_{self.buystg_name}_{save_time}", con, if_exists='append', chunksize=1000)
             con.close()
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인터 결과값 저장 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백파인터 결과값 저장 완료'))
         else:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '조건을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '조건을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'))
         self.sq.put('백파인더를 완료하였습니다.')
         self.bq.put('백파인더 완료')
         time.sleep(1)
@@ -108,18 +108,18 @@ class BackFinder:
 
         buystg  = dfb['전략코드'][buystg_name]
         if 'self.tickcols' not in buystg:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '선택된 전략이 백파인더용 전략이 아닙니다.'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '선택된 전략이 백파인더용 전략이 아닙니다.'))
             self.SysExit(True)
 
         buystg_ = buystg.split('self.tickcols = [')[1].split(']')[0]
         self.tickcols = [x.strip() for x in buystg_.split(',')]
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인더 매수전략 설정 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백파인더 매수전략 설정 완료'))
 
         Process(target=Total, args=(self.wq, self.sq, self.tq, self.bq, self.ui_gubun, self.gubun)).start()
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인더 집계용 프로세스 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백파인더 집계용 프로세스 생성 완료'))
 
-        self.tq.put(['백테정보', avgtime, startday, endday, starttime, endtime, buystg_name, back_count, self.tickcols])
-        data = ['백테정보', avgtime, startday, endday, starttime, endtime, buystg, None]
+        self.tq.put(('백테정보', avgtime, startday, endday, starttime, endtime, buystg_name, back_count, self.tickcols))
+        data = ('백테정보', avgtime, startday, endday, starttime, endtime, buystg, None)
         for q in self.pq_list:
             q.put(data)
 
@@ -129,8 +129,8 @@ class BackFinder:
 
     def SysExit(self, cancel):
         if cancel:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         else:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인더 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백파인더 완료'))
         time.sleep(1)
         sys.exit()

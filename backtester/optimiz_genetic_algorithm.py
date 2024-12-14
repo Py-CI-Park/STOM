@@ -89,15 +89,15 @@ class Total:
                            '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
                 k  = 0
                 for vars_key, list_tsg in total_dict_tsg.items():
-                    data = ['결과집계', columns, list_tsg, total_dict_bct[vars_key]]
+                    data = ('결과집계', columns, list_tsg, total_dict_bct[vars_key])
                     if self.valid_days is not None:
                         for i, vdays in enumerate(self.valid_days):
-                            data_ = data + [vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key]
+                            data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key)
                             self.tdq_list[k % 5].put(data_)
                             self.vdq_list[k % 5].put(data_)
                             k += 1
                     else:
-                        data_ = data + [self.day_count, vars_key]
+                        data_ = data + (self.day_count, vars_key)
                         self.stq_list[k % 10].put(data_)
                         k += 1
                 total_dict_tsg = {}
@@ -107,7 +107,7 @@ class Total:
                 bc  += 1
                 tbc += 1
                 if data[1]: tc += 1
-                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start))
 
                 if bc == self.back_count:
                     bc = 0
@@ -118,7 +118,7 @@ class Total:
                     else:
                         self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
 
-            elif data[0] in ['TRAIN', 'VALID']:
+            elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
                 if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
                 if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
@@ -249,9 +249,9 @@ class OptimizeGeneticAlgorithm:
 
         if int(backengin_sday) > startday:
             if 'V' in self.backname:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 검증기간 만큼의 데이터가 필요합니다'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 검증기간 만큼의 데이터가 필요합니다'))
             else:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 만큼의 데이터가 필요합니다'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 만큼의 데이터가 필요합니다'))
             self.SysExit(True)
 
         con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
@@ -260,7 +260,7 @@ class OptimizeGeneticAlgorithm:
         con.close()
 
         if len(df_mt) == 0 or back_count == 0:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'))
             self.SysExit(True)
 
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
@@ -278,18 +278,18 @@ class OptimizeGeneticAlgorithm:
                 tdaycnt = train_count - vdaycnt
                 valid_days.append([valid_days_list[0], valid_days_list[-1], tdaycnt, vdaycnt])
 
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 학습 기간 {startday} ~ {endday}'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 학습 기간 {startday} ~ {endday}'))
         if 'V' in self.backname:
             for vsday, veday, _, _ in valid_days:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증 기간 {vsday} ~ {veday}'])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증 기간 {vsday} ~ {veday}'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ['백테정보', arry_bct, betting, optistandard]
+        data = ('백테정보', arry_bct, betting, optistandard)
         for q in self.stq_list:
             q.put(data)
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
 
         con = sqlite3.connect(DB_STRATEGY)
         dfb = pd.read_sql(f'SELECT * FROM {self.gubun}optibuy', con).set_index('index')
@@ -304,7 +304,7 @@ class OptimizeGeneticAlgorithm:
         try:
             exec(optivars_, None, locals())
         except Exception as e:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - {self.backname} 변수설정 {e}'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - {self.backname} 변수설정 {e}'))
             self.SysExit(True)
 
         self.total_count = 1
@@ -312,38 +312,38 @@ class OptimizeGeneticAlgorithm:
             self.total_count *= len(value[0])
             self.opti_list.append(value[0])
             self.fixed_list.append(value[1])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
 
         mq = Queue()
         tdq_list = self.stq_list[:5]
         vdq_list = self.stq_list[5:]
         Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.ui_gubun)).start()
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
-        self.tq.put(['백테정보', betting, startday, endday, starttime, endtime, buystg, sellstg, dict_cn, std_text, optistandard, valid_days, len(day_list)])
-        data = ['백테정보', betting, self.vars[0][0], startday, endday, starttime, endtime, buystg, sellstg]
+        self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg, sellstg, dict_cn, std_text, optistandard, valid_days, len(day_list)))
+        data = ('백테정보', betting, self.vars[0][0], startday, endday, starttime, endtime, buystg, sellstg)
         for q in self.pq_list:
             q.put(data)
 
         start = now()
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작'))
 
         k    = 1
         vc   = len(self.opti_list)
         goal = 2 ** int(round(vc / 2))
         self.vars_list = []
         while self.total_count > goal:
-            self.tq.put(['시작시간', now()])
-            self.tq.put(['경우의수', vc * back_count, back_count])
+            self.tq.put(('시작시간', now()))
+            self.tq.put(('경우의수', vc * back_count, back_count))
 
             for _ in range(vc):
                 vars_lists = self.GetVarslist()
                 if vars_lists:
-                    self.tq.put(['변수정보', vars_lists])
+                    self.tq.put(('변수정보', vars_lists))
                     for q in self.stq_list:
                         q.put('백테시작')
                     for q in self.pq_list:
-                        q.put(['변수정보', vars_lists])
+                        q.put(('변수정보', vars_lists))
 
                     for _ in range(10):
                         data = mq.get()
@@ -359,12 +359,12 @@ class OptimizeGeneticAlgorithm:
                     break
 
             if self.total_count == 0:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 모든 경우의 수 탐색 완료'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 모든 경우의 수 탐색 완료'))
                 break
 
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 {k}단계 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 {k}단계 완료'))
             self.SetOptilist(k, int(vc / 4) if vc / 4 > 5 else 5, goal, optistandard)
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 현재 경우의수[{self.total_count:,.0f}] 목표 경우의수[{goal:,.0f}]'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 현재 경우의수[{self.total_count:,.0f}] 목표 경우의수[{goal:,.0f}]'))
             k += 1
 
         self.SaveVarslist(100, optistandard, buystg, sellstg)
@@ -373,7 +373,7 @@ class OptimizeGeneticAlgorithm:
         optivars = optivars.split('self.vars[0]')[0]
         for i in range(len(self.vars)):
             if self.vars[i][1] != self.high_vars[i]:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 변경 {self.vars[i][1]} -> {self.high_vars[i]}'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 변경 {self.vars[i][1]} -> {self.high_vars[i]}'))
                 self.vars[i][1] = self.high_vars[i]
             optivars += f'self.vars[{i}] = {self.vars[i]}\n'
 
@@ -386,7 +386,7 @@ class OptimizeGeneticAlgorithm:
         mq.close()
         if self.dict_set['스톰라이브']: self.lq.put(f'{self.backname}')
         self.sq.put('지에이 최적화가 완료되었습니다.')
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - start}'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - start}'))
         self.SysExit(False)
 
     def GetVarslist(self):
@@ -418,7 +418,7 @@ class OptimizeGeneticAlgorithm:
             for i, vars_ in enumerate(vars_list):
                 if vars_ not in self.opti_list[i]:
                     self.opti_list[i].append(vars_)
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], text[:-1]])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text[:-1]))
 
         self.total_count = 1
         for i, vars_ in enumerate(self.opti_list):
@@ -434,7 +434,7 @@ class OptimizeGeneticAlgorithm:
                     text += f' 기준값 [{std:,.0f}] 변수 {vars_list}\n'
                 else:
                     text += f' 기준값 [{std:.2f}] 변수 {vars_list}\n'
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], text[:-1]])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text[:-1]))
 
     def SaveVarslist(self, rank, optistandard, buystg, sellstg):
         rs_list = sorted(self.result.items(), key=operator.itemgetter(0), reverse=True)
@@ -445,12 +445,12 @@ class OptimizeGeneticAlgorithm:
             df.to_sql(self.savename, con, if_exists='append', chunksize=1000)
         con.close()
         self.high_vars = rs_list[0][1]
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 상위100위 결과 저장 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 상위100위 결과 저장 완료'))
 
     def SysExit(self, cancel):
         if cancel:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         else:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
         time.sleep(1)
         sys.exit()

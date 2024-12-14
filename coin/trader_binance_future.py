@@ -67,14 +67,11 @@ class TraderBinanceFuture:
         }
 
         self.binance = binance.Client(self.dict_set['Access_key2'], self.dict_set['Secret_key2'])
-        self.Start()
-
-    def Start(self):
         self.UpdateDictTime()
         self.LoadDatabase()
         self.GetBalances()
         self.SetPosition()
-        self.EventLoop()
+        self.MainLoop()
 
     def UpdateDictTime(self):
         dict_name = {x['market'].split('-')[1]: x['korean_name'] for x in pyupbit.get_tickers(verbose=True)}
@@ -93,11 +90,11 @@ class TraderBinanceFuture:
         self.df_jg = pd.read_sql(f'SELECT * FROM c_jangolist_future', con).set_index('index')
         con.close()
 
-        if len(self.df_cj) > 0: self.windowQ.put([ui_num['C체결목록'], self.df_cj[::-1]])
-        if len(self.df_td) > 0: self.windowQ.put([ui_num['C거래목록'], self.df_td[::-1]])
-        if len(self.df_jg) > 0: self.creceivQ.put(['잔고목록', list(self.df_jg.index)])
+        if len(self.df_cj) > 0: self.windowQ.put((ui_num['C체결목록'], self.df_cj[::-1]))
+        if len(self.df_td) > 0: self.windowQ.put((ui_num['C거래목록'], self.df_td[::-1]))
+        if len(self.df_jg) > 0: self.creceivQ.put(('잔고목록', tuple(self.df_jg.index)))
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 데이터베이스 불러오기 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 데이터베이스 불러오기 완료'))
 
     def GetBalances(self):
         cbg = 0
@@ -120,7 +117,7 @@ class TraderBinanceFuture:
         if len(self.df_td) > 0:
             self.UpdateTotaltradelist(first=True)
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 예수금 조회 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 예수금 조회 완료'))
 
     def SetPosition(self):
         def get_decimal_place(float_):
@@ -138,9 +135,9 @@ class TraderBinanceFuture:
         else:
             self.dict_lvrg = {x: 1 for x in codes}
 
-        self.cstgQ.put(['바낸선물단위정보', self.dict_info])
-        self.windowQ.put([ui_num['바낸선물단위정보'], self.dict_info])
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 호가단위 및 소숫점자리수 조회 완료'])
+        self.cstgQ.put(('바낸선물단위정보', self.dict_info))
+        self.windowQ.put((ui_num['바낸선물단위정보'], self.dict_info))
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 호가단위 및 소숫점자리수 조회 완료'))
 
         if not self.dict_set['코인모의투자']:
             for code in codes:
@@ -157,13 +154,13 @@ class TraderBinanceFuture:
             except:
                 pass
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 마진타입 및 레버리지 설정 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 마진타입 및 레버리지 설정 완료'))
 
-    def EventLoop(self):
+    def MainLoop(self):
         text = '코인 전략연산 및 트레이더를 시작하였습니다.'
         if self.dict_set['코인알림소리']: self.soundQ.put(text)
         self.teleQ.put(text)
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 시작'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 시작'))
         wsq = Queue()
         while True:
             if self.proc_webs is None or not self.proc_webs.is_alive():
@@ -171,29 +168,18 @@ class TraderBinanceFuture:
 
             if not self.ctraderQ.empty():
                 data = self.ctraderQ.get()
-                if type(data) == list:
-                    self.UpdateList(data)
-                elif type(data) == dict:
-                    self.dict_set = data
-                elif data == '코인명갱신':
-                    self.UpdateDictTime()
-                    self.SetPosition()
-                elif data == 'C체결목록':
-                    self.teleQ.put(self.df_cj.copy()) if len(self.df_cj) > 0 else self.teleQ.put('현재는 코인체결목록이 없습니다.')
-                elif data == 'C거래목록':
-                    self.teleQ.put(self.df_td.copy()) if len(self.df_td) > 0 else self.teleQ.put('현재는 코인거래목록이 없습니다.')
-                elif data == 'C잔고평가':
-                    self.teleQ.put(self.df_jg.copy()) if len(self.df_jg) > 0 else self.teleQ.put('현재는 코인잔고목록이 없습니다.')
-                elif data == 'C잔고청산':
-                    self.JangoCheongsan('수동')
-                elif data == '프로세스종료':
+                if type(data) == tuple:
+                    self.UpdateTuple(data)
+                elif type(data) == str:
+                    self.UpdateString(data)
+                if data == '프로세스종료':
                     if self.proc_webs.is_alive(): self.proc_webs.kill()
                     break
 
             if not wsq.empty():
                 data = wsq.get()
                 if data == 'ConnectionClosedError':
-                    self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 웹소켓 연결 끊김으로 다시 연결합니다.'])
+                    self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 웹소켓 연결 끊김으로 다시 연결합니다.'))
                     self.WebProcessKill()
                 elif data[0] == 'user':
                     data = data[1]
@@ -203,7 +189,7 @@ class TraderBinanceFuture:
                             self.dict_intg['추정예탁자산'] = float(data['B'][0]['wb'])
                             self.dict_intg['예수금'] = float(data['B'][0]['cw'])
                         except Exception as e:
-                            self.windowQ.put([ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 user {e}'])
+                            self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 웹소켓 user {e}'))
                     elif data['e'] == 'ORDER_TRADE_UPDATE':
                         try:
                             data = data['o']
@@ -234,7 +220,7 @@ class TraderBinanceFuture:
                 self.dict_time['잔고갱신및주문취소확인'] = timedelta_sec(1)
 
             if curr_time > self.dict_time['잔고전송']:
-                self.cstgQ.put(self.df_jg.copy())
+                self.cstgQ.put(('잔고목록', self.df_jg))
                 self.dict_time['잔고전송'] = timedelta_sec(0.5)
 
             if self.dict_set['코인장초전략종료시간'] < inthmsutc < self.dict_set['코인장초전략종료시간'] + 10:
@@ -264,7 +250,7 @@ class TraderBinanceFuture:
             if self.ctraderQ.empty() and wsq.empty():
                 time.sleep(0.001)
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 종료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 종료'))
         time.sleep(1)
 
     def TradeProcKill(self):
@@ -279,27 +265,13 @@ class TraderBinanceFuture:
         if self.proc_webs.is_alive(): self.proc_webs.kill()
         time.sleep(3)
 
-    def UpdateList(self, data):
-        if len(data) == 6:
-            self.CheckOrder(data[0], data[1], data[2], data[3], data[4], data[5])
-        elif len(data) == 7:
-            self.CheckOrder(data[0], data[1], data[2], data[3], data[4], data[5], ordertype=data[6])
+    def UpdateTuple(self, data):
+        if len(data) == 7 or len(data) == 8:
+            self.CheckOrder(data)
         elif len(data) == 9:
-            self.SendOrder(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], ordertype=data[8])
+            self.SendOrder(data)
         elif len(data) == 2:
-            if data[0] == '저가대비고가등락율':
-                self.SetLeverage(data[1])
-            elif data[0] == '관심진입':
-                if data[1] in self.dict_sell_long.keys():
-                    self.CancelOrder(data[1], 'SELL_LONG')
-                if data[1] in self.dict_buy_short.keys():
-                    self.CancelOrder(data[1], 'BUY_SHORT')
-            elif data[0] == '관심이탈':
-                if data[1] in self.dict_buy_long.keys():
-                    self.CancelOrder(data[1], 'BUY_LONG')
-                if data[1] in self.dict_sell_short.keys():
-                    self.CancelOrder(data[1], 'SELL_SHORT')
-            else:
+            if type(data[1]) == float:
                 code, c = data
                 self.dict_curc[code] = c
                 try:
@@ -315,6 +287,33 @@ class TraderBinanceFuture:
                         self.df_jg.loc[code, columns] = c, sp, sg, pg
                 except:
                     pass
+            elif data[0] == '저가대비고가등락율':
+                self.SetLeverage(data[1])
+            elif data[0] == '관심진입':
+                if data[1] in self.dict_sell_long.keys():
+                    self.CancelOrder(data[1], 'SELL_LONG')
+                if data[1] in self.dict_buy_short.keys():
+                    self.CancelOrder(data[1], 'BUY_SHORT')
+            elif data[0] == '관심이탈':
+                if data[1] in self.dict_buy_long.keys():
+                    self.CancelOrder(data[1], 'BUY_LONG')
+                if data[1] in self.dict_sell_short.keys():
+                    self.CancelOrder(data[1], 'SELL_SHORT')
+            elif data[0] == '설정변경':
+                self.dict_set = data[1]
+
+    def UpdateString(self, data):
+        if data == '코인명갱신':
+            self.UpdateDictTime()
+            self.SetPosition()
+        elif data == 'C체결목록':
+            self.teleQ.put(self.df_cj) if len(self.df_cj) > 0 else self.teleQ.put('현재는 코인체결목록이 없습니다.')
+        elif data == 'C거래목록':
+            self.teleQ.put(self.df_td) if len(self.df_td) > 0 else self.teleQ.put('현재는 코인거래목록이 없습니다.')
+        elif data == 'C잔고평가':
+            self.teleQ.put(('잔고목록', self.df_jg)) if len(self.df_jg) > 0 else self.teleQ.put('현재는 코인잔고목록이 없습니다.')
+        elif data == 'C잔고청산':
+            self.JangoCheongsan('수동')
 
     def SetLeverage(self, dict_dlhp):
         for code in list(self.dict_info.keys()):
@@ -334,7 +333,13 @@ class TraderBinanceFuture:
                 break
         return leverage
 
-    def CheckOrder(self, og, code, op, oc, signal_time, manual, ordertype=None):
+    def CheckOrder(self, data):
+        if len(data) == 6:
+            og, code, op, oc, signal_time, manual = data
+            ordertype = None
+        else:
+            og, code, op, oc, signal_time, manual, ordertype = data
+
         NIJ  = code not in self.df_jg.index
         INBL = code in self.dict_buy_long.keys()
         INSS = code in self.dict_sell_short.keys()
@@ -347,7 +352,7 @@ class TraderBinanceFuture:
         if manual:
             if (og == 'SELL_LONG' and (NIJ or INSL)) or (og == 'BUY_SHORT' and (NIJ or INBS)):
                 cancel = True
-        elif og in ['BUY_LONG', 'SELL_SHORT']:
+        elif og in ('BUY_LONG', 'SELL_SHORT'):
             inthmsutc = int_hms_utc()
             if self.dict_set['코인매수금지거래횟수'] and self.dict_set['코인매수금지거래횟수값'] <= len(self.df_td[self.df_td['종목명'] == code].drop_duplicates('체결시간')):
                 cancel = True
@@ -372,7 +377,7 @@ class TraderBinanceFuture:
                 cancel = True
             elif og == 'BUY_LONG' and INBL:   cancel = True
             elif og == 'SELL_SHORT' and INSS: cancel = True
-        elif og in ['SELL_LONG', 'BUY_SHORT']:
+        elif og in ('SELL_LONG', 'BUY_SHORT'):
             if og == 'SELL_LONG' and (NIJ or INSL):   cancel = True
             elif og == 'BUY_SHORT' and (NIJ or INBS): cancel = True
             elif self.dict_set['코인매도금지간격'] and curr_time < self.dict_time[code][2]:
@@ -396,10 +401,10 @@ class TraderBinanceFuture:
 
         if cancel:
             if 'CANCEL' not in og:
-                self.cstgQ.put([f'{og}_CANCEL', code])
+                self.cstgQ.put((f'{og}_CANCEL', code))
         else:
             if manual and 'CANCEL' not in og:
-                self.cstgQ.put([f'{og}_MANUAL', code])
+                self.cstgQ.put((f'{og}_MANUAL', code))
 
             if og == 'BUY_LONG':
                 if self.dict_set['코인매도취소매수시그널'] and INSL:
@@ -417,28 +422,28 @@ class TraderBinanceFuture:
             if oc > 0:
                 self.CreateOrder(og, code, op, oc, on, signal_time, manual, 0, ordertype)
             else:
-                self.cstgQ.put([f'{og}_CANCEL', code])
+                self.cstgQ.put((f'{og}_CANCEL', code))
 
     def CreateOrder(self, og, code, op, oc, on, signal_time, manual, fixc, ordertype):
-        if og in ['BUY_LONG', 'SELL_SHORT'] and fixc == 0:
+        if og in ('BUY_LONG', 'SELL_SHORT') and fixc == 0:
             if ordertype is None and '지정가' in self.dict_set['코인매수주문구분']:
                 op = round(op + self.dict_info[code]['호가단위'] * (self.dict_set['코인매수지정가호가번호'] if og == 'BUY_LONG' else self.dict_set['코인매도지정가호가번호']), 8)
-        elif og in ['SELL_LONG', 'BUY_SHORT'] and fixc == 0:
+        elif og in ('SELL_LONG', 'BUY_SHORT') and fixc == 0:
             if ordertype is None and '지정가' in self.dict_set['코인매도주문구분']:
                 op = round(op + self.dict_info[code]['호가단위'] * (self.dict_set['코인매도지정가호가번호'] if og == 'SELL_LONG' else self.dict_set['코인매수지정가호가번호']), 8)
 
         if oc * op < 5:
-            self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 오류 알림 - 최소주문금액 5 USDT 미만입니다.'])
-            self.cstgQ.put([f'{og}_CANCEL', code])
+            self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 오류 알림 - 최소주문금액 5 USDT 미만입니다.'))
+            self.cstgQ.put((f'{og}_CANCEL', code))
             return
 
         if self.dict_set['코인모의투자']:
-            if og in ['BUY_LONG', 'SELL_SHORT']:
+            if og in ('BUY_LONG', 'SELL_SHORT'):
                 self.dict_intg['예수금'] -= op * oc
-            elif og in ['SELL_LONG', 'BUY_SHORT']:
+            elif og in ('SELL_LONG', 'BUY_SHORT'):
                 self.dict_intg['예수금'] += op * round(oc / self.df_jg['레버리지'][code], self.dict_info[code]['소숫점자리수'])
 
-        if og in ['BUY_LONG', 'SELL_SHORT']:
+        if og in ('BUY_LONG', 'SELL_SHORT'):
             oc = round(oc * self.dict_lvrg[code], self.dict_info[code]['소숫점자리수'])
 
         if oc > 0:
@@ -453,9 +458,11 @@ class TraderBinanceFuture:
                         self.dict_sell_short[code] = [0, timedelta_sec(self.dict_set['코인매수취소시간초']), fixc, op, self.dict_lvrg[code]]
                     self.UpdateChejanData(og, code, oc, oc, 0, op, op, '')
             else:
-                self.SendOrder(og, code, op, oc, on, signal_time, manual, fixc, ordertype)
+                data = (og, code, op, oc, on, signal_time, manual, fixc, ordertype)
+                self.SendOrder(data)
 
-    def SendOrder(self, og, code, op, oc, on, signal_time, manual, fixc, ordertype):
+    def SendOrder(self, data):
+        og, code, op, oc, on, signal_time, manual, fixc, ordertype = data
         curr_time = now()
         if curr_time < self.dict_time['주문시간']:
             next_time = (self.dict_time['주문시간'] - curr_time).total_seconds()
@@ -477,8 +484,8 @@ class TraderBinanceFuture:
                 elif ordertype == '지정가FOK' or (ordertype is None and self.dict_set['코인매수주문구분'] == '지정가FOK'):
                     ret = self.binance.futures_create_order(symbol=code, side=side, type='LIMIT', price=op, timeInForce='FOK', quantity=oc)
             except Exception as e:
-                self.cstgQ.put([f'{og}_CANCEL', code])
-                self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {e}'])
+                self.cstgQ.put((f'{og}_CANCEL', code))
+                self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {e}'))
             else:
                 orderId = int(ret['orderId'])
                 dt = self.GetIndex()
@@ -492,21 +499,21 @@ class TraderBinanceFuture:
                     self.dict_buy_short[code] = [orderId, timedelta_sec(self.dict_set['코인매도취소시간초']), fixc, op]
                 self.dict_order_pos[code] = position
                 self.UpdateChegeollist(dt, code, f'{og}_REG', oc, 0, oc, 0, dt[:14], op, orderId)
-                self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'])
+                self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'))
         else:
             try:
                 ret = self.binance.futures_cancel_order(symbol=code, orderId=on)
             except Exception as e:
-                self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {e}'])
+                self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {e}'))
             else:
                 orderId = int(ret['orderId'])
                 dt = self.GetIndex()
                 self.dict_order_pos[code] = position
                 self.UpdateChegeollist(dt, code, f'{og}_REG', oc, 0, oc, 0, dt[:14], 0, orderId)
-                self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'])
+                self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'))
 
         self.dict_time['주문시간'] = timedelta_sec(0.1)
-        self.creceivQ.put(['주문목록', self.GetOrderCodeList()])
+        self.creceivQ.put(('주문목록', self.GetOrderCodeList()))
 
     def JangoCheongsan(self, gubun):
         if gubun == '수동':
@@ -544,22 +551,22 @@ class TraderBinanceFuture:
                             else:
                                 ret = self.binance.futures_create_order(symbol=code, side='BUY', type='MARKET', quantity=oc)
                         except Exception as e:
-                            self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {e}'])
+                            self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {e}'))
                         else:
                             orderId = int(ret['orderId'])
                             dt = self.GetIndex()
                             self.dict_order_pos[code] = position
                             if position == 'LONG':
                                 self.UpdateChegeollist(dt, code, 'SELL_LONG_REG', oc, 0, oc, 0, dt[:14], c, orderId)
-                                self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {c} | {oc} | SELL_LONG'])
+                                self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {c} | {oc} | SELL_LONG'))
                             else:
                                 self.UpdateChegeollist(dt, code, 'BUY_SHORT_REG', oc, 0, oc, 0, dt[:14], c, orderId)
-                                self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {c} | {oc} | BUY_SHORT'])
+                                self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {c} | {oc} | BUY_SHORT'))
                         time.sleep(0.3)
 
             if self.dict_set['코인알림소리']:
                 self.soundQ.put(f'코인 {gubun}전략 잔고청산 주문을 전송하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 실행 알림 - {gubun}전략 잔고청산 주문 완료'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 실행 알림 - {gubun}전략 잔고청산 주문 완료'))
 
     def OrderTimeControl(self):
         if len(self.dict_buy_long) > 0:
@@ -661,7 +668,7 @@ class TraderBinanceFuture:
     def UpdateChejanData(self, gubun, code, oc, cc, mc, cp, op, on):
         dt = self.GetIndex()
 
-        if gubun in ['BUY_LONG', 'SELL_SHORT', 'SELL_LONG', 'BUY_SHORT']:
+        if gubun in ('BUY_LONG', 'SELL_SHORT', 'SELL_LONG', 'BUY_SHORT'):
             if gubun == 'BUY_LONG':
                 if code in self.df_jg.index:
                     jc = round(self.df_jg['보유수량'][code] + cc, self.dict_info[code]['소숫점자리수'])
@@ -755,14 +762,14 @@ class TraderBinanceFuture:
                     self.dict_time[code][3] = timedelta_sec(self.dict_set['코인매수금지손절간격초'])
 
             self.df_jg.sort_values(by=['매입금액'], ascending=False, inplace=True)
-            self.cstgQ.put(self.df_jg.copy())
+            self.cstgQ.put(('잔고목록', self.df_jg))
 
             if mc == 0:
-                self.cstgQ.put([f'{gubun}_COMPLETE', code])
+                self.cstgQ.put((f'{gubun}_COMPLETE', code))
 
             self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
 
-            self.queryQ.put(['거래디비', self.df_jg, 'c_jangolist_future', 'replace'])
+            self.queryQ.put(('거래디비', self.df_jg, 'c_jangolist_future', 'replace'))
             if self.dict_set['코인알림소리']:
                 text = ''
                 if gubun == 'BUY_LONG':     text = '롱포지션을 진입'
@@ -770,20 +777,20 @@ class TraderBinanceFuture:
                 elif gubun == 'SELL_LONG':  text = '롱포지션을 청산'
                 elif gubun == 'BUY_SHORT':  text = '숏포지션을 청산'
                 self.soundQ.put(f'{self.dict_time[code][0]} {text}하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [체결] {code} | {cp} | {cc} | {gubun}'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [체결] {code} | {cp} | {cc} | {gubun}'))
 
         elif gubun == '시드부족':
             self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
 
-        elif gubun in ['BUY_LONG_CANCEL', 'SELL_SHORT_CANCEL', 'SELL_LONG_CANCEL', 'BUY_SHORT_CANCEL']:
+        elif gubun in ('BUY_LONG_CANCEL', 'SELL_SHORT_CANCEL', 'SELL_LONG_CANCEL', 'BUY_SHORT_CANCEL'):
             df = self.GetMichegeolDF(code, gubun.replace('_CANCEL', ''))
             if len(df) > 0 and df['미체결수량'].iloc[-1] > 0:
                 if df['체결수량'].iloc[-1] > 0 and code in self.df_jg.index:
-                    if gubun in ['BUY_LONG_CANCEL', 'SELL_SHORT_CANCEL']:
+                    if gubun in ('BUY_LONG_CANCEL', 'SELL_SHORT_CANCEL'):
                         self.df_jg.loc[code, '분할매수횟수'] = self.df_jg['분할매수횟수'][code] + 1
                     else:
                         self.df_jg.loc[code, '분할매도횟수'] = self.df_jg['분할매도횟수'][code] + 1
-                    self.cstgQ.put(self.df_jg.copy())
+                    self.cstgQ.put(('잔고목록', self.df_jg))
 
                 if gubun == 'BUY_LONG_CANCEL' and code in self.dict_buy_long.keys():
                     del self.dict_buy_long[code]
@@ -794,7 +801,7 @@ class TraderBinanceFuture:
                 elif gubun == 'BUY_SHORT_CANCEL' and code in self.dict_buy_short.keys():
                     del self.dict_buy_short[code]
 
-            self.cstgQ.put([gubun, code])
+            self.cstgQ.put((gubun, code))
             self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
 
             if self.dict_set['코인알림소리']:
@@ -804,17 +811,17 @@ class TraderBinanceFuture:
                 elif gubun == 'SELL_LONG_CANCEL':  text = '롱포지션 청산을 취소'
                 elif gubun == 'BUY_SHORT_CANCEL':  text = '숏포지션 청산을 취소'
                 self.soundQ.put(f'{self.dict_time[code][0]} {text}하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [확인] {code} | {op} | {oc} | {gubun}'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [확인] {code} | {op} | {oc} | {gubun}'))
 
-        self.creceivQ.put(['잔고목록', list(self.df_jg.index)])
-        self.creceivQ.put(['주문목록', self.GetOrderCodeList()])
+        self.creceivQ.put(('잔고목록', tuple(self.df_jg.index)))
+        self.creceivQ.put(('주문목록', self.GetOrderCodeList()))
 
     def UpdateTradelist(self, index, code, pos, jg, pg, cc, sp, sg, ct):
         self.df_td.loc[index] = code, pos, jg, pg, cc, sp, sg, ct
-        self.windowQ.put([ui_num['C거래목록'], self.df_td[::-1]])
+        self.windowQ.put((ui_num['C거래목록'], self.df_td[::-1]))
 
         df = pd.DataFrame([[code, pos, jg, pg, cc, sp, sg, ct]], columns=columns_tdf, index=[index])
-        self.queryQ.put(['거래디비', df, 'c_tradelist_future', 'append'])
+        self.queryQ.put(('거래디비', df, 'c_tradelist_future', 'append'))
 
         self.UpdateTotaltradelist()
 
@@ -828,7 +835,7 @@ class TraderBinanceFuture:
         sp  = round(sg / self.dict_intg['추정예탁자산'] * 100, 2)
 
         self.df_tt = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.str_today])
-        self.windowQ.put([ui_num['C실현손익'], self.df_tt])
+        self.windowQ.put((ui_num['C실현손익'], self.df_tt))
 
         if not first:
             self.teleQ.put(f'손익 알림 - 총매수금액 {tbg:,.0f}, 총매도금액 {tsg:,.0f}, 수익 {sig:,.0f}, 손실 {ssg:,.0f}, 수익금합계 {sg:,.0f}')
@@ -836,15 +843,15 @@ class TraderBinanceFuture:
         if self.dict_set['스톰라이브']:
             sp = round(sg / tbg * 100, 2)
             df = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.str_today])
-            self.liveQ.put(['코인', df])
+            self.liveQ.put(('코인', df))
 
     def UpdateChegeollist(self, index, code, gubun, oc, cc, mc, cp, dt, op, on):
         self.dict_time[code][2] = timedelta_sec(self.dict_set['코인매수금지간격초'])
         self.df_cj.loc[index] = code, gubun, oc, cc, mc, cp, dt, op, on
-        self.windowQ.put([ui_num['C체결목록'], self.df_cj[::-1]])
+        self.windowQ.put((ui_num['C체결목록'], self.df_cj[::-1]))
 
         df = pd.DataFrame([[code, gubun, oc, cc, mc, cp, dt, op, on]], columns=columns_cj, index=[dt])
-        self.queryQ.put(['거래디비', df, 'c_chegeollist', 'append'])
+        self.queryQ.put(('거래디비', df, 'c_chegeollist', 'append'))
 
     def UpdateTotaljango(self, inthmsutc):
         if len(self.df_jg) > 0:
@@ -880,20 +887,20 @@ class TraderBinanceFuture:
 
         if self.dict_intg['종목당투자금'] != tujagm:
             self.dict_intg['종목당투자금'] = tujagm
-            self.cstgQ.put(self.dict_intg['종목당투자금'])
+            self.cstgQ.put(('종목당투자금', self.dict_intg['종목당투자금']))
 
-        self.windowQ.put([ui_num['C잔고목록'], self.df_jg.copy()])
-        self.windowQ.put([ui_num['C잔고평가'], self.df_tj.copy()])
+        self.windowQ.put((ui_num['C잔고목록'], self.df_jg))
+        self.windowQ.put((ui_num['C잔고평가'], self.df_tj))
 
     def StrategyStop(self):
-        self.cstgQ.put(['매수전략중지', ''])
-        # self.cstgQ.put(['매도전략중지', ''])
+        self.cstgQ.put('매수전략중지')
+        # self.cstgQ.put('매도전략중지')
         self.JangoCheongsan('수동')
 
     def SaveTotalGetbalDelcjtd(self):
         df = self.df_tt[['총매수금액', '총매도금액', '총수익금액', '총손실금액', '수익률', '수익금합계']]
         if len(df) > 0:
-            self.queryQ.put(['거래디비', df, 'c_totaltradelist', 'append'])
+            self.queryQ.put(('거래디비', df, 'c_totaltradelist', 'append'))
         self.df_cj = pd.DataFrame(columns=columns_cj)
         self.df_td = pd.DataFrame(columns=columns_tdf)
         self.GetBalances()
@@ -901,10 +908,10 @@ class TraderBinanceFuture:
 
     def OrderTimeLog(self, signal_time):
         gap = (now() - signal_time).total_seconds()
-        self.windowQ.put([ui_num['C단순텍스트'], f'시그널 주문 시간 알림 - 발생시간과 주문시간의 차이는 [{gap:.6f}]초입니다.'])
+        self.windowQ.put((ui_num['C단순텍스트'], f'시그널 주문 시간 알림 - 발생시간과 주문시간의 차이는 [{gap:.6f}]초입니다.'))
 
     def GetOrderCodeList(self):
-        return list(self.dict_buy_long.keys()) + list(self.dict_sell_short.keys()) + list(self.dict_sell_long.keys()) + list(self.dict_buy_short.keys())
+        return tuple(self.dict_buy_long.keys()) + tuple(self.dict_sell_short.keys()) + tuple(self.dict_sell_long.keys()) + tuple(self.dict_buy_short.keys())
 
     def GetMichegeolDF(self, code, gubun):
         return self.df_cj[(self.df_cj['종목명'] == code) & ((self.df_cj['주문구분'] == gubun) | (self.df_cj['주문구분'] == f'{gubun}_REG'))]
@@ -932,7 +939,7 @@ class WebSocketManager:
             while True:
                 try:
                     recv_data = await user_socket.recv()
-                    self.q.put(['user', recv_data])
+                    self.q.put(('user', recv_data))
                 except:
                     self.q.put('ConnectionClosedError')
 

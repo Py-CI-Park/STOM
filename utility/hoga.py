@@ -40,21 +40,21 @@ class Hoga:
             if now() > self.time_uphg:
                 if self.bool_hjup and self.df_hc is not None:
                     if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-                        self.windowQ.put([ui_num['C호가종목'], self.df_hj])
+                        self.windowQ.put((ui_num['C호가종목'], self.df_hj))
                     else:
-                        self.windowQ.put([ui_num['S호가종목'], self.df_hj])
+                        self.windowQ.put((ui_num['S호가종목'], self.df_hj))
                     self.bool_hjup = False
                 if self.bool_hcup and self.df_hc is not None:
                     if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-                        self.windowQ.put([ui_num['C호가체결'], self.df_hc])
+                        self.windowQ.put((ui_num['C호가체결'], self.df_hc))
                     else:
-                        self.windowQ.put([ui_num['S호가체결'], self.df_hc])
+                        self.windowQ.put((ui_num['S호가체결'], self.df_hc))
                     self.bool_hcup = False
                 if self.bool_hgup and self.df_hg is not None:
                     if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-                        self.windowQ.put([ui_num['C호가잔량'], self.df_hg])
+                        self.windowQ.put((ui_num['C호가잔량'], self.df_hg))
                     else:
-                        self.windowQ.put([ui_num['S호가잔량'], self.df_hg])
+                        self.windowQ.put((ui_num['S호가잔량'], self.df_hg))
                     self.bool_hgup = False
                 self.time_uphg = timedelta_sec(0.25)
 
@@ -63,17 +63,18 @@ class Hoga:
         self.df_hj = pd.DataFrame({'종목명': [''], '현재가': [0.], '등락율': [0.], '시가총액': [0], 'UVI': [0], '시가': [0], '고가': [0], '저가': [0]})
         self.df_hc = pd.DataFrame({'체결수량': zero_list, '체결강도': zero_list})
         self.df_hg = pd.DataFrame({'잔량': zero_list, '호가': zero_list})
-        self.windowQ.put([ui_num[f'{gubun}호가종목'], self.df_hj])
-        self.windowQ.put([ui_num[f'{gubun}호가체결'], self.df_hc])
-        self.windowQ.put([ui_num[f'{gubun}호가잔량'], self.df_hg])
+        self.windowQ.put((ui_num[f'{gubun}호가종목'], self.df_hj))
+        self.windowQ.put((ui_num[f'{gubun}호가체결'], self.df_hc))
+        self.windowQ.put((ui_num[f'{gubun}호가잔량'], self.df_hg))
         self.hoga_name = ''
 
     def UpdateHogaJongmok(self, data):
-        gubun = 'C' if 'KRW' in data[0] or 'USDT' in data[0] else 'S'
-        if self.hoga_name != data[0]:
+        hoga_name = data[0]
+        gubun = 'C' if 'KRW' in hoga_name or 'USDT' in hoga_name else 'S'
+        if self.hoga_name != hoga_name:
             self.InitHoga(gubun)
-            self.hoga_name = data[0]
-        self.df_hj = pd.DataFrame([data], columns=columns_hj)
+            self.hoga_name = hoga_name
+        self.df_hj = pd.DataFrame([list(data)], columns=columns_hj)
         self.bool_hjup = True
 
     def UpdateChegeolcount(self, data):
@@ -108,16 +109,17 @@ class Hoga:
         self.bool_hcup = True
 
     def UpdateHogajalryang(self, data):
-        gubun = 'C' if 'KRW' in data[0] or 'USDT' in data[0] else 'S'
-        if self.hoga_name != data[0]:
+        hoga_name = data[0]
+        gubun = 'C' if 'KRW' in hoga_name or 'USDT' in hoga_name else 'S'
+        if self.hoga_name != hoga_name:
             self.InitHoga(gubun)
-            self.hoga_name = data[0]
+            self.hoga_name = hoga_name
 
-        jr = [data[1]] + data[13:23] + [data[2]]
+        jr = [data[1]] + list(data[13:23]) + [data[2]]
         if 'KRW' in self.hoga_name or 'USDT' in self.hoga_name:
-            hg = [self.df_hj['고가'][0]] + data[3:13] + [self.df_hj['저가'][0]]
+            hg = [self.df_hj['고가'][0]] + list(data[3:13]) + [self.df_hj['저가'][0]]
         else:
-            hg = [data[23]] + data[3:13] + [data[24]]
+            hg = [data[23]] + list(data[3:13]) + [data[24]]
 
         self.df_hg = pd.DataFrame({'잔량': jr, '호가': hg})
         self.bool_hgup = True
@@ -178,5 +180,5 @@ class Hoga:
                 hg = [df['VI가격'].iloc[0]] + data[22:32] + [0]
             self.df_hg = pd.DataFrame({'잔량': jr, '호가': hg})
 
-            self.windowQ.put([ui_num[f'{gubun}호가종목'], self.df_hj, str(df.index[0]), 'dummy'])
-            self.windowQ.put([ui_num[f'{gubun}호가잔량'], self.df_hg])
+            self.windowQ.put((ui_num[f'{gubun}호가종목'], self.df_hj, str(df.index[0]), 'dummy'))
+            self.windowQ.put((ui_num[f'{gubun}호가잔량'], self.df_hg))

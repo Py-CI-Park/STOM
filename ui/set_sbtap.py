@@ -249,7 +249,7 @@ class SetStockBack:
         ]
 
         for widget in self.ui.stock_rwftvd_list:
-            if widget not in [self.ui.svjb_labelllll_01, self.ui.svjb_dateEditt_01, self.ui.svjb_dateEditt_02]:
+            if widget not in (self.ui.svjb_labelllll_01, self.ui.svjb_dateEditt_01, self.ui.svjb_dateEditt_02):
                 widget.setVisible(False)
 
     # =================================================================================================================

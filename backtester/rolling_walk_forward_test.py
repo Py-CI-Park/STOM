@@ -115,16 +115,16 @@ class Total:
                 if self.vars_turn >= -1:
                     k = 0
                     for vars_key, list_tsg in total_dict_tsg.items():
-                        data = ['결과집계', columns, list_tsg, total_dict_bct[vars_key]]
-                        train_days, valid_days, test_days = self.list_days
+                        data = ('결과집계', columns, list_tsg, total_dict_bct[vars_key])
+                        train_days, valid_days, test_days = self.list_days[self.in_out_count]
                         if valid_days is not None:
                             for j, vdays in enumerate(valid_days):
-                                data_ = data + [vdays[0], vdays[1], test_days[0], train_days[2] - vdays[2], vdays[2], j, vars_key]
+                                data_ = data + (vdays[0], vdays[1], test_days[0], train_days[2] - vdays[2], vdays[2], j, vars_key)
                                 self.tdq_list[k % 5].put(data_)
                                 self.vdq_list[k % 5].put(data_)
                                 k += 1
                         else:
-                            data_ = data + [train_days[2], vars_key]
+                            data_ = data + (train_days[2], vars_key)
                             self.stq_list[k % 10].put(data_)
                             k += 1
                     total_dict_tsg = {}
@@ -149,7 +149,7 @@ class Total:
                 tbc += 1
                 if data[1]:
                     tc += 1
-                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start))
 
                 if bc == self.back_count:
                     bc = 0
@@ -160,7 +160,7 @@ class Total:
                     else:
                         self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, None)
 
-            elif data[0] in ['TRAIN', 'VALID']:
+            elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_key = data
                 if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
                 if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
@@ -257,8 +257,8 @@ class Total:
 
         text1 = f'[IN] P[{startday}~{endday}] {self.vars} MERGE[{merge:,.2f}]'
         text2 = f'[OUT] P[{self.startday}~{self.endday}] TC[{tc}] MH[{mhct}] WR[{wr:.2f}%] TP[{tsp:.2f}%] TG[{tsg:,.0f}]'
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], text1])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], text2])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text1))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text2))
         self.mq.put('아웃샘플 백테스트')
 
     def Report(self):
@@ -295,10 +295,10 @@ class Total:
         con = sqlite3.connect(DB_BACKTEST)
         self.df_ttsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
         con.close()
-        self.wq.put([ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_ttsg])
+        self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_ttsg))
 
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스터 완료'])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 소요시간 {now() - self.start}'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스터 완료'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 소요시간 {now() - self.start}'))
         self.sq.put(f'{self.backname} 백테스트를 완료하였습니다.')
 
         PltShow('전진분석', self.df_ttsg, self.df_tbct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
@@ -322,8 +322,8 @@ class StopWhenNotUpdateBestCallBack:
         last_num = best_num + self.len_vars
         rema_num = last_num - curr_num
         total_count = self.back_count * (last_num + 1)
-        self.tq.put(['횟수변경', total_count])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA INFO 최고기준값[{best_opt:,}] 기준값갱신[{best_num}] 현재횟수[{curr_num}] 남은횟수[{rema_num}]</font>'])
+        self.tq.put(('횟수변경', total_count))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA INFO 최고기준값[{best_opt:,}] 기준값갱신[{best_num}] 현재횟수[{curr_num}] 남은횟수[{rema_num}]</font>'))
         if curr_num == last_num:
             study.stop()
 
@@ -393,19 +393,19 @@ class RollingWalkForwardTest:
             try:
                 optuna_fixvars  = [int(x.strip()) for x in data[22].split(',')]
             except:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '고정할 범위의 번호를 잘못입력하였습니다.'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '고정할 범위의 번호를 잘못입력하였습니다.'))
                 self.SysExit(True)
         optuna_autostep = data[23]
 
         if 'V' in self.backname:
             int_day = int(strf_time('%Y%m%d', timedelta_day(-(weeks_train + weeks_valid + weeks_test + 1) * 7 + 1, strp_time('%Y%m%d', str(endday)))))
             if int(backengin_sday) > int_day or startday > int_day or endday > int(backengin_eday):
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 검증기간 + 확인기간 * 2 만큼의 데이터가 필요합니다'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 검증기간 + 확인기간 * 2 만큼의 데이터가 필요합니다'))
                 self.SysExit(True)
         else:
             int_day = int(strf_time('%Y%m%d', timedelta_day(-(weeks_train + weeks_test + 1) * 7 + 1, strp_time('%Y%m%d', str(endday)))))
             if int(backengin_sday) > int_day or startday > int_day or endday > int(backengin_eday):
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 확인기간 * 2 만큼의 데이터가 필요합니다'])
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 확인기간 * 2 만큼의 데이터가 필요합니다'))
                 self.SysExit(True)
 
         con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
@@ -414,7 +414,7 @@ class RollingWalkForwardTest:
         con.close()
 
         if len(df_mt) == 0 or back_count == 0:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'))
             self.SysExit(True)
 
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
@@ -471,19 +471,19 @@ class RollingWalkForwardTest:
         list_days = list_days[::-1]
         for i, data in enumerate(list_days):
             train_days, valid_days, test_days = data
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 학습기간 {i + 1} : {train_days[0]} ~ {train_days[1]}'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 학습기간 {i + 1} : {train_days[0]} ~ {train_days[1]}'))
             if 'V' in self.backname:
                 for vsday, veday, _ in valid_days:
-                    self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증기간 {i + 1} : {vsday} ~ {veday}'])
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 확인기간 {i + 1} : {test_days[0]} ~ {test_days[1]}'])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 일자 추출 완료'])
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증기간 {i + 1} : {vsday} ~ {veday}'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 확인기간 {i + 1} : {test_days[0]} ~ {test_days[1]}'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 일자 추출 완료'))
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ['백테정보', arry_bct, betting, optistandard]
+        data = ('백테정보', arry_bct, betting, optistandard)
         for q in self.stq_list:
             q.put(data)
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
 
         con = sqlite3.connect(DB_STRATEGY)
         df = pd.read_sql(f'SELECT * FROM {self.gubun}optibuy', con).set_index('index')
@@ -498,7 +498,7 @@ class RollingWalkForwardTest:
         try:
             exec(optivars_, None, locals())
         except Exception as e:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - 최적화 변수설정 1단계 {e}'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - 최적화 변수설정 1단계 {e}'))
             self.SysExit(True)
 
         total_count = 0
@@ -532,23 +532,23 @@ class RollingWalkForwardTest:
         total_count *= out_count
         total_count += out_count
         total_count *= back_count
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
 
         mq = Queue()
         tdq_list = self.stq_list[:5]
         vdq_list = self.stq_list[5:]
         Process(target=Total, args=(self.wq, self.sq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
-        self.tq.put(['백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars, dict_cn,
-                     list_days, std_text, optistandard, schedul, df_kp, df_kd, weeks_train, weeks_valid, weeks_test])
-        data = ['백테정보', betting, avg_list, starttime, endtime, buystg, sellstg]
+        self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars, dict_cn,
+                     list_days, std_text, optistandard, schedul, df_kp, df_kd, weeks_train, weeks_valid, weeks_test))
+        data = ('백테정보', betting, avg_list, starttime, endtime, buystg, sellstg)
         for q in self.pq_list:
             q.put(data)
 
         if 'B' in self.backname:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 시작'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 시작'))
 
         hstd_list = []
         hvar_list = []
@@ -560,7 +560,7 @@ class RollingWalkForwardTest:
             if 'B' in self.backname:
                 self.htsd = 0
                 total_count_ = back_count * (len(self.vars) + 1)
-                self.tq.put(['경우의수', total_count_, back_count, startday, endday, j])
+                self.tq.put(('경우의수', total_count_, back_count, startday, endday, j))
 
                 def objective(trial):
                     optuna_vars = []
@@ -604,11 +604,11 @@ class RollingWalkForwardTest:
                         optuna_vars.append([trial_])
 
                     if str(optuna_vars) not in self.dict_optuna_vars.keys():
-                        self.tq.put(['변수정보', optuna_vars, -1])
-                        for ctq in self.stq_list:
-                            ctq.put('백테시작')
+                        self.tq.put(('변수정보', optuna_vars, -1))
+                        for stq in self.stq_list:
+                            stq.put('백테시작')
                         for pq in self.pq_list:
-                            pq.put(['변수정보', optuna_vars, -1])
+                            pq.put(('변수정보', optuna_vars, -1, startday, endday))
                         data_ = mq.get()
                         if type(data_) == str:
                             ostd = 0
@@ -632,12 +632,12 @@ class RollingWalkForwardTest:
                 for i, var in enumerate(list(self.study.best_params.values())):
                     vars_[i][-1] = var
             else:
-                self.tq.put(['경우의수', total_count, back_count, startday, endday, j])
-                self.tq.put(['변수정보', vars_, -1])
+                self.tq.put(('경우의수', total_count, back_count, startday, endday, j))
+                self.tq.put(('변수정보', vars_, -1))
                 for q in self.stq_list:
                     q.put('백테시작')
                 for q in self.pq_list:
-                    q.put(['변수정보', vars_, -1])
+                    q.put(('변수정보', vars_, -1, startday, endday))
                 self.htsd, _ = mq.get()
 
                 k = 1
@@ -647,18 +647,18 @@ class RollingWalkForwardTest:
                         if change_var_count == 0:
                             break
                         if k > 1:
-                            self.tq.put(['재최적화'])
-                            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'])
+                            self.tq.put('재최적화')
+                            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'))
 
                     change_var_count = 0
                     for i, vars_list in enumerate(vars_):
-                        len_vars_list = len(vars_list) - 2
-                        if len_vars_list > 0:
-                            self.tq.put(['변수정보', vars_, i])
+                        len_vars_list = len(vars_list) - 1
+                        if len_vars_list > 1:
+                            self.tq.put(('변수정보', vars_, i))
                             for q in self.stq_list:
                                 q.put('백테시작')
                             for q in self.pq_list:
-                                q.put(['변수정보', vars_, i, startday, endday])
+                                q.put(('변수정보', vars_, i, startday, endday))
 
                             for _ in range(len_vars_list):
                                 data = mq.get()
@@ -677,18 +677,18 @@ class RollingWalkForwardTest:
 
             hvar_list.append(vars_)
             hstd_list.append([startday, endday, self.htsd])
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 완료'])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 완료'))
 
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스터 시작'])
-        self.tq.put(['최적화정보', hstd_list])
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스터 시작'))
+        self.tq.put(('최적화정보', hstd_list))
         for i, data in enumerate(list_days):
             startday, endday = data[2]
-            self.tq.put(['경우의수', total_count, back_count, startday, endday, out_count])
-            self.tq.put(['변수정보', hvar_list[i], -2])
+            self.tq.put(('경우의수', total_count, back_count, startday, endday, out_count))
+            self.tq.put(('변수정보', hvar_list[i], -2))
             for q in self.stq_list:
                 q.put('백테시작')
             for q in self.pq_list:
-                q.put(['변수정보', hvar_list[i], -2, startday, endday])
+                q.put(('변수정보', hvar_list[i], -2, startday, endday))
             _ = mq.get()
 
         mq.close()
@@ -697,8 +697,8 @@ class RollingWalkForwardTest:
 
     def SysExit(self, cancel):
         if cancel:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         else:
-            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'])
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
         time.sleep(1)
         sys.exit()

@@ -15,33 +15,32 @@ class ReceiverUpbit2:
         self.ctraderQ  = qlist[9]
         self.cstgQ     = qlist[10]
         self.dict_set  = DICT_SET
-        self.list_jang = []
+        self.tuple_jang = []
         self.Start()
 
     def Start(self):
         while True:
             data = self.creceivQ.get()
-            if type(data) == list:
-                if len(data) != 2:
-                    self.UpdateTestMode(data)
-                else:
-                    self.UpdateList(data)
+            if len(data) != 2:
+                self.UpdateTestMode(data)
+            else:
+                self.UpdateTuple(data)
 
     def UpdateTestMode(self, data):
         code = data[-1]
         c, o, h, low, per, _, ch, bids, asks = data[1:10]
         hogadata = data[12:34]
-        self.cstgQ.put(data + [now()])
-        if code in self.list_jang:
-            self.ctraderQ.put([code, c])
-        self.hogaQ.put([code, c, per, 0, 0, o, h, low])
-        self.hogaQ.put([bids, ch])
-        self.hogaQ.put([-asks, ch])
-        self.hogaQ.put([code] + hogadata + [0, 0])
+        self.cstgQ.put(data + (0,))
+        if code in self.tuple_jang:
+            self.ctraderQ.put((code, c))
+        self.hogaQ.put((code, c, per, 0, 0, o, h, low))
+        self.hogaQ.put((bids, ch))
+        self.hogaQ.put((-asks, ch))
+        self.hogaQ.put((code,) + hogadata + (0, 0))
 
-    def UpdateList(self, data):
-        gubun, list_ = data
-        self.list_jang = list_
+    def UpdateTuple(self, data):
+        gubun, data = data
+        self.tuple_jang = data
 
 
 class TraderUpbit2:
@@ -80,17 +79,15 @@ class TraderUpbit2:
             '계좌평가계산': curr_time,
             '잔고목록전송': curr_time
         }
+        self.test_time = None
         self.UpdateDictName()
         self.GetBalances()
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         while True:
             data = self.ctraderQ.get()
-            if type(data) == list:
-                self.UpdateList(data)
-            elif type(data) == dict:
-                self.dict_set = data
+            self.UpdateTuple(data)
 
             curr_time = now()
             if curr_time > self.dict_time['계좌평가계산']:
@@ -98,7 +95,7 @@ class TraderUpbit2:
                 self.UpdateTotaljango(inthmsutc)
                 self.dict_time['계좌평가계산'] = timedelta_sec(1)
             if curr_time > self.dict_time['잔고목록전송']:
-                self.cstgQ.put(self.df_jg.copy())
+                self.cstgQ.put(('잔고목록', self.df_jg))
                 self.dict_time['잔고목록전송'] = timedelta_sec(0.5)
 
     def UpdateDictName(self):
@@ -112,27 +109,33 @@ class TraderUpbit2:
     def GetBalances(self):
         self.dict_intg['예수금'] = self.dict_intg['추정예수금'] = self.dict_intg['추정예탁자산'] = 100_000_000
 
-    def UpdateList(self, data):
+    def UpdateTuple(self, data):
         if len(data) == 6:
             self.CheckOrder(data[0], data[1], data[2], data[3])
         elif len(data) == 2:
-            code, c = data
-            self.dict_curc[code] = c
-            try:
-                if code in self.df_jg.index and c != self.df_jg['현재가'][code]:
-                    jg = self.df_jg['매입금액'][code]
-                    jc = self.df_jg['보유수량'][code]
-                    pg, sg, sp = GetUpbitPgSgSp(jg, jc * c)
-                    columns = ['현재가', '수익률', '평가손익', '평가금액']
-                    self.df_jg.loc[code, columns] = c, sp, sg, pg
-            except:
-                pass
+            if type(data[1]) == float:
+                code, c = data
+                self.dict_curc[code] = c
+                try:
+                    if code in self.df_jg.index and c != self.df_jg['현재가'][code]:
+                        jg = self.df_jg['매입금액'][code]
+                        jc = self.df_jg['보유수량'][code]
+                        pg, sg, sp = GetUpbitPgSgSp(jg, jc * c)
+                        columns = ['현재가', '수익률', '평가손익', '평가금액']
+                        self.df_jg.loc[code, columns] = c, sp, sg, pg
+                except:
+                    pass
+            elif data[0] == '설정변경':
+                self.dict_set = data[1]
+            elif data[0] == '복기모드시간':
+                self.test_time = data[1]
 
     def CheckOrder(self, og, code, op, oc):
         NIJ = code not in self.df_jg.index
         INB = code in self.dict_buy.keys()
         INS = code in self.dict_sell.keys()
 
+        on = ''
         cancel = False
         curr_time = now()
         if og == '매수':
@@ -155,7 +158,7 @@ class TraderUpbit2:
                 cancel = True
             elif self.dict_intg['추정예수금'] < oc * op:
                 if curr_time > self.dict_name[code][1]:
-                    self.CreateOrder('시드부족', code, op, oc)
+                    self.CreateOrder('시드부족', code, op, oc, on)
                     self.dict_name[code][1] = timedelta_sec(180)
                 cancel = True
             elif INB:
@@ -168,25 +171,29 @@ class TraderUpbit2:
 
         if cancel:
             if '취소' not in og:
-                self.cstgQ.put([f'{og}취소', code])
+                self.cstgQ.put((f'{og}취소', code))
         else:
             if oc > 0:
-                self.CreateOrder(og, code, op, oc)
+                self.CreateOrder(og, code, op, oc, on)
             else:
-                self.cstgQ.put([f'{og}취소', code])
+                self.cstgQ.put((f'{og}취소', code))
 
-    def CreateOrder(self, og, code, op, oc):
+    def CreateOrder(self, og, code, op, oc, on):
+        ct = self.test_time
         if oc > 0:
             if self.dict_set['코인모의투자'] or og == '시드부족':
                 if og == '시드부족':
-                    self.UpdateChejanData(og, code, oc, 0, oc, op, 0, '')
+                    self.UpdateChejanData(og, code, oc, 0, oc, op, 0, ct, on)
                 else:
-                    self.UpdateChejanData(og, code, oc, oc, 0, op, op, '')
+                    self.UpdateChejanData(og, code, oc, oc, 0, op, op, ct, on)
 
-    def UpdateChejanData(self, gubun, code, oc, cc, mc, cp, op, on):
-        dt = self.GetIndex()
+    def UpdateChejanData(self, gubun, code, oc, cc, mc, cp, op, ct, on):
+        index = strf_time('%Y%m%d%H%M%S%f', timedelta_sec(-32400))
+        if index in self.df_cj.index:
+            while index in self.df_cj.index:
+                index = str(int(index) + 1)
 
-        if gubun in ['매수', '매도']:
+        if gubun in ('매수', '매도'):
             if gubun == '매수':
                 if code in self.df_jg.index:
                     jc = round(self.df_jg['보유수량'][code] + cc, 8)
@@ -194,13 +201,13 @@ class TraderUpbit2:
                     jp = round(jg / jc, 4)
                     pg, sg, sp = GetUpbitPgSgSp(jg, jc * cp)
                     columns = ['매입가', '현재가', '수익률', '평가손익', '매입금액', '평가금액', '보유수량', '매수시간']
-                    self.df_jg.loc[code, columns] = jp, cp, sp, sg, jg, pg, jc, dt[:14]
+                    self.df_jg.loc[code, columns] = jp, cp, sp, sg, jg, pg, jc, ct
                 else:
                     jc = cc
                     jg = int(cc * cp)
                     jp = cp
                     pg, sg, sp = GetUpbitPgSgSp(jg, jc * cp)
-                    self.df_jg.loc[code] = code, jp, cp, sp, sg, jg, pg, jc, 0, 0, dt[:14]
+                    self.df_jg.loc[code] = code, jp, cp, sp, sg, jg, pg, jc, 0, 0, ct
 
                 if mc == 0:
                     self.df_jg.loc[code, '분할매수횟수'] = self.df_jg['분할매수횟수'][code] + 1
@@ -226,7 +233,7 @@ class TraderUpbit2:
 
                 jg = jp * cc
                 pg, sg, sp = GetUpbitPgSgSp(jg, cc * cp)
-                self.UpdateTradelist(dt, code, jg, pg, cc, sp, sg, dt[:14])
+                self.UpdateTradelist(index, code, jg, pg, cc, sp, sg, ct)
 
                 if sp < 0:
                     self.dict_name[code][3] = timedelta_sec(self.dict_set['코인매수금지손절간격초'])
@@ -234,12 +241,12 @@ class TraderUpbit2:
             columns = ['평가손익', '매입금액', '평가금액', '분할매수횟수', '분할매도횟수']
             self.df_jg[columns] = self.df_jg[columns].astype(int)
             self.df_jg.sort_values(by=['매입금액'], ascending=False, inplace=True)
-            self.cstgQ.put(self.df_jg.copy())
+            self.cstgQ.put(('잔고목록', self.df_jg))
 
             if mc == 0:
-                self.cstgQ.put([gubun + '완료', code])
+                self.cstgQ.put((gubun + '완료', code))
 
-            self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
+            self.UpdateChegeollist(index, code, gubun, oc, cc, mc, cp, ct, op, on)
 
             if gubun == '매수':
                 self.dict_intg['예수금'] -= int(cc * cp)
@@ -249,16 +256,17 @@ class TraderUpbit2:
 
             if self.dict_set['코인알림소리']:
                 self.soundQ.put(f'{self.dict_name[code][0]}을 {gubun}하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [체결] {code} | {cp} | {cc} | {gubun}'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [체결] {code} | {cp} | {cc} | {gubun}'))
 
         elif gubun == '시드부족':
-            self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
+            self.UpdateChegeollist(index, code, gubun, oc, cc, mc, cp, ct, op, on)
 
-        self.creceivQ.put(['잔고목록', list(self.df_jg.index)])
+        self.creceivQ.put(('잔고목록', tuple(self.df_jg.index)))
+        self.creceivQ.put(('주문목록', self.GetOrderCodeList()))
 
     def UpdateTradelist(self, index, code, jg, pg, cc, sp, sg, ct):
         self.df_td.loc[index] = code, jg, pg, cc, sp, sg, ct
-        self.windowQ.put([ui_num['C거래목록'], self.df_td[::-1]])
+        self.windowQ.put((ui_num['C거래목록'], self.df_td[::-1]))
         self.UpdateTotaltradelist()
 
     def UpdateTotaltradelist(self):
@@ -270,12 +278,12 @@ class TraderUpbit2:
         sg  = self.df_td['수익금'].sum()
         sp  = round(sg / self.dict_intg['추정예탁자산'] * 100, 2)
         self.df_tt = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.str_today])
-        self.windowQ.put([ui_num['C실현손익'], self.df_tt])
+        self.windowQ.put((ui_num['C실현손익'], self.df_tt))
 
     def UpdateChegeollist(self, index, code, gubun, oc, cc, mc, cp, dt, op, on):
         self.dict_name[code][2] = timedelta_sec(self.dict_set['코인매수금지간격초'])
         self.df_cj.loc[index] = code, gubun, oc, cc, mc, cp, dt, op, on
-        self.windowQ.put([ui_num['C체결목록'], self.df_cj[::-1]])
+        self.windowQ.put((ui_num['C체결목록'], self.df_cj[::-1]))
 
     def UpdateTotaljango(self, inthmsutc):
         if len(self.df_jg) > 0:
@@ -302,14 +310,10 @@ class TraderUpbit2:
 
         if self.dict_intg['종목당투자금'] != tujagm:
             self.dict_intg['종목당투자금'] = tujagm
-            self.cstgQ.put(self.dict_intg['종목당투자금'])
+            self.cstgQ.put(('종목당투자금', self.dict_intg['종목당투자금']))
 
-        self.windowQ.put([ui_num['C잔고목록'], self.df_jg.copy()])
-        self.windowQ.put([ui_num['C잔고평가'], self.df_tj.copy()])
+        self.windowQ.put((ui_num['C잔고목록'], self.df_jg))
+        self.windowQ.put((ui_num['C잔고평가'], self.df_tj))
 
-    def GetIndex(self):
-        dt = strf_time('%Y%m%d%H%M%S%f', timedelta_sec(-32400))
-        if dt in self.df_cj.index:
-            while dt in self.df_cj.index:
-                dt = str(int(dt) + 1)
-        return dt
+    def GetOrderCodeList(self):
+        return tuple(self.dict_buy.keys()) + tuple(self.dict_sell.keys())

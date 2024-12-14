@@ -6,10 +6,11 @@ from utility.setting import ui_num, DICT_SET
 
 
 class ZmqRecv(Thread):
-    def __init__(self, cstgQ, creceivQ):
+    def __init__(self, creceivQ, cstgQ, ctraderQ):
         super().__init__()
-        self.cstgQ    = cstgQ
         self.creceivQ = creceivQ
+        self.cstgQ    = cstgQ
+        self.ctraderQ = ctraderQ
         zctx = zmq.Context()
         self.sock = zctx.socket(zmq.SUB)
         self.sock.connect(f'tcp://localhost:5778')
@@ -22,13 +23,13 @@ class ZmqRecv(Thread):
             if msg == 'tickdata':
                 self.creceivQ.put(data)
             elif msg == 'updatecodes':
-                self.creceivQ.put('코인명갱신')
+                self.ctraderQ.put(data)
             elif msg == 'focuscodes':
-                self.cstgQ.put(['관심목록'] + data)
+                self.cstgQ.put(data)
             elif msg == 'mindata':
-                self.cstgQ.put(['분봉데이터', data])
+                self.cstgQ.put(data)
             elif msg == 'daydata':
-                self.cstgQ.put(['일봉데이터', data])
+                self.cstgQ.put(data)
 
 
 class ReceiverUpbitClient:
@@ -40,42 +41,40 @@ class ReceiverUpbitClient:
         self.windowQ   = qlist[0]
         self.soundQ    = qlist[1]
         self.teleQ     = qlist[3]
+        self.hogaQ     = qlist[5]
         self.creceivQ  = qlist[8]
         self.ctraderQ  = qlist[9]
         self.cstgQ     = qlist[10]
         self.dict_set  = DICT_SET
 
-        self.dict_bool = {'프로세스종료': False}
-        self.list_jang = []
-        self.list_oder = []
+        self.dict_bool   = {'프로세스종료': False}
+        self.tuple_jang  = ()
+        self.tuple_order = ()
+        self.hoga_code   = None
 
         if self.dict_set['리시버공유'] == 1:
-            self.zmqserver = ZmqRecv(self.cstgQ, self.creceivQ)
+            self.zmqserver = ZmqRecv(self.creceivQ, self.cstgQ, self.ctraderQ)
             self.zmqserver.start()
 
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         text = '코인 리시버를 시작하였습니다.'
         if self.dict_set['코인알림소리']: self.soundQ.put(text)
         self.teleQ.put(text)
-        self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'])
+        self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'))
         while True:
             data = self.creceivQ.get()
-            inthmsutc = int_hms_utc()
-            if type(data) == list:
-                if len(data) != 2:
-                    self.UpdateTickData(data)
-                else:
-                    self.UpdateList(data)
-            elif type(data) == dict:
-                self.dict_set = data
-            elif type(data) == str:
-                if data == '코인명갱신':
-                    self.ctraderQ.put('코인명갱신')
-                elif data == '프로세스종료':
-                    break
+            if len(data) != 2:
+                self.UpdateTickData(data)
+            else:
+                self.UpdateTuple(data)
+            if data == '프로세스종료':
+                self.ctraderQ.put('프로세스종료')
+                self.cstgQ.put('프로세스종료')
+                break
 
+            inthmsutc = int_hms_utc()
             if self.dict_set['코인장초전략종료시간'] < inthmsutc < self.dict_set['코인장초전략종료시간'] + 10:
                 if self.dict_set['코인장초프로세스종료'] and not self.dict_bool['프로세스종료']:
                     self.ReceiverProcKill()
@@ -84,21 +83,28 @@ class ReceiverUpbitClient:
                 if self.dict_set['코인장중프로세스종료'] and not self.dict_bool['프로세스종료']:
                     self.ReceiverProcKill()
 
-        self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료'])
+        self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료'))
         time.sleep(1)
 
     def UpdateTickData(self, data):
         self.cstgQ.put(data)
         code, c = data[-2], data[1]
-        if code in self.list_oder or code in self.list_jang:
-            self.ctraderQ.put([code, c])
+        if code in self.tuple_order or code in self.tuple_jang:
+            self.ctraderQ.put((code, c))
+        if self.hoga_code == code:
+            c, o, h, low, per, _, ch, bids, asks = data[1:10]
+            hogadata = data[12:34]
+            self.hogaQ.put((code, c, per, 0, 0, o, h, low))
+            self.hogaQ.put((bids, ch))
+            self.hogaQ.put((-asks, ch))
+            self.hogaQ.put((code,) + hogadata + (0, 0))
 
-    def UpdateList(self, data):
+    def UpdateTuple(self, data):
         gubun, data = data
         if gubun == '잔고목록':
-            self.list_jang = data
+            self.tuple_jang = data
         elif gubun == '주문목록':
-            self.list_oder = data
+            self.tuple_order = data
 
     def ReceiverProcKill(self):
         self.dict_bool['프로세스종료'] = True

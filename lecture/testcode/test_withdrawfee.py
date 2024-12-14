@@ -30,7 +30,7 @@ for x in data:
             enable = network['withdrawEnable']
             count  = float(network['withdrawFee'])
             c      = dict_close[code]
-            if name not in ['BNB', 'BSC'] and count != 0 and enable and count < count_:
+            if name not in ('BNB', 'BSC') and count != 0 and enable and count < count_:
                 count_ = count
                 df.loc[code] = count, c, name, round(count * c, 8)
 

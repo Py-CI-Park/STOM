@@ -230,10 +230,10 @@ class CoinUpbitBackEngine:
                 self.dict_set = data[1]
             elif data[0] == '종목명거래대금순위':
                 self.dict_mt = data[1]
-            elif data[0] in ['데이터크기', '데이터로딩']:
+            elif data[0] in ('데이터크기', '데이터로딩'):
                 self.DataLoad(data)
             elif data[0] == '벤치점수요청':
-                self.bq.put([self.total_ticks, self.total_secds, round(self.total_ticks / self.total_secds, 2)])
+                self.bq.put((self.total_ticks, self.total_secds, round(self.total_ticks / self.total_secds, 2)))
 
     def InitDayInfo(self):
         self.tick_count = 0
@@ -261,7 +261,7 @@ class CoinUpbitBackEngine:
                     pass
                 if gubun == '데이터크기':
                     self.total_ticks += len_df_tick
-                    self.bq.put([code, len_df_tick])
+                    self.bq.put((code, len_df_tick))
                 elif len_df_tick > 0:
                     AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
@@ -283,7 +283,7 @@ class CoinUpbitBackEngine:
                         except:
                             pass
                     self.total_ticks += len_df_tick
-                    self.bq.put([day, len_df_tick])
+                    self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 code_list = []
                 for day in day_list:
@@ -318,7 +318,7 @@ class CoinUpbitBackEngine:
                     except:
                         pass
                     self.total_ticks += len_df_tick
-                    self.bq.put([day, len_df_tick])
+                    self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 df_tick, len_df_tick = None, 0
                 try:
@@ -346,13 +346,13 @@ class CoinUpbitBackEngine:
     def CheckAvglist(self, avg_list):
         not_in_list = [x for x in avg_list if x not in self.avg_list]
         if len(not_in_list) > 0 and self.gubun == 0:
-            self.wq.put([ui_num['C백테스트'], '백테엔진 구동 시 포함되지 않은 평균값 틱수를 사용하여 중지되었습니다.'])
-            self.wq.put([ui_num['C백테스트'], '누락된 평균값 틱수를 추가하여 백테엔진을 재시작하십시오.'])
+            self.wq.put((ui_num['C백테스트'], '백테엔진 구동 시 포함되지 않은 평균값 틱수를 사용하여 중지되었습니다.'))
+            self.wq.put((ui_num['C백테스트'], '누락된 평균값 틱수를 추가하여 백테엔진을 재시작하십시오.'))
             self.BackStop()
 
     def BackStop(self):
         self.back_type = None
-        if self.gubun == 0: self.wq.put([ui_num['C백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'])
+        if self.gubun == 0: self.wq.put((ui_num['C백테스트'], '전략 코드 오류로 백테스트를 중지합니다.'))
 
     def BackTest(self):
         if self.profile:
@@ -399,7 +399,7 @@ class CoinUpbitBackEngine:
                         self.InitDayInfo()
                         self.InitTradeInfo()
 
-            self.tq.put(['백테완료', 1 if self.total_count > 0 else 0])
+            self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
 
         if self.profile:
             self.pr.print_stats(sort='cumulative')
@@ -533,7 +533,7 @@ class CoinUpbitBackEngine:
                     return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 8)
 
         def GetArrayIndex(bc):
-            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
+            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
@@ -626,7 +626,7 @@ class CoinUpbitBackEngine:
 
             for j in range(self.vars_count):
                 self.vars_key = j
-                if self.back_type in ['백테스트', '조건최적화']:
+                if self.back_type in ('백테스트', '조건최적화'):
                     if self.tick_count < self.avgtime:
                         break
                 elif self.back_type == 'GA최적화':
@@ -634,10 +634,7 @@ class CoinUpbitBackEngine:
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.vars_turn >= 0:
-                    curr_var = self.vars_list[self.vars_turn][j]
-                    if curr_var == self.high_var:
-                        continue
-                    self.vars[self.vars_turn] = curr_var
+                    self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
                     if self.tick_count < self.vars[0]:
                         if self.vars_turn != 0:
                             break

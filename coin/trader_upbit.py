@@ -58,14 +58,12 @@ class TraderUpbit:
             '잔고전송': curr_time,
             '잔고갱신및주문취소확인': curr_time
         }
-        self.Start()
 
-    def Start(self):
         self.UpdateDictName()
         self.LoadDatabase()
         self.GetKey()
         self.GetBalances()
-        self.EventLoop()
+        self.MainLoop()
 
     def UpdateDictName(self):
         for dict_ticker in pyupbit.get_tickers(fiat="KRW", verbose=True):
@@ -75,7 +73,7 @@ class TraderUpbit:
                 dummy_time = timedelta_sec(-3600)
                 self.dict_name[code] = [name, dummy_time, dummy_time, dummy_time]
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 코인명 수집 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 코인명 수집 완료'))
 
     def LoadDatabase(self):
         con = sqlite3.connect(DB_TRADELIST)
@@ -84,15 +82,15 @@ class TraderUpbit:
         self.df_jg = pd.read_sql(f'SELECT * FROM c_jangolist', con).set_index('index')
         con.close()
 
-        if len(self.df_cj) > 0: self.windowQ.put([ui_num['C체결목록'], self.df_cj[::-1]])
-        if len(self.df_td) > 0: self.windowQ.put([ui_num['C거래목록'], self.df_td[::-1]])
-        if len(self.df_jg) > 0: self.creceivQ.put(['잔고목록', list(self.df_jg.index)])
+        if len(self.df_cj) > 0: self.windowQ.put((ui_num['C체결목록'], self.df_cj[::-1]))
+        if len(self.df_td) > 0: self.windowQ.put((ui_num['C거래목록'], self.df_td[::-1]))
+        if len(self.df_jg) > 0: self.creceivQ.put(('잔고목록', tuple(self.df_jg.index)))
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 데이터베이스 불러오기 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 데이터베이스 불러오기 완료'))
 
     def GetKey(self):
         self.upbit = pyupbit.Upbit(self.dict_set['Access_key1'], self.dict_set['Secret_key1'])
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 주문 및 체결확인용 업비트 객체 생성 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 주문 및 체결확인용 업비트 객체 생성 완료'))
 
     def GetBalances(self):
         cbg = self.df_jg['매입금액'].sum()
@@ -116,31 +114,21 @@ class TraderUpbit:
         if len(self.df_td) > 0:
             self.UpdateTotaltradelist(first=True)
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 예수금 조회 완료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 예수금 조회 완료'))
 
-    def EventLoop(self):
+    def MainLoop(self):
         text = '코인 전략연산 및 트레이더를 시작하였습니다.'
         if self.dict_set['코인알림소리']: self.soundQ.put(text)
         self.teleQ.put(text)
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 시작'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 시작'))
         while True:
             if not self.ctraderQ.empty():
                 data = self.ctraderQ.get()
-                if type(data) == list:
-                    self.UpdateList(data)
-                elif type(data) == dict:
-                    self.dict_set = data
-                elif data == '코인명갱신':
-                    self.UpdateDictName()
-                elif data == 'C체결목록':
-                    self.teleQ.put(self.df_cj.copy()) if len(self.df_cj) > 0 else self.teleQ.put('현재는 코인체결목록이 없습니다.')
-                elif data == 'C거래목록':
-                    self.teleQ.put(self.df_td.copy()) if len(self.df_td) > 0 else self.teleQ.put('현재는 코인거래목록이 없습니다.')
-                elif data == 'C잔고평가':
-                    self.teleQ.put(self.df_jg.copy()) if len(self.df_jg) > 0 else self.teleQ.put('현재는 코인잔고목록이 없습니다.')
-                elif data == 'C잔고청산':
-                    self.JangoCheongsan('수동')
-                elif data == '프로세스종료':
+                if type(data) == tuple:
+                    self.UpdateTuple(data)
+                elif type(data) == str:
+                    self.UpdateString(data)
+                if data == '프로세스종료':
                     break
 
             curr_time = now()
@@ -158,7 +146,7 @@ class TraderUpbit:
                 self.dict_time['잔고갱신및주문취소확인'] = timedelta_sec(1)
 
             if curr_time > self.dict_time['잔고전송']:
-                self.cstgQ.put(self.df_jg.copy())
+                self.cstgQ.put(('잔고목록', self.df_jg))
                 self.dict_time['잔고전송'] = timedelta_sec(0.5)
 
             if self.dict_set['코인장초전략종료시간'] < inthmsutc < self.dict_set['코인장초전략종료시간'] + 10:
@@ -188,28 +176,20 @@ class TraderUpbit:
             if self.ctraderQ.empty():
                 time.sleep(0.001)
 
-        self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 종료'])
+        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 종료'))
         time.sleep(1)
 
     def TradeProcKill(self):
         self.dict_bool['프로세스종료'] = True
         Timer(180, self.ctraderQ.put, args=['프로세스종료']).start()
 
-    def UpdateList(self, data):
-        if len(data) == 6:
-            self.CheckOrder(data[0], data[1], data[2], data[3], data[4], data[5])
-        elif len(data) == 7:
-            self.CheckOrder(data[0], data[1], data[2], data[3], data[4], data[5], ordertype=data[6])
+    def UpdateTuple(self, data):
+        if len(data) == 7 or len(data) == 8:
+            self.CheckOrder(data)
         elif len(data) == 9:
-            self.SendOrder(data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], ordertype=data[8])
+            self.SendOrder(data)
         elif len(data) == 2:
-            if data[0] == '관심진입':
-                if data[1] in self.dict_sell.keys():
-                    self.CancelOrder(data[1], '매도')
-            elif data[0] == '관심이탈':
-                if data[1] in self.dict_buy.keys():
-                    self.CancelOrder(data[1], '매수')
-            else:
+            if type(data[1]) == float:
                 code, c = data
                 self.dict_curc[code] = c
                 try:
@@ -221,8 +201,34 @@ class TraderUpbit:
                         self.df_jg.loc[code, columns] = c, sp, sg, pg
                 except:
                     pass
+            if data[0] == '관심진입':
+                if data[1] in self.dict_sell.keys():
+                    self.CancelOrder(data[1], '매도')
+            elif data[0] == '관심이탈':
+                if data[1] in self.dict_buy.keys():
+                    self.CancelOrder(data[1], '매수')
+            elif data[0] == '설정변경':
+                self.dict_set = data[1]
 
-    def CheckOrder(self, og, code, op, oc, signal_time, manual, ordertype=None):
+    def UpdateString(self, data):
+        if data == '코인명갱신':
+            self.UpdateDictName()
+        elif data == 'C체결목록':
+            self.teleQ.put(self.df_cj) if len(self.df_cj) > 0 else self.teleQ.put('현재는 코인체결목록이 없습니다.')
+        elif data == 'C거래목록':
+            self.teleQ.put(self.df_td) if len(self.df_td) > 0 else self.teleQ.put('현재는 코인거래목록이 없습니다.')
+        elif data == 'C잔고평가':
+            self.teleQ.put(('잔고목록', self.df_jg)) if len(self.df_jg) > 0 else self.teleQ.put('현재는 코인잔고목록이 없습니다.')
+        elif data == 'C잔고청산':
+            self.JangoCheongsan('수동')
+
+    def CheckOrder(self, data):
+        if len(data) == 6:
+            og, code, op, oc, signal_time, manual = data
+            ordertype = None
+        else:
+            og, code, op, oc, signal_time, manual, ordertype = data
+
         NIJ = code not in self.df_jg.index
         INB = code in self.dict_buy.keys()
         INS = code in self.dict_sell.keys()
@@ -278,10 +284,10 @@ class TraderUpbit:
 
         if cancel:
             if '취소' not in og:
-                self.cstgQ.put([f'{og}취소', code])
+                self.cstgQ.put((f'{og}취소', code))
         else:
-            if manual and og in ['매수', '매도']:
-                self.cstgQ.put([f'{og}주문', code])
+            if manual and og in ('매수', '매도'):
+                self.cstgQ.put((f'{og}주문', code))
 
             if og == '매수':
                 if self.dict_set['코인매도취소매수시그널'] and INS:
@@ -293,7 +299,7 @@ class TraderUpbit:
             if oc > 0:
                 self.CreateOrder(og, code, op, oc, on, signal_time, manual, 0, ordertype)
             else:
-                self.cstgQ.put([f'{og}취소', code])
+                self.cstgQ.put((f'{og}취소', code))
 
     def CreateOrder(self, og, code, op, oc, on, signal_time, manual, fixc, ordertype):
         if og == '매수' and fixc == 0:
@@ -304,8 +310,8 @@ class TraderUpbit:
                 op = round(op + GetUpbitHogaunit(op) * self.dict_set['코인매도지정가호가번호'], 8)
 
         if oc * op < 5000:
-            self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - 주문금액이 5천원미만입니다.'])
-            self.cstgQ.put([f'{og}취소', code])
+            self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - 주문금액이 5천원미만입니다.'))
+            self.cstgQ.put((f'{og}취소', code))
             return
 
         if oc > 0:
@@ -316,9 +322,11 @@ class TraderUpbit:
                 else:
                     self.UpdateChejanData(og, code, oc, oc, 0, op, op, '')
             else:
-                self.SendOrder(og, code, op, oc, on, signal_time, manual, fixc, ordertype)
+                data = (og, code, op, oc, on, signal_time, manual, fixc, ordertype)
+                self.SendOrder(data)
 
-    def SendOrder(self, og, code, op, oc, on, signal_time, manual, fixc, ordertype):
+    def SendOrder(self, data):
+        og, code, op, oc, on, signal_time, manual, fixc, ordertype = data
         curr_time = now()
         if curr_time < self.dict_time['주문시간']:
             next_time = (self.dict_time['주문시간'] - curr_time).total_seconds()
@@ -341,10 +349,10 @@ class TraderUpbit:
                         self.dict_intg['추정예수금'] -= int(oc * op)
                         self.dict_buy[code] = [ret['uuid'], timedelta_sec(self.dict_set['코인매수취소시간초']), fixc, op, GetUpbitHogaunit(op)]
                         self.UpdateChegeollist(dt, code, og + '접수', oc, 0, oc, 0, dt[:14], op, ret['uuid'])
-                        self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'])
+                        self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'))
                 else:
-                    self.cstgQ.put(['매수취소', code])
-                    self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {op} | {oc} | {og}'])
+                    self.cstgQ.put(('매수취소', code))
+                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {op} | {oc} | {og}'))
 
         elif og == '매도':
             if self.upbit is not None:
@@ -359,12 +367,12 @@ class TraderUpbit:
                         dt = self.GetIndex()
                         self.dict_sell[code] = [ret['uuid'], timedelta_sec(self.dict_set['코인매도취소시간초']), fixc, op, GetUpbitHogaunit(op)]
                         self.UpdateChegeollist(dt, code, og + '접수', oc, 0, oc, 0, dt[:14], op, ret['uuid'])
-                        self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'])
+                        self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'))
                 else:
-                    self.cstgQ.put(['매도취소', code])
-                    self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {op} | {oc} | {og}'])
+                    self.cstgQ.put(('매도취소', code))
+                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {op} | {oc} | {og}'))
 
-        elif og in ['매수취소', '매도취소']:
+        elif og in ('매수취소', '매도취소'):
             if self.upbit is not None:
                 ret = self.upbit.cancel_order(on)
                 if ret is not None:
@@ -375,12 +383,12 @@ class TraderUpbit:
                         elif og == '매도취소':
                             self.dict_sell_cancel[code] = ret['uuid']
                         self.UpdateChegeollist(dt, code, og + '접수', oc, 0, oc, 0, dt[:14], 0, ret['uuid'])
-                        self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'])
+                        self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'))
                 else:
-                    self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {op} | {oc} | {og}'])
+                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {op} | {oc} | {og}'))
 
         self.dict_time['주문시간'] = timedelta_sec(0.3)
-        self.creceivQ.put(['주문목록', self.GetOrderCodeList()])
+        self.creceivQ.put(('주문목록', self.GetOrderCodeList()))
 
     def CheckChegeol(self):
         if len(self.dict_buy) > 0:
@@ -496,12 +504,12 @@ class TraderUpbit:
                         if self.CheckError(ret):
                             self.dict_sell[code] = [ret['uuid'], now()]
                     else:
-                        self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {c} | {oc} | 매도'])
+                        self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - [주문 실패] {code} | {c} | {oc} | 매도'))
                     time.sleep(0.3)
 
             if self.dict_set['코인알림소리']:
                 self.soundQ.put(f'코인 {gubun}전략 잔고청산 주문을 전송하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'시스템 명령 실행 알림 - {gubun}전략 잔고청산 주문 완료'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 실행 알림 - {gubun}전략 잔고청산 주문 완료'))
 
     def OrderTimeControl(self):
         if len(self.dict_buy) == 0:
@@ -570,7 +578,7 @@ class TraderUpbit:
     def UpdateChejanData(self, gubun, code, oc, cc, mc, cp, op, on):
         dt = self.GetIndex()
 
-        if gubun in ['매수', '매도']:
+        if gubun in ('매수', '매도'):
             if gubun == '매수':
                 if code in self.df_jg.index:
                     jc = round(self.df_jg['보유수량'][code] + cc, 8)
@@ -618,10 +626,10 @@ class TraderUpbit:
             columns = ['평가손익', '매입금액', '평가금액', '분할매수횟수', '분할매도횟수']
             self.df_jg[columns] = self.df_jg[columns].astype(int)
             self.df_jg.sort_values(by=['매입금액'], ascending=False, inplace=True)
-            self.cstgQ.put(self.df_jg.copy())
+            self.cstgQ.put(('잔고목록', self.df_jg))
 
             if mc == 0:
-                self.cstgQ.put([gubun + '완료', code])
+                self.cstgQ.put((gubun + '완료', code))
 
             self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
 
@@ -631,15 +639,15 @@ class TraderUpbit:
                 self.dict_intg['예수금'] += jg + sg
                 self.dict_intg['추정예수금'] += jg + sg
 
-            self.queryQ.put(['거래디비', self.df_jg, 'c_jangolist', 'replace'])
+            self.queryQ.put(('거래디비', self.df_jg, 'c_jangolist', 'replace'))
             if self.dict_set['코인알림소리']:
                 self.soundQ.put(f'{self.dict_name[code][0]}을 {gubun}하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [체결] {code} | {cp} | {cc} | {gubun}'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [체결] {code} | {cp} | {cc} | {gubun}'))
 
         elif gubun == '시드부족':
             self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
 
-        elif gubun in ['매수취소', '매도취소']:
+        elif gubun in ('매수취소', '매도취소'):
             df = self.GetMichegeolDF(code, gubun.replace('취소', ''))
             if len(df) > 0 and df['미체결수량'].iloc[-1] > 0:
                 if df['체결수량'].iloc[-1] > 0 and code in self.df_jg.index:
@@ -647,7 +655,7 @@ class TraderUpbit:
                         self.df_jg.loc[code, '분할매수횟수'] = self.df_jg['분할매수횟수'][code] + 1
                     elif gubun == '매도취소':
                         self.df_jg.loc[code, '분할매도횟수'] = self.df_jg['분할매도횟수'][code] + 1
-                    self.cstgQ.put(self.df_jg.copy())
+                    self.cstgQ.put(('잔고목록', self.df_jg))
 
                 if gubun == '매수취소':
                     self.dict_intg['추정예수금'] += df['미체결수량'].iloc[-1] * df['주문가격'].iloc[-1]
@@ -657,22 +665,22 @@ class TraderUpbit:
                 elif gubun == '매도취소' and code in self.dict_sell.keys():
                     del self.dict_sell[code]
 
-            self.cstgQ.put([gubun, code])
+            self.cstgQ.put((gubun, code))
             self.UpdateChegeollist(dt, code, gubun, oc, cc, mc, cp, dt[:14], op, on)
 
             if self.dict_set['코인알림소리']:
                 self.soundQ.put(f'{self.dict_name[code][0]}을 {gubun}하였습니다.')
-            self.windowQ.put([ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [확인] {code} | {op} | {oc} | {gubun}'])
+            self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [확인] {code} | {op} | {oc} | {gubun}'))
 
-        self.creceivQ.put(['잔고목록', list(self.df_jg.index)])
-        self.creceivQ.put(['주문목록', self.GetOrderCodeList()])
+        self.creceivQ.put(('잔고목록', tuple(self.df_jg.index)))
+        self.creceivQ.put(('주문목록', self.GetOrderCodeList()))
 
     def UpdateTradelist(self, index, code, jg, pg, cc, sp, sg, ct):
         self.df_td.loc[index] = code, jg, pg, cc, sp, sg, ct
-        self.windowQ.put([ui_num['C거래목록'], self.df_td[::-1]])
+        self.windowQ.put((ui_num['C거래목록'], self.df_td[::-1]))
 
         df = pd.DataFrame([[code, jg, pg, cc, sp, sg, ct]], columns=columns_td, index=[index])
-        self.queryQ.put(['거래디비', df, 'c_tradelist', 'append'])
+        self.queryQ.put(('거래디비', df, 'c_tradelist', 'append'))
 
         self.UpdateTotaltradelist()
 
@@ -686,7 +694,7 @@ class TraderUpbit:
         sp  = round(sg / self.dict_intg['추정예탁자산'] * 100, 2)
 
         self.df_tt = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.str_today])
-        self.windowQ.put([ui_num['C실현손익'], self.df_tt])
+        self.windowQ.put((ui_num['C실현손익'], self.df_tt))
 
         if not first:
             self.teleQ.put(f'손익 알림 - 총매수금액 {tbg:,.0f}, 총매도금액 {tsg:,.0f}, 수익 {sig:,.0f}, 손실 {ssg:,.0f}, 수익금합계 {sg:,.0f}')
@@ -694,10 +702,10 @@ class TraderUpbit:
     def UpdateChegeollist(self, index, code, gubun, oc, cc, mc, cp, dt, op, on):
         self.dict_name[code][2] = timedelta_sec(self.dict_set['코인매수금지간격초'])
         self.df_cj.loc[index] = code, gubun, oc, cc, mc, cp, dt, op, on
-        self.windowQ.put([ui_num['C체결목록'], self.df_cj[::-1]])
+        self.windowQ.put((ui_num['C체결목록'], self.df_cj[::-1]))
 
         df = pd.DataFrame([[code, gubun, oc, cc, mc, cp, dt, op, on]], columns=columns_cj, index=[dt])
-        self.queryQ.put(['거래디비', df, 'c_chegeollist', 'append'])
+        self.queryQ.put(('거래디비', df, 'c_chegeollist', 'append'))
 
     def UpdateTotaljango(self, inthmsutc):
         if len(self.df_jg) > 0:
@@ -732,20 +740,20 @@ class TraderUpbit:
 
         if self.dict_intg['종목당투자금'] != tujagm:
             self.dict_intg['종목당투자금'] = tujagm
-            self.cstgQ.put(self.dict_intg['종목당투자금'])
+            self.cstgQ.put(('종목당투자금', self.dict_intg['종목당투자금']))
 
-        self.windowQ.put([ui_num['C잔고목록'], self.df_jg.copy()])
-        self.windowQ.put([ui_num['C잔고평가'], self.df_tj.copy()])
+        self.windowQ.put((ui_num['C잔고목록'], self.df_jg))
+        self.windowQ.put((ui_num['C잔고평가'], self.df_tj))
 
     def StrategyStop(self):
-        self.cstgQ.put(['매수전략중지', ''])
-        # self.cstgQ.put(['매도전략중지', ''])
+        self.cstgQ.put('매수전략중지')
+        # self.cstgQ.put('매도전략중지')
         self.JangoCheongsan('수동')
 
     def SaveTotalGetbalDelcjtd(self):
         df = self.df_tt[['총매수금액', '총매도금액', '총수익금액', '총손실금액', '수익률', '수익금합계']]
         if len(df) > 0:
-            self.queryQ.put(['거래디비', df, 'c_totaltradelist', 'append'])
+            self.queryQ.put(('거래디비', df, 'c_totaltradelist', 'append'))
         self.df_cj = pd.DataFrame(columns=columns_cj)
         self.df_td = pd.DataFrame(columns=columns_td)
         self.GetBalances()
@@ -753,16 +761,16 @@ class TraderUpbit:
 
     def OrderTimeLog(self, signal_time):
         gap = (now() - signal_time).total_seconds()
-        self.windowQ.put([ui_num['C단순텍스트'], f'시그널 주문 시간 알림 - 발생시간과 주문시간의 차이는 [{gap:.6f}]초입니다.'])
+        self.windowQ.put((ui_num['C단순텍스트'], f'시그널 주문 시간 알림 - 발생시간과 주문시간의 차이는 [{gap:.6f}]초입니다.'))
 
     def CheckError(self, ret):
         if type(ret) == dict and list(ret.keys())[0] == 'error':
-            self.windowQ.put([ui_num['C로그텍스트'], f"시스템 명령 오류 알림 - {ret['error']['name']} : {ret['error']['message']}"])
+            self.windowQ.put((ui_num['C로그텍스트'], f"시스템 명령 오류 알림 - {ret['error']['name']} : {ret['error']['message']}"))
             return False
         return True
 
     def GetOrderCodeList(self):
-        return list(self.dict_buy.keys()) + list(self.dict_sell.keys())
+        return tuple(self.dict_buy.keys()) + tuple(self.dict_sell.keys())
 
     def GetMichegeolDF(self, code, gubun):
         return self.df_cj[(self.df_cj['종목명'] == code) & ((self.df_cj['주문구분'] == gubun) | (self.df_cj['주문구분'] == f'{gubun}접수'))]

@@ -18,7 +18,7 @@ from utility.static import now, timedelta_sec, int_hms, qtest_qwait, opstarter_k
 
 class ZmqRecv(QThread):
     signal1 = pyqtSignal(str)
-    signal2 = pyqtSignal(list)
+    signal2 = pyqtSignal(tuple)
 
     def __init__(self, main, qlist, port_num):
         super().__init__()
@@ -41,13 +41,13 @@ class ZmqRecv(QThread):
             elif msg == 'trader':
                 self.straderQ.put(data)
             elif msg == 'strategy':
-                if data[0] == '차트코드갱신':
-                    _, count, code = data
+                if data[0] == '차트종목코드':
+                    count = data[-1]
                     for i, q in enumerate(self.sstgQs):
                         if i == count:
-                            q.put(code)
+                            q.put(data[:2])
                         else:
-                            q.put('000000')
+                            q.put(data[:2])
                 else:
                     for q in self.sstgQs:
                         q.put(data)
@@ -55,7 +55,7 @@ class ZmqRecv(QThread):
                 if type(data) == str:
                     # noinspection PyUnresolvedReferences
                     self.signal1.emit(data)
-                elif type(data) == list:
+                elif type(data) == tuple:
                     # noinspection PyUnresolvedReferences
                     self.signal2.emit(data)
                 if data == '통신종료':
@@ -87,9 +87,9 @@ class ZmqServ(QThread):
             self.sock.send_pyobj(data)
             if int_hms() > int_hms_:
                 sstgQs_size = sum([q.qsize() for q in self.sstgQs])
-                qsize_list  = ['qsize', self.sreceivQ.qsize(), self.straderQ.qsize(), sstgQs_size]
+                qsize_data  = ('qsize', (self.sreceivQ.qsize(), self.straderQ.qsize(), sstgQs_size))
                 self.sock.send_string('qsize', zmq.SNDMORE)
-                self.sock.send_pyobj(qsize_list)
+                self.sock.send_pyobj(qsize_data)
                 int_hms_ = int_hms()
             if type(data) == str and data == '통신종료':
                 QThread.sleep(1)
@@ -130,9 +130,9 @@ class KiwoomManager:
 
         self.zmqrecv = ZmqRecv(self, self.qlist, port_num)
         # noinspection PyUnresolvedReferences
-        self.zmqrecv.signal1.connect(self.ManagerCMD1)
+        self.zmqrecv.signal1.connect(self.UpdateString)
         # noinspection PyUnresolvedReferences
-        self.zmqrecv.signal2.connect(self.ManagerCMD2)
+        self.zmqrecv.signal2.connect(self.UpdateTuple)
         self.zmqrecv.start()
 
         self.qtimer1 = QTimer()
@@ -143,7 +143,7 @@ class KiwoomManager:
 
         app.exec_()
 
-    def ManagerCMD1(self, data):
+    def UpdateString(self, data):
         if data == '주식수동시작':
             self.StockManualStart()
         elif data == '시뮬레이터구동':
@@ -161,9 +161,16 @@ class KiwoomManager:
         elif data == '백테엔진구동':
             self.backtest_engine = True
 
-    def ManagerCMD2(self, data):
-        if data[0] == '설정갱신':
-            self.UpdateDictSet(data[1])
+    def UpdateTuple(self, data):
+        if data[0] == '설정변경':
+            self.dict_set = data[1]
+            if self.StockStrategyProcessAlive():
+                for q in self.sstgQs:
+                    q.put(('설정변경', self.dict_set))
+            if self.StockReceiverProcessAlive():
+                self.sreceivQ.put(('설정변경', self.dict_set))
+            if self.StockTraderProcessAlive():
+                self.straderQ.put(('설정변경', self.dict_set))
 
     def StockManualStart(self):
         if self.backtest_engine:
@@ -215,23 +222,13 @@ class KiwoomManager:
             self.proc_trader_stock.kill()
 
     def ManagerProcessKill(self):
-        self.kwzservQ.put(['window', '통신종료'])
+        self.kwzservQ.put(('window', '통신종료'))
         self.SimulatorProcessKill()
         self.StockReceiverProcessKill()
         self.StockStrategyProcessKill()
         self.StockTraderProcessKill()
         qtest_qwait(3)
         sys.exit()
-
-    def UpdateDictSet(self, data):
-        self.dict_set = data
-        if self.StockStrategyProcessAlive():
-            for q in self.sstgQs:
-                q.put(self.dict_set)
-        if self.StockReceiverProcessAlive():
-            self.sreceivQ.put(self.dict_set)
-        if self.StockTraderProcessAlive():
-            self.straderQ.put(self.dict_set)
 
     def ProcessStarter(self):
         inthms = int_hms()
@@ -250,7 +247,7 @@ class KiwoomManager:
         else:
             self.daydata_download = True
             if self.dict_set['주식알림소리']:
-                self.kwzservQ.put(['sound', '예약된 데이터 다운로드를 시작합니다.'])
+                self.kwzservQ.put(('sound', '예약된 데이터 다운로드를 시작합니다.'))
             subprocess.Popen('python download_kiwoom.py')
 
     @staticmethod

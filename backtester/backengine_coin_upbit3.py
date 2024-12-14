@@ -35,7 +35,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                     except:
                         pass
                     self.total_ticks += len_df_tick
-                    self.bq.put([code, len_df_tick])
+                    self.bq.put((code, len_df_tick))
             elif gubun == '데이터로딩':
                 for code in code_list:
                     df_tick, len_df_tick, df_min, df_day = None, 0, None, None
@@ -94,7 +94,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                         except:
                             pass
                     self.total_ticks += len_df_tick
-                    self.bq.put([day, len_df_tick])
+                    self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 code_list = []
                 for day in day_list:
@@ -161,7 +161,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                         pass
 
                     self.total_ticks += len_df_tick
-                    self.bq.put([day, len_df_tick])
+                    self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 startday_ = day_list[0]
                 endday_   = day_list[-1]
@@ -274,7 +274,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                         self.InitDayInfo()
                         self.InitTradeInfo()
 
-            self.tq.put(['백테완료', 1 if self.total_count > 0 else 0])
+            self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
 
         if self.profile:
             self.pr.print_stats(sort='cumulative')
@@ -420,7 +420,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                     return round(self.array_tick[bindex + 1 - tick:bindex + 1, 1].mean(), 8)
 
         def GetArrayIndex(bc):
-            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ['백테스트', '조건최적화', '백파인더'] else self.vars[0])
+            return bc + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick in self.avg_list:
@@ -616,7 +616,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
 
             for j in range(self.vars_count):
                 self.vars_key = j
-                if self.back_type in ['백테스트', '조건최적화']:
+                if self.back_type in ('백테스트', '조건최적화'):
                     if self.tick_count < self.avgtime:
                         break
                 elif self.back_type == 'GA최적화':
@@ -624,10 +624,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                     if self.tick_count < self.vars[0]:
                         continue
                 elif self.vars_turn >= 0:
-                    curr_var = self.vars_list[self.vars_turn][j]
-                    if curr_var == self.high_var:
-                        continue
-                    self.vars[self.vars_turn] = curr_var
+                    self.vars[self.vars_turn] = self.vars_list[self.vars_turn][j]
                     if self.tick_count < self.vars[0]:
                         if self.vars_turn != 0:
                             break

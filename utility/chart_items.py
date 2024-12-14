@@ -120,7 +120,7 @@ class CandlestickItem(pg.GraphicsObject):
         p = QPainter(self.picture)
         count = len(ar)
         if last:
-            for i in [count - 2, count - 1]:
+            for i in (count - 2, count - 1):
                 o = ar[i, 1]
                 h = ar[i, 2]
                 low = ar[i, 3]

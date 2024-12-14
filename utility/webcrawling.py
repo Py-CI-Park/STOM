@@ -26,12 +26,10 @@ class WebCrawling:
     def Start(self):
         while True:
             data = self.webcQ.get()
-            if type(data) == list:
-                self.Crawling(data[0], data[1])
-            elif type(data) == str:
-                self.Crawling(data)
+            self.Crawling(data)
 
-    def Crawling(self, cmd, data=None):
+    def Crawling(self, data):
+        cmd, data = data
         if cmd == '기업정보':
             self.GugyCrawling(data)
             self.GugsCrawling(data)
@@ -61,7 +59,7 @@ class WebCrawling:
                 self.imagelist = [x for x in self.imagelist if 'lensThumb' not in x]
 
             webimage = request.urlopen(random.choice(self.imagelist)).read()
-            self.windowQ.put([ui_num['풍경사진'], webimage])
+            self.windowQ.put((ui_num['풍경사진'], webimage))
         except:
             pass
 
@@ -76,12 +74,12 @@ class WebCrawling:
             title = title.get_text().replace('.', '. ')
             if title != '':
                 gugy_result += title
-        self.windowQ.put([ui_num['기업개요'], gugy_result])
+        self.windowQ.put((ui_num['기업개요'], gugy_result))
 
     @thread_decorator
     def GugsCrawling(self, code):
         date_list, jbjg_list, gygs_list, link_list = [], [], [], []
-        for i in [1, 2]:
+        for i in (1, 2):
             url    = f'https://finance.naver.com/item/news_notice.nhn?code={code}&page={i}'
             source = requests.get(url).text
             html   = BeautifulSoup(source, 'lxml')
@@ -100,12 +98,12 @@ class WebCrawling:
                     except:
                         pass
         df = pd.DataFrame({'일자': date_list, '정보제공': jbjg_list, '공시': gygs_list, '링크': link_list})
-        self.windowQ.put([ui_num['기업공시'], df])
+        self.windowQ.put((ui_num['기업공시'], df))
 
     @thread_decorator
     def JmnsCrawling(self, code):
         date_list, title_list, ulsa_list, link_list = [], [], [], []
-        for i in [1, 2]:
+        for i in (1, 2):
             url    = f'https://finance.naver.com/item/news_news.nhn?code={code}&page={i}'
             source = requests.get(url).text
             html   = BeautifulSoup(source, 'lxml')
@@ -124,7 +122,7 @@ class WebCrawling:
                     except:
                         pass
         df = pd.DataFrame({'일자 및 시간': date_list, '언론사': ulsa_list, '제목': title_list, '링크': link_list})
-        self.windowQ.put([ui_num['기업뉴스'], df])
+        self.windowQ.put((ui_num['기업뉴스'], df))
 
     @thread_decorator
     def JmjpCrawling(self, code):
@@ -139,8 +137,8 @@ class WebCrawling:
         data2    = [[num_list[j] for j in range(4, 130, 10)], [num_list[j] for j in range(5, 130, 10)], [num_list[j] for j in range(6, 130, 10)], [num_list[j] for j in range(7, 130, 10)], [num_list[j] for j in range(8, 130, 10)], [num_list[j] for j in range(9, 130, 10)]]
         df1      = pd.DataFrame(dict(zip(columns1, data1)))
         df2      = pd.DataFrame(dict(zip(columns2, data2)))
-        self.windowQ.put([ui_num['재무년도'], df1])
-        self.windowQ.put([ui_num['재무분기'], df2])
+        self.windowQ.put((ui_num['재무년도'], df1))
+        self.windowQ.put((ui_num['재무분기'], df2))
 
     @thread_decorator
     def UjTmCrawling(self):
@@ -182,7 +180,7 @@ class WebCrawling:
         norm2 = matplotlib.colors.Normalize(vmin=minimum, vmax=maximum)
         cl2 = [self.cmap(norm2(value)) for value in df2['컬러맵']]
 
-        self.windowQ.put([ui_num['트리맵'], df1, df2, cl1, cl2])
+        self.windowQ.put((ui_num['트리맵'], df1, df2, cl1, cl2))
         if self.treemap:
             Timer(10, self.UjTmCrawling).start()
 
@@ -203,13 +201,13 @@ class WebCrawling:
         color_list = [self.cmap(norm(value)) for value in df['컬러맵']]
 
         if gubun == 1:
-            self.windowQ.put([ui_num['트리맵1'], df, '', color_list, ''])
+            self.windowQ.put((ui_num['트리맵1'], df, '', color_list, ''))
         else:
-            self.windowQ.put([ui_num['트리맵2'], '', df, '', color_list])
+            self.windowQ.put((ui_num['트리맵2'], '', df, '', color_list))
 
     @thread_decorator
     def JisuCrawling(self, startday):
-        self.windowQ.put([ui_num['백테엔진'], '지수차트 웹크롤링 시작'])
+        self.windowQ.put((ui_num['백테엔진'], '지수차트 웹크롤링 시작'))
 
         def crawl_index(code):
             page = 1
@@ -230,6 +228,6 @@ class WebCrawling:
 
         df_kp = crawl_index('KOSPI')
         df_kd = crawl_index('KOSDAQ')
-        self.windowQ.put([ui_num['백테엔진'], '코스피 지수차트 웹크롤링 완료'])
-        self.windowQ.put([ui_num['백테엔진'], '코스닥 지수차트 웹크롤링 완료'])
-        self.backQ.put([df_kp, df_kd])
+        self.windowQ.put((ui_num['백테엔진'], '코스피 지수차트 웹크롤링 완료'))
+        self.windowQ.put((ui_num['백테엔진'], '코스닥 지수차트 웹크롤링 완료'))
+        self.backQ.put((df_kp, df_kd))
