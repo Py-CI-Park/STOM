@@ -701,10 +701,6 @@ class ReceiverKiwoom:
                         del self.dict_tm5m[code]
                     self.dict_arry[code] = np.delete(self.dict_arry[code], 0, 0)
 
-        if self.hoga_code == code:
-            self.kwzservQ.put(('hoga', (self.dict_name[code], c, per, sgta, self.dict_vipr[code][2], o, h, low)))
-            self.kwzservQ.put(('hoga', (int(v), ch)))
-
     def UpdateHogaData(self, dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, name, receivetime):
         sm = 0
         int_logt = int(str(dt)[:12])
@@ -765,16 +761,20 @@ class ReceiverKiwoom:
             if self.dict_set['리시버공유'] == 1:
                 self.recvservQ.put(('tickdata', data))
 
+            if self.hoga_code == code:
+                if code in self.dict_sghg.keys():
+                    shg, hhg = self.dict_sghg[code]
+                else:
+                    shg, hhg = GetSangHahanga(code in self.tuple_kosd, self.kw.GetMasterLastPrice(code), self.int_hgtime)
+                    self.dict_sghg[code] = (shg, hhg)
+                c, o, h, low, per, _, ch, _, _, _, _, sgta, _, bids, asks, _, uvi, _ = self.dict_tick[code]
+                self.kwzservQ.put(('hoga', (self.dict_name[code], c, per, sgta, self.dict_vipr[code][2], o, h, low)))
+                self.kwzservQ.put(('hoga', (name,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5] + (shg, hhg)))
+                self.kwzservQ.put(('hoga', (int(asks), ch)))
+                self.kwzservQ.put(('hoga', (int(bids), ch)))
+
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][13:15] = [0, 0]
-
-        if self.hoga_code == code:
-            if code in self.dict_sghg.keys():
-                shg, hhg = self.dict_sghg[code]
-            else:
-                shg, hhg = GetSangHahanga(code in self.tuple_kosd, self.kw.GetMasterLastPrice(code), self.int_hgtime)
-                self.dict_sghg[code] = (shg, hhg)
-            self.kwzservQ.put(('hoga', (name,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5] + (shg, hhg)))
 
         if ticksend and self.int_logt < int_logt:
             gap = (now() - receivetime).total_seconds()

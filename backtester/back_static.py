@@ -751,18 +751,7 @@ class SubTotal:
     def Start(self):
         while True:
             data = self.stq.get()
-            if data[0] == '백테정보':
-                self.arry_bct_ = data[1]
-                self.betting   = data[2]
-                self.optistd   = data[3]
-            elif data == '백테시작':
-                self.complete1 = False
-                self.complete2 = False
-                self.dict_tsg = {}
-                self.dict_bct = {}
-                self.list_tsg = None
-                self.arry_bct = None
-            elif data[0] == '백테결과':
+            if data[0] == '백테결과':
                 self.CollectData(data)
             elif data == '백테완료':
                 self.complete1 = True
@@ -774,6 +763,17 @@ class SubTotal:
                 self.complete2 = True
             elif data[0] == '결과집계':
                 self.SendSubTotal(data)
+            elif data[0] == '백테정보':
+                self.arry_bct_ = data[1]
+                self.betting   = data[2]
+                self.optistd   = data[3]
+            elif data == '백테시작':
+                self.complete1 = False
+                self.complete2 = False
+                self.dict_tsg = {}
+                self.dict_bct = {}
+                self.list_tsg = None
+                self.arry_bct = None
 
             if self.complete1 and self.stq.empty():
                 self.tq.put('집계완료')

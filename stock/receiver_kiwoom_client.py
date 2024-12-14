@@ -126,9 +126,9 @@ class ReceiverKiwoomClient:
             c, o, h, low, per, _, ch, _, _, _, _, sgta, _, bids, asks, _, uvi = data[1:18]
             hogadata = data[21:43]
             self.kwzservQ.put(('hoga', (name, c, per, sgta, uvi, o, h, low)))
+            self.kwzservQ.put(('hoga', (name,) + hogadata + (0, 0)))
             self.kwzservQ.put(('hoga', (bids, ch)))
             self.kwzservQ.put(('hoga', (-asks, ch)))
-            self.kwzservQ.put(('hoga', (name,) + hogadata + (0, 0)))
 
     def UpdateLoginInfo(self, data):
         self.tuple_kosd, self.dict_sgbn, self.dict_name, self.dict_code = data

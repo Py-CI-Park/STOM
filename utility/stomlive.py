@@ -21,7 +21,7 @@ class StomLiveSender(Thread):
         while True:
             try:
                 data = self.liveQ.get()
-                if type(data) == list:
+                if type(data) == tuple:
                     time.sleep(1)
                     if self.liveQ.empty() and now() > send_time:
                         gubun, df = data

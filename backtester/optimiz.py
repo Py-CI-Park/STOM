@@ -675,6 +675,7 @@ class Optimize:
             total_change  = 0
             change_var_count = None
             last_change_turn = 1000
+            total_del_vars_list = [[] for _ in range(len_vars)]
             for _ in range(ccount if ccount != 0 else 100):
                 if ccount == 0:
                     if change_var_count == 0:
@@ -694,7 +695,7 @@ class Optimize:
                     if len_vars_ > 0:
                         start = now()
                         print('========================================================================')
-                        print(f'opt_vars_turn : {i}  len_vars : {len_vars_ + 1}  high_vars : {vars_[i][1]}')
+                        print(f'opt_vars_turn : {i},  len_vars : {len_vars_ + 1},  high_vars : {vars_[i][1]},  high_std : {hstd}')
                         print(f'opt_vars_list : {vars_[i][0]}')
                         self.tq.put(('변수정보', vars_, i))
                         for q in self.stq_list:
@@ -723,55 +724,54 @@ class Optimize:
                                     change_var_count += 1
                                     last_change_turn = i
 
-                                if std == -2_147_483_648:
-                                    del_list.append(curr_var)
                                 if self.dict_set['범위자동관리']:
                                     turn_stdk[curr_var] = std
-
-                        if self.dict_set['범위자동관리']:
-                            for curr_var, std in turn_stdk.items():
-                                if std < hstd / 2:
+                                elif std == -2_147_483_648:
                                     del_list.append(curr_var)
 
                         print('{:>16} : {:>55}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
 
+                        if self.dict_set['범위자동관리'] and hstd > 0:
+                            for curr_var, std in turn_stdk.items():
+                                if std < hstd / 2:
+                                    del_list.append(curr_var)
+
                     del_vars_list.append(del_list)
+                    if self.dict_set['범위자동관리']:
+                        total_del_vars_list[i] += del_list
+
+                    if del_list:
+                        print('{:>16} : {}'.format('delete_list', del_list))
 
                 last = len(del_vars_list)
                 for i in range(len_vars):
                     if i < last and del_vars_list[i] and len(vars_[i][0]) >= 7:
-                        new_list = [x for x in vars_[i][0] if x not in del_vars_list[i]]
-                        vars_[i][0] = new_list
-                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 불필요 범위값 {del_vars_list[i]} 삭제'))
+                        del_vars_list[i].sort()
+                        vars_[i][0] = [x for x in vars_[i][0] if x not in del_vars_list[i]]
+                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 {del_vars_list[i]} 삭제'))
 
                 if self.dict_set['범위자동관리']:
                     for i in range(len_vars):
-                        if i < last and 7 <= len(vars_[i][0]) <= 18:
-                            first_var  = vars_[i][0][0]
-                            second_var = vars_[i][0][1]
-                            last_var   = vars_[i][0][-1]
-                            high_var   = vars_[i][1]
-                            gap        = second_var - first_var
-                            new_var_list = []
-                            if high_var == first_var:
-                                new_var = first_var - gap * 1
-                                if new_var not in del_vars_list[i]:
-                                    new_var_list.append(new_var)
-                                    new_var = first_var - gap * 2
-                                    if new_var not in del_vars_list[i]:
-                                        new_var_list.append(new_var)
-                                vars_[i][0] = new_var_list + vars_[i][0]
-                                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위값 {new_var_list} 추가'))
-                            elif high_var == last_var:
-                                new_var = last_var + gap * 1
-                                if new_var not in del_vars_list[i]:
-                                    new_var_list.append(new_var)
-                                    new_var = last_var + gap * 2
-                                    if new_var not in del_vars_list[i]:
-                                        new_var_list.append(new_var)
-                                vars_[i][0] = vars_[i][0] + new_var_list
-                                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위값 {new_var_list} 추가'))
-                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'불필요한 범위값 삭제 및 새로운 범위값 추가 완료'))
+                        len_vars_turn = len(vars_[i][0])
+                        if i < last and 7 <= len_vars_turn:
+                            first  = vars_[i][0][0]
+                            second = vars_[i][0][1]
+                            last   = vars_[i][0][-1]
+                            high   = vars_[i][1]
+                            gap    = second - first
+                            if high == first:
+                                new = (first - gap) if type(gap) == int else round(first - gap, 2)
+                                if new not in total_del_vars_list[i]:
+                                    prev_list = vars_[i][0] if len_vars_turn < 20 else vars_[i][0][:-1]
+                                    vars_[i][0] = [new] + prev_list
+                                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 [{new}] 추가'))
+                            elif high == last:
+                                new = (last + gap) if type(gap) == int else round(first + gap, 2)
+                                if new not in total_del_vars_list[i]:
+                                    prev_list = vars_[i][0] if len_vars_turn < 20 else vars_[i][0][1:]
+                                    vars_[i][0] = vars_[i][0] + [new]
+                                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 [{new}] 추가'))
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'불필요한 범위값 삭제 및 새로운 범위값 추가 완료'))
 
                 k += 1
 
