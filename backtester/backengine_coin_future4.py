@@ -7,13 +7,12 @@ import datetime
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData
-from utility.setting import DB_COIN_BACK, BACK_TEMP, DICT_SET, DB_COIN_DAY, DB_COIN_MIN, ui_num, dict_min
-# noinspection PyUnresolvedReferences
-from utility.static import strp_time, timedelta_sec, strf_time, timedelta_day, GetUpbitHogaunit, pickle_read, pickle_write, GetUpbitPgSgSp
+from backtester.back_static import GetBuyStgFuture, GetSellStgFuture, GetBuyCondsFuture, GetSellCondsFuture, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData
+from utility.setting import DB_COIN_BACK, BACK_TEMP, DICT_SET, DB_COIN_DAY, DB_COIN_MIN, ui_num, dict_min, dict_order_ratio
+from utility.static import strp_time, timedelta_sec, strf_time, timedelta_day, pickle_read, pickle_write, GetBinanceLongPgSgSp, GetBinanceShortPgSgSp
 
 
-class CoinUpbitBackEngine3:
+class CoinFutureBackEngine4:
     def __init__(self, gubun, wq, pq, tq, bq, ctq_list, profile=False):
         self.gubun        = gubun
         self.wq           = wq
@@ -43,10 +42,12 @@ class CoinUpbitBackEngine3:
         self.starttime_   = None
         self.endtime_     = None
 
+        self.is_long      = False
         self.buystg       = None
         self.sellstg      = None
         self.dict_cn      = None
         self.dict_mt      = None
+        self.dict_hg      = None
         self.dict_kd      = None
         self.array_tick   = None
 
@@ -96,8 +97,8 @@ class CoinUpbitBackEngine3:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
+                        self.buystg     = GetBuyStgFuture(data[7])
+                        self.sellstg, self.dict_cond = GetSellStgFuture(data[8])
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -117,17 +118,11 @@ class CoinUpbitBackEngine3:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
+                        self.buystg     = GetBuyStgFuture(data[7])
+                        self.sellstg, self.dict_cond = GetSellStgFuture(data[8])
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
-                    elif data[0] == '변수정보':
-                        self.vars_lists = data[1]
-                        self.vars_count = 10
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
-                        self.BackTest()
                 elif self.back_type == '조건최적화':
                     if data[0] == '백테정보':
                         self.betting    = data[1]
@@ -136,18 +131,19 @@ class CoinUpbitBackEngine3:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                    elif data[0] == '조건정보':
+                    if data[0] == '조건정보':
+                        self.is_long      = data[1]
                         self.dict_buystg  = {}
                         self.dict_sellstg = {}
                         self.didict_cond  = {}
                         error = False
                         for i in range(10):
-                            buystg = GetBuyConds(data[1][i])
-                            sellstg, dict_cond = GetSellConds(data[2][i])
+                            buystg = GetBuyCondsFuture(self.is_long, data[2][i])
+                            sellstg, dict_cond = GetSellCondsFuture(self.is_long, data[3][i])
+                            if buystg is None or sellstg is None: error = True
                             self.dict_buystg[i]  = buystg
                             self.dict_sellstg[i] = sellstg
                             self.didict_cond[i]  = dict_cond
-                            if buystg is None or sellstg is None: error = True
                         self.vars_count = 10
                         self.InitDayInfo()
                         self.InitTradeInfo()
@@ -161,8 +157,8 @@ class CoinUpbitBackEngine3:
                         avg_list        = data[2]
                         self.starttime  = data[3]
                         self.endtime    = data[4]
-                        self.buystg     = GetBuyStg(data[5])
-                        self.sellstg, self.dict_cond = GetSellStg(data[6])
+                        self.buystg     = GetBuyStgFuture(data[5])
+                        self.sellstg, self.dict_cond = GetSellStgFuture(data[6])
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop()
@@ -184,8 +180,8 @@ class CoinUpbitBackEngine3:
                         self.endday     = data[4]
                         self.starttime  = data[5]
                         self.endtime    = data[6]
-                        self.buystg     = GetBuyStg(data[7])
-                        self.sellstg, self.dict_cond = GetSellStg(data[8])
+                        self.buystg     = GetBuyStgFuture(data[7])
+                        self.sellstg, self.dict_cond = GetSellStgFuture(data[8])
                         self.vars_turn  = -1
                         self.vars_count = 1
                         self.InitDayInfo()
@@ -203,9 +199,6 @@ class CoinUpbitBackEngine3:
                         self.endday     = data[3]
                         self.starttime  = data[4]
                         self.endtime    = data[5]
-                        self.vars_count = 1
-                        self.InitDayInfo()
-                        self.InitTradeInfo()
                         try:
                             self.buystg = compile(data[6], '<string>', 'exec')
                         except:
@@ -219,6 +212,7 @@ class CoinUpbitBackEngine3:
                 self.dict_set = data[1]
             elif data[0] == '종목명거래대금순위':
                 self.dict_mt = data[1]
+                self.dict_hg = data[2]
             elif data[0] in ['데이터크기', '데이터로딩']:
                 self.DataLoad(data)
             elif data[0] == '벤치점수요청':
@@ -226,10 +220,20 @@ class CoinUpbitBackEngine3:
 
     def InitDayInfo(self):
         self.tick_count = 0
+        v = {
+            '손절횟수': 0,
+            '거래횟수': 0,
+            '직전거래시간': strp_time('%Y%m%d', '20000101'),
+            '손절매도시간': strp_time('%Y%m%d', '20000101')
+        }
+        if self.vars_count == 1:
+            self.day_info = {0: v}
+        else:
+            self.day_info = {k: v for k in range(self.vars_count)}
 
     def InitTradeInfo(self):
         v = {
-            '보유중': 0,
+            '보유중': 0,    # 0: 포지션무, 1: 롱포지션, 2:숏포지션
             '매수가': 0,
             '매도가': 0,
             '주문수량': 0,
@@ -237,7 +241,21 @@ class CoinUpbitBackEngine3:
             '최고수익률': 0.,
             '최저수익률': 0.,
             '매수틱번호': 0,
-            '매수시간': strp_time('%Y%m%d', '20000101')
+            '매수시간': strp_time('%Y%m%d', '20000101'),
+            '추가매수시간': [],
+            '매수호가': 0,
+            '매도호가': 0,
+            '매수호가_': 0,
+            '매도호가_': 0,
+            '추가매수가': 0,
+            '매수호가단위': 0,
+            '매도호가단위': 0,
+            '매수정정횟수': 0,
+            '매도정정횟수': 0,
+            '매수분할횟수': 0,
+            '매도분할횟수': 0,
+            '매수주문시간': strp_time('%Y%m%d', '20000101'),
+            '매도주문시간': strp_time('%Y%m%d', '20000101')
         }
         if self.vars_count == 1:
             self.trade_info = {0: v}
@@ -448,6 +466,10 @@ class CoinUpbitBackEngine3:
         for code in self.code_list:
             self.code = self.name = code
             self.total_count = 0
+
+            if self.dict_set['백테주문관리적용'] and self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
+                self.tq.put(['백테완료', 0])
+                continue
 
             if not self.dict_set['백테일괄로딩']:
                 self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{code}')}
@@ -783,7 +805,7 @@ class CoinUpbitBackEngine3:
         현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율, 매도총잔량, \
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합 = self.array_tick[self.indexn, 1:35]
-        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), GetUpbitHogaunit(현재가)
+        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), self.dict_hg[self.code]
 
         if self.dict_set['코인분봉데이터']:
             분봉시가, 분봉고가, 분봉저가, 분봉거래대금 = self.current_min[1:]
@@ -845,8 +867,6 @@ class CoinUpbitBackEngine3:
                 4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
                 5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
             }
-            self.bhogainfo = self.bhogainfo[self.dict_set['코인매수시장가잔량범위']]
-            self.shogainfo = self.shogainfo[self.dict_set['코인매도시장가잔량범위']]
 
             for j in range(self.vars_count):
                 self.vars_key = j
@@ -861,135 +881,389 @@ class CoinUpbitBackEngine3:
                     if self.tick_count < self.vars[0]:
                         return
 
-                try:
+                포지션, 수익금, 수익률, 보유수량, 최고수익률, 최저수익률, 매수시간, 보유시간 = None, 0, 0., 0, 0., 0., strp_time('%Y%m%d', '20000101'), 0
+                if self.trade_info[j]['보유중']:
+                    _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, _, 매수시간 = list(self.trade_info[j].values())[:9]
+                    매수금액 = 보유수량 * 매수가
+                    평가금액 = 보유수량 * 현재가
+                    if self.trade_info[j]['보유중'] == 1:
+                        _, 수익금, 수익률 = GetBinanceLongPgSgSp(매수금액, 평가금액, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
+                    else:
+                        _, 수익금, 수익률 = GetBinanceShortPgSgSp(매수금액, 평가금액, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
+                    if 수익률 > 최고수익률:
+                        최고수익률 = 수익률
+                        self.trade_info[j]['최고수익률'] = 수익률
+                    elif 수익률 < 최저수익률:
+                        최저수익률 = 수익률
+                        self.trade_info[j]['최저수익률'] = 수익률
+                    보유시간 = (now_utc() - 매수시간).total_seconds()
+                    포지션 = 'LONG' if self.trade_info[j]['보유중'] == 1 else 'SHORT'
+
+                gubun = None
+                if self.dict_set['코인매수주문구분'] == '시장가':
                     if not self.trade_info[j]['보유중']:
+                        gubun = 'BUY_LONG or SELL_SHORT'
+                    elif self.trade_info[j]['매수분할횟수'] < self.dict_set['코인매수분할횟수']:
+                        gubun = 'BUY_LONG or SELL_SHORT'
+                    else:
+                        gubun = 'SELL_LONG or BUY_SHORT'
+                elif self.dict_set['코인매수주문구분'] == '지정가':
+                    if not self.trade_info[j]['보유중']:
+                        if self.trade_info[j]['롱매수호가'] == 0 and self.trade_info[j]['숏매수호가'] == 0:
+                            gubun = 'BUY_LONG or SELL_SHORT'
+                        else:
+                            self.CheckBuy('LONG' if self.trade_info[j]['롱매수호가'] != 0 else 'SHORT')
+                            continue
+                    elif self.trade_info[j]['매수분할횟수'] < self.dict_set['코인매수분할횟수']:
+                        if self.trade_info[j]['롱매수호가'] == 0 and self.trade_info[j]['숏매수호가'] == 0:
+                            gubun = 'BUY_LONG or SELL_SHORT'
+                        else:
+                            self.CheckBuy('LONG' if self.trade_info[j]['롱매수호가'] != 0 else 'SHORT')
+                            continue
+                        if self.trade_info[j]['롱매수호가'] == 0 and self.trade_info[j]['숏매수호가'] == 0:
+                            if self.trade_info[j]['롱매도호가'] == 0 and self.trade_info[j]['숏매도호가'] == 0:
+                                gubun = 'SELL_LONG or BUY_SHORT'
+                            else:
+                                self.CheckSell('LONG' if self.trade_info[j]['롱매도호가'] != 0 else 'SHORT')
+                                continue
+                    else:
+                        if self.trade_info[j]['롱매도호가'] == 0 and self.trade_info[j]['숏매도호가'] == 0:
+                            gubun = 'SELL_LONG or BUY_SHORT'
+                        else:
+                            self.CheckSell('LONG' if self.trade_info[j]['롱매도호가'] != 0 else 'SHORT')
+                            continue
+
+                try:
+                    if gubun == 'BUY_LONG or SELL_SHORT':
                         try:
                             if self.code not in self.dict_mt[self.index]:
                                 return
                         except:
                             return
 
-                        self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
-                        매수 = True
-                        if self.back_type != '조건최적화':
-                            exec(self.buystg, None, locals())
-                        else:
-                            exec(self.dict_buystg[j], None, locals())
-                    else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, _, 매수시간 = self.trade_info[j].values()
-                        매수금액 = 보유수량 * 매수가
-                        평가금액 = 보유수량 * 현재가
-                        _, 수익금, 수익률 = GetUpbitPgSgSp(매수금액, 평가금액)
-                        if 수익률 > 최고수익률:
-                            최고수익률 = 수익률
-                            self.trade_info[j]['최고수익률'] = 수익률
-                        elif 수익률 < 최저수익률:
-                            최저수익률 = 수익률
-                            self.trade_info[j]['최저수익률'] = 수익률
-                        보유시간 = (now_utc() - 매수시간).total_seconds()
+                        cancel = False
+                        if self.dict_set['코인매수금지거래횟수'] and self.dict_set['코인매수금지거래횟수값'] <= self.trade_info[j]['거래횟수']:
+                            cancel = True
+                        if self.dict_set['코인매수금지손절횟수'] and self.dict_set['코인매수금지손절횟수값'] <= self.trade_info[j]['손절횟수']:
+                            cancel = True
+                        if self.dict_set['코인매수금지시간'] and self.dict_set['코인매수금지시작시간'] < int(str(self.index)[8:]) < self.dict_set['코인매수금지종료시간']:
+                            cancel = True
+                        if self.dict_set['코인매수금지간격'] and now_utc() <= self.day_info['직전거래시간']:
+                            cancel = True
+                        if self.dict_set['코인매수금지손절간격'] and now_utc() <= self.day_info['손절매도시간']:
+                            cancel = True
+                        if self.dict_set['코인매수금지200원이하'] and 현재가 <= 200:
+                            cancel = True
+                        if cancel: continue
 
-                        self.trade_info[j]['주문수량'] = 보유수량
-                        매도 = False
-                        if self.back_type != '조건최적화':
-                            exec(self.sellstg, None, locals())
+                        if self.dict_set['코인매수분할횟수'] == 1:
+                            self.trade_info[j]['주문수량'] = round(self.betting / 현재가, 8)
                         else:
-                            exec(self.dict_sellstg[j], None, locals())
+                            oc_ratio = dict_order_ratio[self.dict_set['코인매수분할방법']][self.dict_set['코인매수분할횟수']][self.trade_info[j]['매수분할횟수']]
+                            self.trade_info[j]['주문수량'] = round(self.betting / (현재가 if 포지션 is None else self.trade_info[j]['매수가']) * oc_ratio / 100, 8)
+
+                        if not self.trade_info[j]['보유중']:
+                            BUY_LONG, SELL_SHORT = True, True
+                            if self.back_type != '조건최적화':
+                                exec(self.buystg, None, locals())
+                            else:
+                                exec(self.dict_buystg[j], None, locals())
+                        else:
+                            분할매수기준수익률 = round((현재가 / self.buy_info[9] - 1) * 100, 2) if self.dict_set['코인매수분할고정수익률'] else 수익률
+                            if 포지션 == 'LONG' and self.dict_set['코인매수분할하방'] and 분할매수기준수익률 < -self.dict_set['코인매수분할하방수익률']:
+                                self.Buy('BUY_LONG')
+                            elif 포지션 == 'LONG' and self.dict_set['코인매수분할상방'] and 분할매수기준수익률 > self.dict_set['코인매수분할상방수익률']:
+                                self.Buy('BUY_LONG')
+                            elif 포지션 == 'SHORT' and self.dict_set['코인매수분할하방'] and 분할매수기준수익률 < -self.dict_set['코인매수분할하방수익률']:
+                                self.Buy('SELL_SHORT')
+                            elif 포지션 == 'SHORT' and self.dict_set['코인매수분할상방'] and 분할매수기준수익률 > self.dict_set['코인매수분할상방수익률']:
+                                self.Buy('SELL_SHORT')
+                            elif self.dict_set['코인매수분할시그널']:
+                                BUY_LONG, SELL_SHORT = True, True
+                                if self.back_type != '조건최적화':
+                                    exec(self.buystg, None, locals())
+                                else:
+                                    exec(self.dict_buystg[j], None, locals())
+                    else:
+                        if not self.dict_set['백테주문관리적용']:
+                            self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']
+                            SELL_LONG, BUY_SHORT = False, False
+                            try:
+                                exec(self.sellstg, None, locals())
+                            except:
+                                if self.gubun == 0: print_exc()
+                                self.BackStop()
+                        else:
+                            if (self.dict_set['코인매도손절수익률청산'] and 수익률 < -self.dict_set['코인매도손절수익률']) or \
+                                    (self.dict_set['코인매도손절수익금청산'] and 수익금 < -self.dict_set['코인매도손절수익금']):
+                                self.Sonjeol()
+                                return
+
+                            cancel = False
+                            if self.dict_set['코인매도금지시간'] and self.dict_set['코인매도금지시작시간'] < int(str(self.index)[8:]) < self.dict_set['코인매도금지종료시간']:
+                                cancel = True
+                            elif self.dict_set['코인매도금지간격'] and now_utc() <= self.day_info['직전거래시간']:
+                                cancel = True
+                            elif self.dict_set['코인매수분할횟수'] > 1 and self.dict_set['코인매도금지매수횟수'] and self.trade_info[j]['매수분할횟수'] <= self.dict_set['코인매도금지매수횟수값']:
+                                cancel = True
+                            if cancel: return
+
+                            if self.dict_set['코인매도분할횟수'] == 1:
+                                self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']
+                            else:
+                                oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][self.trade_info[j]['매도분할횟수']]
+                                self.trade_info[j]['주문수량'] = round(self.betting / self.trade_info[j]['매수가'] * oc_ratio / 100, 8)
+                                if self.trade_info[j]['주문수량'] > self.trade_info[j]['보유수량'] or self.trade_info[j]['매도분할횟수'] + 1 == self.dict_set['코인매도분할횟수']:
+                                    self.trade_info[j]['주문수량'] = self.trade_info[j]['보유수량']
+
+                            if self.dict_set['코인매도분할횟수'] == 1:
+                                SELL_LONG, BUY_SHORT = False, False
+                                if self.back_type != '조건최적화':
+                                    exec(self.sellstg, None, locals())
+                                else:
+                                    exec(self.dict_sellstg[j], None, locals())
+                            else:
+                                if 포지션 == 'LONG' and self.dict_set['코인매도분할하방'] and 수익률 < -self.dict_set['코인매도분할하방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                    self.Sell('SELL_LONG', 100)
+                                elif 포지션 == 'LONG' and self.dict_set['코인매도분할상방'] and 수익률 > self.dict_set['코인매도분할상방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                    self.Sell('SELL_LONG', 100)
+                                elif 포지션 == 'SHORT' and self.dict_set['코인매도분할하방'] and 수익률 < -self.dict_set['코인매도분할하방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                    self.Sell('BUY_SHORT', 100)
+                                elif 포지션 == 'SHORT' and self.dict_set['코인매도분할상방'] and 수익률 > self.dict_set['코인매도분할상방수익률'] * (self.trade_info[j]['매도분할횟수'] + 1):
+                                    self.Sell('BUY_SHORT', 100)
+                                elif self.dict_set['코인매도분할시그널']:
+                                    SELL_LONG, BUY_SHORT = False, False
+                                    if self.back_type != '조건최적화':
+                                        exec(self.sellstg, None, locals())
+                                    else:
+                                        exec(self.dict_sellstg[j], None, locals())
                 except:
                     if self.gubun == 0: print_exc()
                     self.BackStop()
 
-    def Buy(self):
-        매수수량 = self.trade_info[self.vars_key]['주문수량']
-        if 매수수량 > 0:
-            남은수량 = 매수수량
-            직전남은수량 = 매수수량
-            매수금액 = 0
-            for 매도호가, 매도잔량 in self.bhogainfo.items():
-                남은수량 -= 매도잔량
+    def Buy(self, gubun):
+        if self.dict_set['코인매수주문구분'] == '시장가':
+            매수수량 = self.trade_info[self.vars_key]['주문수량']
+            if 매수수량 > 0:
+                남은수량 = 매수수량
+                직전남은수량 = 매수수량
+                매수금액 = 0
+                hogainfo = self.bhogainfo if gubun == 'BUY_LONG' else self.shogainfo
+                hogainfo = hogainfo[self.dict_set['코인매수시장가잔량범위']]
+                for 호가, 잔량 in hogainfo.items():
+                    남은수량 -= 잔량
+                    if 남은수량 <= 0:
+                        매수금액 += 호가 * 직전남은수량
+                        break
+                    else:
+                        매수금액 += 호가 * 잔량
+                        직전남은수량 = 남은수량
                 if 남은수량 <= 0:
-                    매수금액 += 매도호가 * 직전남은수량
+                    gubun = 'LONG' if gubun == 'BUY_LONG' else 'SHORT'
+                    if self.trade_info[self.vars_key]['보유수량'] == 0:
+                        self.trade_info[self.vars_key]['매수가'] = round(매수금액 / 매수수량, 4)
+                        self.trade_info[self.vars_key]['보유수량'] = 매수수량
+                        self.UpdateBuyInfo(gubun, True)
+                    else:
+                        self.trade_info[self.vars_key]['추가매수가'] = round(매수금액 / 매수수량, 4)
+                        self.trade_info[self.vars_key]['매수가'] = round((self.trade_info[self.vars_key]['매수가'] * self.trade_info[self.vars_key]['보유수량'] + 매수금액) / (self.trade_info[self.vars_key]['보유수량'] + 매수수량), 4)
+                        self.trade_info[self.vars_key]['보유수량'] += 매수수량
+                        self.UpdateBuyInfo(gubun, False)
+        elif self.dict_set['코인매수주문구분'] == '지정가':
+            기준가격, 매도호가1, 매수호가1 = self.array_tick[self.indexn, 1], self.array_tick[self.indexn, 18], self.array_tick[self.indexn, 19]
+            if self.dict_set['코인매수지정가기준가격'] == '매도1호가':
+                기준가격 = 매도호가1 if gubun == 'BUY_LONG' else 매수호가1
+            elif self.dict_set['코인매수지정가기준가격'] == '매수1호가':
+                기준가격 = 매수호가1 if gubun == 'BUY_LONG' else 매도호가1
+            if gubun == 'BUY_LONG':
+                self.trade_info[self.vars_key]['롱매수호가'] = 기준가격 - self.dict_hg[self.code] * self.dict_set['코인매수지정가호가번호']
+            else:
+                self.trade_info[self.vars_key]['숏매수호가'] = 기준가격 + self.dict_hg[self.code] * self.dict_set['코인매수지정가호가번호']
+            self.trade_info[self.vars_key]['매수호가단위'] = self.dict_hg[self.code]
+            self.trade_info[self.vars_key]['매수주문시간'] = timedelta_sec(self.dict_set['코인매수취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
+
+    def CheckBuy(self, gubun):
+        현재가 = self.array_tick[self.indexn, 1]
+        if self.dict_set['코인매수취소관심이탈'] and self.index in self.dict_mt.keys() and self.code not in self.dict_mt[self.index]:
+            self.trade_info[self.vars_key]['롱매수호가' if gubun == 'LONG' else '숏매수호가'] = 0
+        elif self.dict_set['코인매수취소시간'] and strp_time('%Y%m%d%H%M%S', str(self.index)) > self.trade_info[self.vars_key]['매수주문시간']:
+            self.trade_info[self.vars_key]['롱매수호가' if gubun == 'LONG' else '숏매수호가'] = 0
+        elif self.trade_info[self.vars_key]['매수정정횟수'] < self.dict_set['코인매수정정횟수'] and \
+                현재가 >= self.trade_info[self.vars_key]['롱매수호가'] + self.trade_info[self.vars_key]['매수호가단위'] * self.dict_set['코인매수정정호가차이']:
+            self.trade_info[self.vars_key]['롱매수호가'] = 현재가 - self.trade_info[self.vars_key]['매수호가단위'] * self.dict_set['코인매수정정호가']
+            self.trade_info[self.vars_key]['매수정정횟수'] += 1
+        elif self.trade_info[self.vars_key]['매수정정횟수'] < self.dict_set['코인매수정정횟수'] and \
+                현재가 <= self.trade_info[self.vars_key]['숏매수호가'] - self.trade_info[self.vars_key]['매수호가단위'] * self.dict_set['코인매수정정호가차이']:
+            self.trade_info[self.vars_key]['숏매수호가'] = 현재가 + self.trade_info[self.vars_key]['매수호가단위'] * self.dict_set['코인매수정정호가']
+            self.trade_info[self.vars_key]['매수정정횟수'] += 1
+        elif gubun == 'LONG' and 현재가 < self.trade_info[self.vars_key]['롱매수호가']:
+            if self.trade_info[self.vars_key]['보유수량'] == 0:
+                self.trade_info[self.vars_key]['매수가'] = self.trade_info[self.vars_key]['롱매수호가']
+                self.trade_info[self.vars_key]['보유수량'] = round(self.betting / self.trade_info[self.vars_key]['롱매수호가'], 8)
+                self.UpdateBuyInfo(gubun, True)
+            else:
+                self.trade_info[self.vars_key]['추가매수가'] = self.trade_info[self.vars_key]['롱매수호가']
+                self.trade_info[self.vars_key]['매수가'] = round(self.trade_info[self.vars_key]['매수가'] * self.trade_info[self.vars_key]['보유수량'] + self.trade_info[self.vars_key]['롱매수호가'] * self.trade_info[self.vars_key]['주문수량'] / (self.trade_info[self.vars_key]['보유수량'] + self.trade_info[self.vars_key]['주문수량']), 4)
+                self.trade_info[self.vars_key]['보유수량'] = round(self.trade_info[self.vars_key]['보유수량'] + self.trade_info[self.vars_key]['주문수량'], 8)
+                self.UpdateBuyInfo(gubun, False)
+        elif gubun == 'SHORT' and 현재가 > self.trade_info[self.vars_key]['숏매수호가']:
+            if self.trade_info[self.vars_key]['보유수량'] == 0:
+                self.trade_info[self.vars_key]['매수가'] = self.trade_info[self.vars_key]['숏매수호가']
+                self.trade_info[self.vars_key]['보유수량'] = round(self.betting / self.trade_info[self.vars_key]['숏매수호가'], 8)
+                self.UpdateBuyInfo(gubun, True)
+            else:
+                self.trade_info[self.vars_key]['추가매수가'] = self.trade_info[self.vars_key]['숏매수호가']
+                self.trade_info[self.vars_key]['매수가'] = round(self.trade_info[self.vars_key]['매수가'] * self.trade_info[self.vars_key]['보유수량'] + self.trade_info[self.vars_key]['숏매수호가'] * self.trade_info[self.vars_key]['주문수량'] / (self.trade_info[self.vars_key]['보유수량'] + self.trade_info[self.vars_key]['주문수량']), 4)
+                self.trade_info[self.vars_key]['보유수량'] = round(self.trade_info[self.vars_key]['보유수량'] + self.trade_info[self.vars_key]['주문수량'], 8)
+                self.UpdateBuyInfo(gubun, False)
+
+    def UpdateBuyInfo(self, gubun, firstbuy):
+        datetimefromindex = strp_time('%Y%m%d%H%M%S', str(self.index))
+        self.trade_info[self.vars_key]['보유중'] = 1 if gubun == 'LONG' else 2
+        self.trade_info[self.vars_key]['롱매수호가'] = 0
+        self.trade_info[self.vars_key]['숏매수호가'] = 0
+        self.trade_info[self.vars_key]['매수정정횟수'] = 0
+        self.day_info['직전거래시간'] = timedelta_sec(self.dict_set['코인매수금지간격초'], datetimefromindex)
+        if firstbuy:
+            self.trade_info[self.vars_key]['매수틱번호'] = self.indexn
+            self.trade_info[self.vars_key]['매수시간'] = datetimefromindex
+            self.trade_info[self.vars_key]['추가매수시간'] = []
+            self.trade_info[self.vars_key]['매수분할횟수'] = 1
+        else:
+            self.trade_info[self.vars_key]['추가매수시간'].append(f"{self.index};{self.trade_info[self.vars_key]['추가매수가']}")
+            self.trade_info[self.vars_key]['매수분할횟수'] += 1
+
+    def Sell(self, gubun, sell_cond):
+        if self.dict_set['코인매도주문구분'] == '시장가':
+            남은수량 = self.trade_info[self.vars_key]['주문수량']
+            직전남은수량 = 남은수량
+            매도금액 = 0
+            hogainfo = self.shogainfo if gubun == 'SELL_LONG' else self.bhogainfo
+            hogainfo = hogainfo[self.dict_set['코인매도시장가잔량범위']]
+            for 호가, 잔량 in hogainfo.items():
+                남은수량 -= 잔량
+                if 남은수량 <= 0:
+                    매도금액 += 호가 * 직전남은수량
                     break
                 else:
-                    매수금액 += 매도호가 * 매도잔량
+                    매도금액 += 호가 * 잔량
                     직전남은수량 = 남은수량
             if 남은수량 <= 0:
-                self.trade_info[self.vars_key] = {
-                    '보유중': 1,
-                    '매수가': round(매수금액 / 매수수량, 4),
-                    '매도가': 0,
-                    '주문수량': 매수수량,
-                    '보유수량': 매수수량,
-                    '최고수익률': 0.,
-                    '최저수익률': 0.,
-                    '매수틱번호': self.indexn,
-                    '매수시간': strp_time('%Y%m%d%H%M%S', str(self.index))
-                }
-
-    def Sell(self, sell_cond):
-        주문수량 = self.trade_info[self.vars_key]['주문수량']
-        남은수량 = 주문수량
-        직전남은수량 = 주문수량
-        매도금액 = 0
-        for 매수호가, 매수잔량 in self.shogainfo.items():
-            남은수량 -= 매수잔량
-            if 남은수량 <= 0:
-                매도금액 += 매수호가 * 직전남은수량
-                break
-            else:
-                매도금액 += 매수호가 * 매수잔량
-                직전남은수량 = 남은수량
-        if 남은수량 <= 0:
-            self.trade_info[self.vars_key]['매도가'] = round(매도금액 / 주문수량, 4)
+                self.trade_info[self.vars_key]['매도가'] = round(매도금액 / self.trade_info[self.vars_key]['주문수량'], 4)
+                self.sell_cond = sell_cond
+                self.CalculationEyun()
+        elif self.dict_set['코인매도주문구분'] == '지정가':
+            기준가격, 매도호가1, 매수호가1 = self.array_tick[self.indexn, 1], self.array_tick[self.indexn, 18], self.array_tick[self.indexn, 19]
+            if self.dict_set['코인매도지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1 if gubun == 'SELL_LONG' else 매수호가1
+            if self.dict_set['코인매도지정가기준가격'] == '매수1호가': 기준가격 = 매수호가1 if gubun == 'SELL_LONG' else 매도호가1
             self.sell_cond = sell_cond
+            if gubun == 'SELL_LONG':
+                self.trade_info[self.vars_key]['롱매도호가'] = 기준가격 + self.dict_hg[self.code] * self.dict_set['코인매도지정가호가번호']
+            else:
+                self.trade_info[self.vars_key]['숏매도호가'] = 기준가격 - self.dict_hg[self.code] * self.dict_set['코인매도지정가호가번호']
+            self.trade_info[self.vars_key]['매도호가단위'] = self.dict_hg[self.code]
+            self.trade_info[self.vars_key]['매도주문시간'] = timedelta_sec(self.dict_set['코인매도취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
+
+    def CheckSell(self, gubun):
+        현재가 = self.array_tick[self.indexn, 1]
+        이전인덱스 = self.array_tick[self.indexn - 1, 0]
+        if self.dict_set['코인매도취소관심진입'] and 이전인덱스 in self.dict_mt.keys() and self.index in self.dict_mt.keys() and \
+                self.code not in self.dict_mt[이전인덱스] and self.code in self.dict_mt[self.index]:
+            self.trade_info[self.vars_key]['롱매도호가' if gubun == 'LONG' else '숏매도호가'] = 0
+        elif self.dict_set['코인매도취소시간'] and strp_time('%Y%m%d%H%M%S', str(self.index)) > self.trade_info[self.vars_key]['매도주문시간']:
+            self.trade_info[self.vars_key]['롱매도호가' if gubun == 'LONG' else '숏매도호가'] = 0
+        elif self.trade_info[self.vars_key]['매도정정횟수'] < self.dict_set['코인매도정정횟수'] and \
+                현재가 <= self.trade_info[self.vars_key]['롱매도호가'] - self.trade_info[self.vars_key]['매도호가단위'] * self.dict_set['코인매도정정호가차이']:
+            self.trade_info[self.vars_key]['롱매도호가'] = 현재가 + self.trade_info[self.vars_key]['매도호가단위'] * self.dict_set['코인매도정정호가']
+            self.trade_info[self.vars_key]['매도정정횟수'] += 1
+        elif self.trade_info[self.vars_key]['매도정정횟수'] < self.dict_set['코인매도정정횟수'] and \
+                현재가 <= self.trade_info[self.vars_key]['숏매도호가'] + self.trade_info[self.vars_key]['매도호가단위'] * self.dict_set['코인매도정정호가차이']:
+            self.trade_info[self.vars_key]['숏매도호가'] = 현재가 - self.trade_info[self.vars_key]['매도호가단위'] * self.dict_set['코인매도정정호가']
+            self.trade_info[self.vars_key]['매도정정횟수'] += 1
+        elif gubun == 'LONG' and 현재가 > self.trade_info[self.vars_key]['롱매도호가']:
+            self.trade_info[self.vars_key]['매도가'] = self.trade_info[self.vars_key]['롱매도호가']
             self.CalculationEyun()
+        elif gubun == 'SHORT' and 현재가 < self.trade_info[self.vars_key]['숏매도호가']:
+            self.trade_info[self.vars_key]['매도가'] = self.trade_info[self.vars_key]['숏매도호가']
+            self.CalculationEyun()
+
+    def Sonjeol(self):
+        gubun = 'SELL_LONG' if self.trade_info[self.vars_key]['보유중'] == 1 else 'BUY_SHORT'
+        origin_sell_gubun = self.dict_set['코인매도주문구분']
+        self.dict_set['코인매도주문구분'] = '시장가'
+        self.trade_info[self.vars_key]['주문수량'] = self.trade_info[self.vars_key]['보유수량']
+        self.Sell(gubun, 200)
+        self.dict_set['코인매도주문구분'] = origin_sell_gubun
 
     def LastSell(self):
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 14:34]
-        dict_shogainfo = {
+        self.bhogainfo = {
+            1: {매도호가1: 매도잔량1},
+            2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
+            3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
+            4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
+            5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
+        }
+        self.shogainfo = {
             1: {매수호가1: 매수잔량1},
             2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
             3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
             4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
             5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
         }
-        self.shogainfo = dict_shogainfo[self.dict_set['코인매도시장가잔량범위']]
 
         for k in range(self.vars_count):
             self.vars_key = k
-            if self.trade_info[self.vars_key]['보유중']:
+            if self.trade_info[self.vars_key]['보유중'] > 0:
                 남은수량 = self.trade_info[self.vars_key]['보유수량']
                 직전남은수량 = 남은수량
                 매도금액 = 0
-                for 매수호가, 매수잔량 in self.shogainfo.items():
-                    남은수량 -= 매수잔량
+                hogainfo = self.shogainfo if self.trade_info[self.vars_key]['보유중'] == 1 else self.bhogainfo
+                hogainfo = hogainfo[self.dict_set['코인매도시장가잔량범위']]
+                for 호가, 잔량 in hogainfo.items():
+                    남은수량 -= 잔량
                     if 남은수량 <= 0:
-                        매도금액 += 매수호가 * 직전남은수량
+                        매도금액 += 호가 * 직전남은수량
                         break
                     else:
-                        매도금액 += 매수호가 * 매수잔량
+                        매도금액 += 호가 * 잔량
                         직전남은수량 = 남은수량
 
-                보유수량 = self.trade_info[self.vars_key]['보유수량']
                 if 남은수량 <= 0:
-                    self.trade_info[self.vars_key]['매도가'] = round(매도금액 / 보유수량, 4)
+                    self.trade_info[self.vars_key]['매도가'] = round(매도금액 / self.trade_info[self.vars_key]['보유수량'], 4)
                 elif 매도금액 == 0:
                     self.trade_info[self.vars_key]['매도가'] = self.array_tick[self.indexn, 1]
                 else:
-                    self.trade_info[self.vars_key]['매도가'] = round(매도금액 / (보유수량 - 남은수량), 4)
+                    self.trade_info[self.vars_key]['매도가'] = round(매도금액 / (self.trade_info[self.vars_key]['보유수량'] - 남은수량), 4)
 
-                self.trade_info[self.vars_key]['주문수량'] = 보유수량
+                self.trade_info[self.vars_key]['주문수량'] = self.trade_info[self.vars_key]['보유수량']
                 self.sell_cond = 0
                 self.CalculationEyun()
 
     def CalculationEyun(self):
         self.total_count += 1
-        _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _ = self.trade_info[self.vars_key].values()
-        시가총액 = 0
+        _, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, _, 추가매수시간 = list(self.trade_info[self.vars_key].values())[:10]
         매수시간, 매도시간, 보유시간, 매수금액 = int(self.array_tick[매수틱번호, 0]), self.index, self.indexn - 매수틱번호, 주문수량 * 매수가
-        매도금액, 수익금, 수익률 = GetUpbitPgSgSp(매수금액, 주문수량 * 매도가)
+        if self.trade_info[self.vars_key]['보유중'] == 1:
+            포지션 = 'LONG'
+            매도금액, 수익금, 수익률 = GetBinanceLongPgSgSp(매수금액, self.trade_info[self.vars_key]['주문수량'] * self.trade_info[self.vars_key]['매도가'], '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
+        else:
+            포지션 = 'SHORT'
+            매도금액, 수익금, 수익률 = GetBinanceShortPgSgSp(매수금액, self.trade_info[self.vars_key]['주문수량'] * self.trade_info[self.vars_key]['매도가'], '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
         매도조건 = self.dict_cond[self.sell_cond] if self.back_type != '조건최적화' else self.didict_cond[self.vars_key][self.sell_cond]
-        추가매수시간, 잔량없음 = '', True
-        data = ['백테결과', self.name, 시가총액, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
+        추가매수시간, 잔량없음 = '^'.join(추가매수시간), 보유수량 - 주문수량 == 0
+        data = ['백테결과', self.name, 포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, self.vars_key]
         self.ctq_list[self.vars_key].put(data)
-        self.trade_info[self.vars_key]['보유중'] = 0
+        if 수익률 < 0:
+            self.day_info[self.vars_key]['손절횟수'] += 1
+            self.day_info[self.vars_key]['손절매도시간'] = timedelta_sec(self.dict_set['코인매수금지손절간격초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
+        if self.trade_info[self.vars_key]['보유수량'] - self.trade_info[self.vars_key]['주문수량'] > 0:
+            self.trade_info[self.vars_key]['매도호가'] = 0
+            self.trade_info[self.vars_key]['보유수량'] -= self.trade_info[self.vars_key]['주문수량']
+            self.trade_info[self.vars_key]['매도정정횟수'] = 0
+            self.trade_info[self.vars_key]['매도분할횟수'] += 1
+        else:
+            self.trade_info[self.vars_key]['보유중'] = 0
+            self.trade_info[self.vars_key]['매수호가'] = 0
+            self.trade_info[self.vars_key]['보유수량'] = 0

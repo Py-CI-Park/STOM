@@ -7,12 +7,15 @@ import datetime
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData
-from utility.setting import DB_COIN_BACK, BACK_TEMP, DICT_SET, ui_num, dict_order_ratio
-from utility.static import strp_time, timedelta_sec, GetUpbitHogaunit, pickle_read, pickle_write, GetUpbitPgSgSp
+from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, \
+    GetBackloadDayQuery, AddAvgData
+from utility.setting import DB_COIN_BACK, BACK_TEMP, DICT_SET, DB_COIN_DAY, DB_COIN_MIN, ui_num, dict_min, \
+    dict_order_ratio
+from utility.static import strp_time, timedelta_sec, strf_time, timedelta_day, GetUpbitHogaunit, pickle_read, \
+    pickle_write, GetUpbitPgSgSp
 
 
-class CoinUpbitBackEngine2:
+class CoinUpbitBackEngine4:
     def __init__(self, gubun, wq, pq, tq, bq, ctq_list, profile=False):
         self.gubun = gubun
         self.wq = wq
@@ -271,13 +274,30 @@ class CoinUpbitBackEngine2:
         bk = 0
         divid_mode = data[-2]
         con = sqlite3.connect(DB_COIN_BACK)
+        con2 = sqlite3.connect(DB_COIN_DAY)
+        con3 = sqlite3.connect(DB_COIN_MIN)
 
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
             for code in code_list:
                 len_df = 0
+                df_min = None
+                df_day = None
                 try:
                     df = pd.read_sql(GetBackloadCodeQuery(code, code_days[code], starttime, endtime), con)
+                    if self.dict_set['코인분봉데이터']:
+                        df1 = []
+                        query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}"
+                        df2 = pd.read_sql(query, con3)
+                        df1.append(df2[::-1])
+                        query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday * 1000000} and 체결시간 <= {endday * 1000000 + 240000}"
+                        df2 = pd.read_sql(query, con3)
+                        df1.append(df2)
+                        df_min = pd.concat(df1)
+                    if self.dict_set['코인일봉데이터']:
+                        startday_ = int(strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday)))))
+                        query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday}"
+                        df_day = pd.read_sql(query, con2)
                 except:
                     pass
                 else:
@@ -289,6 +309,16 @@ class CoinUpbitBackEngine2:
                             self.dict_tik_ar[code] = data
                         else:
                             pickle_write(f'{BACK_TEMP}/{code}', data)
+                        if self.dict_set['코인분봉데이터']:
+                            self.dict_min_ar[code] = df_min.to_numpy()
+                            self.dict_mindex[code] = {}
+                            for i, index in enumerate(self.dict_min_ar[code][:, 0]):
+                                self.dict_mindex[code][index] = i
+                        if self.dict_set['코인일봉데이터']:
+                            self.dict_day_ar[code] = df_day.to_numpy()
+                            self.dict_dindex[code] = {}
+                            for i, index in enumerate(self.dict_day_ar[code][:, 0]):
+                                self.dict_dindex[code][index] = i
                         self.code_list.append(code)
                         bk += 1
                 if gubun == '데이터크기':
@@ -316,8 +346,26 @@ class CoinUpbitBackEngine2:
                             code_list.append(code)
                 for code in code_list:
                     days = [day for day in day_list if day in code_days[code]]
+                    startday_ = days[0]
+                    endday_ = days[-1]
+                    df_min = None
+                    df_day = None
                     try:
                         df = pd.read_sql(GetBackloadCodeQuery(code, days, starttime, endtime), con)
+                        if self.dict_set['코인분봉데이터']:
+                            df1 = []
+                            query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}"
+                            df2 = pd.read_sql(query, con3)
+                            df1.append(df2[::-1])
+                            query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday_ * 1000000} and 체결시간 <= {endday_ * 1000000 + 240000}"
+                            df2 = pd.read_sql(query, con3)
+                            df1.append(df2)
+                            df_min = pd.concat(df1)
+                        if self.dict_set['코인일봉데이터']:
+                            startday_ = int(
+                                strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
+                            query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
+                            df_day = pd.read_sql(query, con2)
                     except:
                         pass
                     else:
@@ -328,6 +376,16 @@ class CoinUpbitBackEngine2:
                                 self.dict_tik_ar[code] = arry
                             else:
                                 pickle_write(f'{BACK_TEMP}/{code}', arry)
+                            if self.dict_set['코인분봉데이터']:
+                                self.dict_min_ar[code] = df_min.to_numpy()
+                                self.dict_mindex[code] = {}
+                                for i, index in enumerate(self.dict_min_ar[code][:, 0]):
+                                    self.dict_mindex[code][index] = i
+                            if self.dict_set['코인일봉데이터']:
+                                self.dict_day_ar[code] = df_day.to_numpy()
+                                self.dict_dindex[code] = {}
+                                for i, index in enumerate(self.dict_day_ar[code][:, 0]):
+                                    self.dict_dindex[code][index] = i
                             self.code_list.append(code)
                             bk += 1
         else:
@@ -345,8 +403,26 @@ class CoinUpbitBackEngine2:
                     self.bq.put_nowait([day, len_df])
             elif gubun == '데이터로딩':
                 for code in self.code_list:
+                    startday_ = day_list[0]
+                    endday_ = day_list[-1]
+                    df_min = None
+                    df_day = None
                     try:
                         df = pd.read_sql(GetBackloadCodeQuery(code, day_list, starttime, endtime), con)
+                        if self.dict_set['코인분봉데이터']:
+                            df1 = []
+                            query = f"SELECT * FROM '{code}' WHERE 체결시간 < {startday_ * 1000000} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}"
+                            df2 = pd.read_sql(query, con3)
+                            df1.append(df2[::-1])
+                            query = f"SELECT * FROM '{code}' WHERE 체결시간 >= {startday_ * 1000000} and 체결시간 <= {endday_ * 1000000 + 240000}"
+                            df2 = pd.read_sql(query, con3)
+                            df1.append(df2)
+                            df_min = pd.concat(df1)
+                        if self.dict_set['코인일봉데이터']:
+                            startday_ = int(
+                                strf_time('%Y%m%d', timedelta_day(-250, strp_time('%Y%m%d', str(startday_)))))
+                            query = f"SELECT * FROM '{code}' WHERE 일자 >= {startday_} and 일자 <= {endday_}"
+                            df_day = pd.read_sql(query, con2)
                     except:
                         pass
                     else:
@@ -357,9 +433,21 @@ class CoinUpbitBackEngine2:
                                 self.dict_tik_ar[code] = arry
                             else:
                                 pickle_write(f'{BACK_TEMP}/{code}', arry)
+                            if self.dict_set['코인분봉데이터']:
+                                self.dict_min_ar[code] = df_min.to_numpy()
+                                self.dict_mindex[code] = {}
+                                for i, index in enumerate(self.dict_min_ar[code][:, 0]):
+                                    self.dict_mindex[code][index] = i
+                            if self.dict_set['코인일봉데이터']:
+                                self.dict_day_ar[code] = df_day.to_numpy()
+                                self.dict_dindex[code] = {}
+                                for i, index in enumerate(self.dict_day_ar[code][:, 0]):
+                                    self.dict_dindex[code][index] = i
                             self.code_list.append(code)
                             bk += 1
 
+        con3.close()
+        con2.close()
         con.close()
         if gubun == '데이터로딩':
             self.bq.put_nowait(bk)
@@ -421,6 +509,17 @@ class CoinUpbitBackEngine2:
                     self.index = int(index)
                     self.indexn = i
 
+                    try:
+                        if self.dict_set['코인분봉데이터']:
+                            self.mindex = self.dict_mindex[code][
+                                int(str(self.index)[:10] + dict_min[self.dict_set['코인분봉기간']][
+                                    str(self.index)[10:12]] + '00')]
+                            self.UpdateCurrentMin(i)
+                        if self.dict_set['코인일봉데이터']:
+                            self.dindex = self.dict_dindex[code][int(str(self.index)[:8])]
+                    except:
+                        continue
+
                     if i != last and not next_day_change:
                         self.Strategy()
                     else:
@@ -431,6 +530,18 @@ class CoinUpbitBackEngine2:
 
         if self.profile:
             self.pr.print_stats(sort='cumulative')
+
+    def UpdateCurrentMin(self, i):
+        현재가 = self.array_tick[i, 1]
+        초당거래대금 = self.array_tick[i, 10]
+        if self.current_min is None or self.mindex != self.current_min[0]:
+            self.current_min = [self.mindex, 현재가, 현재가, 현재가, 초당거래대금]
+        else:
+            분봉고가, 분봉저가, 분봉거래대금 = self.current_min[2:]
+            분봉고가 = 현재가 if 현재가 > 분봉고가 else 분봉고가
+            분봉저가 = 현재가 if 현재가 < 분봉저가 else 분봉저가
+            분봉거래대금 += 초당거래대금
+            self.current_min[2:] = 분봉고가, 분봉저가, 분봉거래대금
 
     def Strategy(self):
         def now_utc():
@@ -635,13 +746,118 @@ class CoinUpbitBackEngine2:
             if pre != -1:
                 dmp_gap = self.array_tick[self.indexn - pre, 6] - self.array_tick[self.indexn + 1 - tick - pre, 6]
             else:
-                dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 6] - self.array_tick[self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, 6]
+                dmp_gap = self.array_tick[self.trade_info[self.vars_key]['매수틱번호'], 6] - self.array_tick[
+                    self.trade_info[self.vars_key]['매수틱번호'] + 1 - tick, 6]
             return round(math.atan2(dmp_gap, tick) / (2 * math.pi) * 360, 2)
+
+        if self.dict_set['코인분봉데이터']:
+            def 분봉시가N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 1]
+
+            def 분봉고가N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 2]
+
+            def 분봉저가N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 3]
+
+            def 분봉현재가N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 4]
+
+            def 분봉거래대금N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 5]
+
+            def 분봉이평5N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 6]
+
+            def 분봉이평10N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 7]
+
+            def 분봉이평20N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 8]
+
+            def 분봉이평60N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 9]
+
+            def 분봉이평120N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 10]
+
+            def 분봉이평240N(pre):
+                return self.dict_min_ar[self.code][self.mindex - pre, 11]
+
+        if self.dict_set['코인일봉데이터']:
+            def 일봉시가N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 1]
+
+            def 일봉고가N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 2]
+
+            def 일봉저가N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 3]
+
+            def 일봉현재가N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 4]
+
+            def 일봉거래대금N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 5]
+
+            def 일봉이평5N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 6]
+
+            def 일봉이평10N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 7]
+
+            def 일봉이평20N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 8]
+
+            def 일봉이평60N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 9]
+
+            def 일봉이평120N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 10]
+
+            def 일봉이평240N(pre):
+                return self.dict_day_ar[self.code][self.dindex - pre, 11]
 
         현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율, 매도총잔량, \
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합 = self.array_tick[self.indexn, 1:35]
+            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합 = self.array_tick[
+                                                                                              self.indexn, 1:35]
         종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), GetUpbitHogaunit(현재가)
+
+        if self.dict_set['코인분봉데이터']:
+            분봉시가, 분봉고가, 분봉저가, 분봉거래대금 = self.current_min[1:]
+            분봉최고종가5, 분봉최고고가5, 분봉최고종가10, 분봉최고고가10, 분봉최고종가20, 분봉최고고가20, 분봉최고종가60, 분봉최고고가60, \
+                분봉최고종가120, 분봉최고고가120, 분봉최고종가240, 분봉최고고가240, 분봉최저종가5, 분봉최저저가5, 분봉최저종가10, \
+                분봉최저저가10, 분봉최저종가20, 분봉최저저가20, 분봉최저종가60, 분봉최저저가60, 분봉최저종가120, 분봉최저저가120, \
+                분봉최저종가240, 분봉최저저가240, 분봉종가합계4, 분봉종가합계9, 분봉종가합계19, 분봉종가합계59, 분봉종가합계119, \
+                분봉종가합계239, 분봉최고거래대금 = self.dict_min_ar[종목코드][self.mindex, 12:]
+            분봉이평5 = round((분봉종가합계4 + 현재가) / 5, 8)
+            분봉이평10 = round((분봉종가합계9 + 현재가) / 10, 8)
+            분봉이평20 = round((분봉종가합계19 + 현재가) / 20, 8)
+            분봉이평60 = round((분봉종가합계59 + 현재가) / 60, 8)
+            분봉이평120 = round((분봉종가합계119 + 현재가) / 120, 8)
+            분봉이평240 = round((분봉종가합계239 + 현재가) / 240, 8)
+            if 분봉최고거래대금 != 0:
+                분봉최고거래대금대비 = round(분봉거래대금 / 분봉최고거래대금 * 100, 2)
+            else:
+                분봉최고거래대금대비 = 0.
+
+        if self.dict_set['코인일봉데이터']:
+            일봉최고종가5, 일봉최고고가5, 일봉최고종가10, 일봉최고고가10, 일봉최고종가20, 일봉최고고가20, 일봉최고종가60, 일봉최고고가60, \
+                일봉최고종가120, 일봉최고고가120, 일봉최고종가240, 일봉최고고가240, 일봉최저종가5, 일봉최저저가5, 일봉최저종가10, \
+                일봉최저저가10, 일봉최저종가20, 일봉최저저가20, 일봉최저종가60, 일봉최저저가60, 일봉최저종가120, 일봉최저저가120, \
+                일봉최저종가240, 일봉최저저가240, 일봉종가합계4, 일봉종가합계9, 일봉종가합계19, 일봉종가합계59, 일봉종가합계119, \
+                일봉종가합계239, 일봉최고거래대금 = self.dict_day_ar[종목코드][self.dindex, 12:]
+            일봉이평5 = round((일봉종가합계4 + 현재가) / 5, 8)
+            일봉이평10 = round((일봉종가합계9 + 현재가) / 10, 8)
+            일봉이평20 = round((일봉종가합계19 + 현재가) / 20, 8)
+            일봉이평60 = round((일봉종가합계59 + 현재가) / 60, 8)
+            일봉이평120 = round((일봉종가합계119 + 현재가) / 120, 8)
+            일봉이평240 = round((일봉종가합계239 + 현재가) / 240, 8)
+            if 일봉최고거래대금 != 0:
+                일봉최고거래대금대비 = round(당일거래대금 / 일봉최고거래대금 * 100, 2)
+            else:
+                일봉최고거래대금대비 = 0.
 
         if self.back_type == '백파인더':
             if self.tick_count < self.avgtime:
@@ -860,7 +1076,7 @@ class CoinUpbitBackEngine2:
                         self.trade_info[self.vars_key]['보유수량'] = 매수수량
                         self.UpdateBuyInfo(True)
                     else:
-                        self.trade_info[self.vars_key]['추가매수가'] = int(round(매수금액 / 매수수량))
+                        self.trade_info[self.vars_key]['추가매수가'] = round(매수금액 / 매수수량, 4)
                         self.trade_info[self.vars_key]['매수가'] = round((self.trade_info[self.vars_key]['매수가'] * self.trade_info[self.vars_key]['보유수량'] + 매수금액) / (self.trade_info[self.vars_key]['보유수량'] + 매수수량), 4)
                         self.trade_info[self.vars_key]['보유수량'] += 매수수량
                         self.UpdateBuyInfo(False)

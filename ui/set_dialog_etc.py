@@ -69,7 +69,7 @@ class SetDialogEtc:
         self.ui.tt_pushButtonnn_05 = self.wc.setPushbutton('중지',    box=self.ui.tt_groupBoxxxxx_01, click=self.ui.ctButtonClicked_05)
         self.ui.tt_pushButtonnn_06 = self.wc.setPushbutton('취소',    box=self.ui.tt_groupBoxxxxx_01, click=self.ui.ctButtonClicked_06)
 
-        self.ui.dialog_hoga = self.wc.setDialog('STOM HOGA', tab=self.ui.dialog_chart)
+        self.ui.dialog_hoga = self.wc.setDialog('STOM HOGA')
         self.ui.dialog_hoga.geometry().center()
 
         self.ui.hj_tableWidgett_01 = self.wc.setTablewidget(self.ui.dialog_hoga, columns_hj, 1)
@@ -147,10 +147,10 @@ class SetDialogEtc:
         self.ui.db_labellllllll_02 = QLabel('일자DB의 지정시간이후 데이터 삭제하기 (시간입력 예: 93000)', self.ui.db_groupBoxxxxx_01)
         self.ui.db_lineEdittttt_02 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_01, style=style_bc_dk)
         self.ui.db_pushButtonnn_02 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_02)
-        self.ui.db_labellllllll_03 = QLabel('콜렉터DB의 지정시간이후 데이터 삭제하기 (시간입력)', self.ui.db_groupBoxxxxx_01)
+        self.ui.db_labellllllll_03 = QLabel('당일DB의 지정시간이후 데이터 삭제하기 (시간입력)', self.ui.db_groupBoxxxxx_01)
         self.ui.db_lineEdittttt_03 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_01, style=style_bc_dk)
         self.ui.db_pushButtonnn_03 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_03)
-        self.ui.db_labellllllll_04 = QLabel('콜렉터DB의 연초개장일 및 수능일 시간 조정 (일자 입력)', self.ui.db_groupBoxxxxx_01)
+        self.ui.db_labellllllll_04 = QLabel('당일DB의 연초개장일 및 수능일 시간 조정 (일자 입력)', self.ui.db_groupBoxxxxx_01)
         self.ui.db_lineEdittttt_04 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_01, style=style_bc_dk)
         self.ui.db_pushButtonnn_04 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_04)
         self.ui.db_labellllllll_05 = QLabel('일자DB로 백테DB 생성하기 (일자 입력)', self.ui.db_groupBoxxxxx_01)
@@ -161,9 +161,9 @@ class SetDialogEtc:
         self.ui.db_lineEdittttt_07 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_01, style=style_bc_dk)
         self.ui.db_lineEdittttt_08 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_01, style=style_bc_dk)
         self.ui.db_pushButtonnn_06 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_06)
-        self.ui.db_labellllllll_07 = QLabel('백테DB에 콜렉터DB의 데이터 추가하기 (추가 후 콜렉터디비는 삭제됨)', self.ui.db_groupBoxxxxx_01)
+        self.ui.db_labellllllll_07 = QLabel('백테DB에 당일DB의 데이터 추가하기 (추가 후 콜렉터디비는 삭제됨)', self.ui.db_groupBoxxxxx_01)
         self.ui.db_pushButtonnn_07 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_07)
-        self.ui.db_labellllllll_08 = QLabel('콜렉터DB를 일자DB로 분리하기', self.ui.db_groupBoxxxxx_01)
+        self.ui.db_labellllllll_08 = QLabel('당일DB를 일자DB로 분리하기', self.ui.db_groupBoxxxxx_01)
         self.ui.db_pushButtonnn_08 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_08)
         self.ui.db_labellllllll_09 = QLabel('거래기록 테이블 모두 삭제 (체결목록, 잔고목록, 거래목록, 일별실현손익)', self.ui.db_groupBoxxxxx_01)
         self.ui.db_pushButtonnn_09 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_01, click=self.ui.dbButtonClicked_09)
@@ -177,7 +177,7 @@ class SetDialogEtc:
         self.ui.db_labellllllll_11 = QLabel('일자DB의 지정시간이후 데이터 삭제하기 (시간입력 예: 93000)', self.ui.db_groupBoxxxxx_02)
         self.ui.db_lineEdittttt_10 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_02, style=style_bc_dk)
         self.ui.db_pushButtonnn_11 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_02, click=self.ui.dbButtonClicked_11)
-        self.ui.db_labellllllll_12 = QLabel('콜렉터DB의 지정시간이후 데이터 삭제하기 (시간입력)', self.ui.db_groupBoxxxxx_02)
+        self.ui.db_labellllllll_12 = QLabel('당일DB의 지정시간이후 데이터 삭제하기 (시간입력)', self.ui.db_groupBoxxxxx_02)
         self.ui.db_lineEdittttt_11 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_02, style=style_bc_dk)
         self.ui.db_pushButtonnn_12 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_02, click=self.ui.dbButtonClicked_12)
         self.ui.db_labellllllll_13 = QLabel('일자DB로 백테DB 생성하기 (일자 입력)', self.ui.db_groupBoxxxxx_02)
@@ -188,9 +188,9 @@ class SetDialogEtc:
         self.ui.db_lineEdittttt_14 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_02, style=style_bc_dk)
         self.ui.db_lineEdittttt_15 = self.wc.setLineedit(self.ui.db_groupBoxxxxx_02, style=style_bc_dk)
         self.ui.db_pushButtonnn_14 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_02, click=self.ui.dbButtonClicked_14)
-        self.ui.db_labellllllll_15 = QLabel('백테DB에 콜렉터DB의 데이터 추가하기 (추가 후 콜렉터디비는 삭제됨)', self.ui.db_groupBoxxxxx_02)
+        self.ui.db_labellllllll_15 = QLabel('백테DB에 당일DB의 데이터 추가하기 (추가 후 콜렉터디비는 삭제됨)', self.ui.db_groupBoxxxxx_02)
         self.ui.db_pushButtonnn_15 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_02, click=self.ui.dbButtonClicked_15)
-        self.ui.db_labellllllll_16 = QLabel('콜렉터DB를 일자DB로 분리하기', self.ui.db_groupBoxxxxx_02)
+        self.ui.db_labellllllll_16 = QLabel('당일DB를 일자DB로 분리하기', self.ui.db_groupBoxxxxx_02)
         self.ui.db_pushButtonnn_16 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_02, click=self.ui.dbButtonClicked_16)
         self.ui.db_labellllllll_17 = QLabel('거래기록 테이블 모두 삭제 (체결목록, 잔고목록, 거래목록, 일별실현손익)', self.ui.db_groupBoxxxxx_02)
         self.ui.db_pushButtonnn_17 = self.wc.setPushbutton('실행', box=self.ui.db_groupBoxxxxx_02, click=self.ui.dbButtonClicked_17)
@@ -202,7 +202,7 @@ class SetDialogEtc:
         self.ui.db_tableWidgett_05 = self.wc.setTablewidget(self.ui.bsd_tab0, ['백테스트 스케쥴'], 8, clicked=self.ui.CellClicked_09)
         self.ui.db_textEdittttt_01 = self.wc.setTextEdit(self.ui.dialog_db, vscroll=True)
 
-        self.ui.dialog_order = self.wc.setDialog('STOM ORDER', tab=self.ui)
+        self.ui.dialog_order = self.wc.setDialog('STOM ORDER')
         self.ui.dialog_order.geometry().center()
 
         self.ui.od_groupBoxxxxx_01 = QGroupBox('', self.ui.dialog_order)
@@ -321,6 +321,11 @@ class SetDialogEtc:
         self.ui.ct_checkBoxxxxx_17.setGeometry(135, 200, 120, 30)
 
         self.ui.dialog_hoga.setFixedSize(572, 355)
+        if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
+            try:
+                self.ui.dialog_hoga.move(self.ui.dict_set['창위치'][20], self.ui.dict_set['창위치'][21])
+            except:
+                pass
         self.ui.hj_tableWidgett_01.setGeometry(5, 5, 562, 42)
         self.ui.hc_tableWidgett_01.setGeometry(5, 52, 282, 297)
         self.ui.hc_tableWidgett_02.setGeometry(285, 52, 282, 297)
@@ -451,6 +456,11 @@ class SetDialogEtc:
         self.ui.db_textEdittttt_01.setGeometry(5, 565, 515, 100)
 
         self.ui.dialog_order.setFixedSize(232, 303)
+        if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
+            try:
+                self.ui.dialog_order.move(self.ui.dict_set['창위치'][24], self.ui.dict_set['창위치'][25])
+            except:
+                pass
         self.ui.od_groupBoxxxxx_01.setGeometry(5, 5, 222, 293)
         self.ui.od_labellllllll_01.setGeometry(10, 10, 100, 30)
         self.ui.od_comboBoxxxxx_01.setGeometry(115, 10, 100, 30)

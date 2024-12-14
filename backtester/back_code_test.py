@@ -6,18 +6,33 @@ from utility.static import now, now_utc, timedelta_sec
 
 # noinspection PyUnusedLocal
 class BackCodeTest:
-    def __init__(self, testQ, stg, var=None):
+    def __init__(self, testQ, stg, var=None, ga=False):
         self.testQ = testQ
-        self.vars  = {}
+        self.vars  = {0: []}
 
         error = False
         if var is None:
-            for i in range(100):
+            for i in range(200):
                 self.vars[i] = 1
         else:
             try:
-                var = compile(var, '<string>', 'exec')
-                exec(var, None, locals())
+                exec(compile(var, '<string>', 'exec'), None, locals())
+                max_len_var = 0
+                vars_number = 0
+                for i, v in enumerate(list(self.vars.values())):
+                    len_var = 0
+                    if v[0][2] != 0:
+                        if ga:
+                            len_var = len(v[0])
+                        else:
+                            len_var = (v[0][1] - v[0][0]) / v[0][2] + 1
+                    if len_var > max_len_var:
+                        max_len_var = len_var
+                        vars_number = i
+                if max_len_var > 20:
+                    print('경고 :: 변수 범위의 최대개수는 20개입니다.')
+                    print(f'경고 :: self.vars[{vars_number}]의 범위를 수정하십시오.')
+                    error = True
             except:
                 print_exc()
                 error = True
@@ -42,224 +57,170 @@ class BackCodeTest:
                 else:
                     self.testQ.put('전략테스트완료')
 
+    def Buy(self, *args):
+        pass
+
+    def Sell(self, *args):
+        pass
+
     def Test(self):
-        def 구간최고현재가(pre):
-            if pre <= 1:
-                print('경고 :: 구간최고현재가의 틱수는 2이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 구간최고현재가의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 구간최저현재가(pre):
-            if pre <= 1:
-                print('경고 :: 구간최저현재가의 틱수는 2이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 구간최저현재가의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 누적초당매수수량(pre):
-            if pre <= 1:
-                print('경고 :: 누적초당매수수량의 틱수는 2이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 누적초당매수수량의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 누적초당매도수량(pre):
-            if pre <= 1:
-                print('경고 :: 누적초당매도수량의 틱수는 2이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 누적초당매도수량의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 최고초당매수수량(pre):
-            if pre <= 1:
-                print('경고 :: 최고초당매수수량의 틱수는 2이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 최고초당매수수량의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 최고초당매도수량(pre):
-            if pre <= 1:
-                print('경고 :: 최고초당매도수량의 틱수는 2이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 최고초당매도수량의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 전일비각도(pre):
-            if pre < 2:
-                print('경고 :: 전일비각도의 틱수는 2이상을 입력하십시오.')
-            return 1
-
-        def 당일거래대금각도(pre):
-            if pre < 2:
-                print('경고 :: 당일거래대금각도의 틱수는 2이상을 입력하십시오.')
-            return 1
-
         def 현재가N(pre):
-            if pre < 1:
-                print('경고 :: 현재가N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 현재가N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
+            return 1
+
+        def 시가N(pre):
+            return 1
+
+        def 고가N(pre):
+            return 1
+
+        def 저가N(pre):
             return 1
 
         def 등락율N(pre):
-            if pre < 1:
-                print('경고 :: 등락율N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 등락율N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
             return 1
 
         def 당일거래대금N(pre):
-            if pre < 1:
-                print('경고 :: 당일거래대금N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 당일거래대금N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
             return 1
 
         def 체결강도N(pre):
-            if pre < 1:
-                print('경고 :: 체결강도N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 체결강도N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 초당매수수량N(pre):
-            if pre < 1:
-                print('경고 :: 초당매수수량N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 초당매수수량N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 초당매도수량N(pre):
-            if pre < 1:
-                print('경고 :: 초당매도수량N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 초당매도수량N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 초당거래대금N(pre):
-            if pre < 1:
-                print('경고 :: 초당거래대금N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 초당거래대금N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 고저평균대비등락율N(pre):
-            if pre < 1:
-                print('경고 :: 고저평균대비등락율N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 고저평균대비등락율N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 매도총잔량N(pre):
-            if pre < 1:
-                print('경고 :: 매도총잔량N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 매도총잔량N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 매수총잔량N(pre):
-            if pre < 1:
-                print('경고 :: 매수총잔량N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 매수총잔량N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 매도잔량1N(pre):
-            if pre < 1:
-                print('경고 :: 매도잔량1N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 매도잔량1N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 매수잔량1N(pre):
-            if pre < 1:
-                print('경고 :: 매수잔량1N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 매수잔량1N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 매도수5호가잔량합N(pre):
-            if pre < 1:
-                print('경고 :: 매도수5호가잔량합N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 매도수5호가잔량합N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
-            return 1
-
-        def 이평60N(pre):
-            print('주의 :: 이평60은 60틱으로 만들어지는 변수입니다. 입력한 틱수 + 60만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 이평300N(pre):
-            print('주의 :: 이평300은 300틱으로 만들어지는 변수입니다. 입력한 틱수 + 300만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 이평600N(pre):
-            print('주의 :: 이평600은 600틱으로 만들어지는 변수입니다. 입력한 틱수 + 600만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 이평1200N(pre):
-            print('주의 :: 이평1200은 1200틱으로 만들어지는 변수입니다. 입력한 틱수 + 1200만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 초당거래대금평균N(pre):
-            print('주의 :: 초당거래대금평균은 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 체결강도평균N(pre):
-            print('주의 :: 체결강도평균은 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 최고체결강도N(pre):
-            print('주의 :: 최고체결강도는 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 최저체결강도N(pre):
-            print('주의 :: 최저체결강도는 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 누적초당매수수량N(pre):
-            print('주의 :: 누적초당매수수량은 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 누적초당매도수량N(pre):
-            print('주의 :: 누적초당매도수량은 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 당일거래대금각도N(pre):
-            print('주의 :: 당일거래대금각도는 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
-            return 1
-
-        def 전일비각도N(pre):
-            print('주의 :: 전일비각도는 30틱으로 만들어지는 변수입니다. 입력한 틱수 + 30만큼 데이터길이를 확인하십시오.')
             return 1
 
         def 거래대금증감N(pre):
-            if pre < 1:
-                print('경고 :: 거래대금증감N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 거래대금증감N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
             return 1
 
         def 전일비N(pre):
-            if pre < 1:
-                print('경고 :: 전일비N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 전일비N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
             return 1
 
         def 회전율N(pre):
-            if pre < 1:
-                print('경고 :: 회전율N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 회전율N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
             return 1
 
         def 전일동시간비N(pre):
-            if pre < 1:
-                print('경고 :: 전일동시간비N의 틱수는 1이상을 입력하십시오.')
-            elif pre > 30:
-                print('주의 :: 전일동시간비N의 틱수가 30을 초과합니다. 반드시 데이터길이를 확인하십시오. 예: 데이터길이 >= 틱수')
+            return 1
+
+        def 시가총액N(pre):
+            return 1
+
+        def 라운드피겨위5호가이내N(pre):
+            return 1
+
+        def 초당매수수량N(pre):
+            return 1
+
+        def 초당매도수량N(pre):
+            return 1
+
+        def 초당거래대금N(pre):
+            return 1
+
+        def 고저평균대비등락율N(pre):
+            return 1
+
+        def 매도총잔량N(pre):
+            return 1
+
+        def 매수총잔량N(pre):
+            return 1
+
+        def 매도호가5N(pre):
+            return 1
+
+        def 매도호가4N(pre):
+            return 1
+
+        def 매도호가3N(pre):
+            return 1
+
+        def 매도호가2N(pre):
+            return 1
+
+        def 매도호가1N(pre):
+            return 1
+
+        def 매수호가1N(pre):
+            return 1
+
+        def 매수호가2N(pre):
+            return 1
+
+        def 매수호가3N(pre):
+            return 1
+
+        def 매수호가4N(pre):
+            return 1
+
+        def 매수호가5N(pre):
+            return 1
+
+        def 매도잔량5N(pre):
+            return 1
+
+        def 매도잔량4N(pre):
+            return 1
+
+        def 매도잔량3N(pre):
+            return 1
+
+        def 매도잔량2N(pre):
+            return 1
+
+        def 매도잔량1N(pre):
+            return 1
+
+        def 매수잔량1N(pre):
+            return 1
+
+        def 매수잔량2N(pre):
+            return 1
+
+        def 매수잔량3N(pre):
+            return 1
+
+        def 매수잔량4N(pre):
+            return 1
+
+        def 매수잔량5N(pre):
+            return 1
+
+        def 매도수5호가잔량합N(pre):
+            return 1
+
+        def 이동평균(tick, pre=0):
+            return 1
+
+        def 당일거래대금각도(tick, pre=0):
+            return 1
+
+        def 전일비각도(tick, pre=0):
+            return 1
+
+        def 최고현재가(tick, pre=0):
+            return 1
+
+        def 최저현재가(tick, pre=0):
+            return 1
+
+        def 체결강도평균(tick, pre=0):
+            return 1
+
+        def 최고체결강도(tick, pre=0):
+            return 1
+
+        def 최저체결강도(tick, pre=0):
+            return 1
+
+        def 최고초당매수수량(tick, pre=0):
+            return 1
+
+        def 최고초당매도수량(tick, pre=0):
+            return 1
+
+        def 누적초당매수수량(tick, pre=0):
+            return 1
+
+        def 누적초당매도수량(tick, pre=0):
+            return 1
+
+        def 초당거래대금평균(tick, pre=0):
             return 1
 
         def 분봉시가N(pre):
@@ -337,12 +298,6 @@ class BackCodeTest:
                 now(), 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 1, '005930', now(), '삼성전자']
 
-        매수시점정보 = []
-        매수시점등락율, 매수시점고저평균대비등락율, 매수시점초당거래대금, 매수시점초당거래대금평균, 매수시점당일거래대금, 매수시점체결강도, \
-            매수시점체결강도평균, 매수시점최고체결강도, 매수시점최저체결강도, 매수시점현재가, 매수시점초당매수수량, 매수시점초당매도수량, \
-            매수시점매수잔량1, 매수시점매도잔량1, 매수시점매수총잔량, 매수시점매도총잔량, 매수시점이평60, 매수시점이평300, \
-            매수시점이평600, 매수시점이평1200 = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-
         일봉최고종가5, 일봉최고고가5, 일봉최고종가10, 일봉최고고가10, 일봉최고종가20, 일봉최고고가20, 일봉최고종가60, \
             일봉최고고가60, 일봉최고종가120, 일봉최고고가120, 일봉최고종가240, 일봉최고고가240, 일봉최저종가5, 일봉최저저가5, \
             일봉최저종가10, 일봉최저저가10, 일봉최저종가20, 일봉최저저가20, 일봉최저종가60, 일봉최저저가60, 일봉최저종가120, \
@@ -377,11 +332,10 @@ class BackCodeTest:
 
         시분초, VI아래5호가, 데이터길이, 호가단위, 포지션 = int(str(체결시간)[8:]), 1, 1800, 1, 'LONG'
         평균값계산틱수 = self.dict_set['주식장초평균값계산틱수'] if 시분초 < self.dict_set['주식장초전략종료시간'] else self.dict_set['주식장중평균값계산틱수']
-        초당거래대금평균, 체결강도평균, 최고체결강도, 최저체결강도, 이평60, 이평300, 이평600, 이평1200 = 1., 1., 1., 1., 1., 1., 1., 1.
         분봉시가, 분봉고가, 분봉저가, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240, 분봉거래대금 = 1, 1, 1, 1., 1., 1., 1., 1., 1., 1
         일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240 = 1., 1., 1., 1., 1., 1.
-        수익률, 매입가, 보유수량, 매도수량, 분할매수횟수, 분할매도횟수, 매수시간, 최고수익률, 최저수익률 = 1, 1, 1, 1, 1, 0, now(), 1, 0
-        매수, 매도, BUY_LONG, SELL_LONG, SELL_SHORT, BUY_SHORT = False, False, False, False, False, False
+        수익률, 매입가, 보유수량, 매도수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 1, 1, 1, 1, 1, 0, now(), 0, 1, 0
+        매수, 매도, BUY_LONG, SELL_LONG, SELL_SHORT, BUY_SHORT, 강제청산 = False, False, False, False, False, False, False
 
         exec(self.stg, None, locals())
         self.testQ.put('전략테스트완료')

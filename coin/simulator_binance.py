@@ -9,15 +9,13 @@ from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetBinanc
 class ReceiverBinanceFuture2:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.hogaQ     = qlist[5]
-        self.creceivQ  = qlist[11]
-        self.ctraderQ  = qlist[12]
-        self.cstgQ     = qlist[13]
+        self.creceivQ  = qlist[8]
+        self.ctraderQ  = qlist[9]
+        self.cstgQ     = qlist[10]
         self.dict_set  = DICT_SET
         self.list_jang = []
         self.Start()
@@ -51,16 +49,14 @@ class ReceiverBinanceFuture2:
 class TraderBinanceFuture2:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ  = qlist[0]
         self.soundQ   = qlist[1]
-        self.creceivQ = qlist[11]
-        self.ctraderQ = qlist[12]
-        self.cstgQ    = qlist[13]
+        self.creceivQ = qlist[8]
+        self.ctraderQ = qlist[9]
+        self.cstgQ    = qlist[10]
         self.dict_set = DICT_SET
 
         self.df_cj = pd.DataFrame(columns=columns_cj)

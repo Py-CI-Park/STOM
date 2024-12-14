@@ -7,6 +7,7 @@ from PyQt5.QtCore import QTimer
 from multiprocessing import Process
 from PyQt5.QAxContainer import QAxWidget
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))))
+from utility.static import opstarter_kill
 from utility.setting import OPENAPI_PATH, DICT_SET
 
 
@@ -42,13 +43,13 @@ class Window(QtWidgets.QMainWindow):
         print('자동 로그인 설정 대기 중 ...')
         QTimer.singleShot(1000, lambda: auto_on(1))
         self.ocx.dynamicCall('KOA_Functions(QString, QString)', 'ShowAccountWindow', '')
-        os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
+        opstarter_kill()
 
 
 if __name__ == '__main__':
-    login_info = f'{OPENAPI_PATH}/system/Autologin.dat'
-    if os.path.isfile(login_info):
-        os.remove(f'{OPENAPI_PATH}/system/Autologin.dat')
+    opstarter_kill()
+    autologin_dat = f'{OPENAPI_PATH}/system/Autologin.dat'
+    if os.path.isfile(autologin_dat): os.remove(autologin_dat)
     print('자동 로그인 설정 파일 삭제 완료')
 
     Process(target=Window, daemon=True).start()

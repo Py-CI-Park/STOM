@@ -7,18 +7,6 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(
 from utility.setting import DICT_SET
 
 
-def leftClick(x, y, hwnd):
-    lParam = win32api.MAKELONG(x, y)
-    win32gui.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-    win32gui.SendMessage(hwnd, win32con.WM_LBUTTONUP, 0, lParam)
-    win32api.Sleep(100)
-
-
-def doubleClick(x, y, hwnd):
-    leftClick(x, y, hwnd)
-    leftClick(x, y, hwnd)
-
-
 def window_enumeration_handler(hwndd, top_windows):
     top_windows.append((hwndd, win32gui.GetWindowText(hwndd)))
 
@@ -40,10 +28,29 @@ def find_window(caption):
     return hwnd
 
 
+def leftClick(x, y, hwnd):
+    lParam = win32api.MAKELONG(x, y)
+    win32gui.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+    win32gui.SendMessage(hwnd, win32con.WM_LBUTTONUP, 0, lParam)
+    win32api.Sleep(300)
+
+
+def doubleClick(x, y, hwnd):
+    leftClick(x, y, hwnd)
+    leftClick(x, y, hwnd)
+
+
+def click_button(btn_hwnd):
+    win32api.PostMessage(btn_hwnd, win32con.WM_LBUTTONDOWN, 0, 0)
+    win32api.Sleep(200)
+    win32api.PostMessage(btn_hwnd, win32con.WM_LBUTTONUP, 0, 0)
+    win32api.Sleep(500)
+
+
 def enter_keys(hwndd, data):
     win32api.SendMessage(hwndd, win32con.EM_SETSEL, 0, -1)
     win32api.SendMessage(hwndd, win32con.EM_REPLACESEL, 0, data)
-    win32api.Sleep(200)
+    win32api.Sleep(500)
 
 
 def press_keys(data):
@@ -73,13 +80,6 @@ def press_keys(data):
         win32api.keybd_event(key, 0, win32con.KEYEVENTF_KEYUP, 0)
 
 
-def click_button(btn_hwnd):
-    win32api.PostMessage(btn_hwnd, win32con.WM_LBUTTONDOWN, 0, 0)
-    win32api.Sleep(100)
-    win32api.PostMessage(btn_hwnd, win32con.WM_LBUTTONUP, 0, 0)
-    win32api.Sleep(300)
-
-
 def manual_login(gubun):
     """
     gubun == 1 : 첫번째 계정 모의서버
@@ -95,13 +95,11 @@ def manual_login(gubun):
     if gubun in [1, 3, 5, 7]:
         if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-        win32api.Sleep(500)
         if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
     elif gubun in [2, 4, 6, 8]:
         if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-        win32api.Sleep(500)
         if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
             click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
 
@@ -115,6 +113,7 @@ def manual_login(gubun):
         enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{count}'])
         enter_keys(win32gui.GetDlgItem(hwnd, 0x3E9), DICT_SET[f'비밀번호{count}'])
         enter_keys(win32gui.GetDlgItem(hwnd, 0x3EA), DICT_SET[f'인증서비밀번호{count}'])
+        win32api.Sleep(1000)
         doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3E8))
         enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{count}'])
         doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3E9))

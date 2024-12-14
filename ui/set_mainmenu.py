@@ -76,7 +76,6 @@ class SetMainMenu:
 
         self.ui.bb_pushButton = self.wc.setPushbutton('', click=self.ui.BackBench, shortcut='Ctrl+Shift+B')
         self.ui.od_pushButton = self.wc.setPushbutton('', click=self.ui.ShowOrder, shortcut='Ctrl+Shift+O')
-        self.ui.ts_pushButton = self.wc.setPushbutton('', click=self.ui.ChartTest, shortcut='Ctrl+Shift+C')
 
         self.ui.image_label = QLabel(self.ui)
         self.ui.image_label.setVisible(False)
@@ -122,5 +121,4 @@ class SetMainMenu:
         self.ui.progressBarrr.setGeometry(5, 493, 35, 263)
         self.ui.bb_pushButton.setGeometry(0, 0, 0, 0)
         self.ui.od_pushButton.setGeometry(0, 0, 0, 0)
-        self.ui.ts_pushButton.setGeometry(0, 0, 0, 0)
         self.ui.image_label.setGeometry(1057, 478, 332, 105)

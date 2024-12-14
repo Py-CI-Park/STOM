@@ -71,6 +71,8 @@ class Total:
             self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '조건을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'])
         self.sq.put('백파인더를 완료하였습니다.')
         self.bq.put('백파인더 완료')
+        time.sleep(1)
+        sys.exit()
 
 
 class BackFinder:
@@ -110,14 +112,15 @@ class BackFinder:
 
         buystg_ = buystg.split('self.tickcols = [')[1].split(']')[0]
         self.tickcols = [x.strip() for x in buystg_.split(',')]
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인더 매수전략 로딩 완료'])
+        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인더 매수전략 설정 완료'])
 
-        Process(target=Total, args=(self.wq, self.sq, self.tq, self.bq, self.ui_gubun, self.gubun), daemon=True).start()
+        Process(target=Total, args=(self.wq, self.sq, self.tq, self.bq, self.ui_gubun, self.gubun)).start()
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백파인더 집계용 프로세스 생성 완료'])
 
         self.tq.put(['백테정보', avgtime, startday, endday, starttime, endtime, buystg_name, back_count, self.tickcols])
-        for pq in self.pq_list:
-            pq.put(['백테정보', avgtime, startday, endday, starttime, endtime, buystg])
+        data = ['백테정보', avgtime, startday, endday, starttime, endtime, buystg, None]
+        for q in self.pq_list:
+            q.put(data)
 
         data = self.bq.get()
         if self.dict_set['스톰라이브']: self.lq.put('백파인더')

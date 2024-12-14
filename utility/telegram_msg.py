@@ -7,18 +7,13 @@ from telegram.ext import Updater, MessageHandler, Filters
 class TelegramMsg:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.teleQ    = qlist[3]
-        self.sreceivQ = qlist[7]
-        self.straderQ = qlist[8]
-        self.sstg1Q   = qlist[9]
-        self.sstg2Q   = qlist[10]
-        self.ctraderQ = qlist[12]
-        self.cstgQ    = qlist[13]
+        self.ctraderQ = qlist[9]
+        self.cstgQ    = qlist[10]
+        self.wdservQ  = qlist[13]
         self.dict_set = None
         self.updater  = None
         self.bot      = None
@@ -56,9 +51,9 @@ class TelegramMsg:
 
     def SetCustomButton(self):
         custum_button = [
-            ['S체결목록', 'S거래목록', 'S잔고평가', 'S잔고청산'],
-            ['C체결목록', 'C거래목록', 'C잔고평가', 'C잔고청산'],
-            ['S전략중지', 'C전략중지', 'S틱저장']
+            ['S잔고청산', 'S전략중지', 'C잔고청산', 'C전략중지'],
+            ['S체결목록', 'S거래목록', 'S잔고평가'],
+            ['C체결목록', 'C거래목록', 'C잔고평가']
         ]
         reply_markup = telegram.ReplyKeyboardMarkup(custum_button)
         self.bot.send_message(chat_id=self.dict_set['텔레그램사용자아이디'], text='사용자버튼 설정을 완료하였습니다.', reply_markup=reply_markup)
@@ -71,20 +66,13 @@ class TelegramMsg:
             return
         cmd = update.message.text
         if cmd == 'S전략중지':
-            self.sstg1Q.put(['매수전략중지', ''])
-            # self.sstg1Q.put(['매도전략중지', ''])
-            self.sstg2Q.put(['매수전략중지', ''])
-            # self.sstg2Q.put(['매도전략중지', ''])
+            self.wdservQ.put(['strategy', ['매수전략중지', '']])
             self.SendMsg('주식 전략 중지 완료')
         elif cmd == 'C전략중지':
             self.cstgQ.put(['매수전략중지', ''])
-            # self.cstgQ.put(['매도전략중지', ''])
             self.SendMsg('코인 전략 중지 완료')
-        elif cmd == 'S틱저장':
-            self.sreceivQ.put('틱데이터저장')
-            self.SendMsg('주식 틱데이터 저장 완료')
         elif 'S' in cmd:
-            self.straderQ.put(cmd)
+            self.wdservQ.put(['trader', cmd])
         elif 'C' in cmd:
             self.ctraderQ.put(cmd)
 

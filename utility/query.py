@@ -10,10 +10,8 @@ from utility.setting import ui_num, DB_TRADELIST, DB_SETTING, DB_STRATEGY, DB_CO
 class Query:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ = qlist[0]
         self.queryQ  = qlist[2]
@@ -220,7 +218,7 @@ class Query:
                         con.close()
                         self.windowQ.put([ui_num['DB관리'], f'{db_name} 데이터 갱신 완료 [{i + 1}/{last}]'])
                     self.windowQ.put([ui_num['DB관리'], '지정시간 이후 데이터 삭제 완료'])
-            elif '콜렉터DB지정시간이후삭제' in query[0]:
+            elif '당일데이터지정시간이후삭제' in query[0]:
                 if '코인' in query[0]:
                     self.con4.close()
                 try:
@@ -354,7 +352,7 @@ class Query:
                 try:
                     df = pd.read_sql('SELECT * FROM moneytop', con)
                 except:
-                    self.windowQ.put([ui_num['DB관리'], '콜렉터가 저장한 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put([ui_num['DB관리'], '저장한 데이터가 존재하지 않습니다.'])
                 else:
                     BACK_FILE = DB_STOCK_BACK if '주식' in query[0] else DB_COIN_BACK
                     con2 = sqlite3.connect(BACK_FILE)
@@ -364,7 +362,7 @@ class Query:
                     firstname = 'stock_tick_' if '주식' in query[0] else 'coin_tick_'
                     file_day_list = [x.strip(firstname).strip('.db') for x in file_list if firstname in x and 'back' not in x and '.zip' not in x]
                     if len(list(set(day_list) - set(file_day_list))) > 0:
-                        self.windowQ.put([ui_num['DB관리'], '경고! 추가 후 콜렉터디비가 삭제됩니다.'])
+                        self.windowQ.put([ui_num['DB관리'], '경고! 추가 후 당일 DB가 삭제됩니다.'])
                         self.windowQ.put([ui_num['DB관리'], '날짜별 분리 후 재실행하십시오.'])
                     else:
                         if firstname == 'stock_tick_':
@@ -406,7 +404,7 @@ class Query:
                 try:
                     df = pd.read_sql('SELECT * FROM moneytop', con)
                 except:
-                    self.windowQ.put([ui_num['DB관리'], '콜렉터가 저장한 데이터가 존재하지 않습니다.'])
+                    self.windowQ.put([ui_num['DB관리'], '당일 데이터가 존재하지 않습니다.'])
                 else:
                     df['일자'] = df['index'].apply(lambda x: int(str(x)[:8]))
                     day_list = list(set(df['일자'].to_list()))

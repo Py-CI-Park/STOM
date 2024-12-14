@@ -1,12 +1,29 @@
 import sys
+import zmq
 import sqlite3
 import operator
 import numpy as np
 from stock.kiwoom import *
+from multiprocessing import Queue
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
 from utility.setting import DICT_SET, DB_STOCK_TICK, ui_num
 from utility.static import now, strf_time, strp_time, timedelta_sec, int_hms, roundfigure_upper5, qtest_qwait, GetVIPrice, GetSangHahanga
+
+
+class ZmqServ(QThread):
+    def __init__(self, recvservQ):
+        super().__init__()
+        self.recvservQ = recvservQ
+        zctx = zmq.Context()
+        self.sock = zctx.socket(zmq.PUB)
+        self.sock.bind('tcp://*:5777')
+
+    def run(self):
+        while True:
+            msg, data = self.recvservQ.get()
+            self.sock.send_string(msg, zmq.SNDMORE)
+            self.sock.send_pyobj(data)
 
 
 class Updater(QThread):
@@ -18,47 +35,28 @@ class Updater(QThread):
         super().__init__()
         self.sreceivQ = sreceivQ
 
-    # noinspection PyUnresolvedReferences
     def run(self):
         while True:
             data = self.sreceivQ.get()
             if type(data) == list:
+                # noinspection PyUnresolvedReferences
                 self.signal1.emit(data)
             elif type(data) == str:
+                # noinspection PyUnresolvedReferences
                 self.signal2.emit(data)
             elif type(data) == dict:
+                # noinspection PyUnresolvedReferences
                 self.signal3.emit(data)
 
 
 class ReceiverKiwoom:
-    # noinspection PyUnresolvedReferences
     def __init__(self, qlist):
         app = QApplication(sys.argv)
-        """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
-        """
-        self.windowQ  = qlist[0]
-        self.soundQ   = qlist[1]
-        self.queryQ   = qlist[2]
-        self.teleQ    = qlist[3]
-        self.chartQ   = qlist[4]
-        self.hogaQ    = qlist[5]
-        self.sreceivQ = qlist[7]
-        self.straderQ = qlist[8]
-        self.sstg1Q   = qlist[9]
-        self.sstg2Q   = qlist[10]
-        self.tick1Q   = qlist[14]
-        self.tick2Q   = qlist[15]
-        self.tick3Q   = qlist[16]
-        self.tick4Q   = qlist[17]
-        self.tick5Q   = qlist[18]
-        self.tick6Q   = qlist[19]
-        self.tick7Q   = qlist[20]
-        self.tick8Q   = qlist[21]
-        self.tickQ    = [self.tick1Q, self.tick2Q, self.tick3Q, self.tick4Q, self.tick5Q, self.tick6Q, self.tick7Q, self.tick8Q]
+
+        self.kwmservQ = qlist[0]
+        self.sreceivQ = qlist[1]
+        self.straderQ = qlist[2]
+        self.sstgQs   = qlist[3]
         self.dict_set = DICT_SET
 
         if self.dict_set['리시버프로파일링']:
@@ -87,7 +85,6 @@ class ReceiverKiwoom:
         self.dict_arry = {}
         self.dict_tm5m = {}
         self.dict_mtop = {}
-        self.dict_cgbn = {}
         self.dict_sgbn = {}
 
         self.list_gsjm = []
@@ -114,27 +111,33 @@ class ReceiverKiwoom:
             '거래대금순위기록': curr_time
         }
 
+        self.recvservQ = Queue()
+        if self.dict_set['리시버공유'] == 1:
+            self.zmqserver = ZmqServ(self.recvservQ)
+            self.zmqserver.start()
+
         self.kw = Kiwoom(self, 'Receiver')
         self.KiwoomLogin()
 
         self.updater = Updater(self.sreceivQ)
+        # noinspection PyUnresolvedReferences
         self.updater.signal1.connect(self.UpdateList)
+        # noinspection PyUnresolvedReferences
         self.updater.signal2.connect(self.UpdateStr)
+        # noinspection PyUnresolvedReferences
         self.updater.signal3.connect(self.UpdateDictset)
         self.updater.start()
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.Scheduler)
         self.qtimer1.start()
 
         self.qtimer2 = QTimer()
         self.qtimer2.setInterval(10 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer2.timeout.connect(self.MoneyTopSearch)
-
-        self.qtimer3 = QTimer()
-        self.qtimer3.setInterval(1800 * 1000)
-        self.qtimer3.timeout.connect(lambda: self.SaveTickData(False))
 
         app.exec_()
 
@@ -145,27 +148,31 @@ class ReceiverKiwoom:
 
         self.list_kosd = self.kw.GetCodeListByMarket('10')
         list_code = self.kw.GetCodeListByMarket('0') + self.kw.GetCodeListByMarket('8') + self.list_kosd
-        self.dict_cgbn = {code: i % 8 for i, code in enumerate(list_code)}
-        self.dict_sgbn = {code: i % 2 for i, code in enumerate(list_code)}
+        self.dict_sgbn = {code: i % 8 for i, code in enumerate(list_code)}
         self.dict_name = {code: self.kw.GetMasterCodeName(code) for code in list_code}
         self.dict_code = {name: code for code, name in self.dict_name.items()}
 
-        self.windowQ.put([ui_num['종목명데이터'], self.dict_name, self.dict_code, self.dict_sgbn, '더미'])
-        if self.dict_set['주식트레이더']:
-            self.sstg1Q.put(self.dict_sgbn)
-            self.sstg2Q.put(self.dict_sgbn)
-            self.sstg1Q.put(['코스닥목록', self.list_kosd])
-            self.sstg2Q.put(['코스닥목록', self.list_kosd])
+        self.kwmservQ.put(['window', [ui_num['종목명데이터'], self.dict_name, self.dict_code, self.dict_sgbn, '더미']])
+        self.straderQ.put(self.dict_sgbn)
+        for q in self.sstgQs:
+            q.put(self.dict_sgbn)
+            q.put(['코스닥목록', self.list_kosd])
+
+        if self.dict_set['리시버공유'] == 1 and int_hms() > 85900:
+            data = [self.list_kosd, self.dict_sgbn, self.dict_name, self.dict_code]
+            self.recvservQ.put(['logininfo', data])
+            if int_hms() > 90000:
+                self.recvservQ.put(['operation', 3])
 
         df = pd.DataFrame(self.dict_name.values(), columns=['종목명'], index=list(self.dict_name.keys()))
         df['코스닥'] = [True if x in self.list_kosd else False for x in df.index]
-        self.queryQ.put(['설정디비', df, 'codename', 'replace'])
+        self.kwmservQ.put(['query', ['설정디비', df, 'codename', 'replace']])
 
         self.list_cond = self.kw.GetConditionNamelist()  # [[0, '장초초단타'], [1, '감시종목']]
         error = False
         try:
             if self.list_cond[0][0] == 0 and self.list_cond[1][0] == 1:
-                self.windowQ.put([ui_num['S단순텍스트'], self.list_cond])
+                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], self.list_cond]])
             else:
                 error = True
         except:
@@ -176,10 +183,10 @@ class ReceiverKiwoom:
             print('첫번째는 트레이더가 사용할 관심종목용, 조건식 번호 0번')
             print('두번째는 리시버가 사용할 감시종목용, 조건식 번호 1번이어야 합니다.')
             print('HTS에서 보이는 번호와 API는 다를 수 있으니 조건식을 모두 지우고 새로 작성하십시오.')
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - OpenAPI 로그인 완료'])
-        text = '주식 리시버 및 콜렉터를 시작하였습니다.' if self.dict_set['주식콜렉터'] else '주식 리시버를 시작하였습니다.'
-        if self.dict_set['주식알림소리']: self.soundQ.put(text)
-        self.teleQ.put(text)
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - OpenAPI 로그인 완료']])
+        text = '주식 리시버를 시작하였습니다.'
+        if self.dict_set['주식알림소리']: self.kwmservQ.put(['sound', text])
+        self.kwmservQ.put(['tele', text])
 
     def UpdateList(self, data):
         gubun, code_list = data
@@ -189,15 +196,7 @@ class ReceiverKiwoom:
             self.list_oder = code_list
 
     def UpdateStr(self, data):
-        if data == '틱데이터저장':
-            self.SaveTickData(False)
-        elif data == '틱자동저장시작':
-            if not self.qtimer3.isActive():
-                self.qtimer3.start()
-        elif data == '틱자동저장중지':
-            if self.qtimer3.isActive():
-                self.qtimer3.stop()
-        elif data == '프로파일링결과':
+        if data == '프로파일링결과':
             self.pr.print_stats(sort='cumulative')
         else:
             self.hoga_code = data
@@ -237,27 +236,27 @@ class ReceiverKiwoom:
 
     def ReceiverProcKill(self):
         self.dict_bool['프로세스종료'] = True
-        self.straderQ.put('트레이더종료')
+        self.straderQ.put('프로세스종료')
         self.RemoveAllRealreg()
         QTimer.singleShot(180 * 1000, self.SysExit)
 
     def RemoveAllRealreg(self):
         if self.dict_set['장중전략조건검색식사용']:
             self.kw.SendConditionStop([sn_cond, self.list_cond[2][1], self.list_cond[2][0]])
-            self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 2번 중단 완료'])
+            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 2번 중단 완료']])
         self.kw.SetRealRemove(['ALL', 'ALL'])
 
     def OperationRealreg(self):
         self.dict_bool['리시버시작'] = True
 
         self.kw.SetRealReg([sn_oper, ' ', '215;20;214', 0])
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 장운영시간 등록 완료'])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 장운영시간 등록 완료']])
 
         self.kw.SetRealReg([sn_oper, '001;101', '10;15;20', 1])
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 업종지수 등록 완료'])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 업종지수 등록 완료']])
 
         self.kw.Block_Request('opt10054', 시장구분='000', 장전구분='1', 종목코드='', 발동구분='1', 제외종목='000000000', 거래량구분='0', 거래대금구분='0', 발동방향='0', output='발동종목', next=0)
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - VI발동해제 등록 완료'])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - VI발동해제 등록 완료']])
 
         self.list_code = self.kw.SendCondition([sn_cond, self.list_cond[1][1], self.list_cond[1][0], 0])
 
@@ -270,21 +269,18 @@ class ReceiverKiwoom:
             rreg = [sn_gsjm + k, ';'.join(self.list_code[i:i + 100]), '10;12;14;30;228;41;61;71;81', 1]
             self.kw.SetRealReg(rreg)
             text = f"실시간 알림 등록 완료 - [{sn_gsjm + k}] 종목갯수 {len(rreg[1].split(';'))}"
-            self.windowQ.put([ui_num['S단순텍스트'], text])
+            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], text]])
             k += 1
 
         if k < 10:
             print('조건검색식 설정이 잘못되었습니다.')
             print('감시종목수가 너무 적으니 조건검색식을 재설정하십시오.')
 
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간 등록 완료'])
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간 등록 완료']])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작']])
 
     def ConditionSearchStart(self):
         self.dict_bool['실시간조건검색시작'] = True
-
-        if self.dict_set['주식틱자동저장']:
-            self.qtimer3.start()
 
         codes = self.kw.SendCondition([sn_cond, self.list_cond[0][1], self.list_cond[0][0], 1])
         if len(codes) > 0:
@@ -292,14 +288,14 @@ class ReceiverKiwoom:
                 self.InsertGsjmlist(code)
 
         if len(codes) > 100:
-            self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 오류 알림 - 조건검색식 0번이 잘못되었습니다. HTS에서 확인하십시오.'])
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 0번 등록 완료'])
+            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - 조건검색식 0번이 잘못되었습니다. HTS에서 확인하십시오.']])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 0번 등록 완료']])
 
     def ConditionSearchStop(self):
         self.dict_bool['실시간조건검색중단'] = True
 
         self.kw.SendConditionStop([sn_cond, self.list_cond[0][1], self.list_cond[0][0]])
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 0번 중단 완료'])
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 0번 중단 완료']])
 
         if self.dict_set['장중전략조건검색식사용']:
             self.list_gsjm = []
@@ -308,8 +304,8 @@ class ReceiverKiwoom:
                 for code in codes:
                     self.InsertGsjmlist(code)
             if len(codes) > 100:
-                self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 오류 알림 - 조건검색식 2번이 잘못되었습니다. HTS에서 확인하십시오.'])
-            self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 2번 등록 완료'])
+                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 오류 알림 - 조건검색식 2번이 잘못되었습니다. HTS에서 확인하십시오.']])
+            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 실시간조건검색 2번 등록 완료']])
 
     def StartJangjungStrategy(self):
         self.dict_bool['장중단타전략시작'] = True
@@ -328,20 +324,23 @@ class ReceiverKiwoom:
 
             self.list_prmt = list_mtop
             self.qtimer2.start()
-        self.windowQ.put([ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 장중 단타 전략 시작'])
+        self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 장중 단타 전략 시작']])
 
     def SysExit(self):
         self.dict_bool['프로세스종료'] = True
         if self.qtimer1.isActive():  self.qtimer1.stop()
         if self.qtimer2.isActive():  self.qtimer2.stop()
-        if self.qtimer3.isActive():  self.qtimer3.stop()
         if self.updater.isRunning(): self.updater.quit()
-        if self.dict_set['주식콜렉터']:
-            self.SaveTickData(True)
+        if self.dict_set['주식틱데이터저장']:
+            self.SaveTickData()
             qtest_qwait(10)
-        self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료'])
+        else:
+            for q in self.sstgQs:
+                q.put('프로세스종료')
 
-    def SaveTickData(self, gubun):
+        self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료']])
+
+    def SaveTickData(self):
         codes = []
         if len(self.dict_mtop) > 0:
             codes = list(set(';'.join(list(self.dict_mtop.values())[30:]).split(';')))
@@ -356,14 +355,17 @@ class ReceiverKiwoom:
             df = pd.DataFrame(df.values(), columns=['거래대금순위'], index=list(df.keys()))
             df.to_sql('moneytop', con, if_exists='append', chunksize=1000)
             con.close()
-            self.windowQ.put([ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 거래대금순위 저장 완료'])
+            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], '시스템 명령 실행 알림 - 거래대금순위 저장 완료']])
 
-        self.tick1Q.put(['콜렉터종료', codes, gubun])
+        self.sstgQs[0].put(['틱데이터저장', codes])
 
     def UpdateMoneyTop(self):
         list_gsjm = self.list_gsjm.copy()
-        self.sstg1Q.put(['관심목록', list_gsjm])
-        self.sstg2Q.put(['관심목록', list_gsjm])
+        for q in self.sstgQs:
+            q.put(['관심목록', list_gsjm])
+
+        if self.dict_set['리시버공유'] == 1:
+            self.recvservQ.put(['focuscodes', list_gsjm])
 
         list_gsjm = ';'.join(list_gsjm)
         curr_strtime = str(self.int_jcct)
@@ -399,16 +401,14 @@ class ReceiverKiwoom:
     def InsertGsjmlist(self, code):
         if code not in self.list_gsjm:
             self.list_gsjm.append(code)
-            if self.dict_set['주식트레이더']:
-                if self.dict_set['주식매도취소관심진입']:
-                    self.straderQ.put(['관심진입', code])
+            if self.dict_set['주식매도취소관심진입']:
+                self.straderQ.put(['관심진입', code])
 
     def DeleteGsjmlist(self, code):
         if code in self.list_gsjm:
             self.list_gsjm.remove(code)
-            if self.dict_set['주식트레이더']:
-                if self.dict_set['주식매수취소관심이탈']:
-                    self.straderQ.put(['관심이탈', code])
+            if self.dict_set['주식매수취소관심이탈']:
+                self.straderQ.put(['관심이탈', code])
 
     # noinspection PyUnusedLocal
     def OnReceiveRealCondition(self, code, IorD, cname, cindex):
@@ -432,9 +432,15 @@ class ReceiverKiwoom:
             except:
                 pass
             else:
-                self.windowQ.put([ui_num['S단순텍스트'],
-                                  f'장운영 시간 수신 알림 - {self.operation} {current[:2]}:{current[2:4]}:{current[4:]} '
-                                  f'남은시간 {remain[:2]}:{remain[2:4]}:{remain[4:]}'])
+                self.kwmservQ.put(['window', [ui_num['S단순텍스트'],
+                                              f'장운영 시간 수신 알림 - {self.operation} {current[:2]}:{current[2:4]}:{current[4:]} '
+                                              f'남은시간 {remain[:2]}:{remain[2:4]}:{remain[4:]}']])
+
+                if self.dict_set['리시버공유'] == 1:
+                    self.recvservQ.put(['operation', self.operation])
+                    if int(remain[2:4]) >= 1:
+                        data = [self.list_kosd, self.dict_sgbn, self.dict_name, self.dict_code]
+                        self.recvservQ.put(['logininfo', data])
 
         elif realtype == '업종지수':
             try:
@@ -443,7 +449,7 @@ class ReceiverKiwoom:
             except:
                 pass
             else:
-                self.chartQ.put(['코스피' if code == '001' else '코스닥', dt, c])
+                self.kwmservQ.put(['chart', ['코스피' if code == '001' else '코스닥', dt, c]])
 
         elif realtype == 'VI발동/해제':
             try:
@@ -451,7 +457,7 @@ class ReceiverKiwoom:
                 gubun = self.kw.GetCommRealData(code, 9068)
                 name  = self.dict_name[code]
             except Exception as e:
-                self.windowQ.put([ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - OnReceiveRealData VI발동/해제 {e}'])
+                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - OnReceiveRealData VI발동/해제 {e}']])
             else:
                 if gubun == '1' and code in self.list_code and \
                         (code not in self.dict_vipr.keys() or (self.dict_vipr[code][0] and now() > self.dict_vipr[code][1])):
@@ -482,9 +488,9 @@ class ReceiverKiwoom:
                             int(data[4])               == int(self.kw.GetCommRealData(code, 27)) and \
                             int(data[5])               == int(self.kw.GetCommRealData(code, 28)):
                         self.dict_bool['주식체결필드같음'] = True
-                        self.windowQ.put([ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 주식체결 필드값 같음'])
+                        self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 실행 알림 - 주식체결 필드값 같음']])
                     else:
-                        self.windowQ.put([ui_num['S로그텍스트'], '시스템 명령 오류 알림 - 주식체결 필드값이 다릅니다. 필드값 갱신요망!!'])
+                        self.kwmservQ.put(['window', [ui_num['S로그텍스트'], '시스템 명령 오류 알림 - 주식체결 필드값이 다릅니다. 필드값 갱신요망!!']])
                     self.dict_bool['주식체결필드확인'] = True
 
                 dt = int(self.str_tday + dt)
@@ -522,7 +528,7 @@ class ReceiverKiwoom:
                     csp       = int(self.kw.GetCommRealData(code, 27))
                     cbp       = int(self.kw.GetCommRealData(code, 28))
             except Exception as e:
-                self.windowQ.put([ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - OnReceiveRealData 주식체결 {e}'])
+                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - OnReceiveRealData 주식체결 {e}']])
             else:
                 self.UpdateTickData(code, dt, c, o, h, low, per, dm, v, ch, dmp, jvp, vrp, jsvp, sgta, csp, cbp)
 
@@ -578,9 +584,9 @@ class ReceiverKiwoom:
                             int(data[53])          == int(self.kw.GetCommRealData(code, 79)) and \
                             int(data[59])          == int(self.kw.GetCommRealData(code, 80)):
                         self.dict_bool['호가잔량필드같음'] = True
-                        self.windowQ.put([ui_num['S로그텍스트'], f'시스템 명령 실행 알림 - 호가잔량 필드값 같음'])
+                        self.kwmservQ.put(['window', [ui_num['S로그텍스트'], f'시스템 명령 실행 알림 - 호가잔량 필드값 같음']])
                     else:
-                        self.windowQ.put([ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - 호가잔량 필드값이 다릅니다. 필드값 갱신요망!!'])
+                        self.kwmservQ.put(['window', [ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - 호가잔량 필드값이 다릅니다. 필드값 갱신요망!!']])
                     self.dict_bool['호가잔량필드확인'] = True
 
                 name = self.dict_name[code]
@@ -660,7 +666,7 @@ class ReceiverKiwoom:
                         int(self.kw.GetCommRealData(code, 80))
                     ]
             except Exception as e:
-                self.windowQ.put([ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - OnReceiveRealData 주식호가잔량 {e}'])
+                self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'시스템 명령 오류 알림 - OnReceiveRealData 주식호가잔량 {e}']])
             else:
                 self.UpdateHogaData(dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, name, start)
 
@@ -707,8 +713,8 @@ class ReceiverKiwoom:
                     self.dict_arry[code] = np.delete(self.dict_arry[code], 0, 0)
 
         if self.hoga_code == code:
-            self.hogaQ.put([self.dict_name[code], c, per, sgta, self.dict_vipr[code][2], o, h, low])
-            self.hogaQ.put([int(v), ch])
+            self.kwmservQ.put(['hoga', [self.dict_name[code], c, per, sgta, self.dict_vipr[code][2], o, h, low]])
+            self.kwmservQ.put(['hoga', [int(v), ch]])
 
     def UpdateHogaData(self, dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, name, receivetime):
         sm = 0
@@ -761,19 +767,14 @@ class ReceiverKiwoom:
             hlp   = round((c / ((self.dict_tick[code][2] + self.dict_tick[code][3]) / 2) - 1) * 100, 2)
             hgjrt = sum(hoga_samount + hoga_bamount)
             logt  = now() if self.int_logt < int_logt else 0
-            data  = [dt] + self.dict_tick[code] + [sm, hlp] + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + [hgjrt, code, logt]
+            data  = [dt] + self.dict_tick[code] + [sm, hlp] + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + [hgjrt, code, name, logt]
 
-            if self.dict_set['주식트레이더']:
-                if code in self.list_jang or code in self.list_oder:
-                    self.straderQ.put([code, c])
-                if self.dict_sgbn[code]:
-                    self.sstg1Q.put(data + [name])
-                else:
-                    self.sstg2Q.put(data + [name])
+            self.sstgQs[self.dict_sgbn[code]].put(data)
+            if code in self.list_jang or code in self.list_oder:
+                self.straderQ.put([code, c])
 
-            if self.dict_set['주식콜렉터']:
-                data[16] = int(strf_time('%Y%m%d%H%M%S', data[16]))
-                self.tickQ[self.dict_cgbn[code]].put(data)
+            if self.dict_set['리시버공유'] == 1:
+                self.recvservQ.put(['tickdata', data])
 
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][13:15] = [0, 0]
@@ -784,11 +785,11 @@ class ReceiverKiwoom:
             else:
                 shg, hhg = GetSangHahanga(code in self.list_kosd, self.kw.GetMasterLastPrice(code), self.int_hgtime)
                 self.dict_sghg[code] = [shg, hhg]
-            self.hogaQ.put([name] + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5] + [shg, hhg])
+            self.kwmservQ.put(['hoga', [name] + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5] + [shg, hhg]])
 
-        if self.int_logt < int_logt:
+        if ticksend and self.int_logt < int_logt:
             gap = (now() - receivetime).total_seconds()
-            self.windowQ.put([ui_num['S단순텍스트'], f'리시버 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'])
+            self.kwmservQ.put(['window', [ui_num['S단순텍스트'], f'리시버 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.']])
             self.int_logt = int_logt
 
     def InsertViPrice(self, code, o):
@@ -801,7 +802,7 @@ class ReceiverKiwoom:
                 self.dict_vipr[code][:2] = False, timedelta_sec(5)
             else:
                 self.dict_vipr[code] = [False, timedelta_sec(5), 0, 0, 0]
-            self.windowQ.put([ui_num['S로그텍스트'], f'변동성 완화 장치 발동 - [{code}] {key}'])
+            self.kwmservQ.put(['window', [ui_num['S로그텍스트'], f'변동성 완화 장치 발동 - [{code}] {key}']])
         elif type(key) == int:
             uvi, dvi, hogaunit = GetVIPrice(code in self.list_kosd, key, self.int_hgtime)
             self.dict_vipr[code] = [True, timedelta_sec(5), uvi, dvi, hogaunit]

@@ -10,18 +10,16 @@ from utility.setting import columns_cj, columns_tj, columns_jg, columns_td, colu
 class TraderUpbit:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ  = qlist[0]
         self.soundQ   = qlist[1]
         self.queryQ   = qlist[2]
         self.teleQ    = qlist[3]
-        self.creceivQ = qlist[11]
-        self.ctraderQ = qlist[12]
-        self.cstgQ    = qlist[13]
+        self.creceivQ = qlist[8]
+        self.ctraderQ = qlist[9]
+        self.cstgQ    = qlist[10]
         self.dict_set = DICT_SET
 
         self.upbit            = None
@@ -143,7 +141,6 @@ class TraderUpbit:
                 elif data == 'C잔고청산':
                     self.JangoCheongsan('수동')
                 elif data == '프로세스종료':
-                    self.cstgQ.put('전략프로세스종료')
                     break
 
             curr_time = now()
@@ -192,7 +189,7 @@ class TraderUpbit:
                 time.sleep(0.001)
 
         self.windowQ.put([ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 트레이더 종료'])
-        time.sleep(3)
+        time.sleep(1)
 
     def TradeProcKill(self):
         self.dict_bool['프로세스종료'] = True

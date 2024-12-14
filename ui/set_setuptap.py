@@ -12,8 +12,6 @@ class SetSetupTap:
 
     def set(self):
         self.ui.set_tapWidgett_01 = QTabWidget(self.ui.sj_tab)
-        self.ui.sj_log_labelll_00 = QLabel('', self.ui.sj_tab)
-        self.ui.sj_log_labelll_00.setAlignment(Qt.AlignCenter)
 
         self.ui.sj_set_labelll_01 = QLabel('설정 관리', self.ui.sj_tab)
         self.ui.sj_set_comBoxx_01 = self.wc.setCombobox(self.ui.sj_tab, activated=self.ui.Activated_02)
@@ -37,13 +35,13 @@ class SetSetupTap:
 
         self.ui.sj_main_comBox_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_01, tip='사용할 증권사를 선택하십시오.', items=['키움증권1', '키움증권2'])
         self.ui.sj_main_cheBox_01 = self.wc.setCheckBox('주식 리시버', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_01, tip='두번째 계정으로 로그인하여 실시간조건검색 및 틱데이터를 수신한다.')
-        self.ui.sj_main_cheBox_02 = self.wc.setCheckBox('주식 콜렉터', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_02, tip='리시버로부터 틱데이터를 넘겨받아 데이터베이스에 저장한다.')
-        self.ui.sj_main_cheBox_03 = self.wc.setCheckBox('주식 트레이더', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_03, tip='첫번째 계정으로 로그인하여 주문 및 잔고 관리하는 프로세스와\n리시버로부터 틱데이터를 넘겨받아 전략연산하는 프로세스로 분리되어 있다.')
+        self.ui.sj_main_cheBox_02 = self.wc.setCheckBox('주식 트레이더', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_02, tip='첫번째 계정으로 로그인하여 주문 및 잔고 관리하는 프로세스와\n리시버로부터 틱데이터를 넘겨받아 전략연산하는 프로세스로 분리되어 있다.')
+        self.ui.sj_main_cheBox_03 = self.wc.setCheckBox('틱데이터 저장', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_03, tip='리시버로부터 틱데이터를 넘겨받아 데이터베이스에 저장한다.')
 
         self.ui.sj_main_comBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_01, tip='사용할 거래소를 선택하십시오.', items=['업비트', '바이낸스선물'], activated=self.ui.cActivated_11)
         self.ui.sj_main_cheBox_04 = self.wc.setCheckBox('코인 리시버', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_04, tip='코인 리시버는 체결정보와 호가정보 프로세스로 분리하여 수신한다.')
-        self.ui.sj_main_cheBox_05 = self.wc.setCheckBox('코인 콜렉터', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_05, tip='리시버로부터 틱데이터를 넘겨받아 데이터베이스에 저장한다.')
-        self.ui.sj_main_cheBox_06 = self.wc.setCheckBox('코인 트레이더', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_06, tip='트레이더는 전략연산과 주문 및 잔고 관리 프로세스로 분리되어 있다.')
+        self.ui.sj_main_cheBox_05 = self.wc.setCheckBox('코인 트레이더', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_05, tip='트레이더는 전략연산과 주문 및 잔고 관리 프로세스로 분리되어 있다.')
+        self.ui.sj_main_cheBox_06 = self.wc.setCheckBox('틱데이터 저장', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_06, tip='리시버로부터 틱데이터를 넘겨받아 데이터베이스에 저장한다.')
 
         self.ui.sj_main_labell_00 = QLabel('주식 장중전략 관심종목 선택', self.ui.sj_bs_groupBox_01)
         self.ui.sj_main_cheBox_07 = self.wc.setCheckBox('2번 조건검색식', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_19, tip='HTS에서 작성한 2번 조건검색식을 실시간등록하여 사용한다.')
@@ -57,13 +55,17 @@ class SetSetupTap:
 
         self.ui.sj_checkbox_list = [self.ui.sj_main_cheBox_07, self.ui.sj_main_cheBox_08]
 
-        self.ui.sj_main_labell_02 = QLabel('주식 프로세스 실행시간  |  리시버 및 콜렉터                        트레이더 및 전략연산', self.ui.sj_bs_groupBox_01)
+        self.ui.sj_main_labell_02 = QLabel('주식 프로세스 실행시간  |  리시버                                 트레이더 및 전략연산', self.ui.sj_bs_groupBox_01)
         self.ui.sj_main_liEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_01)
         self.ui.sj_main_liEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_01)
         self.ui.sj_main_labell_03 = QLabel('바이낸스 선물   |                                                         마진타입                     포지션', self.ui.sj_bs_groupBox_01)
         self.ui.sj_lvrg_Button_01 = self.wc.setPushbutton('레버리지 유형 및 수치 설정', box=self.ui.sj_bs_groupBox_01, click=self.ui.lvButtonClicked_01, tip='바이낸스 선물 레버리지를 고정, 변동 형태 중 선택하여 설정한다.')
         self.ui.sj_main_comBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_01, items=['격리', '교차'], activated=self.ui.cActivated_12)
         self.ui.sj_main_comBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_01, items=['단방향', '양방향'], activated=self.ui.cActivated_13)
+
+        self.ui.sj_main_cheBox_09 = self.wc.setCheckBox('주식 버전 업그레이드 실행', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_21, tip='버전업을 실행합니다. 멀티 스톰일 경우 첫번째 실행할 클라이언트에서 실행하십시오.')
+        self.ui.sj_main_cheBox_10 = self.wc.setCheckBox('서버 (동일PC에서 하나만 지정)', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_20, tip='로컬에서 서버 역활을 한다. 이 리시버에서 받은 데이터를 ZMQ를 이용하여 클라이언트로 보낸다.')
+        self.ui.sj_main_cheBox_11 = self.wc.setCheckBox('클라이언트 (동일PC에서 여러개 가능)', self.ui.sj_bs_groupBox_01, changed=self.ui.CheckboxChanged_20, tip='로컬에서 클라이언트 역활을 한다. 동일 PC에서 서버는 하나만 가능하지만, 클라이언트는 여러개 가능하다.')
 
         text = '첫번째 계정 아이디                                                         ' \
                '비밀번호                                                           ' \
@@ -109,7 +111,7 @@ class SetSetupTap:
         self.ui.sj_stock_lEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_ckBox_03 = self.wc.setCheckBox('잔고청산', self.ui.sj_bs_groupBox_05, tip='전략 종료 시 보유잔고를 시장가청산한다.')
-        self.ui.sj_stock_ckBox_04 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_09, tip='장초전략 마감 후 리시버, 콜렉터, 트레이더 프로세스를 종료한다.')
+        self.ui.sj_stock_ckBox_04 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_09, tip='장초전략 마감 후 리시버, 트레이더 프로세스를 종료한다.')
         self.ui.sj_stock_ckBox_05 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_11, tip='프로세스를 종료 후 컴퓨터를 종료한다.')
         text = '장중전략 매수                                              ' \
                '매도                                                        ' \
@@ -121,7 +123,7 @@ class SetSetupTap:
         self.ui.sj_stock_lEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_ckBox_06 = self.wc.setCheckBox('잔고청산', self.ui.sj_bs_groupBox_05, tip='전략 종료 시 보유잔고를 시장가청산한다.')
-        self.ui.sj_stock_ckBox_07 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_09, tip='장중전략 마감 후 리시버, 콜렉터, 트레이더 프로세스를 종료한다.')
+        self.ui.sj_stock_ckBox_07 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_09, tip='장중전략 마감 후 리시버, 트레이더 프로세스를 종료한다.')
         self.ui.sj_stock_ckBox_08 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_11, tip='프로세스를 종료 후 컴퓨터를 종료한다.')
 
         self.ui.sproc_exit_listtt = [self.ui.sj_stock_ckBox_04, self.ui.sj_stock_ckBox_07]
@@ -148,7 +150,7 @@ class SetSetupTap:
         self.ui.sj_coin_liEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_cheBox_03 = self.wc.setCheckBox('잔고청산', self.ui.sj_bs_groupBox_06, tip='전략 종료 시 보유잔고를 시장가청산한다.')
-        self.ui.sj_coin_cheBox_04 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_10, tip='장초전략 마감 후 리시버, 콜렉터, 트레이더 프로세스를 종료한다.')
+        self.ui.sj_coin_cheBox_04 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_10, tip='장초전략 마감 후 리시버, 트레이더 프로세스를 종료한다.')
         self.ui.sj_coin_cheBox_05 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_11, tip='프로세스를 종료 후 컴퓨터를 종료한다.')
         text = '장중전략 매수                                              ' \
                '매도                                                        ' \
@@ -160,7 +162,7 @@ class SetSetupTap:
         self.ui.sj_coin_liEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_cheBox_06 = self.wc.setCheckBox('잔고청산', self.ui.sj_bs_groupBox_06, tip='전략 종료 시 보유잔고를 시장가청산한다.')
-        self.ui.sj_coin_cheBox_07 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_10, tip='장중전략 마감 후 리시버, 콜렉터, 트레이더 프로세스를 종료한다.')
+        self.ui.sj_coin_cheBox_07 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_10, tip='장중전략 마감 후 리시버, 트레이더 프로세스를 종료한다.')
         self.ui.sj_coin_cheBox_08 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_11, tip='프로세스를 종료 후 컴퓨터를 종료한다.')
 
         self.ui.cproc_exit_listtt = [self.ui.sj_coin_cheBox_04, self.ui.sj_coin_cheBox_07]
@@ -200,12 +202,14 @@ class SetSetupTap:
 
         self.ui.sj_back_cheBox_15 = self.wc.setCheckBox('주식 DB 자동관리(일자DB분리, 백테DB추가)', self.ui.sj_bs_groupBox_07, tip='틱데이터 저장 후 일자별분리 및 백테디비추가가 자동실행됨')
         self.ui.sj_back_cheBox_16 = self.wc.setCheckBox('교차검증 최적화에 가중치 적용하기', self.ui.sj_bs_groupBox_07, tip='교차검증 최적화 시 최근데이터일수록 가중치를 줘서 기준값을 계산한다.')
-        self.ui.sj_back_labell_03 = QLabel(' ▣  백테스트 스케쥴러 자동실행                                                        엔진시작일자', self.ui.sj_bs_groupBox_07)
+        self.ui.sj_back_cheBox_19 = self.wc.setCheckBox('스케쥴러 자동실행 | 요일                 시간                                                                                     엔진시작일자', self.ui.sj_bs_groupBox_07, tip='백테 스케쥴러를 자동실행한다.')
+        self.ui.sj_back_comBox_05 = self.wc.setCombobox(self.ui.sj_bs_groupBox_07, items=['금', '토', '일'])
+        self.ui.sj_back_liEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_07)
         self.ui.sj_back_comBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_07, items=['주식', '코인'])
         self.ui.sj_back_comBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_07)
         self.ui.sj_back_cheBox_17 = self.wc.setCheckBox('                   일전', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_17)
         self.ui.sj_back_liEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_18 = self.wc.setCheckBox('                                    고정', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_18)
+        self.ui.sj_back_cheBox_18 = self.wc.setCheckBox('                                        고정', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_18)
         self.ui.sj_back_daEdit_01 = self.wc.setDateEdit(self.ui.sj_bs_groupBox_07)
 
         self.ui.sj_ilbunback_listtt = [self.ui.sj_back_cheBox_04, self.ui.sj_back_cheBox_05]
@@ -215,8 +219,7 @@ class SetSetupTap:
             self.ui.sj_coin_cheBox_08, self.ui.sj_back_cheBox_09
         ]
 
-        self.ui.sj_etc_checBox_01 = self.wc.setCheckBox('주식틱데이터 자동저장(30분주기)', self.ui.sj_bs_groupBox_08)
-        self.ui.sj_etc_labelll_01 = QLabel('▣ UI 테마 선택                                (재구동 후 적용)', self.ui.sj_bs_groupBox_08)
+        self.ui.sj_etc_labelll_01 = QLabel('▣  UI 테마 선택                                (재구동 후 적용)', self.ui.sj_bs_groupBox_08)
         self.ui.sj_etc_comBoxx_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_08, items=['다크블루', '다크브라운', '다크그린', '다크옐로', '다크라임', '다크퍼플'])
         self.ui.sj_etc_checBox_02 = self.wc.setCheckBox('저해상도 설정 (해상도 1920 x 1080일 경우, 재구동 후 적용)', self.ui.sj_bs_groupBox_08)
         self.ui.sj_etc_checBox_03 = self.wc.setCheckBox('프로그램 종료 시 창위치 기억하기 (재구동 후 적용)', self.ui.sj_bs_groupBox_08)
@@ -245,11 +248,8 @@ class SetSetupTap:
 
         self.ui.sj_etc_pButton_01 = self.wc.setPushbutton('계정 텍스트 보기', box=self.ui.sj_bs_groupBox_02, click=self.ui.sjButtonClicked_17)
         self.ui.sj_etc_pButton_02 = self.wc.setPushbutton('주식일봉분봉 수동다운로드', box=self.ui.sj_bs_groupBox_07, click=self.ui.sjButtonClicked_18)
-        self.ui.sj_etc_pButton_03 = self.wc.setPushbutton('이전 최적화 데이터 삭제', box=self.ui.sj_bs_groupBox_07, click=self.ui.sjButtonClicked_32)
-        self.ui.sj_etc_pButton_04 = self.wc.setPushbutton('주식틱데이터 수동저장하기', box=self.ui.sj_bs_groupBox_08, click=self.ui.sjButtonClicked_19)
 
         self.ui.set_tapWidgett_01.setGeometry(7, 10, 1341, 740)
-        self.ui.sj_log_labelll_00.setGeometry(572, 10, 200, 20)
         self.ui.sj_set_labelll_01.setGeometry(847, 10, 50, 20)
         self.ui.sj_set_comBoxx_01.setGeometry(902, 10, 120, 20)
         self.ui.sj_set_pButton_01.setGeometry(1027, 10, 50, 20)
@@ -288,12 +288,16 @@ class SetSetupTap:
         self.ui.sj_main_liEdit_04.setGeometry(900, 50, 50, 20)
 
         self.ui.sj_main_labell_02.setGeometry(10, 75, 500, 20)
-        self.ui.sj_main_liEdit_05.setGeometry(235, 75, 50, 20)
-        self.ui.sj_main_liEdit_06.setGeometry(410, 75, 50, 20)
+        self.ui.sj_main_liEdit_05.setGeometry(185, 75, 75, 20)
+        self.ui.sj_main_liEdit_06.setGeometry(385, 75, 75, 20)
         self.ui.sj_main_labell_03.setGeometry(500, 75, 500, 20)
         self.ui.sj_lvrg_Button_01.setGeometry(590, 75, 150, 20)
         self.ui.sj_main_comBox_03.setGeometry(800, 75, 50, 20)
         self.ui.sj_main_comBox_04.setGeometry(900, 75, 50, 20)
+
+        self.ui.sj_main_cheBox_09.setGeometry(970, 25, 200, 20)
+        self.ui.sj_main_cheBox_10.setGeometry(970, 50, 220, 20)
+        self.ui.sj_main_cheBox_11.setGeometry(970, 75, 220, 20)
 
         self.ui.sj_sacc_labell_01.setGeometry(10, 25, 1000, 20)
         self.ui.sj_sacc_liEdit_01.setGeometry(115, 25, 130, 20)
@@ -405,17 +409,18 @@ class SetSetupTap:
 
         self.ui.sj_back_cheBox_15.setGeometry(10, 100, 250, 20)
         self.ui.sj_back_cheBox_16.setGeometry(275, 100, 250, 20)
-        self.ui.sj_back_labell_03.setGeometry(500, 100, 450, 20)
-        self.ui.sj_back_comBox_03.setGeometry(662, 100, 50, 20)
-        self.ui.sj_back_comBox_04.setGeometry(717, 100, 100, 20)
-        self.ui.sj_back_cheBox_17.setGeometry(900, 100, 110, 20)
-        self.ui.sj_back_liEdit_02.setGeometry(920, 100, 50, 20)
-        self.ui.sj_back_cheBox_18.setGeometry(1010, 100, 200, 20)
-        self.ui.sj_back_daEdit_01.setGeometry(1030, 100, 100, 20)
+        self.ui.sj_back_cheBox_19.setGeometry(500, 100, 800, 20)
+        self.ui.sj_back_comBox_05.setGeometry(645, 100, 40, 20)
+        self.ui.sj_back_liEdit_03.setGeometry(720, 100, 70, 20)
+        self.ui.sj_back_comBox_03.setGeometry(800, 100, 50, 20)
+        self.ui.sj_back_comBox_04.setGeometry(855, 100, 100, 20)
+        self.ui.sj_back_cheBox_17.setGeometry(1040, 100, 110, 20)
+        self.ui.sj_back_liEdit_02.setGeometry(1060, 100, 50, 20)
+        self.ui.sj_back_cheBox_18.setGeometry(1150, 100, 220, 20)
+        self.ui.sj_back_daEdit_01.setGeometry(1170, 100, 110, 20)
 
-        self.ui.sj_etc_checBox_01.setGeometry(10, 25, 500, 20)
-        self.ui.sj_etc_labelll_01.setGeometry(220, 25, 300, 20)
-        self.ui.sj_etc_comBoxx_01.setGeometry(305, 25, 85, 20)
+        self.ui.sj_etc_labelll_01.setGeometry(10, 25, 300, 20)
+        self.ui.sj_etc_comBoxx_01.setGeometry(100, 25, 85, 20)
         self.ui.sj_etc_checBox_02.setGeometry(500, 25, 350, 20)
         self.ui.sj_etc_checBox_03.setGeometry(835, 25, 300, 20)
         self.ui.sj_etc_checBox_04.setGeometry(10, 50, 500, 20)
@@ -443,5 +448,3 @@ class SetSetupTap:
 
         self.ui.sj_etc_pButton_01.setGeometry(1175, 50, 145, 20)
         self.ui.sj_etc_pButton_02.setGeometry(1175, 50, 145, 20)
-        self.ui.sj_etc_pButton_03.setGeometry(1175, 75, 145, 20)
-        self.ui.sj_etc_pButton_04.setGeometry(1175, 50, 145, 20)

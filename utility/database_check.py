@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import pandas as pd
 from static import read_key, write_key
@@ -14,19 +15,63 @@ except:
     write_key()
     print('시스템 명령 실행 알림 - 암호화키 생성 완료')
 
+delete_file = './licence.txt'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_backscheduler.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stock/collector_kiwoom.py'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './coin/collector_coin.py'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './utility/db_update_20220529.py'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './utility/db_update_20220713.py'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './utility/db_update_20230126.py'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './db_update_20220529.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './db_update_20220713.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './db_update_20230126.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_32.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_32.bat.lnk'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_32_stocklogin.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_64.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_64.bat.lnk'
+if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file = './stom_64_backscheduler.bat'
+if os.path.isfile(delete_file): os.remove(delete_file)
+
 con = sqlite3.connect(DB_SETTING)
 df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
 table_list = df['name'].to_list()
 
 if 'main' not in table_list:
     columns = [
-        'index', '증권사', '주식리시버', '주식콜렉터', '주식트레이더', '거래소', '코인리시버', '코인콜렉터', '코인트레이더',
+        'index', '증권사', '주식리시버', '주식트레이더', '주식틱데이터저장', '거래소', '코인리시버', '코인트레이더', '코인틱데이터저장',
         '장중전략조건검색식사용', '주식순위시간', '주식순위선정', '코인순위시간', '코인순위선정', '리시버실행시간', '트레이더실행시간',
-        '바이낸스선물고정레버리지', '바이낸스선물고정레버리지값', '바이낸스선물변동레버리지값', '바이낸스선물마진타입', '바이낸스선물포지션'
+        '바이낸스선물고정레버리지', '바이낸스선물고정레버리지값', '바이낸스선물변동레버리지값', '바이낸스선물마진타입', '바이낸스선물포지션',
+        '버전업', '리시버공유'
     ]
-    data = [0, '키움증권1', 0, 0, 0, '바이낸스선물', 0, 0, 0, 0, 5, 50, 5, 10, 84000, 84500, 1, 1, '0;5;1^5;10;2^10;20;3^20;30;4^30;100;5', 'ISOLATED', 'false']
+    data = [0, '키움증권1', 0, 0, 0, '바이낸스선물', 0, 0, 0, 0, 5, 50, 5, 10, 84000, 84500, 1, 1, '0;5;1^5;10;2^10;20;3^20;30;4^30;100;5', 'ISOLATED', 'false', 1, 0]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('main', con)
+else:
+    df = pd.read_sql('SELECT * FROM main', con).set_index('index')
+    if '주식틱데이터저장' not in df.columns:
+        df.drop(columns=['주식콜렉터'], inplace=True)
+        df.drop(columns=['코인콜렉터'], inplace=True)
+        df['주식틱데이터저장'] = 0
+        df['코인틱데이터저장'] = 0
+        df['버전업'] = 1
+        df['리시버공유'] = 0
+        df.to_sql('main', con, if_exists='replace')
 
 if 'sacc' not in table_list:
     columns = [
@@ -76,55 +121,30 @@ if 'back' not in table_list:
     columns = [
         "index", "블랙리스트추가", "백테주문관리적용", "백테매수시간기준", "백테일괄로딩", "주식일봉데이터", "주식분봉데이터", "주식분봉기간",
         "주식일봉데이터다운", "주식일봉다운컴종료", "일봉다운실행시간", "코인일봉데이터", "코인분봉데이터", "코인분봉기간",
-        "코인일봉데이터다운", "그래프저장하지않기", "그래프띄우지않기", "디비자동관리", "교차검증가중치", "백테스케쥴구분",
-        "백테스케쥴명", "백테날짜고정", "백테날짜", "최적화기준값제한"
+        "코인일봉데이터다운", "그래프저장하지않기", "그래프띄우지않기", "디비자동관리", "교차검증가중치", "백테스케쥴실행", "백테스케쥴요일",
+        "백테스케쥴시간", "백테스케쥴구분", "백테스케쥴명", "백테날짜고정", "백테날짜", "최적화기준값제한", "백테엔진분류방법"
     ]
-    data = [0, 0, 0, 0, 1, 0, 0, 5, 0, 0, 154000, 0, 0, 5, 0, 0, 0, 1, 1, '', '', 1, '20220323', '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;0.0;10000.0;0.0;10.0']
+    data = [0, 0, 0, 0, 1, 0, 0, 5, 0, 0, 154000, 0, 0, 5, 0, 0, 0, 1, 1, 0, 4, 160000, '', '', 1, '20220323', '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;0.0;10000.0;0.0;10.0', '종목코드별 분류']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('back', con)
 else:
-    change = False
     df = pd.read_sql('SELECT * FROM back', con).set_index('index')
-    if '백테주문관리적용' not in df.columns:
-        df.drop(columns=['백테매수금지적용'], inplace=True)
-        df['백테주문관리적용'] = 0
-        change = True
-    if '그래프저장하지않기' not in df.columns:
-        df['그래프저장하지않기'] = 0
-        df['그래프띄우지않기'] = 0
-        change = True
-    if '백테매수시간기준' not in df.columns:
-        df['백테매수시간기준'] = 0
-        change = True
-
-    if change:
+    if '백테스케쥴실행' not in df.columns:
+        df['백테엔진분류방법'] = '종목코드별 분류'
+        df['백테스케쥴실행'] = 0
+        df['백테스케쥴요일'] = 4
+        df['백테스케쥴시간'] = 160000
         df.to_sql('back', con, if_exists='replace')
 
-    try:
-        con2 = sqlite3.connect(DB_BACKTEST)
-        df = pd.read_sql('SELECT * FROM back_vc_list', con2).set_index('index')
-        if '주관적용' not in df.columns:
-            import os
-            file_list = os.listdir('./_databasevc')
-            for file in file_list:
-                os.remove(f'./_databasevc/{file}')
-            cur2 = con2.cursor()
-            cur2.execute('DROP TABLE back_vc_list')
-            con2.commit()
-        con2.close()
-    except:
-        pass
-
 if 'etc' not in table_list:
-    columns = ["index", "주식틱자동저장", "테마", "저해상도", "휴무프로세스종료", "휴무컴퓨터종료", "창위치기억", "창위치", "스톰라이브", "프로그램종료", "팩터선택"]
-    data = [0, 0, '다크블루', 0, 1, 0, 1, '0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0', 1, 0, '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1']
+    columns = ["index", "테마", "저해상도", "휴무프로세스종료", "휴무컴퓨터종료", "창위치기억", "창위치", "스톰라이브", "프로그램종료", "팩터선택"]
+    data = [0, '다크블루', 0, 1, 0, 1, '', 1, 0, '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('etc', con)
 else:
     df = pd.read_sql('SELECT * FROM etc', con).set_index('index')
-    if '프로그램만종료' in df.columns:
-        df.drop(columns=['프로그램만종료'], inplace=True)
-        df['프로그램종료'] = 0
+    if '주식틱자동저장' in df.columns:
+        df.drop(columns=['주식틱자동저장'], inplace=True)
         df.to_sql('etc', con, if_exists='replace')
 
 if 'stockbuyorder' not in table_list:
@@ -139,11 +159,6 @@ if 'stockbuyorder' not in table_list:
     data = [0, '시장가', 1, 2, 1, 0, 1, 0.5, 0.5, 1, '매수1호가', 0, 3, 0, 0, 0, 30, 0, 0, 5, 0, 2, 0, 2, 0, 120000, 130000, 0, 5, 0, 300, 0, 5, 2]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('stockbuyorder', con)
-else:
-    df = pd.read_sql('SELECT * FROM stockbuyorder', con).set_index('index')
-    if '주식매수분할고정수익률' not in df.columns:
-        df['주식매수분할고정수익률'] = 0
-        df.to_sql('stockbuyorder', con, if_exists='replace')
 
 if 'stocksellorder' not in table_list:
     columns = [
@@ -157,15 +172,6 @@ if 'stocksellorder' not in table_list:
     data = [0, '시장가', 1, 1, 1, 0, 1, 0.5, 2.0, '매도1호가', 0, 5, 0, 0, 0, 30, 0, 5, 0, 100, 0, 2, 0, 5, 0, 120000, 130000, 0, 300, 0, 5, 2]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('stocksellorder', con)
-else:
-    df = pd.read_sql('SELECT * FROM stocksellorder', con).set_index('index')
-    if '주식매도손절수익금청산' not in df.columns:
-        df.drop(columns=['주식매도손절청산', '주식매도손절수익률'], inplace=True)
-        df['주식매도손절수익률청산'] = 0
-        df['주식매도손절수익률'] = 5
-        df['주식매도손절수익금청산'] = 0
-        df['주식매도손절수익금'] = 100
-        df.to_sql('stocksellorder', con, if_exists='replace')
 
 if 'coinbuyorder' not in table_list:
     columns = [
@@ -179,11 +185,6 @@ if 'coinbuyorder' not in table_list:
     data = [0, '시장가', 1, 1, 1, 0, 1, 0.5, 0.5, 1, '매수1호가', 0, 3, 0, 0, 0, 30, 0, 0, 0, 2, 0, 2, 0, 150000, 210000, 0, 5, 0, 300, 0, 5, 2]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('coinbuyorder', con)
-else:
-    df = pd.read_sql('SELECT * FROM coinbuyorder', con).set_index('index')
-    if '코인매수분할고정수익률' not in df.columns:
-        df['코인매수분할고정수익률'] = 0
-        df.to_sql('coinbuyorder', con, if_exists='replace')
 
 if 'coinsellorder' not in table_list:
     columns = [
@@ -196,15 +197,6 @@ if 'coinsellorder' not in table_list:
     data = [0, '시장가', 1, 1, 1, 0, 1, 0.5, 2.0, '매도1호가', 0, 5, 0, 0, 0, 30, 0, 5, 0, 100, 0, 2, 0, 150000, 210000, 0, 300, 0, 5, 2]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('coinsellorder', con)
-else:
-    df = pd.read_sql('SELECT * FROM coinsellorder', con).set_index('index')
-    if '코인매도손절수익금청산' not in df.columns:
-        df.drop(columns=['코인매도손절청산', '코인매도손절수익률'], inplace=True)
-        df['코인매도손절수익률청산'] = 0
-        df['코인매도손절수익률'] = 5
-        df['코인매도손절수익금청산'] = 0
-        df['코인매도손절수익금'] = 100
-        df.to_sql('coinsellorder', con, if_exists='replace')
 
 if 'codename' not in table_list:
     columns = ["index", "종목명"]
@@ -221,13 +213,11 @@ df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
 table_list = df['name'].to_list()
 
 if 'coinbuy' not in table_list:
-    query = 'CREATE TABLE "coinbuy" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinbuy" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinbuy_index" ON "coinbuy"("index")')
 
 if 'coinsell' not in table_list:
-    query = 'CREATE TABLE "coinsell" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinsell" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinsell_index"ON "coinsell" ("index")')
 
 if 'coinoptibuy' not in table_list:
@@ -254,46 +244,33 @@ if 'coinoptibuy' not in table_list:
             '"변수190" REAL, "변수191" REAL, "변수192" REAL, "변수193" REAL, "변수194" REAL, "변수195" REAL, "변수196" REAL, "변수197" REAL, "변수198" REAL, "변수199" REAL )'
     cur.execute(query)
     cur.execute('CREATE INDEX "ix_coinoptibuy_index"ON "coinoptibuy" ("index")')
-else:
-    df = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
-    if '변수100' not in df.columns:
-        for num in range(100, 200, 1):
-            df[f'변수{num}'] = 9999.
-        df.to_sql('coinoptibuy', con, if_exists='replace')
 
 if 'coinoptisell' not in table_list:
-    query = 'CREATE TABLE "coinoptisell" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinoptisell" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinoptisell_index"ON "coinoptisell" ("index")')
 
 if 'coinoptivars' not in table_list:
-    query = 'CREATE TABLE "coinoptivars" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinoptivars" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinoptivars_index"ON "coinoptivars" ("index")')
 
 if 'coinvars' not in table_list:
-    query = 'CREATE TABLE "coinvars" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinvars" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinvars_index"ON "coinvars" ("index")')
 
 if 'coinbuyconds' not in table_list:
-    query = 'CREATE TABLE "coinbuyconds" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinbuyconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinbuyconds_index" ON "coinbuyconds"("index")')
 
 if 'coinsellconds' not in table_list:
-    query = 'CREATE TABLE "coinsellconds" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "coinsellconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinsellconds_index"ON "coinsellconds" ("index")')
 
 if 'stockbuy' not in table_list:
-    query = 'CREATE TABLE "stockbuy" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stockbuy" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockbuy_index"ON "stockbuy" ("index")')
 
 if 'stocksell' not in table_list:
-    query = 'CREATE TABLE "stocksell" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stocksell" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stocksell_index"ON "stocksell" ("index")')
 
 if 'stockoptibuy' not in table_list:
@@ -320,41 +297,29 @@ if 'stockoptibuy' not in table_list:
             '"변수190" REAL, "변수191" REAL, "변수192" REAL, "변수193" REAL, "변수194" REAL, "변수195" REAL, "변수196" REAL, "변수197" REAL, "변수198" REAL, "변수199" REAL )'
     cur.execute(query)
     cur.execute('CREATE INDEX "ix_stockoptibuy_index"ON "stockoptibuy" ("index")')
-else:
-    df = pd.read_sql('SELECT * FROM stockoptibuy', con).set_index('index')
-    if '변수100' not in df.columns:
-        for num in range(100, 200, 1):
-            df[f'변수{num}'] = 9999.
-        df.to_sql('stockoptibuy', con, if_exists='replace')
 
 if 'stockoptisell' not in table_list:
-    query = 'CREATE TABLE "stockoptisell" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stockoptisell" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockoptisell_index"ON "stockoptisell" ("index")')
 
 if 'stockoptivars' not in table_list:
-    query = 'CREATE TABLE "stockoptivars" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stockoptivars" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockoptivars_index"ON "stockoptivars" ("index")')
 
 if 'stockvars' not in table_list:
-    query = 'CREATE TABLE "stockvars" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stockvars" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockvars_index"ON "stockvars" ("index")')
 
 if 'stockbuyconds' not in table_list:
-    query = 'CREATE TABLE "stockbuyconds" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stockbuyconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockbuyconds_index" ON "stockbuyconds"("index")')
 
 if 'stocksellconds' not in table_list:
-    query = 'CREATE TABLE "stocksellconds" ( "index" TEXT, "전략코드" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "stocksellconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stocksellconds_index"ON "stocksellconds" ("index")')
 
 if 'schedule' not in table_list:
-    query = 'CREATE TABLE "schedule" ( "index" TEXT, "스케쥴" TEXT )'
-    cur.execute(query)
+    cur.execute('CREATE TABLE "schedule" ( "index" TEXT, "스케쥴" TEXT )')
     cur.execute('CREATE INDEX "ix_schedule_index"ON "schedule" ("index")')
 
 con.commit()

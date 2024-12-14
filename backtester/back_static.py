@@ -9,11 +9,33 @@ import pandas as pd
 from traceback import print_exc
 from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
-from utility.static import strp_time, strf_time
+from utility.static import strp_time, strf_time, timedelta_sec
 from utility.setting import ui_num, GRAPH_PATH, columns_btf, columns_bt, DICT_SET, DB_SETTING
 
 
-def GetQuery(gubun, startday, endday, starttime, endtime):
+def GetBackloadCodeQuery(code, days, starttime, endtime):
+    last      = len(days) - 1
+    like_text = '( '
+    for i, day in enumerate(days):
+        if i != last:
+            like_text += f"`index` LIKE '{day}%' or "
+        else:
+            like_text += f"`index` LIKE '{day}%' )"
+    query = f"SELECT * FROM '{code}' WHERE {like_text} and " \
+            f"`index` % 1000000 >= {starttime} and " \
+            f"`index` % 1000000 <= {endtime}"
+    return query
+
+
+def GetBackloadDayQuery(day, code, starttime, endtime):
+    query = f"SELECT * FROM '{code}' WHERE " \
+            f"`index` LIKE '{day}%' and " \
+            f"`index` % 1000000 >= {starttime} and " \
+            f"`index` % 1000000 <= {endtime}"
+    return query
+
+
+def GetMoneytopQuery(gubun, startday, endday, starttime, endtime):
     if gubun == 'S' and starttime < 90030:
         query = f"SELECT * FROM moneytop WHERE " \
                 f"`index` >= {startday * 1000000} and " \
@@ -27,6 +49,25 @@ def GetQuery(gubun, startday, endday, starttime, endtime):
                 f"`index` % 1000000 >= {starttime} and " \
                 f"`index` % 1000000 <= {endtime}"
     return query
+
+
+def AddAvgData(df, r, avg_list):
+    df['이평60'] = df['현재가'].rolling(window=60).mean().round(r)
+    df['이평300'] = df['현재가'].rolling(window=300).mean().round(r)
+    df['이평600'] = df['현재가'].rolling(window=600).mean().round(r)
+    df['이평1200'] = df['현재가'].rolling(window=1200).mean().round(r)
+    for avg in avg_list:
+        df[f'최고현재가{avg}'] = df['현재가'].rolling(window=avg).max()
+        df[f'최저현재가{avg}'] = df['현재가'].rolling(window=avg).min()
+        df[f'체결강도평균{avg}'] = df['체결강도'].rolling(window=avg).mean()
+        df[f'최고체결강도{avg}'] = df['체결강도'].rolling(window=avg).max()
+        df[f'최저체결강도{avg}'] = df['체결강도'].rolling(window=avg).min()
+        df[f'최고초당매수수량{avg}'] = df['초당매수수량'].rolling(window=avg).max()
+        df[f'최고초당매도수량{avg}'] = df['초당매도수량'].rolling(window=avg).max()
+        df[f'누적초당매수수량{avg}'] = df['초당매수수량'].rolling(window=avg).sum()
+        df[f'누적초당매도수량{avg}'] = df['초당매도수량'].rolling(window=avg).sum()
+        df[f'초당거래대금평균{avg}'] = df['초당거래대금'].rolling(window=avg).mean()
+    return df
 
 
 def LoadOrderSetting(gubun):
@@ -167,13 +208,13 @@ def SetSellCondFuture(selllist):
 
 
 def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, exponential=False):
-    gubun, ui_gubun, wq, mq, stdp, optistd, varc, vars_list, startday, endday = back_list
+    gubun, ui_gubun, wq, mq, stdp, optistd, vars_turn, vars_key, vars_list, startday, endday = back_list
     if gubun in ['최적화', '최적화테스트']:
-        text1 = GetText1(varc, vars_list)
+        text1 = GetText1(vars_turn, vars_list)
     elif gubun == 'GA최적화':
         text1 = f'<font color=white> V{vars_list} </font>'
     elif gubun == '전진분석':
-        text1 = f'<font color=#f78645>[IN] P[{startday}~{endday}]</font>{GetText1(varc, vars_list)}'
+        text1 = f'<font color=#f78645>[IN] P[{startday}~{endday}]</font>{GetText1(vars_turn, vars_list)}'
     else:
         text1 = ''
 
@@ -196,7 +237,7 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
             valid_data.append(std)
 
         std = GetOptiValidStd(train_data, valid_data, optistd, betting, exponential)
-        text3, stdp_ = GetText3(std, stdp)
+        text3, stdp_ = GetText3(True, std, stdp)
 
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text3}'])
         for text in train_text:
@@ -205,27 +246,29 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
             wq.put([ui_num[f'{ui_gubun}백테스트'], text])
     else:
         if gubun in ['GA최적화', '조건최적화']:
-            text2, std = GetText2('', optistd, std_list, betting, dict_train)
+            text2, std   = GetText2('', optistd, std_list, betting, dict_train)
+            text3, stdp_ = GetText3(False, std, stdp)
+            text2 = f'{text2}{text3}'
         elif gubun == '최적화테스트':
             text2, std = GetText2('TEST', optistd, std_list, betting, dict_train)
         else:
             text2, std = GetText2('TOTAL', optistd, std_list, betting, dict_train)
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
 
-    if varc != -2:
-        mq.put(std)
+    if vars_turn >= 0:
+        mq.put([std, vars_key])
     return stdp_
 
 
-def GetText1(varc, vars_list):
+def GetText1(vars_turn, vars_list):
     prev_vars, curr_vars, next_vars = '', '', ''
-    if varc < 0:
+    if vars_turn < 0:
         next_vars = f'<font color=#6eff6e> V{vars_list} </font>'
     else:
-        prev_vars = f' V{vars_list[:varc]}'.split(']')[0]
-        prev_vars = f'<font color=white>{prev_vars}, </font>'
-        curr_vars = f'<font color=#6eff6e>{vars_list[varc]}</font>'
-        next_vars = f'{vars_list[varc + 1:]}'.split('[')[1]
+        prev_vars = f' V{vars_list[:vars_turn]}'.split(']')[0]
+        prev_vars = f'<font color=white>{prev_vars}</font>' if vars_turn == 0 else f'<font color=white>{prev_vars}, </font>'
+        curr_vars = f'<font color=#6eff6e>{vars_list[vars_turn]}</font>'
+        next_vars = f'{vars_list[vars_turn + 1:]}'.split('[')[1]
         if next_vars != ']': next_vars = f', {next_vars}'
         next_vars = f'<font color=white>{next_vars} </font>'
     return f'{prev_vars}{curr_vars}{next_vars}'
@@ -241,8 +284,8 @@ def GetText2(gubun, optistd, std_list, betting, result):
     return text, std
 
 
-def GetText3(std, stdp):
-    text = f'<font color=#f78645>MERGE[{std:,.2f}]</font>'
+def GetText3(gubun, std, stdp):
+    text = f'<font color=#f78645>MERGE[{std:,.2f}]</font>' if gubun else ''
     if std >= stdp:
         text = f'{text}<font color=#6eff6e>[기준값갱신]</font>' if std > stdp else f'{text}<font color=white>[기준값동일]</font>'
         stdp = std
@@ -604,6 +647,67 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
         plt.show()
 
 
+class CollectTotal:
+    def __init__(self, tq, ctq, buystd, gubun):
+        self.tq       = tq
+        self.ctq      = ctq
+        self.buystd   = buystd
+        self.gubun    = gubun
+        self.arry_bct = None
+        self.list_k   = []
+        self.list_c   = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.Start()
+
+    def Start(self):
+        while True:
+            data = self.ctq.get()
+            if data[0] == '백테결과':
+                self.Collect(data)
+            elif data == '백테완료':
+                if self.list_k:
+                    data = ['백테결과', self.gubun, self.list_k, self.list_c, self.arry_bct]
+                else:
+                    data = ['백테결과', None, None, None, None]
+                self.tq.put(data)
+            elif data == '백테시작':
+                self.InitData()
+            elif data[0] == '보유종목수어레이':
+                self.arry_bct = data[1]
+            else:
+                break
+        sys.exit()
+
+    def Collect(self, data):
+        index = str(data[3]) if self.buystd else str(data[4])
+        while index in self.list_k:
+            index += strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
+
+        self.list_k.append(index)
+        self.list_c[0].append(data[1])
+        self.list_c[1].append(data[2])
+        self.list_c[2].append(data[3])
+        self.list_c[3].append(data[4])
+        self.list_c[4].append(data[5])
+        self.list_c[5].append(data[6])
+        self.list_c[6].append(data[7])
+        self.list_c[7].append(data[8])
+        self.list_c[8].append(data[9])
+        self.list_c[9].append(data[10])
+        self.list_c[10].append(data[11])
+        self.list_c[11].append(data[12])
+        self.list_c[12].append(data[13])
+
+        if data[14]:
+            arry_bct = self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])]
+            arry_bct[:, 1] += 1
+            self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])] = arry_bct
+
+    def InitData(self):
+        self.arry_bct[:, 1] = 0
+        self.list_k = []
+        self.list_c = [[], [], [], [], [], [], [], [], [], [], [], [], []]
+
+
 class SubTotal:
     def __init__(self, tq, stq, betting, optistd, gubun):
         self.tq      = tq
@@ -623,9 +727,14 @@ class SubTotal:
         sys.exit()
 
     def SendSubTotal(self, data):
-        index = 0
-        if len(data) == 8:
-            df_tsg, df_bct, vsday, veday, tsday, tdaycnt, vdaycnt, index = data
+        columns, list_c, list_k, arry_bct = data[:4]
+        df_tsg = pd.DataFrame(dict(zip(columns, list_c), index=list_k))
+        df_tsg.sort_index(inplace=True)
+        arry_bct = arry_bct[arry_bct[:, 1] > 0]
+        df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
+
+        if len(data) == 11:
+            vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | ((df_tsg['매도시간'] > veday * 1000000 + 240000) & (df_tsg['매도시간'] < tsday * 1000000))]
                 df_bct = df_bct[(df_bct.index < vsday * 1000000) | ((df_bct.index > veday * 1000000 + 240000) & (df_bct.index < tsday * 1000000))]
@@ -633,8 +742,9 @@ class SubTotal:
                 df_tsg = df_tsg[(df_tsg['매도시간'] >= vsday * 1000000) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
                 df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
-        elif len(data) == 7:
-            df_tsg, df_bct, vsday, veday, tdaycnt, vdaycnt, index = data
+            self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
+        elif len(data) == 10:
+            vsday, veday, tdaycnt, vdaycnt, index, vars_key = data[4:]
             if self.gubun:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | (df_tsg['매도시간'] > veday * 1000000 + 240000)]
                 df_bct = df_bct[(df_bct.index < vsday * 1000000) | (df_bct.index > veday * 1000000 + 240000)]
@@ -642,8 +752,9 @@ class SubTotal:
                 df_tsg = df_tsg[(df_tsg['매도시간'] >= vsday * 1000000) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
                 df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
-        else:
-            df_tsg, df_bct, teday, daycnt = data
+            self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
+        elif len(data) == 7:
+            teday, daycnt, vars_key = data[4:]
             df_tsg['구분'] = df_tsg['매도시간'].apply(lambda x: 0 if int(x / 1000000) % 2 == 0 else 1)
             df_bct['구분'] = df_bct.index
             df_bct['구분'] = df_bct['구분'].apply(lambda x: 0 if int(x / 1000000) % 2 == 0 else 1)
@@ -655,4 +766,8 @@ class SubTotal:
                 df_tsg = df_tsg[(df_tsg['매도시간'] < teday * 1000000) & (df_tsg['구분'] != gb)]
                 df_bct = df_bct[(df_bct.index < teday * 1000000) & (df_bct['구분'] != gb)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
-        self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result])
+            self.tq.put(['TRAIN' if self.gubun else 'VALID', 0, result, vars_key])
+        else:
+            daycnt, vars_key = data[4:]
+            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
+            self.tq.put(['ALL', 0, result, vars_key])

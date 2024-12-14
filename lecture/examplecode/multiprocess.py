@@ -30,6 +30,7 @@ class Window(QMainWindow):
 
         self.qtimer = QTimer()
         self.qtimer.setInterval(1 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer.timeout.connect(self.Scheduler)
         self.qtimer.start()
 
@@ -88,6 +89,7 @@ class Receiver:
 
         self.qtimer = QTimer()
         self.qtimer.setInterval(2 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer.timeout.connect(self.Scheduler)
         self.qtimer.start()
 
@@ -200,18 +202,18 @@ class Updater2(QThread):
         super().__init__()
         self.traderQ = traderQ_
 
-    # noinspection PyUnresolvedReferences
     def run(self):
         while True:
             data = self.traderQ.get()
             if data[0] in ['매수 시그널', '매도 시그널']:
+                # noinspection PyUnresolvedReferences
                 self.signal1.emit(data)
             elif data[0] == '잔고갱신':
+                # noinspection PyUnresolvedReferences
                 self.signal2.emit(data)
 
 
 class Trader:
-    # noinspection PyUnresolvedReferences
     def __init__(self, qlist_):
         """
             0         1           2          3         4
@@ -232,12 +234,15 @@ class Trader:
         self.df_jg = pd.DataFrame(columns=columns)
 
         self.updater = Updater2(self.traderQ)
+        # noinspection PyUnresolvedReferences
         self.updater.signal1.connect(self.SendOrder)
+        # noinspection PyUnresolvedReferences
         self.updater.signal2.connect(self.UpdateJango)
         self.updater.start()
 
         self.qtimer = QTimer()
         self.qtimer.setInterval(1 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer.timeout.connect(self.Scheduler)
         self.qtimer.start()
 

@@ -12,14 +12,12 @@ from utility.static import thread_decorator
 class WebCrawling:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ   = qlist[0]
         self.webcQ     = qlist[6]
-        self.backQ     = qlist[24]
+        self.backQ     = qlist[7]
         self.cmap      = matplotlib.colormaps['hsv']
         self.imagelist = None
         self.treemap   = False
@@ -33,23 +31,23 @@ class WebCrawling:
             elif type(data) == str:
                 self.Crawling(data)
 
-    def Crawling(self, cmd, code_or_url=None):
+    def Crawling(self, cmd, data=None):
         if cmd == '기업정보':
-            self.GugyCrawling(code_or_url)
-            self.GugsCrawling(code_or_url)
-            self.JmnsCrawling(code_or_url)
-            self.JmjpCrawling(code_or_url)
+            self.GugyCrawling(data)
+            self.GugsCrawling(data)
+            self.JmnsCrawling(data)
+            self.JmjpCrawling(data)
         elif cmd == '트리맵':
             self.treemap = True
             self.UjTmCrawling()
         elif cmd == '트리맵1':
-            self.UjTmCrawlingDetail(code_or_url, 1)
+            self.UjTmCrawlingDetail(data, 1)
         elif cmd == '트리맵2':
-            self.UjTmCrawlingDetail(code_or_url, 2)
+            self.UjTmCrawlingDetail(data, 2)
         elif cmd == '트리맵중단':
             self.treemap = False
         elif cmd == '지수차트':
-            self.JisuCrawling()
+            self.JisuCrawling(data)
         elif cmd == '풍경사진요청':
             self.GetImage()
 
@@ -58,9 +56,9 @@ class WebCrawling:
         try:
             if self.imagelist is None:
                 url = 'https://search.naver.com/search.naver?where=image&sm=tab_jum&query=%EA%B3%A0%ED%99%94%EC%A7%88%ED%92%8D%EA%B2%BD%EC%82%AC%EC%A7%84#imgId=image_sas%3Ablog820823%7C57%7C222093041979_1318628683'
-                self.imagelist = requests.get(url).text.split('originalUrl":"')
-                self.imagelist = [x.split('", ')[0] for x in self.imagelist if 'blogfiles.naver.net' in x and 'http' in x and '.jpg' in x][1:]
-                self.imagelist = [f'https://search.pstatic.net/common/?src={x}' for x in self.imagelist]
+                self.imagelist = requests.get(url).text.split('viewerThumb:"')[1:]
+                self.imagelist = [x.split('.jpg')[0] + '.jpg' for x in self.imagelist]
+                self.imagelist = [x for x in self.imagelist if 'lensThumb' not in x]
 
             webimage = request.urlopen(random.choice(self.imagelist)).read()
             self.windowQ.put([ui_num['풍경사진'], webimage])
@@ -210,7 +208,7 @@ class WebCrawling:
             self.windowQ.put([ui_num['트리맵2'], '', df, '', color_list])
 
     @thread_decorator
-    def JisuCrawling(self):
+    def JisuCrawling(self, startday):
         self.windowQ.put([ui_num['백테엔진'], '지수차트 웹크롤링 시작'])
 
         def crawl_index(code):
@@ -224,10 +222,10 @@ class WebCrawling:
                 close_list = [float(item.get_text().replace(',', '')) for i, item in enumerate(html.select('.number_1')) if i % 4 == 0]
                 df.append(pd.DataFrame(dict(zip(['index', '종가'], [day_list, close_list]))))
                 page += 1
-                if int(day_list[-1]) < 20220323:
+                if int(day_list[-1]) < startday:
                     break
             df = pd.concat(df)
-            df = df[df['index'] >= '20220323'][::-1]
+            df = df[df['index'] >= str(startday)][::-1]
             return df
 
         df_kp = crawl_index('KOSPI')

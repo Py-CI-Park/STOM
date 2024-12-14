@@ -1,5 +1,5 @@
+import zmq
 import shutil
-import psutil
 import random
 import ctypes
 import binance
@@ -51,33 +51,29 @@ from coin.kimp import Kimp
 from coin.trader_upbit import TraderUpbit
 from coin.strategy_upbit import StrategyUpbit
 from coin.receiver_upbit import ReceiverUpbit
-from coin.collector_coin import CollectorCoin
+from coin.receiver_upbit_client import ReceiverUpbitClient
 from coin.trader_binance_future import TraderBinanceFuture
 from coin.strategy_binance_future import StrategyBinanceFuture
 from coin.receiver_binance_future import ReceiverBinanceFuture
-
-from stock.trader_kiwoom import TraderKiwoom
-from stock.receiver_kiwoom import ReceiverKiwoom
-from stock.strategy_kiwoom import StrategyKiwoom
-from stock.strategy_kiwoom_ import StrategyKiwoom2
-from stock.collector_kiwoom import CollectorKiwoom
-from stock.login_kiwoom.manuallogin import find_window, leftClick, enter_keys, press_keys
-
+from coin.receiver_binance_future_client import ReceiverBinanceFutureClient
 from coin.simulator_upbit import ReceiverUpbit2, TraderUpbit2
-from stock.simulator_kiwoom import ReceiverKiwoom2, TraderKiwoom2
 from coin.simulator_binance import ReceiverBinanceFuture2, TraderBinanceFuture2
+from stock.login_kiwoom.manuallogin import leftClick, enter_keys, press_keys
 
-from backtester.back_static import GetQuery
+from backtester.back_static import CollectTotal, GetMoneytopQuery
 from backtester.back_code_test import BackCodeTest
 from backtester.backengine_stock import StockBackEngine
 from backtester.backengine_stock2 import StockBackEngine2
 from backtester.backengine_stock3 import StockBackEngine3
+from backtester.backengine_stock4 import StockBackEngine4
 from backtester.backengine_coin_upbit import CoinUpbitBackEngine
 from backtester.backengine_coin_upbit2 import CoinUpbitBackEngine2
 from backtester.backengine_coin_upbit3 import CoinUpbitBackEngine3
+from backtester.backengine_coin_upbit4 import CoinUpbitBackEngine4
 from backtester.backengine_coin_future import CoinFutureBackEngine
 from backtester.backengine_coin_future2 import CoinFutureBackEngine2
 from backtester.backengine_coin_future3 import CoinFutureBackEngine3
+from backtester.backengine_coin_future4 import CoinFutureBackEngine4
 from backtester.backtest import BackTest
 from backtester.backfinder import BackFinder
 from backtester.optimiz import Optimize
@@ -97,6 +93,71 @@ class NumericItem(QTableWidgetItem):
         return self.data(Qt.UserRole) < other.data(Qt.UserRole)
 
 
+class ZmqServ(QThread):
+    def __init__(self, wdservQ_, port_num):
+        super().__init__()
+        self.wdservQ_ = wdservQ_
+        self.zctx = zmq.Context()
+        self.sock = self.zctx.socket(zmq.PUB)
+        self.sock.bind(f'tcp://*:{port_num}')
+
+    def run(self):
+        while True:
+            msg, data = self.wdservQ_.get()
+            self.sock.send_string(msg, zmq.SNDMORE)
+            self.sock.send_pyobj(data)
+            if data == '통신종료':
+                QThread.sleep(1)
+                break
+        self.sock.close()
+        self.zctx.term()
+
+
+class ZmqRecv(QThread):
+    def __init__(self, qlist_, port_num):
+        super().__init__()
+        """
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
+        """
+        self.windowQ = qlist_[0]
+        self.soundQ  = qlist_[1]
+        self.queryQ  = qlist_[2]
+        self.teleQ   = qlist_[3]
+        self.chartQ  = qlist_[4]
+        self.hogaQ   = qlist_[5]
+        self.liveQ   = qlist_[11]
+
+        self.zctx = zmq.Context()
+        self.sock = self.zctx.socket(zmq.SUB)
+        self.sock.connect(f'tcp://localhost:{port_num}')
+        self.sock.setsockopt_string(zmq.SUBSCRIBE, '')
+
+    def run(self):
+        while True:
+            msg  = self.sock.recv_string()
+            data = self.sock.recv_pyobj()
+            if msg == 'window':
+                self.windowQ.put(data)
+                if data == '통신종료':
+                    QThread.sleep(1)
+                    break
+            elif msg == 'sound':
+                self.soundQ.put(data)
+            elif msg == 'query':
+                self.queryQ.put(data)
+            elif msg == 'chart':
+                self.chartQ.put(data)
+            elif msg == 'hoga':
+                self.hogaQ.put(data)
+            elif msg == 'live':
+                self.liveQ.put(data)
+            elif msg == 'qsize':
+                self.windowQ.put(data)
+        self.sock.close()
+        self.zctx.term()
+
+
 class Writer(QThread):
     signal1 = pyqtSignal(list)
     signal2 = pyqtSignal(list)
@@ -106,44 +167,63 @@ class Writer(QThread):
     signal6 = pyqtSignal(list)
     signal7 = pyqtSignal(list)
     signal8 = pyqtSignal(list)
+    signal9 = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
-        self.df   = None
-        self.test = False
+        df           = pd.DataFrame
+        self.df      = None
+        self.df_list = [df, df, df, df, df, df, df, df]
+        self.test    = None
 
-    # noinspection PyUnresolvedReferences
     def run(self):
+        gsjm_count = 0
         while True:
             try:
                 data = windowQ.get()
                 if type(data) == list:
-                    if data[0] <= ui_num['DB관리'] or data[0] == ui_num['기업개요']:
+                    if data[0] == 'qsize':
+                        # noinspection PyUnresolvedReferences
+                        self.signal9.emit(data[1:])
+                    elif data[0] <= ui_num['DB관리'] or data[0] == ui_num['기업개요']:
+                        # noinspection PyUnresolvedReferences
                         self.signal1.emit(data)
                     elif ui_num['S실현손익'] <= data[0] <= ui_num['C상세기록']:
-                        if self.test and data[0] in [ui_num['S관심종목1'], ui_num['S관심종목2']]:
-                            self.signal2.emit([ui_num['S관심종목2'], data[1]])
-                        elif data[0] == ui_num['S관심종목1']:
-                            self.df = data[1]
-                        elif data[0] == ui_num['S관심종목2']:
-                            if self.df is not None:
-                                self.df = pd.concat([self.df, data[1]])
-                                self.df.sort_values(by=['d_money'], ascending=False, inplace=True)
-                                self.signal2.emit([ui_num['S관심종목2'], self.df])
-                                self.df = None
+                        if data[0] == ui_num['S관심종목']:
+                            if not self.test:
+                                index = data[1]
+                                self.df_list[index] = data[2]
+                                gsjm_count += 1
+                                if gsjm_count == 8:
+                                    gsjm_count = 0
+                                    # noinspection PyTypeChecker
+                                    self.df = pd.concat(self.df_list)
+                                    self.df.sort_values(by=['d_money'], ascending=False, inplace=True)
+                                    # noinspection PyUnresolvedReferences
+                                    self.signal2.emit([ui_num['S관심종목'], self.df])
+                            else:
+                                # noinspection PyUnresolvedReferences
+                                self.signal2.emit([ui_num['S관심종목'], data[2]])
                         else:
+                            # noinspection PyUnresolvedReferences
                             self.signal2.emit(data)
                     elif data[0] == ui_num['차트']:
+                        # noinspection PyUnresolvedReferences
                         self.signal3.emit(data)
                     elif data[0] == ui_num['실시간차트']:
+                        # noinspection PyUnresolvedReferences
                         self.signal4.emit(data)
                     elif data[0] == ui_num['풍경사진']:
+                        # noinspection PyUnresolvedReferences
                         self.signal8.emit(data)
                     elif data[0] in [ui_num['일봉차트'], ui_num['분봉차트']]:
+                        # noinspection PyUnresolvedReferences
                         self.signal7.emit(data)
                     elif data[0] in [ui_num['코스피'], ui_num['코스닥']]:
+                        # noinspection PyUnresolvedReferences
                         self.signal5.emit(data)
                     elif data[0] >= ui_num['트리맵']:
+                        # noinspection PyUnresolvedReferences
                         self.signal6.emit(data)
                 else:
                     if data == '복기모드시작':
@@ -154,7 +234,6 @@ class Writer(QThread):
                 pass
 
 
-# noinspection PyUnresolvedReferences
 class Window(QMainWindow):
     def __init__(self, auto_run_):
         super().__init__()
@@ -180,8 +259,8 @@ class Window(QMainWindow):
         SetDialogEtc(self, self.wc)
         SetDialogBack(self, self.wc)
 
-        con1 = sqlite3.connect(DB_SETTING) if BIT32 else sqlite3.connect(DB_STOCK_BACK)
-        con2 = sqlite3.connect(DB_STOCK_BACK) if BIT32 else sqlite3.connect(DB_SETTING)
+        con1 = sqlite3.connect(DB_SETTING)
+        con2 = sqlite3.connect(DB_STOCK_BACK)
         try:
             df = pd.read_sql('SELECT * FROM codename', con1).set_index('index')
         except:
@@ -231,7 +310,9 @@ class Window(QMainWindow):
         self.buy_index        = []
         self.sell_index       = []
         self.back_procs       = []
+        self.bact_procs       = []
         self.back_pques       = []
+        self.bact_pques       = []
         self.avg_list         = []
         self.back_count       = 0
         self.startday         = 0
@@ -259,24 +340,10 @@ class Window(QMainWindow):
         self.proc_backtester_rv    = None
         self.proc_backtester_rvc   = None
 
+        self.proc_stomlive_stock   = None
         self.proc_receiver_coin    = None
-        self.proc_collector_coin   = None
         self.proc_strategy_coin    = None
         self.proc_trader_coin      = None
-
-        self.proc_receiver_stock   = None
-        self.proc_collector_stock1 = None
-        self.proc_collector_stock2 = None
-        self.proc_collector_stock3 = None
-        self.proc_collector_stock4 = None
-        self.proc_collector_stock5 = None
-        self.proc_collector_stock6 = None
-        self.proc_collector_stock7 = None
-        self.proc_collector_stock8 = None
-        self.proc_strategy_stock1  = None
-        self.proc_strategy_stock2  = None
-        self.proc_trader_stock     = None
-        self.proc_stomlive_stock   = None
         self.proc_coin_kimp        = None
         self.proc_simulator_rv     = None
         self.proc_simulator_td     = None
@@ -293,7 +360,7 @@ class Window(QMainWindow):
         self.ctpg_tik_legend       = {}
         self.ctpg_tik_item         = {}
         self.ctpg_tik_data         = {}
-        self.ctpg_tik_fators       = []
+        self.ctpg_tik_factors      = []
         self.ctpg_tik_labels       = []
 
         self.ctpg_day_name         = None
@@ -318,6 +385,10 @@ class Window(QMainWindow):
         self.ctpg_min_ymin         = 0
         self.ctpg_min_ymax         = 0
 
+        self.srqsize = 0
+        self.stqsize = 0
+        self.ssqsize = 0
+
         self.df_kp  = None
         self.df_kd  = None
         self.tm_ax1 = None
@@ -330,34 +401,52 @@ class Window(QMainWindow):
         self.tm_mc1 = 0
         self.tm_mc2 = 0
 
+        subprocess.Popen('python kiwoom_manager.py')
+
+        port_num = GetPortNumber()
+        self.zmqserv = ZmqServ(wdservQ, port_num)
+        self.zmqserv.start()
+
+        self.zmqrecv = ZmqRecv(qlist, port_num + 1)
+        self.zmqrecv.start()
+
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.ProcessStarter)
         self.qtimer1.start()
 
         self.qtimer2 = QTimer()
         self.qtimer2.setInterval(500)
+        # noinspection PyUnresolvedReferences
         self.qtimer2.timeout.connect(self.UpdateProgressBar)
         self.qtimer2.start()
 
         self.qtimer3 = QTimer()
         self.qtimer3.setInterval(1 * 1000)
+        # noinspection PyUnresolvedReferences
         self.qtimer3.timeout.connect(self.UpdateCpuper)
         self.qtimer3.start()
 
-        self.qtimer4 = QTimer()
-        self.qtimer4.setInterval(250)
-        self.qtimer4.timeout.connect(self.ChartDrawTest)
-
         self.writer = Writer()
+        # noinspection PyUnresolvedReferences
         self.writer.signal1.connect(self.UpdateTexedit)
+        # noinspection PyUnresolvedReferences
         self.writer.signal2.connect(self.UpdateTablewidget)
+        # noinspection PyUnresolvedReferences
         self.writer.signal3.connect(self.DrawChart)
+        # noinspection PyUnresolvedReferences
         self.writer.signal4.connect(self.DrawRealChart)
+        # noinspection PyUnresolvedReferences
         self.writer.signal5.connect(self.DrawRealJisuChart)
+        # noinspection PyUnresolvedReferences
         self.writer.signal6.connect(self.DrawTremap)
+        # noinspection PyUnresolvedReferences
         self.writer.signal7.connect(self.DrawChartDayMin)
+        # noinspection PyUnresolvedReferences
         self.writer.signal8.connect(self.ImageUpdate)
+        # noinspection PyUnresolvedReferences
+        self.writer.signal9.connect(self.UpdateSQsize)
         self.writer.start()
 
         font_name = 'C:/Windows/Fonts/malgun.ttf'
@@ -381,163 +470,38 @@ class Window(QMainWindow):
         if A or B or C or D:
             if self.dict_set['코인리시버']:
                 self.CoinReceiverStart()
-            if self.dict_set['코인콜렉터']:
-                self.CoinCollectorStart()
             if self.dict_set['코인트레이더']:
                 self.CoinTraderStart()
 
         if self.dict_set['코인트레이더'] and A and D and not self.time_sync:
-            subprocess.Popen('python ./utility/timesync.py')
+            subprocess.Popen('python64 ./utility/timesync.py')
             self.time_sync = True
 
         if self.int_time < 90000 <= inthms:
             self.time_sync = False
 
-        if BIT32 and self.int_time < self.dict_set['리시버실행시간'] <= inthms and self.dict_set['주식리시버'] and not self.StockReceiverProcessAlive():
-            self.StockReceiverStart()
-        if BIT32 and self.int_time < self.dict_set['트레이더실행시간'] <= inthms and self.dict_set['주식트레이더'] and self.StockReceiverProcessAlive() and not self.StockTraderProcessAlive():
-            self.StockTraderStart()
-
-        if BIT32 and self.dict_set['주식일봉데이터다운'] and not self.daydata_download and self.int_time < self.dict_set['일봉다운실행시간'] <= inthms:
-            self.sjButtonClicked_18()
-
         if self.dict_set['스톰라이브'] and not self.StockLiveProcessAlive():
             self.proc_stomlive_stock = Process(target=StomLiveClient, args=(qlist,), daemon=True)
             self.proc_stomlive_stock.start()
 
+        if self.dict_set['백테스케쥴실행'] and not self.backtest_engine and now().weekday() == self.dict_set['백테스케쥴요일']:
+            if self.int_time < self.dict_set['백테스케쥴시간'] <= inthms:
+                self.AutoBackSchedule(1)
+
         if self.auto_run == 1:
             self.mnButtonClicked_02(stocklogin=True)
-            self.auto_run = 0
-        elif self.auto_run == 2:
-            self.AutoBackSchedule(1)
             self.auto_run = 0
 
         self.UpdateWindowTitle()
         self.int_time = inthms
 
-    @staticmethod
-    def OpenapiLoginWait():
-        result = True
-        time_out = timedelta_sec(10)
-        while find_window('Open API login') == 0:
-            if now() > time_out:
-                result = False
-                break
-            qtest_qwait(0.1)
-        if result:
-            update = False
-            time_out = timedelta_sec(30)
-            while find_window('Open API login') != 0:
-                if not update:
-                    try:
-                        text = win32gui.GetWindowText(win32gui.GetDlgItem(find_window('Open API login'), 0x40D))
-                        if '다운로드' in text or '분석' in text or '기동' in text:
-                            update = True
-                    except:
-                        pass
-                    if now() > time_out:
-                        result = False
-                        break
-                qtest_qwait(0.1)
-        if not result:
-            os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
-        return result
-
-    def StockReceiverStart(self):
-        if self.dict_set['아이디2'] is not None:
-            subprocess.Popen(f'python {LOGIN_PATH}/versionupdater.py')
-            while not self.OpenapiLoginWait():
-                qtest_qwait(1)
-                subprocess.Popen(f'python {LOGIN_PATH}/versionupdater.py')
-            qtest_qwait(10)
-            subprocess.Popen(f'python {LOGIN_PATH}/autologin2.py')
-            while not self.OpenapiLoginWait():
-                qtest_qwait(1)
-                subprocess.Popen(f'python {LOGIN_PATH}/autologin2.py')
-            qtest_qwait(5)
-
-            if self.dict_set['주식콜렉터']:
-                if not self.StockCollectorProcessAlive():
-                    self.proc_collector_stock1 = Process(target=CollectorKiwoom, args=(1, qlist), daemon=True)
-                    self.proc_collector_stock2 = Process(target=CollectorKiwoom, args=(2, qlist), daemon=True)
-                    self.proc_collector_stock3 = Process(target=CollectorKiwoom, args=(3, qlist), daemon=True)
-                    self.proc_collector_stock4 = Process(target=CollectorKiwoom, args=(4, qlist), daemon=True)
-                    self.proc_collector_stock5 = Process(target=CollectorKiwoom, args=(5, qlist), daemon=True)
-                    self.proc_collector_stock6 = Process(target=CollectorKiwoom, args=(6, qlist), daemon=True)
-                    self.proc_collector_stock7 = Process(target=CollectorKiwoom, args=(7, qlist), daemon=True)
-                    self.proc_collector_stock8 = Process(target=CollectorKiwoom, args=(8, qlist), daemon=True)
-                    self.proc_collector_stock1.start()
-                    self.proc_collector_stock2.start()
-                    self.proc_collector_stock3.start()
-                    self.proc_collector_stock4.start()
-                    self.proc_collector_stock5.start()
-                    self.proc_collector_stock6.start()
-                    self.proc_collector_stock7.start()
-                    self.proc_collector_stock8.start()
-
-            if self.dict_set['주식리시버']:
-                with open('C:/OpenAPI/system/ip_api.dat') as file:
-                    text = file.read()
-                fixed_ip = text.split('IP=')[1].split('PORT=')[0].strip()[:7]
-
-                while True:
-                    qtest_qwait(1)
-                    if not self.StockReceiverProcessAlive():
-                        self.proc_receiver_stock = Process(target=ReceiverKiwoom, args=(qlist,), daemon=True)
-                        self.proc_receiver_stock.start()
-                        if self.OpenapiLoginWait():
-                            with open('C:/OpenAPI/system/opcomms.ini') as file:
-                                text = file.read()
-                            server_ip_select = text.split('SERVER_IP_SELECT=')[1].split('PROBLEM_CONNECTIP=')[0].strip()
-                            inthms = int_hms()
-                            if inthms < 73000 or 85800 < inthms or now().weekday() > 4:
-                                print(f'접속 시간 초과, 마지막 접속 유지 [{server_ip_select}]')
-                                break
-                            elif fixed_ip in server_ip_select:
-                                print(f'빠른 서버 접속 완료 [{server_ip_select}]')
-                                break
-                            else:
-                                self.proc_receiver_stock.kill()
-                                print('빠른 서버 접속 실패, 잠시 후 재접속합니다.')
-                        else:
-                            self.proc_receiver_stock.kill()
-                            print('로그인 또는 업데이트 실패, 잠시 후 재접속합니다.')
-        else:
-            QMessageBox.critical(self, '오류 알림', '두번째 계정이 설정되지 않아\n콜렉터를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
-
-    def StockTraderStart(self):
-        if self.dict_set['아이디1'] is not None:
-            qtest_qwait(10)
-            subprocess.Popen(f'python {LOGIN_PATH}/autologin1.py')
-            while not self.OpenapiLoginWait():
-                qtest_qwait(1)
-                subprocess.Popen(f'python {LOGIN_PATH}/autologin1.py')
-            qtest_qwait(5)
-            self.proc_strategy_stock1 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(1, qlist), daemon=True)
-            self.proc_strategy_stock2 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(2, qlist), daemon=True)
-            self.proc_strategy_stock1.start()
-            self.proc_strategy_stock2.start()
-            while True:
-                qtest_qwait(1)
-                if not self.StockTraderProcessAlive():
-                    self.proc_trader_stock = Process(target=TraderKiwoom, args=(qlist,), daemon=True)
-                    self.proc_trader_stock.start()
-                    if self.OpenapiLoginWait():
-                        break
-                    else:
-                        self.proc_trader_stock.kill()
-        else:
-            QMessageBox.critical(self, '오류 알림', '첫번째 계정이 설정되지 않아\n트레이더를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
-
     def CoinReceiverStart(self):
         if not self.CoinReceiverProcessAlive():
-            self.proc_receiver_coin = Process(target=ReceiverUpbit if self.dict_set['거래소'] == '업비트' else ReceiverBinanceFuture, args=(qlist,))
+            if self.dict_set['리시버공유'] < 2:
+                self.proc_receiver_coin = Process(target=ReceiverUpbit if self.dict_set['거래소'] == '업비트' else ReceiverBinanceFuture, args=(qlist,))
+            else:
+                self.proc_receiver_coin = Process(target=ReceiverUpbitClient if self.dict_set['거래소'] == '업비트' else ReceiverBinanceFutureClient, args=(qlist,))
             self.proc_receiver_coin.start()
-
-    def CoinCollectorStart(self):
-        if not self.CoinCollectorProcessAlive():
-            self.proc_collector_coin = Process(target=CollectorCoin, args=(qlist,), daemon=True)
-            self.proc_collector_coin.start()
 
     def CoinTraderStart(self):
         if self.dict_set['거래소'] == '업비트' and (self.dict_set['Access_key1'] is None or self.dict_set['Access_key1'] is None):
@@ -587,6 +551,10 @@ class Window(QMainWindow):
 
     def UpdateWindowTitle(self):
         text = 'STOM'
+        if self.dict_set['리시버공유'] == 1:
+            text = f'{text} Server'
+        elif self.dict_set['리시버공유'] == 2:
+            text = f'{text} Client'
         if self.dict_set['거래소'] == '바이낸스선물' and self.dict_set['코인리시버']:
             text = f'{text} | 바이낸스선물'
         elif self.dict_set['거래소'] == '업비트' and self.dict_set['코인리시버']:
@@ -595,13 +563,12 @@ class Window(QMainWindow):
             text = f'{text} | 키움증권해외선물'
         elif self.dict_set['주식리시버']:
             text = f'{text} | 키움증권'
-        text = f'{text} | 32-bit' if BIT32 else f'{text} | 64-bit'
         if self.showQsize:
-            stickQ_size = tick1Q.qsize() + tick2Q.qsize() + tick3Q.qsize() + tick4Q.qsize() + tick5Q.qsize() + tick6Q.qsize() + tick7Q.qsize() + tick8Q.qsize()
-            text = f'{text} | sreceivQ[{sreceivQ.qsize()}] | straderQ[{straderQ.qsize()}] | sstgQ[{sstg1Q.qsize() + sstg2Q.qsize()}] | ' \
-                   f'stickQ[{stickQ_size}] | creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | ' \
-                   f'cstgQ[{cstgQ.qsize()}] | ctickQ[{tick9Q.qsize()}] | windowQ[{windowQ.qsize()}] | ' \
-                   f'queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | hogaQ[{hogaQ.qsize()} | soundQ[{soundQ.qsize()}]'
+            ctqsize = sum([ctq.qsize() for ctq in self.bact_pques]) if self.bact_pques else 0
+            text = f'{text} | sreceivQ[{self.srqsize}] | straderQ[{self.stqsize}] | sstgQ[{self.ssqsize}] | ' \
+                   f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstgQ[{cstgQ.qsize()}] | ' \
+                   f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
+                   f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backctQ[{ctqsize}]'
         else:
             text = f"{text} | {strf_time('%Y-%m-%d %H:%M:%S')}"
         self.setWindowTitle(text)
@@ -720,6 +687,9 @@ class Window(QMainWindow):
         qpix = qpix.scaled(QSize(332, 105), Qt.IgnoreAspectRatio)
         self.image_label.setPixmap(qpix)
 
+    def UpdateSQsize(self, data):
+        self.srqsize, self.stqsize, self.ssqsize = data
+
     @thread_decorator
     def UpdateCpuper(self):
         self.cpu_per = int(psutil.cpu_percent(interval=1))
@@ -730,15 +700,11 @@ class Window(QMainWindow):
             if '시스템 명령 오류 알림' in data[1]:
                 self.lgicon_alert = True
 
-            if data[0] in [ui_num['S백테스트'], ui_num['C백테스트'], ui_num['CF백테스트']]:
-                time_text = str(now())[:-7]
-            else:
-                time_text = str(now())
-            text = f'[{time_text}] {data[1]}' if '</font>' not in data[1] else f'<font color=white>[{time_text}]</font> {data[1]}'
+            time_ = str(now())[:-7] if data[0] in [ui_num['S백테스트'], ui_num['C백테스트'], ui_num['CF백테스트']] else str(now())
+            log_  = f'<font color=#FF32FF>{data[1]}</font>' if '오류' in data[1] else data[1]
+            text  = f'[{time_}] {log_}' if '</font>' not in log_ else f'<font color=white>[{time_}]</font> {log_}'
 
-            if data[0] == ui_num['설정로그']:
-                self.sj_log_labelll_00.setText(data[1])
-            elif data[0] == ui_num['백테엔진']:
+            if data[0] == ui_num['백테엔진']:
                 self.be_textEditxxxx_01.append(text)
                 if data[1] == '백테엔진 준비 완료' and self.auto_mode:
                     if self.dialog_backengine.isVisible():
@@ -753,7 +719,7 @@ class Window(QMainWindow):
             elif data[0] == ui_num['S단순텍스트']:
                 self.src_textEditttt_01.append(text)
                 self.log2.info(text)
-                if '콜렉터 프로세스 틱데이터 저장 중 ... [8]' in text:
+                if '전략연산 프로세스 틱데이터 저장 중 ... [8]' in text:
                     self.tickdata_save = True
             elif data[0] == ui_num['C로그텍스트']:
                 self.cst_textEditttt_01.append(text)
@@ -762,7 +728,7 @@ class Window(QMainWindow):
                 self.crc_textEditttt_01.append(text)
                 self.log4.info(text)
             elif data[0] == ui_num['S백테스트']:
-                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '무한모드' in data[1] or '벤치점수' in data[1]:
+                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or '벤치점수' in data[1]:
                     color = color_fg_rt
                 elif ('A' in data[1] and '-' in data[1].split('A')[1]) or ('수익률' in data[1] and '-' in data[1].split('수익률')[1]):
                     color = color_fg_dk
@@ -789,7 +755,7 @@ class Window(QMainWindow):
                         qtest_qwait(3)
                         self.sdButtonClicked_02()
             elif data[0] in [ui_num['C백테스트'], ui_num['CF백테스트']]:
-                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '무한모드' in data[1]:
+                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1]:
                     color = color_fg_rt
                 elif ('A' in data[1] and '-' in data[1].split('A')[1]) or \
                         ('수익률' in data[1] and '-' in data[1].split('수익률')[1].split('KRW')[0]):
@@ -821,35 +787,23 @@ class Window(QMainWindow):
                 self.gg_textEdittttt_01.append(data[1])
 
             if data[0] == ui_num['S단순텍스트'] and '리시버 종료' in data[1]:
-                if self.StockReceiverProcessAlive(): self.proc_receiver_stock.kill()
-            elif data[0] == ui_num['S단순텍스트'] and '콜렉터 종료' in data[1]:
-                if self.StockCollectorProcessAlive():
-                    self.proc_collector_stock1.kill()
-                    self.proc_collector_stock2.kill()
-                    self.proc_collector_stock3.kill()
-                    self.proc_collector_stock4.kill()
-                    self.proc_collector_stock5.kill()
-                    self.proc_collector_stock6.kill()
-                    self.proc_collector_stock7.kill()
-                    self.proc_collector_stock8.kill()
+                wdservQ.put(['manager', '리시버 종료'])
+            elif data[0] == ui_num['S로그텍스트'] and '전략연산 종료' in data[1]:
+                wdservQ.put(['manager', '전략연산 종료'])
                 self.AutoDataBase(1)
                 self.StockShutDownCheck()
-            elif data[0] == ui_num['S로그텍스트'] and '전략연산 종료' in data[1]:
-                if self.StockStrategy1ProcessAlive(): self.proc_strategy_stock1.kill()
-                if self.StockStrategy2ProcessAlive(): self.proc_strategy_stock2.kill()
             elif data[0] == ui_num['S로그텍스트'] and '트레이더 종료' in data[1]:
-                if self.StockTraderProcessAlive(): self.proc_trader_stock.kill()
-                if not self.dict_set['주식콜렉터']:  self.StockShutDownCheck()
+                wdservQ.put(['manager', '트레이더 종료'])
             elif data[0] == ui_num['C단순텍스트'] and '리시버 종료' in data[1]:
-                if self.CoinReceiverProcessAlive(): self.proc_receiver_coin.kill()
-            elif data[0] == ui_num['C단순텍스트'] and '콜렉터 종료' in data[1]:
-                if self.CoinCollectorProcessAlive(): self.proc_collector_coin.kill()
-                self.CoinShutDownCheck()
+                if self.CoinReceiverProcessAlive():
+                    self.proc_receiver_coin.kill()
             elif data[0] == ui_num['C로그텍스트'] and '전략연산 종료' in data[1]:
-                if self.CoinStrategyProcessAlive(): self.proc_strategy_coin.kill()
+                if self.CoinStrategyProcessAlive():
+                    self.proc_strategy_coin.kill()
+                self.CoinShutDownCheck()
             elif data[0] == ui_num['C로그텍스트'] and '트레이더 종료' in data[1]:
-                if self.CoinTraderProcessAlive(): self.proc_trader_coin.kill()
-                if not self.dict_set['코인콜렉터']: self.CoinShutDownCheck()
+                if self.CoinTraderProcessAlive():
+                    self.proc_trader_coin.kill()
             elif data[0] == ui_num['DB관리']:
                 if data[1] == 'DB업데이트완료':
                     self.database_control = False
@@ -933,16 +887,24 @@ class Window(QMainWindow):
             self.auto_mode = False
 
     def StockShutDownCheck(self):
-        if self.dict_set['프로그램종료']:
-            QTimer.singleShot(180 * 1000, self.ProcessKill)
-        if self.dict_set['주식장초컴퓨터종료'] or self.dict_set['주식장중컴퓨터종료'] or (90000 < int_hms() < 90500 and self.dict_set['휴무컴퓨터종료']):
-            os.system('shutdown /s /t 300')
+        if not self.dict_set['백테스케쥴실행'] or now().weekday() != self.dict_set['백테스케쥴요일']:
+            if self.dict_set['프로그램종료']:
+                QTimer.singleShot(180 * 1000, self.ProcessKill)
+            if self.dict_set['리시버공유'] < 2:
+                if self.dict_set['주식장초컴퓨터종료'] or self.dict_set['주식장중컴퓨터종료'] or (90000 < int_hms() < 90500 and self.dict_set['휴무컴퓨터종료']):
+                    os.system('shutdown /s /t 300')
+        elif self.dict_set['주식알림소리']:
+            soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
 
     def CoinShutDownCheck(self):
-        if self.dict_set['프로그램종료']:
-            QTimer.singleShot(180 * 1000, self.ProcessKill)
-        if self.dict_set['코인장초컴퓨터종료'] or self.dict_set['코인장중컴퓨터종료']:
-            os.system('shutdown /s /t 300')
+        if not self.dict_set['백테스케쥴실행'] or now().weekday() != self.dict_set['백테스케쥴요일']:
+            if self.dict_set['프로그램종료'] and self.dict_set['리시버공유'] < 2:
+                QTimer.singleShot(180 * 1000, self.ProcessKill)
+            if self.dict_set['리시버공유'] < 2:
+                if self.dict_set['코인장초컴퓨터종료'] or self.dict_set['코인장중컴퓨터종료']:
+                    os.system('shutdown /s /t 300')
+        elif self.dict_set['코인알림소리']:
+            soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
 
     @error_decorator
     def UpdateTablewidget(self, data):
@@ -975,7 +937,7 @@ class Window(QMainWindow):
             tableWidget = self.snt_tableWidgettt
         elif gubun == ui_num['S누적상세']:
             tableWidget = self.sns_tableWidgettt
-        elif gubun == ui_num['S관심종목2']:
+        elif gubun == ui_num['S관심종목']:
             tableWidget = self.sgj_tableWidgettt
         elif gubun == ui_num['C실현손익']:
             tableWidget = self.ctt_tableWidgettt
@@ -1027,7 +989,7 @@ class Window(QMainWindow):
             tableWidget = self.hj_tableWidgett_01
         elif gubun in [ui_num['C호가체결'], ui_num['S호가체결']]:
             if not self.dialog_hoga.isVisible():
-                if self.StockReceiverProcessAlive(): sreceivQ.put('000000')
+                wdservQ.put(['receiver', '000000'])
                 if self.CoinReceiverProcessAlive():  creceivQ.put('000000')
                 return
             tableWidget = self.hc_tableWidgett_01
@@ -1072,7 +1034,7 @@ class Window(QMainWindow):
             tableWidget.clearContents()
             return
 
-        if gubun in [ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목2'], ui_num['C관심종목'], ui_num['S당일상세'],
+        if gubun in [ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'],
                      ui_num['김프'], ui_num['S누적상세'], ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'],
                      ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']]:
             tableWidget.setSortingEnabled(False)
@@ -1111,7 +1073,7 @@ class Window(QMainWindow):
                         (gubun == ui_num['C호가종목'] and column in ['현재가', '시가', '고가', '저가']) or \
                         (gubun == ui_num['C호가잔량'] and column == '호가'):
                     item = QTableWidgetItem(change_format(arry[i, j], dotdown8=True))
-                elif gubun in [ui_num['S관심종목2'], ui_num['C관심종목'], ui_num['S상세기록'], ui_num['C상세기록'],
+                elif gubun in [ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S상세기록'], ui_num['C상세기록'],
                                ui_num['S당일상세'], ui_num['S누적상세'], ui_num['C당일상세'], ui_num['C누적상세'],
                                ui_num['스톰라이브1'], ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'],
                                ui_num['스톰라이브7'], ui_num['김프']]:
@@ -1230,7 +1192,7 @@ class Window(QMainWindow):
 
         if len(df) < 13 and gubun in [ui_num['S거래목록'], ui_num['S잔고목록'], ui_num['C거래목록'], ui_num['C잔고목록']]:
             tableWidget.setRowCount(13)
-        elif len(df) < 15 and gubun in [ui_num['S체결목록'], ui_num['C체결목록'], ui_num['S관심종목2'], ui_num['C관심종목']]:
+        elif len(df) < 15 and gubun in [ui_num['S체결목록'], ui_num['C체결목록'], ui_num['S관심종목'], ui_num['C관심종목']]:
             tableWidget.setRowCount(15)
         elif len(df) < 19 and gubun in [ui_num['S당일상세'], ui_num['C당일상세']]:
             tableWidget.setRowCount(19)
@@ -1253,7 +1215,7 @@ class Window(QMainWindow):
         elif len(df) < 12 and gubun in [ui_num['C호가체결2'], ui_num['S호가체결2']]:
             tableWidget.setRowCount(12)
 
-        if gubun in [ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목2'], ui_num['C관심종목'], ui_num['S당일상세'],
+        if gubun in [ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'],
                      ui_num['김프'], ui_num['S누적상세'], ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'],
                      ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']]:
             tableWidget.setSortingEnabled(True)
@@ -1350,7 +1312,7 @@ class Window(QMainWindow):
             windowQ.put([ui_num['C호가체결2'], df])
 
         for i in range(len(self.ctpg_tik_legend)):
-            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, xpoint, self.ctpg_tik_fators[i], f'{hms[:2]}:{hms[2:4]}:{hms[4:]}', False))
+            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, xpoint, self.ctpg_tik_factors[i], f'{hms[:2]}:{hms[2:4]}:{hms[4:]}', False))
             self.ctpg_tik_labels[i].setText('')
 
     @error_decorator
@@ -1376,25 +1338,25 @@ class Window(QMainWindow):
         date = strf_time('%Y%m%d', from_timestamp(xmin))
         if not coin: self.KiwoomHTSChart(code, date)
 
-        self.ctpg_tik_fators = []
-        if self.ct_checkBoxxxxx_01.isChecked():     self.ctpg_tik_fators.append('현재가')
-        if self.ct_checkBoxxxxx_02.isChecked():     self.ctpg_tik_fators.append('체결강도')
-        if self.ct_checkBoxxxxx_03.isChecked():     self.ctpg_tik_fators.append('초당거래대금')
-        if self.ct_checkBoxxxxx_04.isChecked():     self.ctpg_tik_fators.append('초당체결수량')
-        if self.ct_checkBoxxxxx_05.isChecked():     self.ctpg_tik_fators.append('등락율')
-        if self.ct_checkBoxxxxx_06.isChecked():     self.ctpg_tik_fators.append('고저평균대비등락율')
-        if self.ct_checkBoxxxxx_07.isChecked():     self.ctpg_tik_fators.append('호가총잔량')
-        if self.ct_checkBoxxxxx_08.isChecked():     self.ctpg_tik_fators.append('1호가잔량')
-        if self.ct_checkBoxxxxx_09.isChecked():     self.ctpg_tik_fators.append('5호가잔량합')
-        if self.ct_checkBoxxxxx_10.isChecked():     self.ctpg_tik_fators.append('당일거래대금')
-        if self.ct_checkBoxxxxx_15.isChecked():     self.ctpg_tik_fators.append('누적초당매도수수량')
-        if self.ct_checkBoxxxxx_17.isChecked():     self.ctpg_tik_fators.append('당일거래대금각도')
+        self.ctpg_tik_factors = []
+        if self.ct_checkBoxxxxx_01.isChecked():     self.ctpg_tik_factors.append('현재가')
+        if self.ct_checkBoxxxxx_02.isChecked():     self.ctpg_tik_factors.append('체결강도')
+        if self.ct_checkBoxxxxx_03.isChecked():     self.ctpg_tik_factors.append('초당거래대금')
+        if self.ct_checkBoxxxxx_04.isChecked():     self.ctpg_tik_factors.append('초당체결수량')
+        if self.ct_checkBoxxxxx_05.isChecked():     self.ctpg_tik_factors.append('등락율')
+        if self.ct_checkBoxxxxx_06.isChecked():     self.ctpg_tik_factors.append('고저평균대비등락율')
+        if self.ct_checkBoxxxxx_07.isChecked():     self.ctpg_tik_factors.append('호가총잔량')
+        if self.ct_checkBoxxxxx_08.isChecked():     self.ctpg_tik_factors.append('1호가잔량')
+        if self.ct_checkBoxxxxx_09.isChecked():     self.ctpg_tik_factors.append('5호가잔량합')
+        if self.ct_checkBoxxxxx_10.isChecked():     self.ctpg_tik_factors.append('당일거래대금')
+        if self.ct_checkBoxxxxx_15.isChecked():     self.ctpg_tik_factors.append('누적초당매도수수량')
+        if self.ct_checkBoxxxxx_17.isChecked():     self.ctpg_tik_factors.append('당일거래대금각도')
         if not coin:
-            if self.ct_checkBoxxxxx_11.isChecked(): self.ctpg_tik_fators.append('거래대금증감')
-            if self.ct_checkBoxxxxx_12.isChecked(): self.ctpg_tik_fators.append('전일비')
-            if self.ct_checkBoxxxxx_13.isChecked(): self.ctpg_tik_fators.append('회전율')
-            if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_fators.append('전일동시간비')
-            if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_fators.append('전일비각도')
+            if self.ct_checkBoxxxxx_11.isChecked(): self.ctpg_tik_factors.append('거래대금증감')
+            if self.ct_checkBoxxxxx_12.isChecked(): self.ctpg_tik_factors.append('전일비')
+            if self.ct_checkBoxxxxx_13.isChecked(): self.ctpg_tik_factors.append('회전율')
+            if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_factors.append('전일동시간비')
+            if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_factors.append('전일비각도')
 
         """
         '이평60', '이평300', '이평600', '이평1200', '현재가', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도',
@@ -1409,10 +1371,10 @@ class Window(QMainWindow):
 
         chuse_exist = True if len(self.ctpg_tik_arry[self.ctpg_tik_arry[:, 26] > 0]) > 0 else False
         hms = from_timestamp(xmax).strftime('%H:%M:%S')
-        for i, colunms in enumerate(self.ctpg_tik_fators):
+        for i, factor in enumerate(self.ctpg_tik_factors):
             self.ctpg[i].clear()
             ymin, ymax = 0, 0
-            if colunms == '현재가':
+            if factor == '현재가':
                 ar_ma0060 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 0] > 0][:, 0]
                 ar_ma0300 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 1] > 0][:, 1]
                 ar_ma0600 = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 2] > 0][:, 2]
@@ -1448,7 +1410,7 @@ class Window(QMainWindow):
                             arrow = pg.ArrowItem(angle=0, tipAngle=60, headLen=10, pen='w', brush='b')
                             arrow.setPos(self.ctpg_tik_xticks[j], price)
                             self.ctpg[i].addItem(arrow)
-            elif colunms == '체결강도':
+            elif factor == '체결강도':
                 ymin = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 8] > 0][:, 8].min()
                 ymax = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 7] > 0][:, 7].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
@@ -1456,82 +1418,82 @@ class Window(QMainWindow):
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 7], pen=(200,  50,  50))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 6], pen=( 50, 200, 200))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 5], pen=( 50, 200,  50))
-            elif colunms == '초당거래대금':
+            elif factor == '초당거래대금':
                 ymin = min(self.ctpg_tik_arry[:, 9].min(), self.ctpg_tik_arry[:, 10].min())
                 ymax = max(self.ctpg_tik_arry[:, 9].max(), self.ctpg_tik_arry[:, 10].max())
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:,  9], pen=(200,  50,  50))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 10], pen=( 50, 200,  50))
-            elif colunms == '초당체결수량':
+            elif factor == '초당체결수량':
                 ymin = min(self.ctpg_tik_arry[:, 11].min(), self.ctpg_tik_arry[:, 12].min())
                 ymax = max(self.ctpg_tik_arry[:, 11].max(), self.ctpg_tik_arry[:, 12].max())
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 11], pen=(200, 50,  50))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 12], pen=( 50, 50, 200))
-            elif colunms == '등락율':
+            elif factor == '등락율':
                 ymin = self.ctpg_tik_arry[:, 13].min()
                 ymax = self.ctpg_tik_arry[:, 13].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 13], pen=(200, 50, 200))
-            elif colunms == '고저평균대비등락율':
+            elif factor == '고저평균대비등락율':
                 ymin = self.ctpg_tik_arry[:, 14].min()
                 ymax = self.ctpg_tik_arry[:, 14].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 14], pen=(50, 200, 200))
-            elif colunms == '호가총잔량':
+            elif factor == '호가총잔량':
                 ymin = min(self.ctpg_tik_arry[:, 15].min(), self.ctpg_tik_arry[:, 16].min())
                 ymax = max(self.ctpg_tik_arry[:, 15].max(), self.ctpg_tik_arry[:, 16].max())
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 15], pen=(200, 50,  50))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 16], pen=( 50, 50, 200))
-            elif colunms == '1호가잔량':
+            elif factor == '1호가잔량':
                 ymin = min(self.ctpg_tik_arry[:, 17].min(), self.ctpg_tik_arry[:, 18].min())
                 ymax = max(self.ctpg_tik_arry[:, 17].max(), self.ctpg_tik_arry[:, 18].max())
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 17], pen=(200, 50,  50))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 18], pen=( 50, 50, 200))
-            elif colunms == '5호가잔량합':
+            elif factor == '5호가잔량합':
                 ymin = self.ctpg_tik_arry[:, 19].min()
                 ymax = self.ctpg_tik_arry[:, 19].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 19], pen=(200, 50, 50))
-            elif colunms == '당일거래대금':
+            elif factor == '당일거래대금':
                 ymin = self.ctpg_tik_arry[:, 20].min()
                 ymax = self.ctpg_tik_arry[:, 20].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 20], pen=(200, 50, 50))
-            elif colunms == '누적초당매도수수량':
+            elif factor == '누적초당매도수수량':
                 ymin = min(self.ctpg_tik_arry[:, 21].min(), self.ctpg_tik_arry[:, 22].min())
                 ymax = max(self.ctpg_tik_arry[:, 21].max(), self.ctpg_tik_arry[:, 22].max())
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 21], pen=(200, 50,  50))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 22], pen=( 50, 50, 200))
-            elif colunms == '당일거래대금각도':
+            elif factor == '당일거래대금각도':
                 ymin = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 23] > 0][:, 23].min()
                 ymax = self.ctpg_tik_arry[self.ctpg_tik_arry[:, 23] > 0][:, 23].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 23], pen=(200, 50, 50))
-            elif colunms == '전일비각도':
+            elif factor == '전일비각도':
                 ymin = self.ctpg_tik_arry[:, 27].min()
                 ymax = self.ctpg_tik_arry[:, 27].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 27], pen=(200, 50, 50))
-            elif colunms == '거래대금증감':
+            elif factor == '거래대금증감':
                 ymin = self.ctpg_tik_arry[:, 28].min()
                 ymax = self.ctpg_tik_arry[:, 28].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 28], pen=(200, 50, 50))
-            elif colunms == '전일비':
+            elif factor == '전일비':
                 ymin = self.ctpg_tik_arry[:, 29].min()
                 ymax = self.ctpg_tik_arry[:, 29].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 29], pen=(200, 50, 50))
-            elif colunms == '회전율':
+            elif factor == '회전율':
                 ymin = self.ctpg_tik_arry[:, 30].min()
                 ymax = self.ctpg_tik_arry[:, 30].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
                 self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_arry[:, 30], pen=(200, 50, 50))
-            elif colunms == '전일동시간비':
+            elif factor == '전일동시간비':
                 ymin = self.ctpg_tik_arry[:, 31].min()
                 ymax = self.ctpg_tik_arry[:, 31].max()
                 if chuse_exist: self.ctpg[i].addItem(ChuseItem(self.ctpg_tik_arry[:, 26], ymin, ymax, self.ctpg_tik_xticks))
@@ -1539,15 +1501,14 @@ class Window(QMainWindow):
 
             if self.ct_checkBoxxxxx_22.isChecked():
                 legend = pg.TextItem(anchor=(0, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
-                legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_fators[i], hms, False))
+                legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, False))
                 legend.setFont(qfont12)
                 legend.setPos(xmin, ymax)
                 self.ctpg[i].addItem(legend)
                 self.ctpg_tik_legend[i] = legend
 
             if i != 0: self.ctpg[i].setXLink(self.ctpg[0])
-            self.ctpg_cvb[i].set_range(xmin, xmax, ymin, ymax)
-            self.ctpg[i].setRange(xRange=(xmin, xmax), yRange=(ymin, ymax))
+            self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
             if self.ct_checkBoxxxxx_22.isChecked(): self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][1])
             if i == chart_count - 1: break
 
@@ -1706,7 +1667,7 @@ class Window(QMainWindow):
             label.setFont(qfont12)
             label.setPos(kxmin, kymin)
             self.ctpg_tik_labels.append(label)
-            if k == len(self.ctpg_tik_fators) - 1:
+            if k == len(self.ctpg_tik_factors) - 1:
                 break
 
         try:
@@ -1800,7 +1761,7 @@ class Window(QMainWindow):
                     xpoint = self.ctpg_tik_xticks.index(int(mousePoint.x()))
                     hms_   = from_timestamp(int(mousePoint.x())).strftime('%H:%M:%S')
                     for n, labell in enumerate(self.ctpg_tik_labels):
-                        foctor = self.ctpg_tik_fators[n]
+                        foctor = self.ctpg_tik_factors[n]
                         if index == n:
                             text = f'Y축 {round(mousePoint.y(), 2):,}\n{self.GetLabelText(coin_, self.ctpg_tik_arry, xpoint, foctor, hms_, True if real else False)}'
                         else:
@@ -1823,7 +1784,7 @@ class Window(QMainWindow):
                                 if self.ct_checkBoxxxxx_22.isChecked():
                                     self.ctpg_tik_legend[n].setAnchor((0, 0))
                                     self.ctpg_tik_legend[n].setPos(lxmin, lymax)
-                        if n == len(self.ctpg_tik_fators) - 1:
+                        if n == len(self.ctpg_tik_factors) - 1:
                             break
                     hLines[index].setPos(mousePoint.y())
                     for vLine in vLines:
@@ -1835,41 +1796,53 @@ class Window(QMainWindow):
 
     @staticmethod
     def GetLabelText(coin, arry, xpoint, factor, hms, real):
+        def cindex(number):
+            return dict_stock[number] if not coin else dict_coin[number]
+
+        dict_stock = {
+            1: 44, 2: 45, 3: 46, 4: 47, 5: 1, 6: 50, 7: 51, 8: 52, 9: 7, 10: 19, 11: 57, 12: 14, 13: 15, 14: 5, 15: 20,
+            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 8, 27: 9, 28: 10, 29: 11
+        }
+        dict_coin = {
+            1: 35, 2: 36, 3: 37, 4: 38, 5: 1, 6: 41, 7: 42, 8: 43, 9: 7, 10: 10, 11: 48, 12: 8, 13: 9, 14: 5, 15: 11,
+            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49
+        }
+
         jpd = 0
         dmj = 0
         jip = 0
         hjp = 0
         jdp = 0
-        ema0060 = arry[xpoint,  1 if real else  0]
-        ema0300 = arry[xpoint,  2 if real else  1]
-        ema0600 = arry[xpoint,  3 if real else  2]
-        ema1200 = arry[xpoint,  4 if real else  3]
-        cc      = arry[xpoint,  5 if real else  4]
-        ch      = arry[xpoint,  6 if real else  5]
-        ach     = arry[xpoint,  7 if real else  6]
-        hch     = arry[xpoint,  8 if real else  7]
-        lch     = arry[xpoint,  9 if real else  8]
-        sm      = arry[xpoint, 10 if real else  9]
-        asm     = arry[xpoint, 11 if real else 10]
-        bbc     = arry[xpoint, 12 if real else 11]
-        sbc     = arry[xpoint, 13 if real else 12]
-        per     = arry[xpoint, 14 if real else 13]
-        hlp     = arry[xpoint, 15 if real else 14]
-        tbj     = arry[xpoint, 16 if real else 15]
-        tsj     = arry[xpoint, 17 if real else 16]
-        b1j     = arry[xpoint, 18 if real else 17]
-        s1j     = arry[xpoint, 19 if real else 18]
-        jr5     = arry[xpoint, 20 if real else 19]
-        dm      = arry[xpoint, 21 if real else 20]
-        nsb     = arry[xpoint, 22 if real else 21]
-        nss     = arry[xpoint, 23 if real else 22]
-        dmd     = arry[xpoint, 24 if real else 23]
+        ema0060 = arry[xpoint, cindex(1) if real else 0]
+        ema0300 = arry[xpoint, cindex(2) if real else 1]
+        ema0600 = arry[xpoint, cindex(3) if real else 2]
+        ema1200 = arry[xpoint, cindex(4) if real else 3]
+        cc      = arry[xpoint, cindex(5) if real else 4]
+        ch      = arry[xpoint, cindex(9) if real else 5]
+        ach     = arry[xpoint, cindex(6) if real else 6]
+        hch     = arry[xpoint, cindex(7) if real else 7]
+        lch     = arry[xpoint, cindex(8) if real else 8]
+        sm      = arry[xpoint, cindex(10) if real else 9]
+        asm     = arry[xpoint, cindex(11) if real else 10]
+        bbc     = arry[xpoint, cindex(12) if real else 11]
+        sbc     = arry[xpoint, cindex(13) if real else 12]
+        per     = arry[xpoint, cindex(14) if real else 13]
+        hlp     = arry[xpoint, cindex(15) if real else 14]
+        tbj     = arry[xpoint, cindex(16) if real else 15]
+        tsj     = arry[xpoint, cindex(17) if real else 16]
+        b1j     = arry[xpoint, cindex(18) if real else 17]
+        s1j     = arry[xpoint, cindex(19) if real else 18]
+        jr5     = arry[xpoint, cindex(20) if real else 19]
+        dm      = arry[xpoint, cindex(21) if real else 20]
+        nsb     = arry[xpoint, cindex(22) if real else 21]
+        nss     = arry[xpoint, cindex(23) if real else 22]
+        dmd     = arry[xpoint, cindex(24) if real else 23]
         if not coin:
-            jpd = arry[xpoint, 25 if real else 27]
-            dmj = arry[xpoint, 26 if real else 28]
-            jip = arry[xpoint, 27 if real else 29]
-            hjp = arry[xpoint, 28 if real else 30]
-            jdp = arry[xpoint, 29 if real else 31]
+            jpd = arry[xpoint, cindex(25) if real else 24]
+            dmj = arry[xpoint, cindex(26) if real else 25]
+            jip = arry[xpoint, cindex(27) if real else 26]
+            hjp = arry[xpoint, cindex(28) if real else 27]
+            jdp = arry[xpoint, cindex(29) if real else 28]
 
         text = ''
         if factor == '현재가':
@@ -1950,12 +1923,16 @@ class Window(QMainWindow):
 
     @error_decorator
     def DrawRealChart(self, data):
+        def cindex(number):
+            return dict_stock[number] if not coin else dict_coin[number]
+
         if not self.dialog_chart.isVisible():
             self.ChartClear()
             return
 
         name, self.ctpg_tik_arry = data[1:]
         coin = True if 'KRW' in name or 'USDT' in name else False
+
         if self.ct_pushButtonnn_04.text() == 'CHART 8':
             chart_count = 8
         elif self.ct_pushButtonnn_04.text() == 'CHART 12':
@@ -1967,157 +1944,165 @@ class Window(QMainWindow):
             self.ctpg_tik_item   = {}
             self.ctpg_tik_data   = {}
             self.ctpg_tik_legend = {}
-            self.ctpg_tik_fators = []
-            if self.ct_checkBoxxxxx_01.isChecked():     self.ctpg_tik_fators.append('현재가')
-            if self.ct_checkBoxxxxx_02.isChecked():     self.ctpg_tik_fators.append('체결강도')
-            if self.ct_checkBoxxxxx_03.isChecked():     self.ctpg_tik_fators.append('초당거래대금')
-            if self.ct_checkBoxxxxx_04.isChecked():     self.ctpg_tik_fators.append('초당체결수량')
-            if self.ct_checkBoxxxxx_05.isChecked():     self.ctpg_tik_fators.append('등락율')
-            if self.ct_checkBoxxxxx_06.isChecked():     self.ctpg_tik_fators.append('고저평균대비등락율')
-            if self.ct_checkBoxxxxx_07.isChecked():     self.ctpg_tik_fators.append('호가총잔량')
-            if self.ct_checkBoxxxxx_08.isChecked():     self.ctpg_tik_fators.append('1호가잔량')
-            if self.ct_checkBoxxxxx_09.isChecked():     self.ctpg_tik_fators.append('5호가잔량합')
-            if self.ct_checkBoxxxxx_10.isChecked():     self.ctpg_tik_fators.append('당일거래대금')
-            if self.ct_checkBoxxxxx_15.isChecked():     self.ctpg_tik_fators.append('누적초당매도수수량')
-            if self.ct_checkBoxxxxx_17.isChecked():     self.ctpg_tik_fators.append('당일거래대금각도')
+            self.ctpg_tik_factors = []
+            if self.ct_checkBoxxxxx_01.isChecked():     self.ctpg_tik_factors.append('현재가')
+            if self.ct_checkBoxxxxx_02.isChecked():     self.ctpg_tik_factors.append('체결강도')
+            if self.ct_checkBoxxxxx_03.isChecked():     self.ctpg_tik_factors.append('초당거래대금')
+            if self.ct_checkBoxxxxx_04.isChecked():     self.ctpg_tik_factors.append('초당체결수량')
+            if self.ct_checkBoxxxxx_05.isChecked():     self.ctpg_tik_factors.append('등락율')
+            if self.ct_checkBoxxxxx_06.isChecked():     self.ctpg_tik_factors.append('고저평균대비등락율')
+            if self.ct_checkBoxxxxx_07.isChecked():     self.ctpg_tik_factors.append('호가총잔량')
+            if self.ct_checkBoxxxxx_08.isChecked():     self.ctpg_tik_factors.append('1호가잔량')
+            if self.ct_checkBoxxxxx_09.isChecked():     self.ctpg_tik_factors.append('5호가잔량합')
+            if self.ct_checkBoxxxxx_10.isChecked():     self.ctpg_tik_factors.append('당일거래대금')
+            if self.ct_checkBoxxxxx_15.isChecked():     self.ctpg_tik_factors.append('누적초당매도수수량')
+            if self.ct_checkBoxxxxx_17.isChecked():     self.ctpg_tik_factors.append('당일거래대금각도')
             if not coin:
-                if self.ct_checkBoxxxxx_11.isChecked(): self.ctpg_tik_fators.append('거래대금증감')
-                if self.ct_checkBoxxxxx_12.isChecked(): self.ctpg_tik_fators.append('전일비')
-                if self.ct_checkBoxxxxx_13.isChecked(): self.ctpg_tik_fators.append('회전율')
-                if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_fators.append('전일동시간비')
-                if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_fators.append('전일비각도')
+                if self.ct_checkBoxxxxx_11.isChecked(): self.ctpg_tik_factors.append('거래대금증감')
+                if self.ct_checkBoxxxxx_12.isChecked(): self.ctpg_tik_factors.append('전일비')
+                if self.ct_checkBoxxxxx_13.isChecked(): self.ctpg_tik_factors.append('회전율')
+                if self.ct_checkBoxxxxx_14.isChecked(): self.ctpg_tik_factors.append('전일동시간비')
+                if self.ct_checkBoxxxxx_16.isChecked(): self.ctpg_tik_factors.append('전일비각도')
 
-            for j in range(30):
-                if j in [1, 2, 3, 4, 7, 8, 9, 24]:
-                    self.ctpg_tik_data[j] = [x for x in self.ctpg_tik_arry[:, j] if x != 0]
-                elif j < 25 or 'KRW' not in name and 'USDT' not in name:
-                    self.ctpg_tik_data[j] = self.ctpg_tik_arry[:, j]
+        """ 주식
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
+           0      1     2    3    4     5         6         7         8        9      10       11        12           13
+        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            14         15          16      17       18         19            20            21        22
+        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           23       24       25        26       27        28       29        30       31        32
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           33       34       35        36       37        38       39        40       41       42          43
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
+            44         45          46           47           48         49         50           51           52
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_, 전일비각도_
+              53            54               55              56              57             58            59
+        """
+        dict_stock = {
+            1: 44, 2: 45, 3: 46, 4: 47, 5: 1, 6: 50, 7: 51, 8: 52, 9: 7, 10: 19, 11: 57, 12: 14, 13: 15, 14: 5, 15: 20,
+            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 8, 27: 9, 28: 10, 29: 11
+        }
 
-            self.ctpg_tik_xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.ctpg_tik_data[0]]
-            xmin, xmax = self.ctpg_tik_xticks[0], self.ctpg_tik_xticks[-1]
-            hms = from_timestamp(xmax).strftime('%H:%M:%S')
+        """ 코인
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
+           0      1     2    3     4     5        6         7         8           9          10            11
+        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           12        13        14       15       16        17       18        19       20       21        22       23
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+           24        25       26       27        28       29        30       31       32        33         34
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
+            35         36           37           38          39         40         41           42          43
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 당일거래대금각도_
+               44            45              46              47              48             49
+        """
+        dict_coin = {
+            1: 35, 2: 36, 3: 37, 4: 38, 5: 1, 6: 41, 7: 42, 8: 43, 9: 7, 10: 10, 11: 48, 12: 8, 13: 9, 14: 5, 15: 11,
+            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49
+        }
 
-            tlen  = len(self.ctpg_tik_xticks)
-            len1  = len(self.ctpg_tik_data[1])
-            len2  = len(self.ctpg_tik_data[2])
-            len3  = len(self.ctpg_tik_data[3])
-            len4  = len(self.ctpg_tik_data[4])
-            len7  = len(self.ctpg_tik_data[7])
-            len8  = len(self.ctpg_tik_data[8])
-            len9  = len(self.ctpg_tik_data[9])
-            len24 = len(self.ctpg_tik_data[24])
+        for j in range(len(self.ctpg_tik_arry[0, :])):
+            if j in [cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(24)]:
+                self.ctpg_tik_data[j] = [x for x in self.ctpg_tik_arry[:, j] if x != 0]
+            else:
+                self.ctpg_tik_data[j] = self.ctpg_tik_arry[:, j]
 
-            """
-            체결시간, 이평60, 이평300, 이평600, 이평1200, 현재가, 체결강도, 체결강도평균, 최고체결강도, 최저체결강도, 초당거래대금,
-               0       1      2        3       4       5       6        7           8           9          10  
-            초당거래대금평균, 초당매수수량, 초당매도수량, 등락율, 고저평균대비등락율, 매수총잔량, 매도총잔량, 매수잔량1, 매도잔량1,
-                  11           12         13        14         15           16        17        18       19
-            매도수5호가잔량합, 당일거래대금, 누적초당매수수량(평균값계산틱수), 누적초당매도수량(평균값계산틱수), 당일거래대금각도(평균값계산틱수),
-                   20          21                   22                          23                          24
-            전일비각도(평균값계산틱수), 거래대금증감, 전일비, 회전율, 전일동시간비, 고가, 저가
-                     25                26       27     28       29       30   31
-            """
+        self.ctpg_tik_xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.ctpg_tik_data[0]]
+        xmin, xmax = self.ctpg_tik_xticks[0], self.ctpg_tik_xticks[-1]
+        hms  = from_timestamp(xmax).strftime('%H:%M:%S')
+        tlen = len(self.ctpg_tik_xticks)
+        len1 = len(self.ctpg_tik_data[cindex(1)])
+        len2 = len(self.ctpg_tik_data[cindex(2)])
+        len3 = len(self.ctpg_tik_data[cindex(3)])
+        len4 = len(self.ctpg_tik_data[cindex(4)])
+        len5 = len(self.ctpg_tik_data[cindex(6)])
+        len6 = len(self.ctpg_tik_data[cindex(7)])
+        len7 = len(self.ctpg_tik_data[cindex(8)])
+        len8 = len(self.ctpg_tik_data[cindex(24)])
 
-            for i, colunm in enumerate(self.ctpg_tik_fators):
+        if self.ctpg_tik_name != name:
+            for i, factor in enumerate(self.ctpg_tik_factors):
                 self.ctpg[i].clear()
                 ymin, ymax = 0, 0
-                if colunm == '현재가':
-                    self.ctpg_tik_item[1]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len1:], y=self.ctpg_tik_data[1], pen=(140, 140, 145))
-                    self.ctpg_tik_item[2]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len2:], y=self.ctpg_tik_data[2], pen=(120, 120, 125))
-                    self.ctpg_tik_item[3]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len3:], y=self.ctpg_tik_data[3], pen=(100, 100, 105))
-                    self.ctpg_tik_item[4]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len4:], y=self.ctpg_tik_data[4], pen=(80, 80, 85))
-                    self.ctpg_tik_item[5]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[5], pen=(200, 50, 50))
+                if factor == '현재가':
+                    self.ctpg_tik_item[1] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len1:], y=self.ctpg_tik_data[cindex(1)], pen=(140, 140, 145))
+                    self.ctpg_tik_item[2] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len2:], y=self.ctpg_tik_data[cindex(2)], pen=(120, 120, 125))
+                    self.ctpg_tik_item[3] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len3:], y=self.ctpg_tik_data[cindex(3)], pen=(100, 100, 105))
+                    self.ctpg_tik_item[4] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len4:], y=self.ctpg_tik_data[cindex(4)], pen=(80, 80, 85))
+                    self.ctpg_tik_item[5] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(5)], pen=(200, 50, 50))
                     self.ctpg_tik_cline = pg.InfiniteLine(angle=0)
                     self.ctpg_tik_cline.setPen(pg.mkPen(color_fg_bt))
-                    self.ctpg_tik_cline.setPos(self.ctpg_tik_data[5][-1])
+                    self.ctpg_tik_cline.setPos(self.ctpg_tik_data[cindex(5)][-1])
                     self.ctpg[i].addItem(self.ctpg_tik_cline)
-                    ar_c_ma = np.r_[self.ctpg_tik_data[1], self.ctpg_tik_data[2], self.ctpg_tik_data[3], self.ctpg_tik_data[4], self.ctpg_tik_data[5]]
-                    ymin  = ar_c_ma.min()
-                    ymax  = ar_c_ma.max()
-                elif colunm == '체결강도':
-                    self.ctpg_tik_item[9]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len9:], y=self.ctpg_tik_data[9], pen=(50, 50, 200))
-                    self.ctpg_tik_item[8]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[8], pen=(200, 50, 50))
-                    self.ctpg_tik_item[7]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len7:], y=self.ctpg_tik_data[7], pen=(50, 200, 200))
-                    self.ctpg_tik_item[6]  = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[6], pen=(50, 200, 50))
-                    ymin  = min(self.ctpg_tik_data[9])
-                    ymax  = max(self.ctpg_tik_data[8])
-                elif colunm == '초당거래대금':
-                    self.ctpg_tik_item[10] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[10], pen=(200, 50, 50))
-                    self.ctpg_tik_item[11] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[11], pen=(50, 200, 50))
-                    ymin  = min(self.ctpg_tik_data[10].min(), self.ctpg_tik_data[11].min())
-                    ymax  = max(self.ctpg_tik_data[10].max(), self.ctpg_tik_data[11].max())
-                elif colunm == '초당체결수량':
-                    self.ctpg_tik_item[12] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[12], pen=(200, 50, 50))
-                    self.ctpg_tik_item[13] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[13], pen=(50, 50, 200))
-                    ymin  = min(self.ctpg_tik_data[12].min(), self.ctpg_tik_data[13].min())
-                    ymax  = max(self.ctpg_tik_data[12].max(), self.ctpg_tik_data[13].max())
-                elif colunm == '등락율':
-                    self.ctpg_tik_item[14] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[14], pen=(200, 50, 200))
-                    ymin  = self.ctpg_tik_data[14].min()
-                    ymax  = self.ctpg_tik_data[14].max()
-                elif colunm == '고저평균대비등락율':
-                    self.ctpg_tik_item[15] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[15], pen=(50, 200, 200))
-                    ymin  = self.ctpg_tik_data[15].min()
-                    ymax  = self.ctpg_tik_data[15].max()
-                elif colunm == '호가총잔량':
-                    self.ctpg_tik_item[16] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[16], pen=(200, 50, 50))
-                    self.ctpg_tik_item[17] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[17], pen=(50, 50, 200))
-                    ymin  = min(self.ctpg_tik_data[16].min(), self.ctpg_tik_data[17].min())
-                    ymax  = max(self.ctpg_tik_data[16].max(), self.ctpg_tik_data[17].max())
-                elif colunm == '1호가잔량':
-                    self.ctpg_tik_item[18] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[18], pen=(200, 50, 50))
-                    self.ctpg_tik_item[19] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[19], pen=(50, 50, 200))
-                    ymin  = min(self.ctpg_tik_data[18].min(), self.ctpg_tik_data[19].min())
-                    ymax  = max(self.ctpg_tik_data[18].max(), self.ctpg_tik_data[19].max())
-                elif colunm == '5호가잔량합':
-                    self.ctpg_tik_item[20] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[20], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[20].min()
-                    ymax  = self.ctpg_tik_data[20].max()
-                elif colunm == '당일거래대금':
-                    self.ctpg_tik_item[21] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[21], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[21].min()
-                    ymax  = self.ctpg_tik_data[21].max()
-                elif colunm == '누적초당매도수수량':
-                    self.ctpg_tik_item[22] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[22], pen=(200, 50, 50))
-                    self.ctpg_tik_item[23] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[23], pen=(50, 50, 200))
-                    ymin  = min(self.ctpg_tik_data[22].min(), self.ctpg_tik_data[23].min())
-                    ymax  = max(self.ctpg_tik_data[22].max(), self.ctpg_tik_data[23].max())
-                elif colunm == '당일거래대금각도':
-                    self.ctpg_tik_item[24] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len24:], y=self.ctpg_tik_data[24], pen=(200, 50, 50))
-                    ymin  = min(self.ctpg_tik_data[24])
-                    ymax  = max(self.ctpg_tik_data[24])
-                elif colunm == '전일비각도':
-                    self.ctpg_tik_item[25] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[25], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[25].min()
-                    ymax  = self.ctpg_tik_data[25].max()
-                elif colunm == '거래대금증감':
-                    self.ctpg_tik_item[26] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[26], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[26].min()
-                    ymax  = self.ctpg_tik_data[26].max()
-                elif colunm == '전일비':
-                    self.ctpg_tik_item[27] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[27], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[27].min()
-                    ymax  = self.ctpg_tik_data[27].max()
-                elif colunm == '회전율':
-                    self.ctpg_tik_item[28] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[28], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[28].min()
-                    ymax  = self.ctpg_tik_data[28].max()
-                elif colunm == '전일동시간비':
-                    self.ctpg_tik_item[29] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[29], pen=(200, 50, 50))
-                    ymin  = self.ctpg_tik_data[29].min()
-                    ymax  = self.ctpg_tik_data[29].max()
+                    list_ = self.ctpg_tik_data[cindex(1)] + self.ctpg_tik_data[cindex(2)] + self.ctpg_tik_data[cindex(3)] + self.ctpg_tik_data[cindex(4)] + list(self.ctpg_tik_data[cindex(5)])
+                    ymax, ymin = max(list_), min(list_)
+                elif factor == '체결강도':
+                    self.ctpg_tik_item[6] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len5:], y=self.ctpg_tik_data[cindex(6)], pen=(50, 50, 200))
+                    self.ctpg_tik_item[7] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len6:], y=self.ctpg_tik_data[cindex(7)], pen=(200, 50, 50))
+                    self.ctpg_tik_item[8] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len7:], y=self.ctpg_tik_data[cindex(8)], pen=(50, 200, 200))
+                    self.ctpg_tik_item[9] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(9)], pen=(50, 200, 50))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(7)]), min(self.ctpg_tik_data[cindex(8)])
+                elif factor == '초당거래대금':
+                    self.ctpg_tik_item[10] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(10)], pen=(200, 50, 50))
+                    self.ctpg_tik_item[11] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(11)], pen=(50, 200, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(10)].max(), self.ctpg_tik_data[cindex(10)].min()
+                elif factor == '초당체결수량':
+                    self.ctpg_tik_item[12] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(12)], pen=(200, 50, 50))
+                    self.ctpg_tik_item[13] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(13)], pen=(50, 50, 200))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(12)].max(), self.ctpg_tik_data[cindex(13)].max()), min(self.ctpg_tik_data[cindex(12)].min(), self.ctpg_tik_data[cindex(13)].min())
+                elif factor == '등락율':
+                    self.ctpg_tik_item[14] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(14)], pen=(200, 50, 200))
+                    ymax, ymin = self.ctpg_tik_data[cindex(14)].max(), self.ctpg_tik_data[cindex(14)].min()
+                elif factor == '고저평균대비등락율':
+                    self.ctpg_tik_item[15] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(15)], pen=(50, 200, 200))
+                    ymax, ymin = self.ctpg_tik_data[cindex(15)].max(), self.ctpg_tik_data[cindex(15)].min()
+                elif factor == '호가총잔량':
+                    self.ctpg_tik_item[16] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(16)], pen=(200, 50, 50))
+                    self.ctpg_tik_item[17] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(17)], pen=(50, 50, 200))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(16)].max(), self.ctpg_tik_data[cindex(17)].max()), min(self.ctpg_tik_data[cindex(16)].min(), self.ctpg_tik_data[cindex(17)].min())
+                elif factor == '1호가잔량':
+                    self.ctpg_tik_item[18] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(18)], pen=(200, 50, 50))
+                    self.ctpg_tik_item[19] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(19)], pen=(50, 50, 200))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(18)].max(), self.ctpg_tik_data[cindex(19)].max()), min(self.ctpg_tik_data[cindex(18)].min(), self.ctpg_tik_data[cindex(19)].min())
+                elif factor == '5호가잔량합':
+                    self.ctpg_tik_item[20] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(20)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(20)].max(), self.ctpg_tik_data[cindex(20)].min()
+                elif factor == '당일거래대금':
+                    self.ctpg_tik_item[21] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(21)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(21)].max(), self.ctpg_tik_data[cindex(21)].min()
+                elif factor == '누적초당매도수수량':
+                    self.ctpg_tik_item[22] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(22)], pen=(200, 50, 50))
+                    self.ctpg_tik_item[23] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(23)], pen=(50, 50, 200))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(22)].max(), self.ctpg_tik_data[cindex(23)].max()), min(self.ctpg_tik_data[cindex(22)].min(), self.ctpg_tik_data[cindex(23)].min())
+                elif factor == '당일거래대금각도':
+                    self.ctpg_tik_item[24] = self.ctpg[i].plot(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(24)], pen=(200, 50, 50))
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(24)]), min(self.ctpg_tik_data[cindex(24)])
+                elif factor == '전일비각도':
+                    self.ctpg_tik_item[25] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(25)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(25)].max(), self.ctpg_tik_data[cindex(25)].min()
+                elif factor == '거래대금증감':
+                    self.ctpg_tik_item[26] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(26)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(26)].max(), self.ctpg_tik_data[cindex(26)].min()
+                elif factor == '전일비':
+                    self.ctpg_tik_item[27] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(27)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(27)].max(), self.ctpg_tik_data[cindex(27)].min()
+                elif factor == '회전율':
+                    self.ctpg_tik_item[28] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(28)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(28)].max(), self.ctpg_tik_data[cindex(28)].min()
+                elif factor == '전일동시간비':
+                    self.ctpg_tik_item[29] = self.ctpg[i].plot(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(29)], pen=(200, 50, 50))
+                    ymax, ymin = self.ctpg_tik_data[cindex(29)].max(), self.ctpg_tik_data[cindex(29)].min()
 
                 if self.ct_checkBoxxxxx_22.isChecked():
                     legend = pg.TextItem(anchor=(0, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
                     legend.setFont(qfont12)
-                    legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_fators[i], hms, True))
+                    legend.setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, True))
                     self.ctpg[i].addItem(legend)
                     self.ctpg_tik_legend[i] = legend
 
                 if i != 0: self.ctpg[i].setXLink(self.ctpg[0])
-                self.ctpg_cvb[i].set_range(xmin, xmax, ymin, ymax)
-                self.ctpg[i].setRange(xRange=(xmin, xmax), yRange=(ymin, ymax))
-                if self.ct_checkBoxxxxx_22.isChecked(): self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][1])
+                self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
+                if self.ct_checkBoxxxxx_22.isChecked():
+                    self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][1])
                 if i == chart_count - 1: break
 
             self.ctpg_tik_name = name
@@ -2126,80 +2111,89 @@ class Window(QMainWindow):
                 elif chart_count == 12: self.CrossHair(True, coin, self.ctpg[0], self.ctpg[1], self.ctpg[2], self.ctpg[3], self.ctpg[4], self.ctpg[5], self.ctpg[6], self.ctpg[7], self.ctpg[8], self.ctpg[9], self.ctpg[10], self.ctpg[11])
                 elif chart_count == 16: self.CrossHair(True, coin, self.ctpg[0], self.ctpg[1], self.ctpg[2], self.ctpg[3], self.ctpg[4], self.ctpg[5], self.ctpg[6], self.ctpg[7], self.ctpg[8], self.ctpg[9], self.ctpg[10], self.ctpg[11], self.ctpg[12], self.ctpg[13], self.ctpg[14], self.ctpg[15])
         else:
-            for j in range(30):
-                if j in [1, 2, 3, 4, 7, 8, 9, 24]:
-                    self.ctpg_tik_data[j] = [x for x in self.ctpg_tik_arry[:, j] if x != 0]
-                elif j < 25 or 'KRW' not in name and 'USDT' not in name:
-                    self.ctpg_tik_data[j] = self.ctpg_tik_arry[:, j]
+            for i, factor in enumerate(self.ctpg_tik_factors):
+                ymin, ymax = 0, 0
+                if factor == '현재가':
+                    list_ = self.ctpg_tik_data[cindex(1)] + self.ctpg_tik_data[cindex(2)] + self.ctpg_tik_data[cindex(3)] + self.ctpg_tik_data[cindex(4)] + list(self.ctpg_tik_data[cindex(5)])
+                    ymax, ymin = max(list_), min(list_)
+                    self.ctpg_tik_item[1].setData(x=self.ctpg_tik_xticks[tlen - len1:], y=self.ctpg_tik_data[cindex(1)])
+                    self.ctpg_tik_item[2].setData(x=self.ctpg_tik_xticks[tlen - len2:], y=self.ctpg_tik_data[cindex(2)])
+                    self.ctpg_tik_item[3].setData(x=self.ctpg_tik_xticks[tlen - len3:], y=self.ctpg_tik_data[cindex(3)])
+                    self.ctpg_tik_item[4].setData(x=self.ctpg_tik_xticks[tlen - len4:], y=self.ctpg_tik_data[cindex(4)])
+                    self.ctpg_tik_item[5].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(5)])
+                    self.ctpg_tik_cline.setPos(self.ctpg_tik_data[cindex(5)][-1])
+                elif factor == '체결강도':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(7)]), min(self.ctpg_tik_data[cindex(8)])
+                    self.ctpg_tik_item[6].setData(x=self.ctpg_tik_xticks[tlen - len5:], y=self.ctpg_tik_data[cindex(6)])
+                    self.ctpg_tik_item[7].setData(x=self.ctpg_tik_xticks[tlen - len6:], y=self.ctpg_tik_data[cindex(7)])
+                    self.ctpg_tik_item[8].setData(x=self.ctpg_tik_xticks[tlen - len7:], y=self.ctpg_tik_data[cindex(8)])
+                    self.ctpg_tik_item[9].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(9)])
+                elif factor == '초당거래대금':
+                    ymax, ymin = self.ctpg_tik_data[cindex(10)].max(), self.ctpg_tik_data[cindex(10)].min()
+                    self.ctpg_tik_item[10].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(10)])
+                    self.ctpg_tik_item[11].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(11)])
+                elif factor == '초당체결수량':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(12)].max(), self.ctpg_tik_data[cindex(13)].max()), min(self.ctpg_tik_data[cindex(12)].min(), self.ctpg_tik_data[cindex(13)].min())
+                    self.ctpg_tik_item[12].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(12)])
+                    self.ctpg_tik_item[13].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(13)])
+                elif factor == '등락율':
+                    ymax, ymin = self.ctpg_tik_data[cindex(14)].max(), self.ctpg_tik_data[cindex(14)].min()
+                    self.ctpg_tik_item[14].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(14)])
+                elif factor == '고저평균대비등락율':
+                    ymax, ymin = self.ctpg_tik_data[cindex(15)].max(), self.ctpg_tik_data[cindex(15)].min()
+                    self.ctpg_tik_item[15].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(15)])
+                elif factor == '호가총잔량':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(16)].max(), self.ctpg_tik_data[cindex(17)].max()), min(self.ctpg_tik_data[cindex(16)].min(), self.ctpg_tik_data[cindex(17)].min())
+                    self.ctpg_tik_item[16].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(16)])
+                    self.ctpg_tik_item[17].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(17)])
+                elif factor == '1호가잔량':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(18)].max(), self.ctpg_tik_data[cindex(19)].max()), min(self.ctpg_tik_data[cindex(18)].min(), self.ctpg_tik_data[cindex(19)].min())
+                    self.ctpg_tik_item[18].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(18)])
+                    self.ctpg_tik_item[19].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(19)])
+                elif factor == '5호가잔량합':
+                    ymax, ymin = self.ctpg_tik_data[cindex(20)].max(), self.ctpg_tik_data[cindex(20)].min()
+                    self.ctpg_tik_item[20].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(20)])
+                elif factor == '당일거래대금':
+                    ymax, ymin = self.ctpg_tik_data[cindex(21)].max(), self.ctpg_tik_data[cindex(21)].min()
+                    self.ctpg_tik_item[21].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(21)])
+                elif factor == '누적초당매도수수량':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(22)].max(), self.ctpg_tik_data[cindex(23)].max()), min(self.ctpg_tik_data[cindex(22)].min(), self.ctpg_tik_data[cindex(23)].min())
+                    self.ctpg_tik_item[22].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(22)])
+                    self.ctpg_tik_item[23].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(23)])
+                elif factor == '당일거래대금각도':
+                    ymax, ymin = max(self.ctpg_tik_data[cindex(24)]), min(self.ctpg_tik_data[cindex(24)])
+                    self.ctpg_tik_item[24].setData(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[cindex(24)])
+                elif factor == '전일비각도':
+                    ymax, ymin = self.ctpg_tik_data[cindex(25)].max(), self.ctpg_tik_data[cindex(25)].min()
+                    self.ctpg_tik_item[25].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(25)])
+                elif factor == '거래대금증감':
+                    ymax, ymin = self.ctpg_tik_data[cindex(26)].max(), self.ctpg_tik_data[cindex(26)].min()
+                    self.ctpg_tik_item[26].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(26)])
+                elif factor == '전일비':
+                    ymax, ymin = self.ctpg_tik_data[cindex(27)].max(), self.ctpg_tik_data[cindex(27)].min()
+                    self.ctpg_tik_item[27].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(27)])
+                elif factor == '회전율':
+                    ymax, ymin = self.ctpg_tik_data[cindex(28)].max(), self.ctpg_tik_data[cindex(28)].min()
+                    self.ctpg_tik_item[28].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(28)])
+                elif factor == '전일동시간비':
+                    ymax, ymin = self.ctpg_tik_data[cindex(29)].max(), self.ctpg_tik_data[cindex(29)].min()
+                    self.ctpg_tik_item[29].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[cindex(29)])
 
-            self.ctpg_tik_xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.ctpg_tik_data[0]]
-            xmin, xmax = self.ctpg_tik_xticks[0], self.ctpg_tik_xticks[-1]
-            hms = from_timestamp(xmax).strftime('%H:%M:%S')
-
-            tlen  = len(self.ctpg_tik_xticks)
-            len1  = len(self.ctpg_tik_data[1])
-            len2  = len(self.ctpg_tik_data[2])
-            len3  = len(self.ctpg_tik_data[3])
-            len4  = len(self.ctpg_tik_data[4])
-            len7  = len(self.ctpg_tik_data[7])
-            len8  = len(self.ctpg_tik_data[8])
-            len9  = len(self.ctpg_tik_data[9])
-            len24 = len(self.ctpg_tik_data[24])
-
-            i = 0
-            for j in list(self.ctpg_tik_item.keys()):
-                if j == 5:
-                    ar = np.r_[self.ctpg_tik_data[1], self.ctpg_tik_data[2], self.ctpg_tik_data[3], self.ctpg_tik_data[4], self.ctpg_tik_data[5]]
-                    ymin = ar.min()
-                    ymax = ar.max()
-                    self.ctpg_tik_item[1].setData(x=self.ctpg_tik_xticks[tlen - len1:], y=self.ctpg_tik_data[1])
-                    self.ctpg_tik_item[2].setData(x=self.ctpg_tik_xticks[tlen - len2:], y=self.ctpg_tik_data[2])
-                    self.ctpg_tik_item[3].setData(x=self.ctpg_tik_xticks[tlen - len3:], y=self.ctpg_tik_data[3])
-                    self.ctpg_tik_item[4].setData(x=self.ctpg_tik_xticks[tlen - len4:], y=self.ctpg_tik_data[4])
-                    self.ctpg_tik_item[5].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[5])
-                    self.ctpg_tik_cline.setPos(self.ctpg_tik_data[5][-1])
-                    self.SetPosLegendLabel(i, xmin, xmax, ymin, ymax, coin, hms)
-                    i += 1
-                elif j == 9:
-                    ymin = min(self.ctpg_tik_data[j])
-                    ymax = max(self.ctpg_tik_data[j-1])
-                    self.ctpg_tik_item[9].setData(x=self.ctpg_tik_xticks[tlen - len9:], y=self.ctpg_tik_data[9])
-                    self.ctpg_tik_item[8].setData(x=self.ctpg_tik_xticks[tlen - len8:], y=self.ctpg_tik_data[8])
-                    self.ctpg_tik_item[7].setData(x=self.ctpg_tik_xticks[tlen - len7:], y=self.ctpg_tik_data[7])
-                    self.ctpg_tik_item[6].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[6])
-                    self.SetPosLegendLabel(i, xmin, xmax, ymin, ymax, coin, hms)
-                    i += 1
-                elif j in [11, 13, 17, 19, 23]:
-                    ar = np.r_[self.ctpg_tik_data[j-1], self.ctpg_tik_data[j]]
-                    ymin = ar.min()
-                    ymax = ar.max()
-                    self.ctpg_tik_item[j-1].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[j-1])
-                    self.ctpg_tik_item[j].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[j])
-                    self.SetPosLegendLabel(i, xmin, xmax, ymin, ymax, coin, hms)
-                    i += 1
-                elif j == 24:
-                    ymin = min(self.ctpg_tik_data[j])
-                    ymax = max(self.ctpg_tik_data[j])
-                    self.ctpg_tik_item[24].setData(x=self.ctpg_tik_xticks[tlen - len24:], y=self.ctpg_tik_data[24])
-                    self.SetPosLegendLabel(i, xmin, xmax, ymin, ymax, coin, hms)
-                    i += 1
-                elif j in [14, 15, 20, 21, 25, 26, 27, 28, 29]:
-                    ymin = self.ctpg_tik_data[j].min()
-                    ymax = self.ctpg_tik_data[j].max()
-                    self.ctpg_tik_item[j].setData(x=self.ctpg_tik_xticks, y=self.ctpg_tik_data[j])
-                    self.SetPosLegendLabel(i, xmin, xmax, ymin, ymax, coin, hms)
-                    i += 1
+                self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
+                self.SetPosLegendLabel(i, coin, hms)
 
         if self.database_chart: self.database_chart = False
 
-    def SetPosLegendLabel(self, i, xmin, xmax, ymin, ymax, coin, hms):
+    def SetRangeCtpg(self, i, xmin, xmax, ymin, ymax):
         self.ctpg_cvb[i].set_range(xmin, xmax, ymin, ymax)
         self.ctpg[i].setRange(xRange=(xmin, xmax), yRange=(ymin, ymax))
+
+    def SetPosLegendLabel(self, i, coin, hms):
         if self.ct_checkBoxxxxx_21.isChecked():
             self.ctpg_tik_labels[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][0])
         if self.ct_checkBoxxxxx_22.isChecked():
             self.ctpg_tik_legend[i].setPos(self.ctpg_cvb[i].state['viewRange'][0][0], self.ctpg_cvb[i].state['viewRange'][1][1])
-            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_fators[i], hms, True))
+            self.ctpg_tik_legend[i].setText(self.GetLabelText(coin, self.ctpg_tik_arry, -1, self.ctpg_tik_factors[i], hms, True))
 
     @error_decorator
     def DrawRealJisuChart(self, data):
@@ -2579,11 +2573,11 @@ class Window(QMainWindow):
                 if len(df) == 0 or df['아이디2'][0] == '':
                     self.sj_main_cheBox_01.nextCheckState()
                     QMessageBox.critical(self, '오류 알림', '두번째 계정이 설정되지 않아\n리시버를 선택할 수 없습니다.\n계정 설정 후 다시 선택하십시오.\n')
+                elif not self.sj_main_cheBox_02.isChecked():
+                    self.sj_main_cheBox_02.nextCheckState()
             else:
                 if self.sj_main_cheBox_02.isChecked():
                     self.sj_main_cheBox_02.nextCheckState()
-                if self.sj_main_cheBox_03.isChecked():
-                    self.sj_main_cheBox_03.nextCheckState()
 
     def CheckboxChanged_02(self, state):
         if type(self.focusWidget()) != QPushButton:
@@ -2591,52 +2585,63 @@ class Window(QMainWindow):
                 con = sqlite3.connect(DB_SETTING)
                 df = pd.read_sql('SELECT * FROM sacc', con).set_index('index')
                 con.close()
-                if len(df) == 0 or df['아이디2'][0] == '':
-                    self.sj_main_cheBox_02.nextCheckState()
-                    QMessageBox.critical(self, '오류 알림', '두번째 계정이 설정되지 않아\n콜렉터를 선택할 수 없습니다.\n계정 설정 후 다시 선택하십시오.\n')
-                elif not self.sj_main_cheBox_01.isChecked():
-                    self.sj_main_cheBox_01.nextCheckState()
-
-    def CheckboxChanged_03(self, state):
-        if type(self.focusWidget()) != QPushButton:
-            if state == Qt.Checked:
-                con = sqlite3.connect(DB_SETTING)
-                df = pd.read_sql('SELECT * FROM sacc', con).set_index('index')
-                con.close()
                 if len(df) == 0 or df['아이디1'][0] == '':
-                    self.sj_main_cheBox_03.nextCheckState()
+                    self.sj_main_cheBox_02.nextCheckState()
                     QMessageBox.critical(self, '오류 알림', '첫번째 계정이 설정되지 않아\n트레이더를 선택할 수 없습니다.\n계정 설정 후 다시 선택하십시오.\n')
                 elif not self.sj_main_cheBox_01.isChecked():
                     self.sj_main_cheBox_01.nextCheckState()
+            else:
+                if self.sj_main_cheBox_01.isChecked():
+                    self.sj_main_cheBox_01.nextCheckState()
+
+    def CheckboxChanged_03(self, state):
+        if type(self.focusWidget()) != QPushButton and state == Qt.Checked:
+            if self.sj_main_cheBox_11.isChecked():
+                self.sj_main_cheBox_03.nextCheckState()
+                QMessageBox.critical(self, '오류 알림', '클라이언트용 스톰은\n틱데이터를 저장할 수 없습니다.\n서버용 스톰으로 저장하십시오.\n')
+            else:
+                if not self.sj_main_cheBox_01.isChecked():
+                    self.sj_main_cheBox_01.nextCheckState()
+                if not self.sj_main_cheBox_02.isChecked():
+                    self.sj_main_cheBox_02.nextCheckState()
 
     def CheckboxChanged_04(self, state):
-        if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
-            if self.sj_main_cheBox_05.isChecked():
-                self.sj_main_cheBox_05.nextCheckState()
-            if self.sj_main_cheBox_06.isChecked():
-                self.sj_main_cheBox_06.nextCheckState()
-
-    def CheckboxChanged_05(self, state):
-        if type(self.focusWidget()) != QPushButton and state == Qt.Checked:
-            if not self.sj_main_cheBox_04.isChecked():
-                self.sj_main_cheBox_04.nextCheckState()
-
-    def CheckboxChanged_06(self, state):
         if type(self.focusWidget()) != QPushButton:
             if state == Qt.Checked:
-                con = sqlite3.connect(DB_SETTING)
-                df = pd.read_sql('SELECT * FROM cacc', con).set_index('index')
-                con.close()
-                if len(df) == 0 or (df['Access_key1'][0] == '' and df['Access_key2'][0] == ''):
-                    self.sj_main_cheBox_06.nextCheckState()
-                    QMessageBox.critical(self, '오류 알림', '업비트 계정이 설정되지 않아\n트레이더를 선택할 수 없습니다.\n계정 설정 후 다시 선택하십시오.\n')
-                elif not self.sj_main_cheBox_04.isChecked():
+                if not self.sj_main_cheBox_05.isChecked():
+                    self.sj_main_cheBox_05.nextCheckState()
+            else:
+                if self.sj_main_cheBox_05.isChecked():
+                    self.sj_main_cheBox_05.nextCheckState()
+
+    def CheckboxChanged_05(self, state):
+        if type(self.focusWidget()) != QPushButton:
+            if state == Qt.Checked:
+                if not self.sj_main_cheBox_04.isChecked():
+                    self.sj_main_cheBox_04.nextCheckState()
+            else:
+                if self.sj_main_cheBox_04.isChecked():
                     self.sj_main_cheBox_04.nextCheckState()
 
+    def CheckboxChanged_06(self, state):
+        if type(self.focusWidget()) != QPushButton and state == Qt.Checked:
+            if self.sj_main_cheBox_11.isChecked():
+                self.sj_main_cheBox_03.nextCheckState()
+                QMessageBox.critical(self, '오류 알림', '클라이언트용 스톰은\n틱데이터를 저장할 수 없습니다.\n서버용 스톰으로 저장하십시오.\n')
+            else:
+                if not self.sj_main_cheBox_04.isChecked():
+                    self.sj_main_cheBox_04.nextCheckState()
+                if not self.sj_main_cheBox_05.isChecked():
+                    self.sj_main_cheBox_05.nextCheckState()
+
     def CheckboxChanged_07(self, state):
-        if type(self.focusWidget()) != QPushButton and state != Qt.Checked and self.StockTraderProcessAlive():
-            self.sj_stock_ckBox_01.nextCheckState()
-            QMessageBox.critical(self, '오류 알림', '트레이더 실행 중에는 모의모드를 해제할 수 없습니다.\n')
+        if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
+            buttonReply = QMessageBox.question(
+                self, '경고', '트레이더 실행 중에 모의모드를 해제하면\n바로 실매매로 전환됩니다. 해제하시겠습니까?',
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+            if buttonReply != QMessageBox.Yes:
+                self.sj_stock_ckBox_01.nextCheckState()
 
     def CheckboxChanged_08(self, state):
         if type(self.focusWidget()) != QPushButton and state != Qt.Checked and self.CoinTraderProcessAlive():
@@ -2663,7 +2668,6 @@ class Window(QMainWindow):
                 QMessageBox.critical(self, '오류 알림', '일봉데이터 자동다운로드 시는 선택할 수 없습니다.\n')
                 self.focusWidget().nextCheckState()
                 return
-
             for widget in self.com_exit_list:
                 if widget != self.focusWidget():
                     if widget.isChecked():
@@ -2713,20 +2717,22 @@ class Window(QMainWindow):
             self.list_tcomboBoxxxxx[gubun].clear()
 
     def CheckboxChanged_17(self, state):
-        if state == Qt.Checked:
-            if self.sj_back_cheBox_18.isChecked():
-                self.sj_back_cheBox_18.nextCheckState()
-        else:
-            if not self.sj_back_cheBox_18.isChecked():
-                self.sj_back_cheBox_18.nextCheckState()
+        if type(self.focusWidget()) != QPushButton:
+            if state == Qt.Checked:
+                if self.sj_back_cheBox_18.isChecked():
+                    self.sj_back_cheBox_18.nextCheckState()
+            else:
+                if not self.sj_back_cheBox_18.isChecked():
+                    self.sj_back_cheBox_18.nextCheckState()
 
     def CheckboxChanged_18(self, state):
-        if state == Qt.Checked:
-            if self.sj_back_cheBox_17.isChecked():
-                self.sj_back_cheBox_17.nextCheckState()
-        else:
-            if not self.sj_back_cheBox_17.isChecked():
-                self.sj_back_cheBox_17.nextCheckState()
+        if type(self.focusWidget()) != QPushButton:
+            if state == Qt.Checked:
+                if self.sj_back_cheBox_17.isChecked():
+                    self.sj_back_cheBox_17.nextCheckState()
+            else:
+                if not self.sj_back_cheBox_17.isChecked():
+                    self.sj_back_cheBox_17.nextCheckState()
 
     def CheckboxChanged_19(self, state):
         if type(self.focusWidget()) != QPushButton and state == Qt.Checked:
@@ -2734,6 +2740,24 @@ class Window(QMainWindow):
                 if widget != self.focusWidget():
                     if widget.isChecked():
                         widget.nextCheckState()
+
+    def CheckboxChanged_20(self, state):
+        if type(self.focusWidget()) != QPushButton:
+            if state == Qt.Checked:
+                if self.focusWidget() == self.sj_main_cheBox_10:
+                    if self.sj_main_cheBox_11.isChecked():
+                        self.sj_main_cheBox_11.nextCheckState()
+                else:
+                    if self.sj_main_cheBox_10.isChecked():
+                        self.sj_main_cheBox_10.nextCheckState()
+            elif not self.sj_main_cheBox_11.isChecked() and not self.sj_main_cheBox_10.isChecked() and not self.sj_main_cheBox_09.isChecked():
+                self.sj_main_cheBox_09.nextCheckState()
+
+    def CheckboxChanged_21(self, state):
+        if type(self.focusWidget()) != QPushButton and state != Qt.Checked:
+            if self.focusWidget() == self.sj_main_cheBox_09:
+                if not self.sj_main_cheBox_11.isChecked() and not self.sj_main_cheBox_10.isChecked():
+                    self.sj_main_cheBox_09.nextCheckState()
 
     # =================================================================================================================
 
@@ -2861,7 +2885,7 @@ class Window(QMainWindow):
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
         if buttonReply == QMessageBox.Yes:
-            if self.StockTraderProcessAlive(): straderQ.put(['매도', self.dict_code[name], name, c, oc, now(), True])
+            wdservQ.put(['trader', ['매도', self.dict_code[name], name, c, oc, now(), True]])
 
     @pyqtSlot(int)
     def CellClicked_03(self, row):
@@ -3179,7 +3203,7 @@ class Window(QMainWindow):
 
     def ReturnPress_02(self):
         if self.pa_lineEditttt_01.text() == self.dict_set['계좌비밀번호1'] or \
-                (self.pa_lineEditttt_01.text() == '' and self.dict_set['계좌비밀번호1'] is None and BIT32):
+                (self.pa_lineEditttt_01.text() == '' and self.dict_set['계좌비밀번호1'] is None):
             self.sj_sacc_liEdit_01.setEchoMode(QLineEdit.Normal)
             self.sj_sacc_liEdit_02.setEchoMode(QLineEdit.Normal)
             self.sj_sacc_liEdit_03.setEchoMode(QLineEdit.Normal)
@@ -3389,13 +3413,7 @@ class Window(QMainWindow):
                 if coin:
                     if self.CoinStrategyProcessAlive(): cstgQ.put(code)
                 else:
-                    if self.StockStrategy1ProcessAlive():
-                        if self.dict_sgbn[code]:
-                            sstg2Q.put('000000')
-                            sstg1Q.put(code)
-                        else:
-                            sstg1Q.put('000000')
-                            sstg2Q.put(code)
+                    wdservQ.put(['strategy', ['차트코드갱신', self.dict_sgbn[code], code]])
             else:
                 self.ChartClear()
                 if detail is None:
@@ -3693,11 +3711,11 @@ class Window(QMainWindow):
 
     def PutHogaCode(self, coin, code):
         if coin:
-            if self.StockReceiverProcessAlive(): sreceivQ.put('000000')
+            wdservQ.put(['receiver', '000000'])
             if self.CoinReceiverProcessAlive():  creceivQ.put(code)
         else:
             if self.CoinReceiverProcessAlive():  creceivQ.put('000000')
-            if self.StockReceiverProcessAlive(): sreceivQ.put(code)
+            wdservQ.put(['receiver', code])
 
     def ChartMoneyTopList(self):
         searchdate = self.ct_dateEdittttt_02.date().toString('yyyyMMdd')
@@ -3838,43 +3856,11 @@ class Window(QMainWindow):
                     bpq.put(['백테유형', '백테스트'])
 
                 backQ.put([betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', self.dict_cn, self.back_count, bl, False, self.df_kp, self.df_kd, False])
-                self.proc_backtester_bt = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '백테스트', 'S'))
+                self.proc_backtester_bt = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S'))
                 self.proc_backtester_bt.start()
                 self.svjButtonClicked_07()
                 self.ss_progressBar_01.setValue(0)
                 self.ssicon_alert = True
-
-    def ChartTest(self):
-        if not self.qtimer4.isActive():
-            self.qtimer4.start()
-        else:
-            self.qtimer4.stop()
-            self.ct_test = 0
-
-    def ChartDrawTest(self):
-        tableWidget = self.ss_tableWidget_01
-        item = tableWidget.item(self.ct_test, 0)
-        if item is None:
-            self.qtimer4.stop()
-            self.ct_test = 0
-            self.qtimer4.start()
-            return
-        name = item.text()
-        if name in self.dict_code.keys():
-            searchdate = tableWidget.item(self.ct_test, 1).text()[:8]
-            buytime    = comma2int(tableWidget.item(self.ct_test, 1).text())
-            selltime   = comma2int(tableWidget.item(self.ct_test, 2).text())
-            buyprice   = comma2float(tableWidget.item(self.ct_test, 4).text())
-            sellprice  = comma2float(tableWidget.item(self.ct_test, 5).text())
-            detail     = [buytime, buyprice, selltime, sellprice]
-            buytimes   = tableWidget.item(row, 12).text()
-            coin       = True if 'KRW' in name or 'USDT' in name else False
-            code       = self.dict_code[name] if name in self.dict_code.keys() else name
-            self.ct_lineEdittttt_04.setText(code)
-            self.ct_lineEdittttt_05.setText(name)
-            self.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-            self.ShowDialogChart(False, coin, code, 30, searchdate, self.ct_lineEdittttt_01.text(), self.ct_lineEdittttt_02.text(), detail, buytimes)
-        self.ct_test += 1
 
     def ChangeBacksDate(self):
         if self.sd_scheckBoxxxx_01.isChecked():
@@ -3924,8 +3910,8 @@ class Window(QMainWindow):
                 return
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '주식 콜렉터DB의 지정시간이후 데이터를 삭제합니다.'])
-                queryQ.put(['주식콜렉터DB지정시간이후삭제', time])
+                windowQ.put([ui_num['DB관리'], '주식 당일 데이터의 지정시간이후 데이터를 삭제합니다.'])
+                queryQ.put(['주식당일데이터지정시간이후삭제', time])
 
     def dbButtonClicked_04(self):
         if not self.database_control:
@@ -3935,7 +3921,7 @@ class Window(QMainWindow):
                 return
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '주식 콜렉터DB의 체결시간을 조정합니다.'])
+                windowQ.put([ui_num['DB관리'], '주식 당일DB의 체결시간을 조정합니다.'])
                 queryQ.put(['주식체결시간조정', date])
 
     def dbButtonClicked_05(self):
@@ -3966,14 +3952,14 @@ class Window(QMainWindow):
         if not self.database_control:
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '주식 콜렉터DB를 백테DB로 추가합니다.'])
+                windowQ.put([ui_num['DB관리'], '주식 당일DB를 백테DB로 추가합니다.'])
                 queryQ.put(['주식백테디비추가2', ''])
 
     def dbButtonClicked_08(self):
         if not self.database_control:
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '주식 콜렉터DB를 일자DB로 분리합니다.'])
+                windowQ.put([ui_num['DB관리'], '주식 당일DB를 일자DB로 분리합니다.'])
                 queryQ.put(['주식일자DB분리', ''])
 
     def dbButtonClicked_09(self):
@@ -4020,8 +4006,8 @@ class Window(QMainWindow):
                 return
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '코인 콜렉터DB의 지정시간이후 데이터를 삭제합니다.'])
-                queryQ.put(['코인콜렉터DB지정시간이후삭제', time])
+                windowQ.put([ui_num['DB관리'], '코인 당일DB의 지정시간이후 데이터를 삭제합니다.'])
+                queryQ.put(['코인당일데이터지정시간이후삭제', time])
 
     def dbButtonClicked_13(self):
         if not self.database_control:
@@ -4051,14 +4037,14 @@ class Window(QMainWindow):
         if not self.database_control:
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '코인 콜렉터DB를 백테DB로 추가합니다.'])
+                windowQ.put([ui_num['DB관리'], '코인 당일DB를 백테DB로 추가합니다.'])
                 queryQ.put(['코인백테디비추가2', ''])
 
     def dbButtonClicked_16(self):
         if not self.database_control:
             if proc_query.is_alive():
                 self.database_control = True
-                windowQ.put([ui_num['DB관리'], '코인 콜렉터DB를 일자DB로 분리합니다.'])
+                windowQ.put([ui_num['DB관리'], '코인 당일DB를 일자DB로 분리합니다.'])
                 queryQ.put(['코인일자DB분리', ''])
 
     def dbButtonClicked_17(self):
@@ -4113,9 +4099,8 @@ class Window(QMainWindow):
             if self.CoinTraderProcessAlive():
                 ctraderQ.put(['매수', name, comma2float(op), comma2float(oc), now(), False, ordertype])
         elif 'USDT' not in name:
-            if self.StockTraderProcessAlive():
-                code = self.dict_code[name]
-                straderQ.put(['매수', code, name, comma2int(op), comma2int(oc), now(), False, ordertype])
+            code = self.dict_code[name]
+            wdservQ.put(['trader', ['매수', code, name, comma2int(op), comma2int(oc), now(), False, ordertype]])
 
     def odButtonClicked_02(self):
         name      = self.od_comboBoxxxxx_01.currentText()
@@ -4129,9 +4114,8 @@ class Window(QMainWindow):
             if self.CoinTraderProcessAlive():
                 ctraderQ.put(['매도', name, comma2float(op), comma2float(oc), now(), False, ordertype])
         elif 'USDT' not in name:
-            if self.StockTraderProcessAlive():
-                code = self.dict_code[name]
-                straderQ.put(['매도', code, name, comma2int(op), comma2int(oc), now(), False, ordertype])
+            code = self.dict_code[name]
+            wdservQ.put(['trader', ['매도', code, name, comma2int(op), comma2int(oc), now(), False, ordertype]])
 
     def odButtonClicked_03(self):
         name      = self.od_comboBoxxxxx_01.currentText()
@@ -4190,9 +4174,8 @@ class Window(QMainWindow):
                 ctraderQ.put(['BUY_LONG_CANCEL', name, 0, 0, now(), False])
                 ctraderQ.put(['SELL_SHORT_CANCEL', name, 0, 0, now(), False])
         else:
-            if self.StockTraderProcessAlive():
-                code = self.dict_code[name]
-                straderQ.put(['매수취소', code, name, 0, 0, now(), False])
+            code = self.dict_code[name]
+            wdservQ.put(['trader', ['매수취소', code, name, 0, 0, now(), False]])
 
     def odButtonClicked_08(self):
         name = self.od_comboBoxxxxx_01.currentText()
@@ -4208,7 +4191,7 @@ class Window(QMainWindow):
                 ctraderQ.put(['BUY_SHORT_CANCEL', name, 0, 0, now(), False])
         else:
             code = self.dict_code[name]
-            straderQ.put(['매도취소', code, name, 0, 0, now(), False])
+            wdservQ.put(['trader', ['매도취소', code, name, 0, 0, now(), False]])
 
     # =================================================================================================================
 
@@ -4238,6 +4221,8 @@ class Window(QMainWindow):
                     self.backtest_engine = False
                     for proc in self.back_procs:
                         proc.kill()
+                    for proc in self.bact_procs:
+                        proc.kill()
                     self.BacktestEngineVarsReset()
                     qtest_qwait(3)
                     self.StartBacktestEngine('주식')
@@ -4253,6 +4238,8 @@ class Window(QMainWindow):
                     self.backtest_engine = False
                     for proc in self.back_procs:
                         proc.kill()
+                    for proc in self.bact_procs:
+                        proc.kill()
                     self.BacktestEngineVarsReset()
                     qtest_qwait(3)
                     self.StartBacktestEngine('코인')
@@ -4260,7 +4247,9 @@ class Window(QMainWindow):
     def BacktestEngineVarsReset(self):
         self.ClearBacktestQ()
         self.back_procs = []
+        self.bact_procs = []
         self.back_pques = []
+        self.bact_pques = []
         self.dict_cn    = None
         self.dict_mt    = None
         self.back_count = 0
@@ -4328,7 +4317,7 @@ class Window(QMainWindow):
                         backQ.put([betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, self.back_count, bl, True, None, None, False])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
-                    self.proc_backtester_bt = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, back_name, gubun))
+                    self.proc_backtester_bt = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, gubun))
                     self.proc_backtester_bt.start()
 
                     if bt_gubun == '주식':
@@ -4358,7 +4347,7 @@ class Window(QMainWindow):
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
                     for bpq in self.back_pques:
-                        bpq.put(['백테유형', '최적화'])
+                        bpq.put(['백테유형', '조건최적화'])
 
                     backQ.put([
                         betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd,
@@ -4374,19 +4363,19 @@ class Window(QMainWindow):
                     if '교차 검증' in back_name:
                         self.proc_backtester_ocvc = Process(
                             target=OptimizeConditions,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OCVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', gubun)
                         )
                         self.proc_backtester_ocvc.start()
                     elif '검증' in back_name:
                         self.proc_backtester_ocv = Process(
                             target=OptimizeConditions,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OCV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', gubun)
                         )
                         self.proc_backtester_ocv.start()
                     else:
                         self.proc_backtester_oc = Process(
                             target=OptimizeConditions,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OC', gubun)
                         )
                         self.proc_backtester_oc.start()
 
@@ -4414,7 +4403,7 @@ class Window(QMainWindow):
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
                     for bpq in self.back_pques:
-                        bpq.put(['백테유형', '최적화'])
+                        bpq.put(['백테유형', 'GA최적화'])
 
                     if bt_gubun == '주식':
                         backQ.put([
@@ -4432,19 +4421,19 @@ class Window(QMainWindow):
                     if '교차 검증' in back_name:
                         self.proc_backtester_ogvc = Process(
                             target=OptimizeGeneticAlgorithm,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OGVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', gubun)
                         )
                         self.proc_backtester_ogvc.start()
                     elif '검증' in back_name:
                         self.proc_backtester_ogv = Process(
                             target=OptimizeGeneticAlgorithm,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OGV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', gubun)
                         )
                         self.proc_backtester_ogv.start()
                     else:
                         self.proc_backtester_og = Process(
                             target=OptimizeGeneticAlgorithm,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OG', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OG', gubun)
                         )
                         self.proc_backtester_og.start()
 
@@ -4495,19 +4484,19 @@ class Window(QMainWindow):
                     if back_name == '분할 최적화 전진분석':
                         self.proc_backtester_rh = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RH', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RH', gubun)
                         )
                         self.proc_backtester_rh.start()
                     elif back_name == '교차 검증 최적화 전진분석':
                         self.proc_backtester_rvc = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RVC', gubun)
                         )
                         self.proc_backtester_rvc.start()
                     else:
                         self.proc_backtester_rv = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RV', gubun)
                         )
                         self.proc_backtester_rv.start()
 
@@ -4554,37 +4543,37 @@ class Window(QMainWindow):
                     if back_name == '교차 검증 최적화 테스트':
                         self.proc_backtester_ovct = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVCT', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', gubun)
                         )
                         self.proc_backtester_ovct.start()
                     elif back_name == '검증 최적화 테스트':
                         self.proc_backtester_ovt = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVT', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', gubun)
                         )
                         self.proc_backtester_ovt.start()
                     elif back_name == '분할 검증 최적화 테스트':
                         self.proc_backtester_oht = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OHT', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OHT', gubun)
                         )
                         self.proc_backtester_oht.start()
                     elif back_name == '교차 검증 최적화':
                         self.proc_backtester_ovc = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', gubun)
                         )
                         self.proc_backtester_ovc.start()
                     elif back_name == '검증 최적화':
                         self.proc_backtester_ov = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OV', gubun)
                         )
                         self.proc_backtester_ov.start()
                     else:
                         self.proc_backtester_oh = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OH', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OH', gubun)
                         )
                         self.proc_backtester_oh.start()
 
@@ -4659,14 +4648,11 @@ class Window(QMainWindow):
             schedule += self.sd_oclineEdittt_01.text() + ';'
             schedule += self.sd_oclineEdittt_02.text() + ';'
             schedule += self.sd_oclineEdittt_03.text()
-            if '조건최적화' in schedule:
-                QMessageBox.critical(self.dialog_scheduler, '오류 알림', '조건최적화는 스케쥴로 저장할 수 없습니다.\n')
-            else:
-                if proc_query.is_alive():
-                    queryQ.put(['전략디비', f"DELETE FROM schedule WHERE `index` = '{schedule_name}'"])
-                    df = pd.DataFrame({'스케쥴': [schedule]}, index=[schedule_name])
-                    queryQ.put(['전략디비', df, 'schedule', 'append'])
-                QMessageBox.information(self.dialog_scheduler, '저장 완료', random.choice(famous_saying))
+            if proc_query.is_alive():
+                queryQ.put(['전략디비', f"DELETE FROM schedule WHERE `index` = '{schedule_name}'"])
+                df = pd.DataFrame({'스케쥴': [schedule]}, index=[schedule_name])
+                queryQ.put(['전략디비', df, 'schedule', 'append'])
+            QMessageBox.information(self.dialog_scheduler, '저장 완료', random.choice(famous_saying))
 
     # =================================================================================================================
 
@@ -4732,10 +4718,6 @@ class Window(QMainWindow):
             QMessageBox.warning(self, '오류 알림', '해당 버튼은 트레이더탭에서만 작동합니다.\n')
 
     def mnButtonClicked_02(self, stocklogin=False):
-        if not BIT32:
-            QMessageBox.critical(self, '오류 알림', '64비트 환경에서는 주식 로그인을 할 수 없습니다.\n')
-            return
-
         if stocklogin:
             buttonReply = QMessageBox.Yes
         else:
@@ -4745,42 +4727,22 @@ class Window(QMainWindow):
             if self.dict_set['리시버실행시간'] <= int_hms() <= self.dict_set['트레이더실행시간']:
                 QMessageBox.critical(self, '오류 알림', '리시버 및 트레이더 실행시간 동안은 수동시작할 수 없습니다.\n')
                 return
-            if self.StockReceiverProcessAlive():
-                buttonReply = QMessageBox.question(
-                    self, '주식 수동 시작', '주식 리시버 프로세스가 실행 중입니다.\n기존 프로세스를 종료하고 재시작하겠습니까?\n',
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-                )
-            else:
-                buttonReply = QMessageBox.question(
-                    self, '주식 수동 시작', '주식 리시버 또는 트레이더를 시작합니다.\n계속하시겠습니까?\n',
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-                )
+            buttonReply = QMessageBox.question(
+                self, '주식 수동 시작', '주식 리시버 또는 트레이더를 시작합니다.\n이미 실행 중이라면 기존 프로세스는 종료됩니다.\n계속하시겠습니까?\n',
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
 
         if buttonReply == QMessageBox.Yes:
-            if self.StockReceiverProcessAlive():
-                self.proc_receiver_stock.kill()
-            if self.StockCollectorProcessAlive():
-                self.proc_collector_stock1.kill()
-                self.proc_collector_stock2.kill()
-                self.proc_collector_stock3.kill()
-                self.proc_collector_stock4.kill()
-                self.proc_collector_stock5.kill()
-                self.proc_collector_stock6.kill()
-                self.proc_collector_stock7.kill()
-                self.proc_collector_stock8.kill()
-                if self.StockStrategy1ProcessAlive(): self.proc_strategy_stock1.kill()
-                if self.StockStrategy2ProcessAlive(): self.proc_strategy_stock2.kill()
-            if self.StockTraderProcessAlive():
-                self.proc_trader_stock.kill()
-                qtest_qwait(3)
-            if self.dict_set['아이디2'] is None:
+            wdservQ.put(['manager', '리시버 종료'])
+            wdservQ.put(['manager', '전략연산 종료'])
+            wdservQ.put(['manager', '트레이더 종료'])
+            qtest_qwait(3)
+            if self.dict_set['리시버공유'] < 2 and self.dict_set['아이디2'] is None:
                 QMessageBox.critical(self, '오류 알림', '두번째 계정이 설정되지 않아\n리시버를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
-            elif self.dict_set['주식리시버'] and not self.StockReceiverProcessAlive():
-                self.StockReceiverStart()
             if self.dict_set['아이디1'] is None:
                 QMessageBox.critical(self, '오류 알림', '첫번째 계정이 설정되지 않아\n트레이더를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
-            elif self.dict_set['주식트레이더'] and self.StockReceiverProcessAlive() and not self.StockTraderProcessAlive():
-                self.StockTraderStart()
+            if self.dict_set['주식리시버'] and self.dict_set['주식트레이더']:
+                wdservQ.put(['manager', '주식수동시작'])
         self.ms_pushButton.setStyleSheet(style_bc_bt)
 
     def mnButtonClicked_03(self):
@@ -6197,8 +6159,7 @@ class Window(QMainWindow):
         elif strategy == '':
             QMessageBox.critical(self, '오류 알림', '매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                    (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('S', strategy)):
+            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
                 if proc_query.is_alive():
                     queryQ.put(['전략디비', f"DELETE FROM stockbuy WHERE `index` = '{strategy_name}'"])
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -6224,8 +6185,7 @@ class Window(QMainWindow):
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if buttonReply == QMessageBox.Yes:
-                if self.StockStrategy1ProcessAlive(): sstg1Q.put(['매수전략', strategy])
-                if self.StockStrategy2ProcessAlive(): sstg2Q.put(['매수전략', strategy])
+                wdservQ.put(['strategy', ['매수전략', strategy]])
                 self.svjb_pushButon_04.setStyleSheet(style_bc_dk)
                 self.svjb_pushButon_12.setStyleSheet(style_bc_st)
 
@@ -6251,8 +6211,7 @@ class Window(QMainWindow):
         self.ss_textEditttt_01.append(stock_buy_signal)
 
     def svjbButtonClicked_12(self):
-        if self.StockStrategy1ProcessAlive(): sstg1Q.put(['매수전략중지', ''])
-        if self.StockStrategy2ProcessAlive(): sstg2Q.put(['매수전략중지', ''])
+        wdservQ.put(['strategy', ['매수전략중지', '']])
         self.svjb_pushButon_12.setStyleSheet(style_bc_dk)
         self.svjb_pushButon_04.setStyleSheet(style_bc_st)
 
@@ -6855,7 +6814,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_bt = Process(
                 target=BackTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '백테스트', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S')
             )
             self.proc_backtester_bt.start()
             self.svjButtonClicked_07()
@@ -6958,7 +6917,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_oh = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OH', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OH', 'S')
             )
             self.proc_backtester_oh.start()
             self.svjButtonClicked_07()
@@ -7013,7 +6972,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ovc = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVC', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', 'S')
             )
             self.proc_backtester_ovc.start()
             self.svjButtonClicked_07()
@@ -7065,7 +7024,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ov = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OV', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OV', 'S')
             )
             self.proc_backtester_ov.start()
             self.svjButtonClicked_07()
@@ -7117,7 +7076,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_oht = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OHT', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OHT', 'S')
             )
             self.proc_backtester_oht.start()
             self.svjButtonClicked_07()
@@ -7172,7 +7131,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ovct = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVCT', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', 'S')
             )
             self.proc_backtester_ovct.start()
             self.svjButtonClicked_07()
@@ -7224,7 +7183,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ovt = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVT', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', 'S')
             )
             self.proc_backtester_ovt.start()
             self.svjButtonClicked_07()
@@ -7281,7 +7240,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_rh = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RH', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RH', 'S')
             )
             self.proc_backtester_rh.start()
             self.svjButtonClicked_07()
@@ -7341,7 +7300,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_rvc = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RVC', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RVC', 'S')
             )
             self.proc_backtester_rvc.start()
             self.svjButtonClicked_07()
@@ -7398,7 +7357,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_rv = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RV', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RV', 'S')
             )
             self.proc_backtester_rv.start()
             self.svjButtonClicked_07()
@@ -7444,7 +7403,7 @@ class Window(QMainWindow):
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
+                bpq.put(['백테유형', 'GA최적화'])
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, self.dict_set['최적화기준값제한'],
@@ -7452,7 +7411,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ogvc = Process(
                 target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OGVC', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', 'S')
             )
             self.proc_backtester_ogvc.start()
             self.svjButtonClicked_07()
@@ -7495,7 +7454,7 @@ class Window(QMainWindow):
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
+                bpq.put(['백테유형', 'GA최적화'])
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, self.dict_set['최적화기준값제한'],
@@ -7503,7 +7462,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ogv = Process(
                 target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OGV', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', 'S')
             )
             self.proc_backtester_ogv.start()
             self.svjButtonClicked_07()
@@ -7546,7 +7505,7 @@ class Window(QMainWindow):
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
+                bpq.put(['백테유형', 'GA최적화'])
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, self.dict_set['최적화기준값제한'],
@@ -7554,7 +7513,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_og = Process(
                 target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OG', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OG', 'S')
             )
             self.proc_backtester_og.start()
             self.svjButtonClicked_07()
@@ -7638,7 +7597,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ocvc = Process(
                 target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OCVC', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', 'S')
             )
             self.proc_backtester_ocvc.start()
             self.svjButtonClicked_07()
@@ -7692,7 +7651,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ocv = Process(
                 target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OCV', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', 'S')
             )
             self.proc_backtester_ocv.start()
             self.svjButtonClicked_07()
@@ -7746,7 +7705,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_oc = Process(
                 target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OC', 'S')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OC', 'S')
             )
             self.proc_backtester_oc.start()
             self.svjButtonClicked_07()
@@ -7798,8 +7757,7 @@ class Window(QMainWindow):
         elif strategy == '':
             QMessageBox.critical(self, '오류 알림', '매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                    (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('S', strategy)):
+            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
                 if proc_query.is_alive():
                     queryQ.put(['전략디비', f"DELETE FROM stocksell WHERE `index` = '{strategy_name}'"])
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -7822,8 +7780,7 @@ class Window(QMainWindow):
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if buttonReply == QMessageBox.Yes:
-                if self.StockStrategy1ProcessAlive(): sstg1Q.put(['매도전략', strategy])
-                if self.StockStrategy2ProcessAlive(): sstg2Q.put(['매도전략', strategy])
+                wdservQ.put(['strategy', ['매도전략', strategy]])
                 self.svjs_pushButon_04.setStyleSheet(style_bc_dk)
                 self.svjs_pushButon_14.setStyleSheet(style_bc_st)
 
@@ -7855,8 +7812,7 @@ class Window(QMainWindow):
         self.ss_textEditttt_02.append(stock_sell_signal)
 
     def svjsButtonClicked_14(self):
-        if self.StockStrategy1ProcessAlive(): sstg1Q.put(['매도전략중지', ''])
-        if self.StockStrategy2ProcessAlive(): sstg2Q.put(['매도전략중지', ''])
+        wdservQ.put(['strategy', ['매도전략중지', '']])
         self.svjs_pushButon_14.setStyleSheet(style_bc_dk)
         self.svjs_pushButon_04.setStyleSheet(style_bc_st)
 
@@ -7887,58 +7843,63 @@ class Window(QMainWindow):
             elif strategy == '':
                 QMessageBox.critical(self, '오류 알림', '최적화 매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
             else:
-                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                        (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('S', strategy)):
+                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
+                    con = sqlite3.connect(DB_STRATEGY)
+                    df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con)
+                    con.close()
                     if proc_query.is_alive():
-                        queryQ.put(['전략디비', f"DELETE FROM stockoptibuy WHERE `index` = '{strategy_name}'"])
-                        data = [
-                            strategy,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.
-                        ]
-                        columns = [
-                            '전략코드',
-                            '변수0', '변수1', '변수2', '변수3', '변수4', '변수5', '변수6', '변수7', '변수8', '변수9',
-                            '변수10', '변수11', '변수12', '변수13', '변수14', '변수15', '변수16', '변수17', '변수18', '변수19',
-                            '변수20', '변수21', '변수22', '변수23', '변수24', '변수25', '변수26', '변수27', '변수28', '변수29',
-                            '변수30', '변수31', '변수32', '변수33', '변수34', '변수35', '변수36', '변수37', '변수38', '변수39',
-                            '변수40', '변수41', '변수42', '변수43', '변수44', '변수45', '변수46', '변수47', '변수48', '변수49',
-                            '변수50', '변수51', '변수52', '변수53', '변수54', '변수55', '변수56', '변수57', '변수58', '변수59',
-                            '변수60', '변수61', '변수62', '변수63', '변수64', '변수65', '변수66', '변수67', '변수68', '변수69',
-                            '변수70', '변수71', '변수72', '변수73', '변수74', '변수75', '변수76', '변수77', '변수78', '변수79',
-                            '변수80', '변수81', '변수82', '변수83', '변수84', '변수85', '변수86', '변수87', '변수88', '변수89',
-                            '변수90', '변수91', '변수92', '변수93', '변수94', '변수95', '변수96', '변수97', '변수98', '변수99',
-                            '변수100', '변수101', '변수102', '변수103', '변수104', '변수105', '변수106', '변수107', '변수108', '변수109',
-                            '변수110', '변수111', '변수112', '변수113', '변수114', '변수115', '변수116', '변수117', '변수118', '변수119',
-                            '변수120', '변수121', '변수122', '변수123', '변수124', '변수125', '변수126', '변수127', '변수128', '변수129',
-                            '변수130', '변수131', '변수132', '변수133', '변수134', '변수135', '변수136', '변수137', '변수138', '변수139',
-                            '변수140', '변수141', '변수142', '변수143', '변수144', '변수145', '변수146', '변수147', '변수148', '변수149',
-                            '변수150', '변수151', '변수152', '변수153', '변수154', '변수155', '변수156', '변수157', '변수158', '변수159',
-                            '변수160', '변수161', '변수162', '변수163', '변수164', '변수165', '변수166', '변수167', '변수168', '변수169',
-                            '변수170', '변수171', '변수172', '변수173', '변수174', '변수175', '변수176', '변수177', '변수178', '변수179',
-                            '변수180', '변수181', '변수182', '변수183', '변수184', '변수185', '변수186', '변수187', '변수188', '변수189',
-                            '변수190', '변수191', '변수192', '변수193', '변수194', '변수195', '변수196', '변수197', '변수198', '변수199'
-                        ]
-                        df = pd.DataFrame([data], columns=columns, index=[strategy_name])
-                        queryQ.put(['전략디비', df, 'stockoptibuy', 'append'])
+                        if len(df) > 0:
+                            query = f"UPDATE stockoptibuy SET 전략코드 = '{strategy}' WHERE `index` = '{strategy_name}'"
+                            queryQ.put(['전략디비', query])
+                        else:
+                            data = [
+                                strategy,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.
+                            ]
+                            columns = [
+                                '전략코드',
+                                '변수0', '변수1', '변수2', '변수3', '변수4', '변수5', '변수6', '변수7', '변수8', '변수9',
+                                '변수10', '변수11', '변수12', '변수13', '변수14', '변수15', '변수16', '변수17', '변수18', '변수19',
+                                '변수20', '변수21', '변수22', '변수23', '변수24', '변수25', '변수26', '변수27', '변수28', '변수29',
+                                '변수30', '변수31', '변수32', '변수33', '변수34', '변수35', '변수36', '변수37', '변수38', '변수39',
+                                '변수40', '변수41', '변수42', '변수43', '변수44', '변수45', '변수46', '변수47', '변수48', '변수49',
+                                '변수50', '변수51', '변수52', '변수53', '변수54', '변수55', '변수56', '변수57', '변수58', '변수59',
+                                '변수60', '변수61', '변수62', '변수63', '변수64', '변수65', '변수66', '변수67', '변수68', '변수69',
+                                '변수70', '변수71', '변수72', '변수73', '변수74', '변수75', '변수76', '변수77', '변수78', '변수79',
+                                '변수80', '변수81', '변수82', '변수83', '변수84', '변수85', '변수86', '변수87', '변수88', '변수89',
+                                '변수90', '변수91', '변수92', '변수93', '변수94', '변수95', '변수96', '변수97', '변수98', '변수99',
+                                '변수100', '변수101', '변수102', '변수103', '변수104', '변수105', '변수106', '변수107', '변수108', '변수109',
+                                '변수110', '변수111', '변수112', '변수113', '변수114', '변수115', '변수116', '변수117', '변수118', '변수119',
+                                '변수120', '변수121', '변수122', '변수123', '변수124', '변수125', '변수126', '변수127', '변수128', '변수129',
+                                '변수130', '변수131', '변수132', '변수133', '변수134', '변수135', '변수136', '변수137', '변수138', '변수139',
+                                '변수140', '변수141', '변수142', '변수143', '변수144', '변수145', '변수146', '변수147', '변수148', '변수149',
+                                '변수150', '변수151', '변수152', '변수153', '변수154', '변수155', '변수156', '변수157', '변수158', '변수159',
+                                '변수160', '변수161', '변수162', '변수163', '변수164', '변수165', '변수166', '변수167', '변수168', '변수169',
+                                '변수170', '변수171', '변수172', '변수173', '변수174', '변수175', '변수176', '변수177', '변수178', '변수179',
+                                '변수180', '변수181', '변수182', '변수183', '변수184', '변수185', '변수186', '변수187', '변수188', '변수189',
+                                '변수190', '변수191', '변수192', '변수193', '변수194', '변수195', '변수196', '변수197', '변수198', '변수199'
+                            ]
+                            df = pd.DataFrame([data], columns=columns, index=[strategy_name])
+                            queryQ.put(['전략디비', df, 'stockoptibuy', 'append'])
                         QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
     def svcButtonClicked_03(self):
@@ -7966,7 +7927,7 @@ class Window(QMainWindow):
             elif strategy == '':
                 QMessageBox.critical(self, '오류 알림', '변수범위의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
             else:
-                if (QApplication.keyboardModifiers() & Qt.ControlModifier) or (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest2(strategy)):
+                if (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest2(strategy):
                     if proc_query.is_alive():
                         queryQ.put(['전략디비', f"DELETE FROM stockoptivars WHERE `index` = '{strategy_name}'"])
                         df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -8000,8 +7961,7 @@ class Window(QMainWindow):
             elif strategy == '':
                 QMessageBox.critical(self, '오류 알림', '최적화 매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
             else:
-                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                        (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('S', strategy)):
+                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
                     if proc_query.is_alive():
                         queryQ.put(['전략디비', f"DELETE FROM stockoptisell WHERE `index` = '{strategy_name}'"])
                         df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -8133,7 +8093,7 @@ class Window(QMainWindow):
         elif strategy == '':
             QMessageBox.critical(self, '오류 알림', 'GA범위의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if (QApplication.keyboardModifiers() & Qt.ControlModifier) or (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest2(strategy)):
+            if (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest2(strategy, ga=True):
                 if proc_query.is_alive():
                     queryQ.put(['전략디비', f"DELETE FROM stockvars WHERE `index` = '{strategy_name}'"])
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -8233,8 +8193,7 @@ class Window(QMainWindow):
         elif strategy == '':
             QMessageBox.critical(self, '오류 알림', '매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                    (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('C', strategy)):
+            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
                 if proc_query.is_alive():
                     queryQ.put(['전략디비', f"DELETE FROM coinbuy WHERE `index` = '{strategy_name}'"])
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -8891,7 +8850,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_bt = Process(
                 target=BackTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '백테스트', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_bt.start()
             self.cvjButtonClicked_07()
@@ -8994,7 +8953,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_oh = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OH', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OH', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_oh.start()
             self.cvjButtonClicked_07()
@@ -9049,7 +9008,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ovc = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ovc.start()
             self.cvjButtonClicked_07()
@@ -9101,7 +9060,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ov = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ov.start()
             self.cvjButtonClicked_07()
@@ -9153,7 +9112,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_oht = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OHT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OHT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_oht.start()
             self.cvjButtonClicked_07()
@@ -9208,7 +9167,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ovct = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVCT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ovct.start()
             self.cvjButtonClicked_07()
@@ -9260,7 +9219,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ovt = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OVT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ovt.start()
             self.cvjButtonClicked_07()
@@ -9317,7 +9276,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_rh = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RH', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RH', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_rh.start()
             self.cvjButtonClicked_07()
@@ -9377,7 +9336,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_rvc = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_rvc.start()
             self.cvjButtonClicked_07()
@@ -9434,7 +9393,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_rv = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '전진분석RV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_rv.start()
             self.cvjButtonClicked_07()
@@ -9480,7 +9439,7 @@ class Window(QMainWindow):
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
+                bpq.put(['백테유형', 'GA최적화'])
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
@@ -9488,7 +9447,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ogvc = Process(
                 target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OGVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ogvc.start()
             self.cvjButtonClicked_07()
@@ -9531,7 +9490,7 @@ class Window(QMainWindow):
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
+                bpq.put(['백테유형', 'GA최적화'])
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
@@ -9539,7 +9498,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ogv = Process(
                 target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OGV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ogv.start()
             self.cvjButtonClicked_07()
@@ -9582,7 +9541,7 @@ class Window(QMainWindow):
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
+                bpq.put(['백테유형', 'GA최적화'])
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
@@ -9590,7 +9549,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_og = Process(
                 target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OG', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OG', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_og.start()
             self.cvjButtonClicked_07()
@@ -9674,7 +9633,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ocvc = Process(
                 target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OCVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ocvc.start()
             self.cvjButtonClicked_07()
@@ -9728,7 +9687,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_ocv = Process(
                 target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OCV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_ocv.start()
             self.cvjButtonClicked_07()
@@ -9782,7 +9741,7 @@ class Window(QMainWindow):
             ])
             self.proc_backtester_oc = Process(
                 target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, '최적화OC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
             self.proc_backtester_oc.start()
             self.cvjButtonClicked_07()
@@ -9834,8 +9793,7 @@ class Window(QMainWindow):
         elif strategy == '':
             QMessageBox.critical(self, '오류 알림', '매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                    (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('C', strategy)):
+            if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
                 if proc_query.is_alive():
                     queryQ.put(['전략디비', f"DELETE FROM coinsell WHERE `index` = '{strategy_name}'"])
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -9923,58 +9881,63 @@ class Window(QMainWindow):
             elif strategy == '':
                 QMessageBox.critical(self, '오류 알림', '최적화 매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
             else:
-                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                        (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('C', strategy)):
+                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
+                    con = sqlite3.connect(DB_STRATEGY)
+                    df = pd.read_sql(f"SELECT * FROM coinoptibuy WHERE `index` = '{strategy_name}'", con)
+                    con.close()
                     if proc_query.is_alive():
-                        queryQ.put(['전략디비', f"DELETE FROM coinoptibuy WHERE `index` = '{strategy_name}'"])
-                        data = [
-                            strategy,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
-                            9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.
-                        ]
-                        columns = [
-                            '전략코드',
-                            '변수0', '변수1', '변수2', '변수3', '변수4', '변수5', '변수6', '변수7', '변수8', '변수9',
-                            '변수10', '변수11', '변수12', '변수13', '변수14', '변수15', '변수16', '변수17', '변수18', '변수19',
-                            '변수20', '변수21', '변수22', '변수23', '변수24', '변수25', '변수26', '변수27', '변수28', '변수29',
-                            '변수30', '변수31', '변수32', '변수33', '변수34', '변수35', '변수36', '변수37', '변수38', '변수39',
-                            '변수40', '변수41', '변수42', '변수43', '변수44', '변수45', '변수46', '변수47', '변수48', '변수49',
-                            '변수50', '변수51', '변수52', '변수53', '변수54', '변수55', '변수56', '변수57', '변수58', '변수59',
-                            '변수60', '변수61', '변수62', '변수63', '변수64', '변수65', '변수66', '변수67', '변수68', '변수69',
-                            '변수70', '변수71', '변수72', '변수73', '변수74', '변수75', '변수76', '변수77', '변수78', '변수79',
-                            '변수80', '변수81', '변수82', '변수83', '변수84', '변수85', '변수86', '변수87', '변수88', '변수89',
-                            '변수90', '변수91', '변수92', '변수93', '변수94', '변수95', '변수96', '변수97', '변수98', '변수99',
-                            '변수100', '변수101', '변수102', '변수103', '변수104', '변수105', '변수106', '변수107', '변수108', '변수109',
-                            '변수110', '변수111', '변수112', '변수113', '변수114', '변수115', '변수116', '변수117', '변수118', '변수119',
-                            '변수120', '변수121', '변수122', '변수123', '변수124', '변수125', '변수126', '변수127', '변수128', '변수129',
-                            '변수130', '변수131', '변수132', '변수133', '변수134', '변수135', '변수136', '변수137', '변수138', '변수139',
-                            '변수140', '변수141', '변수142', '변수143', '변수144', '변수145', '변수146', '변수147', '변수148', '변수149',
-                            '변수150', '변수151', '변수152', '변수153', '변수154', '변수155', '변수156', '변수157', '변수158', '변수159',
-                            '변수160', '변수161', '변수162', '변수163', '변수164', '변수165', '변수166', '변수167', '변수168', '변수169',
-                            '변수170', '변수171', '변수172', '변수173', '변수174', '변수175', '변수176', '변수177', '변수178', '변수179',
-                            '변수180', '변수181', '변수182', '변수183', '변수184', '변수185', '변수186', '변수187', '변수188', '변수189',
-                            '변수190', '변수191', '변수192', '변수193', '변수194', '변수195', '변수196', '변수197', '변수198', '변수199'
-                        ]
-                        df = pd.DataFrame([data], columns=columns, index=[strategy_name])
-                        queryQ.put(['전략디비', df, 'coinoptibuy', 'append'])
+                        if len(df) > 0:
+                            query = f"UPDATE coinoptibuy SET 전략코드 = '{strategy}' WHERE `index` = '{strategy_name}'"
+                            queryQ.put(['전략디비', query])
+                        else:
+                            data = [
+                                strategy,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,
+                                9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.
+                            ]
+                            columns = [
+                                '전략코드',
+                                '변수0', '변수1', '변수2', '변수3', '변수4', '변수5', '변수6', '변수7', '변수8', '변수9',
+                                '변수10', '변수11', '변수12', '변수13', '변수14', '변수15', '변수16', '변수17', '변수18', '변수19',
+                                '변수20', '변수21', '변수22', '변수23', '변수24', '변수25', '변수26', '변수27', '변수28', '변수29',
+                                '변수30', '변수31', '변수32', '변수33', '변수34', '변수35', '변수36', '변수37', '변수38', '변수39',
+                                '변수40', '변수41', '변수42', '변수43', '변수44', '변수45', '변수46', '변수47', '변수48', '변수49',
+                                '변수50', '변수51', '변수52', '변수53', '변수54', '변수55', '변수56', '변수57', '변수58', '변수59',
+                                '변수60', '변수61', '변수62', '변수63', '변수64', '변수65', '변수66', '변수67', '변수68', '변수69',
+                                '변수70', '변수71', '변수72', '변수73', '변수74', '변수75', '변수76', '변수77', '변수78', '변수79',
+                                '변수80', '변수81', '변수82', '변수83', '변수84', '변수85', '변수86', '변수87', '변수88', '변수89',
+                                '변수90', '변수91', '변수92', '변수93', '변수94', '변수95', '변수96', '변수97', '변수98', '변수99',
+                                '변수100', '변수101', '변수102', '변수103', '변수104', '변수105', '변수106', '변수107', '변수108', '변수109',
+                                '변수110', '변수111', '변수112', '변수113', '변수114', '변수115', '변수116', '변수117', '변수118', '변수119',
+                                '변수120', '변수121', '변수122', '변수123', '변수124', '변수125', '변수126', '변수127', '변수128', '변수129',
+                                '변수130', '변수131', '변수132', '변수133', '변수134', '변수135', '변수136', '변수137', '변수138', '변수139',
+                                '변수140', '변수141', '변수142', '변수143', '변수144', '변수145', '변수146', '변수147', '변수148', '변수149',
+                                '변수150', '변수151', '변수152', '변수153', '변수154', '변수155', '변수156', '변수157', '변수158', '변수159',
+                                '변수160', '변수161', '변수162', '변수163', '변수164', '변수165', '변수166', '변수167', '변수168', '변수169',
+                                '변수170', '변수171', '변수172', '변수173', '변수174', '변수175', '변수176', '변수177', '변수178', '변수179',
+                                '변수180', '변수181', '변수182', '변수183', '변수184', '변수185', '변수186', '변수187', '변수188', '변수189',
+                                '변수190', '변수191', '변수192', '변수193', '변수194', '변수195', '변수196', '변수197', '변수198', '변수199'
+                            ]
+                            df = pd.DataFrame([data], columns=columns, index=[strategy_name])
+                            queryQ.put(['전략디비', df, 'coinoptibuy', 'append'])
                         QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
     def cvcButtonClicked_03(self):
@@ -10002,7 +9965,7 @@ class Window(QMainWindow):
             elif strategy == '':
                 QMessageBox.critical(self, '오류 알림', '변수범위의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
             else:
-                if (QApplication.keyboardModifiers() & Qt.ControlModifier) or (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest2(strategy)):
+                if (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest2(strategy):
                     if proc_query.is_alive():
                         queryQ.put(['전략디비', f"DELETE FROM coinoptivars WHERE `index` = '{strategy_name}'"])
                         df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -10036,8 +9999,7 @@ class Window(QMainWindow):
             elif strategy == '':
                 QMessageBox.critical(self, '오류 알림', '최적화 매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
             else:
-                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or \
-                        (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest1('C', strategy)):
+                if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest1(strategy):
                     if proc_query.is_alive():
                         queryQ.put(['전략디비', f"DELETE FROM coinoptisell WHERE `index` = '{strategy_name}'"])
                         df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -10166,7 +10128,7 @@ class Window(QMainWindow):
         elif strategy == '':
             QMessageBox.critical(self, '오류 알림', 'GA범위의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if (QApplication.keyboardModifiers() & Qt.ControlModifier) or (not (QApplication.keyboardModifiers() & Qt.ControlModifier) and self.BackCodeTest2(strategy)):
+            if (QApplication.keyboardModifiers() & Qt.ControlModifier) or self.BackCodeTest2(strategy, ga=True):
                 if proc_query.is_alive():
                     queryQ.put(['전략디비', f"DELETE FROM coinvars WHERE `index` = '{strategy_name}'"])
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -10239,6 +10201,24 @@ class Window(QMainWindow):
     # =================================================================================================================
 
     def BackengineShow(self, gubun):
+        table_list = []
+        BACK_FILE = DB_STOCK_BACK if gubun == '주식' else DB_COIN_BACK
+        con = sqlite3.connect(BACK_FILE)
+        try:
+            df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
+            table_list = df['name'].to_list()
+            table_list.remove('codename')
+            table_list.remove('moneytop')
+        except:
+            pass
+        con.close()
+        if table_list:
+            name_list = [self.dict_name[code] if code in self.dict_name.keys() else code for code in table_list]
+            name_list.sort()
+            self.be_comboBoxxxxx_02.clear()
+            for name in name_list:
+                self.be_comboBoxxxxx_02.addItem(name)
+        self.be_comboBoxxxxx_01.setCurrentText(self.dict_set['백테엔진분류방법'])
         self.be_lineEdittttt_01.setText('90000' if gubun == '주식' else '0')
         self.be_lineEdittttt_02.setText('93000' if gubun == '주식' else '235959')
         self.dialog_backengine.show()
@@ -10251,6 +10231,17 @@ class Window(QMainWindow):
         self.endtime   = int(self.be_lineEdittttt_02.text())
         self.avg_list  = [int(x) for x in self.be_lineEdittttt_03.text().split(',')]
         multi          = int(self.be_lineEdittttt_04.text())
+        divid_mode     = self.be_comboBoxxxxx_01.currentText()
+        one_code       = self.be_comboBoxxxxx_02.currentText()
+
+        wdservQ.put(['manager', '백테엔진구동'])
+        for i in range(20):
+            ctQ   = Queue()
+            cproc = Process(target=CollectTotal, args=(totalQ, ctQ, self.dict_set['백테매수시간기준'], i), daemon=True)
+            cproc.start()
+            self.bact_procs.append(cproc)
+            self.bact_pques.append(ctQ)
+            windowQ.put([ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'])
 
         for i in range(multi):
             bprocQ = Queue()
@@ -10258,31 +10249,67 @@ class Window(QMainWindow):
                 if not self.dict_set['주식분봉데이터'] and not self.dict_set['주식일봉데이터']:
                     if not self.dict_set['백테주문관리적용']:
                         if i == 0 and self.dict_set['백테엔진프로파일링']:
-                            bproc = Process(target=StockBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, True), daemon=True)
+                            bproc = Process(target=StockBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
                         else:
-                            bproc = Process(target=StockBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ), daemon=True)
+                            bproc = Process(target=StockBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
                     else:
-                        bproc = Process(target=StockBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ), daemon=True)
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=StockBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=StockBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
                 else:
-                    bproc = Process(target=StockBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ), daemon=True)
+                    if not self.dict_set['백테주문관리적용']:
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=StockBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=StockBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                    else:
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=StockBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=StockBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
             else:
                 if not self.dict_set['코인분봉데이터'] and not self.dict_set['코인일봉데이터']:
                     if not self.dict_set['백테주문관리적용']:
-                        bproc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ), daemon=True)
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=CoinUpbitBackEngine if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
                     else:
-                        bproc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ), daemon=True)
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=CoinUpbitBackEngine2 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
                 else:
-                    bproc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ), daemon=True)
+                    if not self.dict_set['백테주문관리적용']:
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=CoinUpbitBackEngine3 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine3, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+                    else:
+                        if i == 0 and self.dict_set['백테엔진프로파일링']:
+                            bproc = Process(target=CoinUpbitBackEngine4 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques, True), daemon=True)
+                        else:
+                            bproc = Process(target=CoinUpbitBackEngine4 if self.dict_set['거래소'] == '업비트' else CoinFutureBackEngine4, args=(i, windowQ, bprocQ, totalQ, backQ, self.bact_pques), daemon=True)
+
             bproc.start()
             self.back_procs.append(bproc)
             self.back_pques.append(bprocQ)
             windowQ.put([ui_num['백테엔진'], f'연산용 프로세스{i + 1} 생성 완료'])
 
         if gubun == '주식':
-            webcQ.put('지수차트')
+            webcQ.put(['지수차트', self.startday])
             self.df_kp, self.df_kd = backQ.get()
 
+        if not self.dict_set['백테일괄로딩']:
+            file_list = os.listdir(BACK_TEMP)
+            for file in file_list:
+                os.remove(f'{BACK_TEMP}/{file}')
+            windowQ.put([ui_num['백테엔진'], '이전 임시파일 삭제 완료'])
+
         dict_kd = None
+        # noinspection PyUnusedLocal
+        df_mt = None
         try:
             con = sqlite3.connect(DB_STOCK_BACK) if gubun == '주식' else sqlite3.connect(DB_COIN_BACK)
             if gubun == '주식':
@@ -10295,7 +10322,7 @@ class Window(QMainWindow):
                 datas = [x for x in datas['symbols'] if re.search('USDT$', x['symbol']) is not None]
                 dict_kd = {x['symbol']: float(x['filters'][0]['tickSize']) for x in datas}
             gubun_ = 'S' if gubun == '주식' else 'CF' if gubun == '코인' and self.dict_set['거래소'] == '바이낸스선물' else 'C'
-            query = GetQuery(gubun_, self.startday, self.endday, self.starttime, self.endtime)
+            query = GetMoneytopQuery(gubun_, self.startday, self.endday, self.starttime, self.endtime)
             df_mt = pd.read_sql(query, con)
             con.close()
             df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
@@ -10312,102 +10339,206 @@ class Window(QMainWindow):
                     windowQ.put([ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'])
             else:
                 windowQ.put([ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'])
-        else:
-            if df_mt.empty:
-                windowQ.put([ui_num['백테엔진'], '시작 또는 종료일자가 잘못 선택되었거나 해당 일자에 데이터가 존재하지 않습니다.'])
-                return
+            return
 
-            self.dict_mt = df_mt['거래대금순위'].to_dict()
-            day_list     = list(set(df_mt['일자'].to_list()))
-            table_list   = list(set(';'.join(list(self.dict_mt.values())).split(';')))
+        if df_mt is None or df_mt.empty:
+            windowQ.put([ui_num['백테엔진'], '시작 또는 종료일자가 잘못 선택되었거나 해당 일자에 데이터가 존재하지 않습니다.'])
+            return
 
-            day_codes = {}
-            for day in day_list:
-                df_mt_ = df_mt[df_mt['일자'] == day]
-                day_codes[day] = list(set(';'.join(df_mt_['거래대금순위'].to_list()).split(';')))
+        self.dict_mt = df_mt['거래대금순위'].to_dict()
+        day_list = list(set(df_mt['일자'].to_list()))
+        table_list = list(set(';'.join(list(self.dict_mt.values())).split(';')))
 
-            code_days = {}
-            for code in table_list:
-                code_days[code] = []
-                for day, codes in day_codes.items():
-                    if code in codes:
-                        code_days[code].append(day)
+        day_codes = {}
+        for day in day_list:
+            df_mt_ = df_mt[df_mt['일자'] == day]
+            day_codes[day] = list(set(';'.join(df_mt_['거래대금순위'].to_list()).split(';')))
 
-            for i in range(multi):
-                if gubun == '주식':
-                    self.back_pques[i].put(['종목명거래대금순위', self.dict_cn, self.dict_mt, dict_kd])
-                else:
-                    self.back_pques[i].put(['종목명거래대금순위', self.dict_mt, dict_kd])
-            windowQ.put([ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'])
+        code_days = {}
+        for code in table_list:
+            code_days[code] = []
+            for day, codes in day_codes.items():
+                if code in codes:
+                    code_days[code].append(day)
 
-            if not self.dict_set['백테일괄로딩']:
-                file_list = os.listdir(BACK_TEMP)
-                for file in file_list:
-                    os.remove(f'{BACK_TEMP}/{file}')
-                windowQ.put([ui_num['백테엔진'], '이전 임시파일 삭제 완료'])
+        for i in range(multi):
+            if gubun == '주식':
+                self.back_pques[i].put(['종목명거래대금순위', self.dict_cn, self.dict_mt, dict_kd])
+            else:
+                self.back_pques[i].put(['종목명거래대금순위', self.dict_mt, dict_kd])
+        windowQ.put([ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'])
 
+        if divid_mode == '종목코드별 분류':
             windowQ.put([ui_num['백테엔진'], '종목별 데이터 크기 추출 시작'])
             code_lists = []
             for i in range(multi):
                 code_lists.append([code for j, code in enumerate(table_list) if j % multi == i])
-
             for i, codes in enumerate(code_lists):
-                self.back_pques[i].put(['데이터크기', self.startday, self.endday, self.starttime, self.endtime, codes, self.avg_list, code_days])
+                self.back_pques[i].put(['데이터크기', self.startday, self.endday, self.starttime, self.endtime, codes, self.avg_list, code_days, day_codes, divid_mode, one_code])
 
-            dict_rams = {}
+            dict_lendf = {}
             last = len(table_list)
             for i in range(last):
                 data = backQ.get()
                 if data[1] != 0:
-                    dict_rams[data[0]] = data[1]
+                    dict_lendf[data[0]] = data[1]
                 if (i + 1) % 100 == 0:
                     windowQ.put([ui_num['백테엔진'], f'종목별 데이터 크기 추출 중 ... [{i + 1}/{last}]'])
             windowQ.put([ui_num['백테엔진'], '종목별 데이터 크기 추출 완료'])
 
             code_lists = []
+            total_list = []
             for _ in range(multi):
                 code_lists.append([])
+                total_list.append(0)
 
-            add_count = 0
-            multi_num = 0
-            reverse   = False
-            sort_rams = sorted(dict_rams.items(), key=operator.itemgetter(1), reverse=True)
-            for code, _ in sort_rams:
+            add_count   = 0
+            multi_num   = 0
+            reverse     = False
+            divid_lendf = int(sum(dict_lendf.values()) / multi)
+            sort_lendf  = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
+            for code, lendf in sort_lendf:
                 code_lists[multi_num].append(code)
-                add_count += 1
-                if add_count % multi == 0:
-                    if reverse:
-                        reverse   = False
-                        multi_num = 0
+                total_list[multi_num] += lendf
+                while True:
+                    add_count += 1
+                    if add_count % multi == 0:
+                        if reverse:
+                            reverse   = False
+                            multi_num = 0
+                        else:
+                            reverse   = True
+                            multi_num = multi - 1
                     else:
-                        reverse   = True
-                        multi_num = multi - 1
-                else:
-                    if reverse:
-                        multi_num -= 1
-                    else:
-                        multi_num += 1
-            windowQ.put([ui_num['백테엔진'], '종목코드 분류 완료'])
+                        if reverse:
+                            multi_num -= 1
+                        else:
+                            multi_num += 1
+                    if total_list[multi_num] < divid_lendf:
+                        break
 
+            windowQ.put([ui_num['백테엔진'], '종목코드별 분류 완료'])
             for i, codes in enumerate(code_lists):
-                self.back_pques[i].put(['데이터로딩', self.startday, self.endday, self.starttime, self.endtime, codes, self.avg_list, code_days])
+                self.back_pques[i].put(['데이터로딩', self.startday, self.endday, self.starttime, self.endtime, codes, self.avg_list, code_days, day_codes, divid_mode, one_code])
 
-            for _ in range(multi):
+        elif divid_mode == '일자별 분류':
+            windowQ.put([ui_num['백테엔진'], '일자별 데이터 크기 추출 시작'])
+            day_lists = []
+            for i in range(multi):
+                day_lists.append([day for j, day in enumerate(day_list) if j % multi == i])
+            for i, days in enumerate(day_lists):
+                self.back_pques[i].put(['데이터크기', self.startday, self.endday, self.starttime, self.endtime, days, self.avg_list, code_days, day_codes, divid_mode, one_code])
+
+            dict_lendf = {}
+            last = len(day_list)
+            for i in range(last):
                 data = backQ.get()
-                self.back_count += data
-                windowQ.put([ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'])
-            windowQ.put([ui_num['백테엔진'], '백테엔진 준비 완료'])
-            self.backtest_engine = True
+                if data[1] != 0:
+                    dict_lendf[data[0]] = data[1]
+                if (i + 1) % 10 == 0:
+                    windowQ.put([ui_num['백테엔진'], f'일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'])
+            windowQ.put([ui_num['백테엔진'], '일자별 데이터 크기 추출 완료'])
 
-    def BackCodeTest1(self, gubun, stg_code):
+            day_lists  = []
+            total_list = []
+            for _ in range(multi):
+                day_lists.append([])
+                total_list.append(0)
+
+            add_count   = 0
+            multi_num   = 0
+            reverse     = False
+            divid_lendf = int(sum(dict_lendf.values()) / multi)
+            sort_lendf  = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
+            for day, lendf in sort_lendf:
+                day_lists[multi_num].append(day)
+                total_list[multi_num] += lendf
+                while True:
+                    add_count += 1
+                    if add_count % multi == 0:
+                        if reverse:
+                            reverse   = False
+                            multi_num = 0
+                        else:
+                            reverse   = True
+                            multi_num = multi - 1
+                    else:
+                        if reverse:
+                            multi_num -= 1
+                        else:
+                            multi_num += 1
+                    if total_list[multi_num] < divid_lendf:
+                        break
+
+            windowQ.put([ui_num['백테엔진'], '일자별 분류 완료'])
+            for i, days in enumerate(day_lists):
+                self.back_pques[i].put(['데이터로딩', self.startday, self.endday, self.starttime, self.endtime, days, self.avg_list, code_days, day_codes, divid_mode, one_code])
+        else:
+            windowQ.put([ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 시작'])
+            day_lists = code_days[one_code]
+            for i, days in enumerate(day_lists):
+                self.back_pques[i].put(['데이터크기', self.startday, self.endday, self.starttime, self.endtime, days, self.avg_list, code_days, day_codes, divid_mode, one_code])
+
+            dict_lendf = {}
+            last = len(day_list)
+            for i in range(last):
+                data = backQ.get()
+                if data[1] != 0:
+                    dict_lendf[data[0]] = data[1]
+                if (i + 1) % 10 == 0:
+                    windowQ.put([ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'])
+            windowQ.put([ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 완료'])
+
+            day_lists  = []
+            total_list = []
+            for _ in range(multi):
+                day_lists.append([])
+                total_list.append(0)
+
+            add_count   = 0
+            multi_num   = 0
+            reverse     = False
+            divid_lendf = int(sum(dict_lendf.values()) / multi)
+            sort_lendf  = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
+            for day, lendf in sort_lendf:
+                day_lists[multi_num].append(day)
+                total_list[multi_num] += lendf
+                while True:
+                    add_count += 1
+                    if add_count % multi == 0:
+                        if reverse:
+                            reverse   = False
+                            multi_num = 0
+                        else:
+                            reverse   = True
+                            multi_num = multi - 1
+                    else:
+                        if reverse:
+                            multi_num -= 1
+                        else:
+                            multi_num += 1
+                    if total_list[multi_num] < divid_lendf:
+                        break
+
+            windowQ.put([ui_num['백테엔진'], f'{one_code} 일자별 분류 완료'])
+            for i, days in enumerate(day_lists):
+                self.back_pques[i].put(['데이터로딩', self.startday, self.endday, self.starttime, self.endtime, days, self.avg_list, code_days, day_codes, divid_mode, one_code])
+
+        for _ in range(multi):
+            data = backQ.get()
+            self.back_count += data
+            windowQ.put([ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'])
+        windowQ.put([ui_num['백테엔진'], '백테엔진 준비 완료'])
+        self.backtest_engine = True
+
+    def BackCodeTest1(self, stg_code):
         print('전략 코드 오류 테스트 시작')
-        stg_code = stg_code.split('self.straderQ.put')[0] if gubun == 'S' else stg_code.split('self.ctraderQ.put')[0]
         Process(target=BackCodeTest, args=(testQ, stg_code), daemon=True).start()
         return self.BackCodeTestWait('전략')
 
-    def BackCodeTest2(self, vars_code):
+    def BackCodeTest2(self, vars_code, ga=False):
         print('범위 코드 오류 테스트 시작')
-        Process(target=BackCodeTest, args=(testQ, '', vars_code), daemon=True).start()
+        Process(target=BackCodeTest, args=(testQ, '', vars_code, ga), daemon=True).start()
         return self.BackCodeTestWait('범위')
 
     def BackCodeTest3(self, gubun, conds_code):
@@ -10562,12 +10693,12 @@ class Window(QMainWindow):
         if len(df) > 0:
             self.sj_main_comBox_01.setCurrentText(df['증권사'][0])
             self.sj_main_cheBox_01.setChecked(True) if df['주식리시버'][0] else self.sj_main_cheBox_01.setChecked(False)
-            self.sj_main_cheBox_02.setChecked(True) if df['주식콜렉터'][0] else self.sj_main_cheBox_02.setChecked(False)
-            self.sj_main_cheBox_03.setChecked(True) if df['주식트레이더'][0] else self.sj_main_cheBox_03.setChecked(False)
+            self.sj_main_cheBox_02.setChecked(True) if df['주식트레이더'][0] else self.sj_main_cheBox_02.setChecked(False)
+            self.sj_main_cheBox_03.setChecked(True) if df['주식틱데이터저장'][0] else self.sj_main_cheBox_03.setChecked(False)
             self.sj_main_comBox_02.setCurrentText(df['거래소'][0])
             self.sj_main_cheBox_04.setChecked(True) if df['코인리시버'][0] else self.sj_main_cheBox_04.setChecked(False)
-            self.sj_main_cheBox_05.setChecked(True) if df['코인콜렉터'][0] else self.sj_main_cheBox_05.setChecked(False)
-            self.sj_main_cheBox_06.setChecked(True) if df['코인트레이더'][0] else self.sj_main_cheBox_06.setChecked(False)
+            self.sj_main_cheBox_05.setChecked(True) if df['코인트레이더'][0] else self.sj_main_cheBox_05.setChecked(False)
+            self.sj_main_cheBox_06.setChecked(True) if df['코인틱데이터저장'][0] else self.sj_main_cheBox_06.setChecked(False)
             self.sj_main_cheBox_07.setChecked(True) if df['장중전략조건검색식사용'][0] else self.sj_main_cheBox_07.setChecked(False)
             self.sj_main_cheBox_08.setChecked(True) if not df['장중전략조건검색식사용'][0] else self.sj_main_cheBox_08.setChecked(False)
             self.sj_main_liEdit_01.setText(str(df['주식순위시간'][0]))
@@ -10578,7 +10709,17 @@ class Window(QMainWindow):
             self.sj_main_liEdit_06.setText(str(df['트레이더실행시간'][0]))
             self.sj_main_comBox_03.setCurrentText('격리' if df['바이낸스선물마진타입'][0] == 'ISOLATED' else '교차')
             self.sj_main_comBox_04.setCurrentText('단방향' if df['바이낸스선물포지션'][0] == 'false' else '양방향')
-            self.UpdateTexedit([ui_num['설정로그'], '기본 설정값 불러오기 완료'])
+            self.sj_main_cheBox_08.setChecked(True) if not df['장중전략조건검색식사용'][0] else self.sj_main_cheBox_08.setChecked(False)
+            self.sj_main_cheBox_09.setChecked(True) if df['버전업'][0] else self.sj_main_cheBox_09.setChecked(False)
+            if df['리시버공유'][0] == 0:
+                self.sj_main_cheBox_10.setChecked(False)
+                self.sj_main_cheBox_11.setChecked(False)
+            elif df['리시버공유'][0] == 1:
+                self.sj_main_cheBox_10.setChecked(True)
+                self.sj_main_cheBox_11.setChecked(False)
+            elif df['리시버공유'][0] == 2:
+                self.sj_main_cheBox_10.setChecked(False)
+                self.sj_main_cheBox_11.setChecked(True)
         else:
             QMessageBox.critical(self, '오류 알림', '기본 설정값이\n존재하지 않습니다.\n')
 
@@ -10606,7 +10747,6 @@ class Window(QMainWindow):
                 self.sj_sacc_liEdit_06.setText(de_text(self.dict_set['키'], df['비밀번호4'][0]))
                 self.sj_sacc_liEdit_07.setText(de_text(self.dict_set['키'], df['인증서비밀번호4'][0]))
                 self.sj_sacc_liEdit_08.setText(de_text(self.dict_set['키'], df['계좌비밀번호4'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '주식 계정 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '주식 계정 설정값이\n존재하지 않습니다.\n')
 
@@ -10619,11 +10759,9 @@ class Window(QMainWindow):
             if combo_name == '업비트' and df['Access_key1'][0] != '' and df['Secret_key1'][0] != '':
                 self.sj_cacc_liEdit_01.setText(de_text(self.dict_set['키'], df['Access_key1'][0]))
                 self.sj_cacc_liEdit_02.setText(de_text(self.dict_set['키'], df['Secret_key1'][0]))
-                self.UpdateTexedit([ui_num['설정로그'], '업비트 계정 설정값 불러오기 완료'])
             elif combo_name == '바이낸스선물' and df['Access_key2'][0] != '' and df['Secret_key2'][0] != '':
                 self.sj_cacc_liEdit_01.setText(de_text(self.dict_set['키'], df['Access_key2'][0]))
                 self.sj_cacc_liEdit_02.setText(de_text(self.dict_set['키'], df['Secret_key2'][0]))
-                self.UpdateTexedit([ui_num['설정로그'], '바이낸스선물 계정 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '계정 설정값이\n존재하지 않습니다.\n')
 
@@ -10634,7 +10772,6 @@ class Window(QMainWindow):
         if len(df) > 0 and df['str_bot'][0] != '':
             self.sj_tele_liEdit_01.setText(de_text(self.dict_set['키'], df['str_bot'][0]))
             self.sj_tele_liEdit_02.setText(de_text(self.dict_set['키'], df['int_id'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '텔레그램 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '텔레그램 봇토큰 및 사용자 아이디\n설정값이 존재하지 않습니다.\n')
 
@@ -10710,7 +10847,6 @@ class Window(QMainWindow):
             self.sj_stock_lEdit_08.setText(str(df['주식장중투자금'][0]))
             self.sj_stock_lEdit_09.setText(str(df['주식손실중지수익률'][0]))
             self.sj_stock_lEdit_10.setText(str(df['주식수익중지수익률'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '주식 전략 설정값 불러오기 완료'])
             if 152000 <= df['주식장중전략종료시간'][0] <= 152759:
                 QMessageBox.critical(self, '오류 알림', '주식 장중전략의 종료시간을\n152000 ~ 152759 구간으로 설정할 수 없습니다.\n')
                 return
@@ -10789,7 +10925,6 @@ class Window(QMainWindow):
             self.sj_coin_liEdit_08.setText(str(df['코인장중투자금'][0]))
             self.sj_coin_liEdit_09.setText(str(df['코인손실중지수익률'][0]))
             self.sj_coin_liEdit_10.setText(str(df['코인수익중지수익률'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '코인 전략 설정값 불러오기 완료'])
             if df['코인장중전략종료시간'][0] > 234500:
                 QMessageBox.critical(self, '오류 알림', '코인 장중전략의 종료시간은\n234500미만으로 설정하십시오.\n')
         else:
@@ -10820,6 +10955,7 @@ class Window(QMainWindow):
             self.sj_back_cheBox_15.setChecked(True) if df['디비자동관리'][0] else self.sj_back_cheBox_15.setChecked(False)
             self.sj_back_cheBox_16.setChecked(True) if df['교차검증가중치'][0] else self.sj_back_cheBox_16.setChecked(False)
             self.sj_back_comBox_04.clear()
+            self.sj_back_cheBox_19.setChecked(True) if df['백테스케쥴실행'][0] else self.sj_back_cheBox_19.setChecked(False)
             con = sqlite3.connect(DB_STRATEGY)
             dfs = pd.read_sql('SELECT * FROM schedule', con).set_index('index')
             con.close()
@@ -10827,6 +10963,13 @@ class Window(QMainWindow):
             indexs.sort()
             for index in indexs:
                 self.sj_back_comBox_04.addItem(index)
+            if df['백테스케쥴요일'][0] == 4:
+                self.sj_back_comBox_05.setCurrentText('금')
+            elif df['백테스케쥴요일'][0] == 5:
+                self.sj_back_comBox_05.setCurrentText('토')
+            elif df['백테스케쥴요일'][0] == 6:
+                self.sj_back_comBox_05.setCurrentText('일')
+            self.sj_back_liEdit_03.setText(str(df['백테스케쥴시간'][0]))
             self.sj_back_comBox_03.setCurrentText(df['백테스케쥴구분'][0])
             self.sj_back_comBox_04.setCurrentText(df['백테스케쥴명'][0])
             self.sj_back_cheBox_17.setChecked(True) if not df['백테날짜고정'][0] else self.sj_back_cheBox_17.setChecked(False)
@@ -10835,7 +10978,6 @@ class Window(QMainWindow):
                 self.sj_back_daEdit_01.setDate(QDate.fromString(self.dict_set['백테날짜'], 'yyyyMMdd'))
             else:
                 self.sj_back_liEdit_02.setText(df['백테날짜'][0])
-            self.UpdateTexedit([ui_num['설정로그'], '백테 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '백테 설정값이\n존재하지 않습니다.\n')
 
@@ -10844,7 +10986,6 @@ class Window(QMainWindow):
         df  = pd.read_sql('SELECT * FROM etc', con).set_index('index')
         con.close()
         if len(df) > 0:
-            self.sj_etc_checBox_01.setChecked(True) if df['주식틱자동저장'][0] else self.sj_etc_checBox_01.setChecked(False)
             self.sj_etc_checBox_02.setChecked(True) if df['저해상도'][0] else self.sj_etc_checBox_02.setChecked(False)
             self.sj_etc_checBox_04.setChecked(True) if df['휴무프로세스종료'][0] else self.sj_etc_checBox_04.setChecked(False)
             self.sj_etc_checBox_05.setChecked(True) if df['휴무컴퓨터종료'][0] else self.sj_etc_checBox_05.setChecked(False)
@@ -10852,19 +10993,18 @@ class Window(QMainWindow):
             self.sj_etc_checBox_06.setChecked(True) if df['스톰라이브'][0] else self.sj_etc_checBox_06.setChecked(False)
             self.sj_etc_checBox_07.setChecked(True) if df['프로그램종료'][0] else self.sj_etc_checBox_07.setChecked(False)
             self.sj_etc_comBoxx_01.setCurrentText(df['테마'][0])
-            self.UpdateTexedit([ui_num['설정로그'], '기타 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '기타 설정값이\n존재하지 않습니다.\n')
 
     def sjButtonClicked_09(self):
         sg  = self.sj_main_comBox_01.currentText()
         sr  = 1 if self.sj_main_cheBox_01.isChecked() else 0
-        sc  = 1 if self.sj_main_cheBox_02.isChecked() else 0
-        st  = 1 if self.sj_main_cheBox_03.isChecked() else 0
+        st  = 1 if self.sj_main_cheBox_02.isChecked() else 0
+        ss  = 1 if self.sj_main_cheBox_03.isChecked() else 0
         cg  = self.sj_main_comBox_02.currentText()
         cr  = 1 if self.sj_main_cheBox_04.isChecked() else 0
-        cc  = 1 if self.sj_main_cheBox_05.isChecked() else 0
-        ct  = 1 if self.sj_main_cheBox_06.isChecked() else 0
+        ct  = 1 if self.sj_main_cheBox_05.isChecked() else 0
+        cs  = 1 if self.sj_main_cheBox_06.isChecked() else 0
         jj  = 1 if self.sj_main_cheBox_07.isChecked() else 0
         smt = self.sj_main_liEdit_01.text()
         smd = self.sj_main_liEdit_02.text()
@@ -10874,6 +11014,13 @@ class Window(QMainWindow):
         tdt = self.sj_main_liEdit_06.text()
         mt  = 'ISOLATED' if self.sj_main_comBox_03.currentText() == '격리' else 'CROSSED'
         pt  = 'false' if self.sj_main_comBox_04.currentText() == '단방향' else 'true'
+        vu  = 1 if self.sj_main_cheBox_09.isChecked() else 0
+        if self.sj_main_cheBox_10.isChecked():
+            rg = 1
+        elif self.sj_main_cheBox_11.isChecked():
+            rg = 2
+        else:
+            rg = 0
         if int(cmd) < 10:
             QMessageBox.critical(self, '오류 알림', '코인순위선정은 10이상의 수만 입력하십시오.\n')
         elif '' in [smt, smd, cmt, cmd, rdt, tdt]:
@@ -10881,21 +11028,21 @@ class Window(QMainWindow):
         else:
             smt, smd, cmt, cmd, rdt, tdt = int(smt), int(smd), int(cmt), int(cmd), int(rdt), int(tdt)
             if proc_query.is_alive():
-                query = f"UPDATE main SET 증권사 = '{sg}', 주식리시버 = {sr}, 주식콜렉터 = {sc}, 주식트레이더 = {st}, " \
-                        f"거래소 = '{cg}', 코인리시버 = {cr}, 코인콜렉터 = {cc}, 코인트레이더 = {ct}, 장중전략조건검색식사용 = {jj}, " \
+                query = f"UPDATE main SET 증권사 = '{sg}', 주식리시버 = {sr}, 주식트레이더 = {st}, 주식틱데이터저장 = {ss}, " \
+                        f"거래소 = '{cg}', 코인리시버 = {cr}, 코인트레이더 = {ct}, 코인틱데이터저장 = {cs}, 장중전략조건검색식사용 = {jj}, " \
                         f"주식순위시간 = {smt}, 주식순위선정 = {smd}, 코인순위시간 = {cmt}, 코인순위선정 = {cmd}, 리시버실행시간 = {rdt}, " \
-                        f"트레이더실행시간 = {tdt}, 바이낸스선물마진타입 = '{mt}', 바이낸스선물포지션 = '{pt}'"
+                        f"트레이더실행시간 = {tdt}, 바이낸스선물마진타입 = '{mt}', 바이낸스선물포지션 = '{pt}', '버전업' = {vu}, '리시버공유' = {rg}"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '기본 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['증권사']            = sg
-            self.dict_set['주식리시버']         = sr
-            self.dict_set['주식콜렉터']         = sc
+            self.dict_set['주식리시버']        = sr
             self.dict_set['주식트레이더']       = st
+            self.dict_set['주식틱데이터저장']    = ss
             self.dict_set['거래소']            = cg
             self.dict_set['코인리시버']         = cr
-            self.dict_set['코인콜렉터']         = cc
             self.dict_set['코인트레이더']       = ct
+            self.dict_set['코인틱데이터저장']    = cs
             self.dict_set['장중전략조건검색식사용'] = jj
             self.dict_set['주식순위시간']       = smt
             self.dict_set['주식순위선정']       = smd
@@ -10905,16 +11052,19 @@ class Window(QMainWindow):
             self.dict_set['트레이더실행시간']    = tdt
             self.dict_set['바이낸스선물마진타입'] = mt
             self.dict_set['바이낸스선물포지션']   = pt
+            self.dict_set['버전업']            = vu
+            self.dict_set['리시버공유']         = rg
 
             if self.dict_set['거래소'] == '업비트':
                 self.sj_coin_labell_03.setText('장초전략                        백만원,  장중전략                        백만원              전략중지 및 잔고청산  |')
             else:
                 self.sj_coin_labell_03.setText('장초전략                        USDT,   장중전략                        USDT              전략중지 및 잔고청산  |')
 
-            if self.StockReceiverProcessAlive(): sreceivQ.put(self.dict_set)
-            if self.CoinReceiverProcessAlive():  creceivQ.put(self.dict_set)
-            if self.StockTraderProcessAlive():   straderQ.put(self.dict_set)
-            if self.CoinTraderProcessAlive():    ctraderQ.put(self.dict_set)
+            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            if self.CoinReceiverProcessAlive():
+                creceivQ.put(self.dict_set)
+            if self.CoinTraderProcessAlive():
+                ctraderQ.put(self.dict_set)
 
     def sjButtonClicked_10(self):
         id1 = self.sj_sacc_liEdit_01.text()
@@ -10965,7 +11115,7 @@ class Window(QMainWindow):
                 self.dict_set['비밀번호4']      = ps2
                 self.dict_set['인증서비밀번호4'] = cp2
                 self.dict_set['계좌비밀번호4']   = ap2
-            self.UpdateTexedit([ui_num['설정로그'], '주식 계정 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
     def sjButtonClicked_11(self):
         access_key = self.sj_cacc_liEdit_01.text()
@@ -10986,11 +11136,10 @@ class Window(QMainWindow):
             if combo_name == '업비트':
                 self.dict_set['Access_key1'] = access_key
                 self.dict_set['Secret_key1'] = secret_key
-                self.UpdateTexedit([ui_num['설정로그'], '업비트 계정 설정값 저장하기 완료'])
             else:
                 self.dict_set['Access_key2'] = access_key
                 self.dict_set['Secret_key2'] = secret_key
-                self.UpdateTexedit([ui_num['설정로그'], '바이낸스선물 계정 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
     def sjButtonClicked_12(self):
         str_bot = self.sj_tele_liEdit_01.text()
@@ -11007,7 +11156,7 @@ class Window(QMainWindow):
             self.dict_set['텔레그램봇토큰'] = str_bot
             self.dict_set['텔레그램사용자아이디'] = int(int_id)
             teleQ.put(self.dict_set)
-            self.UpdateTexedit([ui_num['설정로그'], '텔레그램 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
     def sjButtonClicked_13(self):
         me  = 1 if self.sj_stock_ckBox_01.isChecked() else 0
@@ -11060,7 +11209,7 @@ class Window(QMainWindow):
                         f"주식장중프로세스종료 = {pc2}, 주식장중컴퓨터종료 = {ce2}, 주식투자금고정 = {ts}, 주식장초투자금 = {sc}, " \
                         f"주식장중투자금 = {sj}, 주식손실중지 = {cm}, 주식손실중지수익률 = {cmp}, 주식수익중지 = {cp}, 주식수익중지수익률 = {cpp}"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '주식 전략 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['주식모의투자']         = me
             self.dict_set['주식알림소리']         = sd
@@ -11088,11 +11237,9 @@ class Window(QMainWindow):
             self.dict_set['주식수익중지']         = cp
             self.dict_set['주식수익중지수익률']    = cpp
 
-            if self.StockStrategy1ProcessAlive(): sstg1Q.put(self.dict_set)
-            if self.StockStrategy2ProcessAlive(): sstg2Q.put(self.dict_set)
-            if self.StockReceiverProcessAlive():  sreceivQ.put(self.dict_set)
-            if self.StockTraderProcessAlive():    straderQ.put(self.dict_set)
-            if proc_chart.is_alive():             chartQ.put(self.dict_set)
+            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+            if proc_chart.is_alive():
+                chartQ.put(self.dict_set)
 
     def sjButtonClicked_14(self):
         me  = 1 if self.sj_coin_cheBox_01.isChecked() else 0
@@ -11151,7 +11298,7 @@ class Window(QMainWindow):
                             f"코인장중프로세스종료 = {pc2}, 코인장중컴퓨터종료 = {ce2}, 코인투자금고정 = {tc}, 코인장초투자금 = {sc}, " \
                             f"코인장중투자금 = {sj}, 코인손실중지 = {cm}, 코인손실중지수익률 = {cmp}, 코인수익중지 = {cp}, 코인수익중지수익률 = {cpp}"
                     queryQ.put(['설정디비', query])
-                self.UpdateTexedit([ui_num['설정로그'], '코인 전략 설정값 저장하기 완료'])
+                QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
                 self.dict_set['코인모의투자']         = me
                 self.dict_set['코인알림소리']         = sd
@@ -11204,6 +11351,12 @@ class Window(QMainWindow):
         dt  = self.sj_back_liEdit_01.text()
         smp = int(self.sj_back_comBox_01.currentText())
         cmp = int(self.sj_back_comBox_02.currentText())
+        bwd = 0
+        bss = 1 if self.sj_back_cheBox_19.isChecked() else 0
+        if self.sj_back_comBox_05.currentText() == '금':   bwd = 4
+        elif self.sj_back_comBox_05.currentText() == '토': bwd = 5
+        elif self.sj_back_comBox_05.currentText() == '일': bwd = 6
+        bst = self.sj_back_liEdit_03.text()
         abd = self.sj_back_comBox_03.currentText()
         abn = self.sj_back_comBox_04.currentText()
         if bdf:
@@ -11211,19 +11364,20 @@ class Window(QMainWindow):
         else:
             bd = self.sj_back_liEdit_02.text()
 
-        if '' in [dt, bd]:
+        if '' in [dt, bd, bst]:
             QMessageBox.critical(self, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
         elif int(dt) < 154000:
             QMessageBox.critical(self, '오류 알림', '주식 일봉데이터 자동 다운로드는\n15시 40분 이전에 실행할 수 없습니다.\n')
         else:
+            dt, bst = int(dt), int(bst)
             if proc_query.is_alive():
                 query = f"UPDATE back SET 블랙리스트추가 = {bl}, 백테주문관리적용 = {bbg}, 백테매수시간기준 = {bsg}, 백테일괄로딩 = {bld}, 주식일봉데이터 = {sdb}, " \
                         f"주식분봉데이터 = {smb}, 주식분봉기간 = {smp}, 주식일봉데이터다운 = {sab}, 주식일봉다운컴종료 = {de}, 일봉다운실행시간 = {dt}, " \
                         f"코인일봉데이터 = {cdb}, 코인분봉데이터 = {cmb}, 코인분봉기간 = {cmp}, 코인일봉데이터다운 = {cab}, 그래프저장하지않기 = {gsv}, " \
-                        f"그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', " \
-                        f"백테날짜고정 = {bdf}, 백테날짜 = '{bd}'"
+                        f"그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴실행 = {bss}, 백테스케쥴요일 = {bwd}, 백테스케쥴시간 = {bst}, " \
+                        f"백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', 백테날짜고정 = {bdf}, 백테날짜 = '{bd}'"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '백테 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['블랙리스트추가']    = bl
             self.dict_set['백테주문관리적용']   = bbg
@@ -11234,7 +11388,7 @@ class Window(QMainWindow):
             self.dict_set['주식분봉기간']      = smp
             self.dict_set['주식일봉데이터다운'] = sab
             self.dict_set['주식일봉다운컴종료'] = de
-            self.dict_set['일봉다운실행시간']  = int(dt)
+            self.dict_set['일봉다운실행시간']  = dt
             self.dict_set['코인일봉데이터']    = cdb
             self.dict_set['코인분봉데이터']    = cmb
             self.dict_set['코인분봉기간']      = cmp
@@ -11243,14 +11397,15 @@ class Window(QMainWindow):
             self.dict_set['그래프띄우지않기']   = gpl
             self.dict_set['디비자동관리']      = atd
             self.dict_set['교차검증가중치']    = ext
+            self.dict_set['백테스케쥴실행']    = bss
+            self.dict_set['백테스케쥴요일']    = bwd
+            self.dict_set['백테스케쥴시간']    = bst
             self.dict_set['백테스케쥴구분']    = abd
             self.dict_set['백테스케쥴명']      = abn
             self.dict_set['백테날짜고정']      = bdf
             self.dict_set['백테날짜']         = bd
 
-            if self.StockStrategy1ProcessAlive(): sstg1Q.put(self.dict_set)
-            if self.StockStrategy2ProcessAlive(): sstg2Q.put(self.dict_set)
-            if self.StockTraderProcessAlive():    straderQ.put(self.dict_set)
+            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.CoinStrategyProcessAlive():   cstgQ.put(self.dict_set)
             if self.CoinTraderProcessAlive():     ctraderQ.put(self.dict_set)
             if self.backtest_engine:
@@ -11261,7 +11416,6 @@ class Window(QMainWindow):
                 QMessageBox.warning(self, '경고', '전략종료 후 컴퓨터종료가 체크되어 있으면\n일봉 다운로드가 실행되지 않으니 유의하시길 바랍니다.\n')
 
     def sjButtonClicked_16(self):
-        ta  = 1 if self.sj_etc_checBox_01.isChecked() else 0
         pe  = 1 if self.sj_etc_checBox_04.isChecked() else 0
         ce  = 1 if self.sj_etc_checBox_05.isChecked() else 0
         ldp = 1 if self.sj_etc_checBox_02.isChecked() else 0
@@ -11271,13 +11425,11 @@ class Window(QMainWindow):
         the = self.sj_etc_comBoxx_01.currentText()
 
         if proc_query.is_alive():
-            query = f"UPDATE etc SET 주식틱자동저장 = {ta}, 테마 = '{the}', 휴무프로세스종료 = {pe}, 휴무컴퓨터종료 = {ce}, " \
+            query = f"UPDATE etc SET 테마 = '{the}', 휴무프로세스종료 = {pe}, 휴무컴퓨터종료 = {ce}, " \
                     f"저해상도 = {ldp}, 창위치기억 = {cgo}, 스톰라이브 = {slv}, 프로그램종료 = {pex}"
             queryQ.put(['설정디비', query])
-        self.UpdateTexedit([ui_num['설정로그'], '기타 설정값 저장하기 완료'])
+        QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
-        preta = self.dict_set['주식틱자동저장']
-        self.dict_set['주식틱자동저장']   = ta
         self.dict_set['테마']           = the
         self.dict_set['휴무프로세스종료'] = pe
         self.dict_set['휴무컴퓨터종료']   = ce
@@ -11286,17 +11438,9 @@ class Window(QMainWindow):
         self.dict_set['스톰라이브']      = slv
         self.dict_set['프로그램종료']    = pex
 
-        if self.StockReceiverProcessAlive():
-            sreceivQ.put(self.dict_set)
-            if not preta and ta:
-                sreceivQ.put('틱자동저장시작')
-                self.UpdateTexedit([ui_num['설정로그'], '틱데이터 자동저장 타이머 시작'])
-            elif preta and not ta:
-                sreceivQ.put('틱자동저장중지')
-                self.UpdateTexedit([ui_num['설정로그'], '틱데이터 자동저장 타이머 중지'])
-
-        if self.StockTraderProcessAlive(): straderQ.put(self.dict_set)
-        if self.CoinTraderProcessAlive():  ctraderQ.put(self.dict_set)
+        wdservQ.put(['manager', ['설정갱신', self.dict_set]])
+        if self.CoinTraderProcessAlive():
+            ctraderQ.put(self.dict_set)
 
     def sjButtonClicked_17(self):
         if self.sj_etc_pButton_01.text() == '계정 텍스트 보기':
@@ -11320,14 +11464,8 @@ class Window(QMainWindow):
             self.sj_etc_pButton_01.setStyleSheet(style_bc_bt)
 
     def sjButtonClicked_18(self):
-        if self.StockReceiverProcessAlive() or self.StockTraderProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '리시버 및 트레이더가 실행 중일 경우에는 실행할 수 없습니다.\n')
-        else:
-            self.daydata_download = True
-            subprocess.Popen('python download_kiwoom.py')
-
-    def sjButtonClicked_19(self):
-        if self.StockReceiverProcessAlive(): sreceivQ.put('틱데이터저장')
+        self.daydata_download = True
+        subprocess.Popen('python download_kiwoom.py')
 
     def sjButtonClicked_20(self):
         con = sqlite3.connect(DB_SETTING)
@@ -11379,7 +11517,6 @@ class Window(QMainWindow):
             self.sj_sodb_lineEdit_12.setText(str(df['주식매수정정횟수'][0]))
             self.sj_sodb_comboBox_04.setCurrentText(str(df['주식매수정정호가차이'][0]))
             self.sj_sodb_comboBox_05.setCurrentText(str(df['주식매수정정호가'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 주식매수 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '주문관리 주식매수 설정값이\n존재하지 않습니다.\n')
 
@@ -11431,7 +11568,6 @@ class Window(QMainWindow):
             self.sj_sods_lineEdit_12.setText(str(df['주식매도정정횟수'][0]))
             self.sj_sods_comboBox_04.setCurrentText(str(df['주식매도정정호가차이'][0]))
             self.sj_sods_comboBox_05.setCurrentText(str(df['주식매도정정호가'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 주식매도 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '주문관리 주식매도 설정값이\n존재하지 않습니다.\n')
 
@@ -11478,7 +11614,6 @@ class Window(QMainWindow):
             self.sj_codb_lineEdit_11.setText(str(df['코인매수정정횟수'][0]))
             self.sj_codb_comboBox_04.setCurrentText(str(df['코인매수정정호가차이'][0]))
             self.sj_codb_comboBox_05.setCurrentText(str(df['코인매수정정호가'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 코인매수 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '주문관리 코인매수 설정값이\n존재하지 않습니다.\n')
 
@@ -11522,7 +11657,6 @@ class Window(QMainWindow):
             self.sj_cods_lineEdit_11.setText(str(df['코인매도정정횟수'][0]))
             self.sj_cods_comboBox_04.setCurrentText(str(df['코인매도정정호가차이'][0]))
             self.sj_cods_comboBox_05.setCurrentText(str(df['코인매도정정호가'][0]))
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 코인매도 설정값 불러오기 완료'])
         else:
             QMessageBox.critical(self, '오류 알림', '주문관리 코인매도 설정값이\n존재하지 않습니다.\n')
 
@@ -11602,7 +11736,7 @@ class Window(QMainWindow):
                         f"주식매수금지손절간격 = {bb7}, 주식매수금지손절간격초 = {bb7s}, 주식매수정정횟수 = {bb8}, 주식매수정정호가차이 = {bb8c}, " \
                         f"주식매수정정호가 = {bb8h}"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 주식매수 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['주식매수주문구분']      = od
             self.dict_set['주식매수분할횟수']      = dc
@@ -11638,10 +11772,7 @@ class Window(QMainWindow):
             self.dict_set['주식매수정정호가차이']   = bb8c
             self.dict_set['주식매수정정호가']      = bb8h
 
-            if self.StockStrategy1ProcessAlive(): sstg1Q.put(self.dict_set)
-            if self.StockStrategy2ProcessAlive(): sstg2Q.put(self.dict_set)
-            if self.StockReceiverProcessAlive():  sreceivQ.put(self.dict_set)
-            if self.StockTraderProcessAlive():    straderQ.put(self.dict_set)
+            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.backtest_engine:
                 for bpq in self.back_pques:
                     bpq.put(['설정변경', self.dict_set])
@@ -11722,7 +11853,7 @@ class Window(QMainWindow):
                         f"주식매도금지시간 = {bb3}, 주식매도금지시작시간 = {bb3s}, 주식매도금지종료시간 = {bb3e}, 주식매도금지간격 = {bb4}, " \
                         f"주식매도금지간격초 = {bb4s}, 주식매도정정횟수 = {bb5}, 주식매도정정호가차이 = {bb5c}, 주식매도정정호가 = {bb5h}"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 주식매도 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['주식매도주문구분']      = od
             self.dict_set['주식매도분할횟수']      = dc
@@ -11756,10 +11887,7 @@ class Window(QMainWindow):
             self.dict_set['주식매도정정호가차이']   = bb5c
             self.dict_set['주식매도정정호가']      = bb5h
 
-            if self.StockStrategy1ProcessAlive(): sstg1Q.put(self.dict_set)
-            if self.StockStrategy2ProcessAlive(): sstg2Q.put(self.dict_set)
-            if self.StockReceiverProcessAlive():  sreceivQ.put(self.dict_set)
-            if self.StockTraderProcessAlive():    straderQ.put(self.dict_set)
+            wdservQ.put(['manager', ['설정갱신', self.dict_set]])
             if self.backtest_engine:
                 for bpq in self.back_pques:
                     bpq.put(['설정변경', self.dict_set])
@@ -11832,7 +11960,7 @@ class Window(QMainWindow):
                         f"코인매수금지종료시간 = {bb5e}, 코인매수금지간격 = {bb6}, 코인매수금지간격초 = {bb6s}, 코인매수금지손절간격 = {bb7}, " \
                         f"코인매수금지손절간격초 = {bb7s}, 코인매수정정횟수 = {bb8}, 코인매수정정호가차이 = {bb8c}, 코인매수정정호가 = {bb8h}"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 코인매수 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['코인매수주문구분']      = od
             self.dict_set['코인매수분할횟수']      = dc
@@ -11942,7 +12070,7 @@ class Window(QMainWindow):
                         f"코인매도금지종료시간 = {bb3e}, 코인매도금지간격 = {bb4}, 코인매도금지간격초 = {bb4s}, 코인매도정정횟수 = {bb5}, " \
                         f"코인매도정정호가차이 = {bb5c}, 코인매도정정호가 = {bb5h}"
                 queryQ.put(['설정디비', query])
-            self.UpdateTexedit([ui_num['설정로그'], '주문관리 코인매도 설정값 저장하기 완료'])
+            QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
             self.dict_set['코인매도주문구분']      = od
             self.dict_set['코인매도분할횟수']      = dc
@@ -11991,7 +12119,6 @@ class Window(QMainWindow):
 
     def sjButtonClicked_28(self):
         self.LoadSettings()
-        self.sj_log_labelll_00.setText('설정파일 로딩 완료')
 
     def sjButtonClicked_29(self):
         name = self.sj_set_comBoxx_01.currentText()
@@ -12030,7 +12157,7 @@ class Window(QMainWindow):
         self.sjButtonClicked_25()
         self.sjButtonClicked_26()
         self.sjButtonClicked_27()
-        self.sj_log_labelll_00.setText('모든설정 적용 완료')
+        QMessageBox.information(self, '모든 설정 적용 완료', random.choice(famous_saying))
 
     def sjButtonClicked_30(self):
         name = self.sj_set_comBoxx_01.currentText()
@@ -12040,7 +12167,7 @@ class Window(QMainWindow):
         remove_file = f'{DB_PATH}/setting_{name}.db'
         os.remove(remove_file)
         self.LoadSettings()
-        self.sj_log_labelll_00.setText('설정파일 삭제 완료')
+        QMessageBox.information(self, '삭제 완료', random.choice(famous_saying))
 
     def sjButtonClicked_31(self):
         name = self.sj_set_liEditt_01.text()
@@ -12051,20 +12178,7 @@ class Window(QMainWindow):
         copy_file   = f'{DB_PATH}/setting_{name}.db'
         shutil.copy(origin_file, copy_file)
         self.LoadSettings()
-        self.sj_log_labelll_00.setText('설정파일 저장 완료')
-
-    @staticmethod
-    def sjButtonClicked_32():
-        con = sqlite3.connect(DB_BACKTEST)
-        cur = con.cursor()
-        cur.execute('DELETE FROM back_vc_list')
-        con.commit()
-        con.close()
-        print('이전 최적화 데이터 DB기록 삭제 완료')
-        file_list = os.listdir(BACKVC_PATH)
-        for file in file_list:
-            pickle_delete(f'{BACKVC_PATH}/{file}')
-        print('이전 최적화 데이터 파일 삭제 완료')
+        QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
     # =================================================================================================================
 
@@ -12080,22 +12194,17 @@ class Window(QMainWindow):
                 if self.CoinStrategyProcessAlive():
                     QMessageBox.critical(self.dialog_test, '오류 알림', '코인 전략연산 프로세스가 실행중입니다.\n 트레이더을 작동 중지 설정하여 프로그램을 재구동하십시오.')
                     return
-            else:
-                if self.StockStrategy1ProcessAlive():
-                    QMessageBox.critical(self.dialog_test, '오류 알림', '주식 전략연산 프로세스가 실행중입니다.\n 프로그램을 재구동하십시오.')
-                    return
+
             if gubun == '주식':
-                self.proc_simulator_rv =    Process(target=ReceiverKiwoom2, args=(qlist,), daemon=True)
-                self.proc_simulator_td =    Process(target=TraderKiwoom2, args=(qlist,), daemon=True)
-                self.proc_strategy_stock1 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(1, qlist,), daemon=True)
+                wdservQ.put(['manager', '시뮬레이터구동'])
             elif gubun == '업비트':
-                self.proc_simulator_rv =    Process(target=ReceiverUpbit2, args=(qlist,), daemon=True)
-                self.proc_simulator_td =    Process(target=TraderUpbit2, args=(qlist,), daemon=True)
-                self.proc_strategy_coin =   Process(target=StrategyUpbit, args=(qlist,), daemon=True)
+                self.proc_simulator_rv  = Process(target=ReceiverUpbit2, args=(qlist,), daemon=True)
+                self.proc_simulator_td  = Process(target=TraderUpbit2, args=(qlist,), daemon=True)
+                self.proc_strategy_coin = Process(target=StrategyUpbit, args=(qlist,), daemon=True)
             else:
-                self.proc_simulator_rv =    Process(target=ReceiverBinanceFuture2, args=(qlist,), daemon=True)
-                self.proc_simulator_td =    Process(target=TraderBinanceFuture2, args=(qlist,), daemon=True)
-                self.proc_strategy_coin =   Process(target=StrategyBinanceFuture, args=(qlist,), daemon=True)
+                self.proc_simulator_rv  = Process(target=ReceiverBinanceFuture2, args=(qlist,), daemon=True)
+                self.proc_simulator_td  = Process(target=TraderBinanceFuture2, args=(qlist,), daemon=True)
+                self.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(qlist,), daemon=True)
 
             self.proc_strategy_stock1.start() if gubun == '주식' else self.proc_strategy_coin.start()
             self.proc_simulator_td.start()
@@ -12115,8 +12224,9 @@ class Window(QMainWindow):
         if self.SimulatorProcessAlive():
             self.proc_simulator_rv.kill()
             self.proc_simulator_td.kill()
-        if self.StockStrategy1ProcessAlive(): self.proc_strategy_stock1.kill()
-        if self.CoinStrategyProcessAlive():  self.proc_strategy_coin.kill()
+        wdservQ.put(['manager', '시뮬레이터종료'])
+        if self.CoinStrategyProcessAlive():
+            self.proc_strategy_coin.kill()
         qtest_qwait(3)
         QMessageBox.information(self.dialog_test, '알림', '시뮬레이터 엔진 종료 완료')
 
@@ -12141,21 +12251,21 @@ class Window(QMainWindow):
         end_time   = int(self.tt_lineEdittttt_02.text())
 
         if gubun == '주식' and self.dict_set['주식분봉데이터']:
-            sstg1Q.put(['분봉재로딩', code, int(date + '090000')])
+            wdservQ.put(['simul_strategy', ['분봉재로딩', code, int(date + '090000')]])
         elif gubun != '주식' and self.dict_set['코인분봉데이터']:
             cstgQ.put(['분봉재로딩', code, int(date + '000000')])
         qtest_qwait(1)
 
         if gubun == '주식' and self.dict_set['주식일봉데이터']:
-            sstg1Q.put(['일봉재로딩', code, int(date)])
+            wdservQ.put(['simul_strategy', ['일봉재로딩', code, int(date)]])
         elif gubun != '주식' and self.dict_set['코인일봉데이터']:
-            cstgQ.put(['일봉재로딩', code, int(date + '000000')])
+            wdservQ.put(['simul_strategy', ['일봉재로딩', code, int(date + '000000')]])
         qtest_qwait(1)
 
         self.ChartClear()
         if gubun == '주식':
-            sstg1Q.put(code)
-            sstg1Q.put(['관심목록', [code]])
+            wdservQ.put(['simul_strategy', code])
+            wdservQ.put(['simul_strategy', ['관심목록', [code]]])
         else:
             cstgQ.put(code)
             cstgQ.put(['관심목록', [code], [code]])
@@ -12181,8 +12291,8 @@ class Window(QMainWindow):
             dt = self.df_test.index[self.ct_test]
             data = list(self.df_test.iloc[self.ct_test])
             if gubun == '주식':
-                straderQ.put('복기모드시간 ' + str(dt))
-                sreceivQ.put([dt] + data + [code])
+                wdservQ.put(['trader', '복기모드시간 ' + str(dt)])
+                wdservQ.put(['receiver', [dt] + data + [code]])
             else:
                 ctraderQ.put('복기모드시간 ' + str(dt))
                 creceivQ.put([dt] + data + [code])
@@ -12192,21 +12302,21 @@ class Window(QMainWindow):
                 Timer(round(1 / speed, 2), self.TickInput, args=[code, gubun]).start()
         except:
             if gubun == '주식':
-                sstg1Q.put(['관심목록', []])
-                sstg1Q.put('복기모드종료')
+                wdservQ.put(['simul_strategy', ['관심목록', []]])
+                wdservQ.put(['simul_strategy', '복기모드종료'])
             else:
                 cstgQ.put(['관심목록', []])
                 cstgQ.put('복기모드종료')
             windowQ.put('복기모드종료')
-            self.ct_test    = 0
+            self.ct_test = 0
             self.test_pause = False
             qtest_qwait(2)
             self.ChartClear()
 
     def ChartClear(self):
-        if self.StockStrategy1ProcessAlive(): sstg1Q.put('000000')
-        if self.StockStrategy2ProcessAlive(): sstg2Q.put('000000')
-        if self.CoinStrategyProcessAlive():   cstgQ.put('000000')
+        wdservQ.put(['simul_strategy', '000000'])
+        if self.CoinStrategyProcessAlive():
+            cstgQ.put('000000')
 
         self.ctpg_tik_name         = None
         self.ctpg_tik_cline        = None
@@ -12318,26 +12428,11 @@ class Window(QMainWindow):
     def StockLiveProcessAlive(self):
         return self.proc_stomlive_stock is not None and self.proc_stomlive_stock.is_alive()
 
-    def StockReceiverProcessAlive(self):
-        return self.proc_receiver_stock is not None and self.proc_receiver_stock.is_alive()
-
-    def StockCollectorProcessAlive(self):
-        return self.proc_collector_stock1 is not None and self.proc_collector_stock1.is_alive()
-
-    def StockTraderProcessAlive(self):
-        return self.proc_trader_stock is not None and self.proc_trader_stock.is_alive()
-
-    def StockStrategy1ProcessAlive(self):
-        return self.proc_strategy_stock1 is not None and self.proc_strategy_stock1.is_alive()
-
-    def StockStrategy2ProcessAlive(self):
-        return self.proc_strategy_stock2 is not None and self.proc_strategy_stock2.is_alive()
+    def SimulatorProcessAlive(self):
+        return self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and self.proc_simulator_td is not None and self.proc_simulator_td.is_alive()
 
     def CoinReceiverProcessAlive(self):
         return self.proc_receiver_coin is not None and self.proc_receiver_coin.is_alive()
-
-    def CoinCollectorProcessAlive(self):
-        return self.proc_collector_coin is not None and self.proc_collector_coin.is_alive()
 
     def CoinTraderProcessAlive(self):
         return self.proc_trader_coin is not None and self.proc_trader_coin.is_alive()
@@ -12347,9 +12442,6 @@ class Window(QMainWindow):
 
     def CoinKimpProcessAlive(self):
         return self.proc_coin_kimp is not None and self.proc_coin_kimp.is_alive()
-
-    def SimulatorProcessAlive(self):
-        return self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and self.proc_simulator_td is not None and self.proc_simulator_td.is_alive()
 
     def BacktestProcessAlive(self):
         return (self.proc_backtester_bt is not None and self.proc_backtester_bt.is_alive()) or \
@@ -12801,33 +12893,40 @@ class Window(QMainWindow):
 
     def ProcessKill(self):
         if self.dict_set['리시버프로파일링']:
-            sreceivQ.put('프로파일링결과')
+            wdservQ.put(['receiver', '프로파일링결과'])
             qtest_qwait(3)
         if self.dict_set['트레이더프로파일링']:
-            straderQ.put('프로파일링결과')
+            wdservQ.put(['trader', '프로파일링결과'])
             qtest_qwait(3)
         if self.dict_set['전략연산프로파일링']:
-            sstg1Q.put(['프로파일링결과', ''])
+            wdservQ.put(['strategy', ['프로파일링결과', '']])
             qtest_qwait(3)
 
+        wdservQ.put(['manager', '통신종료'])
         factor_choice = ''
         for checkbox in self.factor_checkbox_list:
             factor_choice = f"{factor_choice}{'1' if checkbox.isChecked() else '0'};"
         query = f"UPDATE etc SET 팩터선택 = '{factor_choice[:-1]}'"
         queryQ.put(['설정디비', query])
+        divid_mode = self.be_comboBoxxxxx_01.currentText()
+        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}'"
+        queryQ.put(['설정디비', query])
 
         if self.dict_set['창위치기억']:
-            geo_size = len(self.dict_set["창위치"])
-            geometry = f'{self.x()};{self.y()};'
-            geometry += f'{self.dialog_chart.x()};{self.dialog_chart.y() - 31 if geo_size >= 4 and self.dict_set["창위치"][3] + 31 == self.dialog_chart.y() else self.dialog_chart.y()};'
-            geometry += f'{self.dialog_scheduler.x()};{self.dialog_scheduler.y() - 31 if geo_size >= 6 and self.dict_set["창위치"][5] + 31 == self.dialog_scheduler.y() else self.dialog_scheduler.y()};'
-            geometry += f'{self.dialog_jisu.x()};{self.dialog_jisu.y() - 31 if geo_size >= 8 and self.dict_set["창위치"][7] + 31 == self.dialog_jisu.y() else self.dialog_jisu.y()};'
-            geometry += f'{self.dialog_info.x()};{self.dialog_info.y() - 31 if geo_size >= 10 and self.dict_set["창위치"][9] + 31 == self.dialog_info.y() else self.dialog_info.y()};'
-            geometry += f'{self.dialog_web.x()};{self.dialog_web.y() - 31 if geo_size >= 12 and self.dict_set["창위치"][11] + 31 == self.dialog_web.y() else self.dialog_web.y()};'
-            geometry += f'{self.dialog_tree.x()};{self.dialog_tree.y() - 31 if geo_size >= 14 and self.dict_set["창위치"][13] + 31 == self.dialog_tree.y() else self.dialog_tree.y()};'
-            geometry += f'{self.dialog_chart_day.x()};{self.dialog_chart_day.y() - 31 if geo_size >= 16 and self.dict_set["창위치"][15] + 31 == self.dialog_chart_day.y() else self.dialog_chart_day.y()};'
-            geometry += f'{self.dialog_chart_min.x()};{self.dialog_chart_min.y() - 31 if geo_size >= 18 and self.dict_set["창위치"][17] + 31 == self.dialog_chart_min.y() else self.dialog_chart_min.y()};'
-            geometry += f'{self.dialog_kimp.x()};{self.dialog_kimp.y() - 31 if geo_size >= 20 and self.dict_set["창위치"][19] + 31 == self.dialog_kimp.y() else self.dialog_kimp.y()}'
+            geo_len   = len(self.dict_set['창위치']) if self.dict_set['창위치'] is not None else 0
+            geometry  = f"{self.x()};{self.y()};"
+            geometry += f"{self.dialog_chart.x()};{self.dialog_chart.y() - 31 if geo_len > 3 and self.dict_set['창위치'][3] + 31 == self.dialog_chart.y() else self.dialog_chart.y()};"
+            geometry += f"{self.dialog_scheduler.x()};{self.dialog_scheduler.y() - 31 if geo_len > 5 and self.dict_set['창위치'][5] + 31 == self.dialog_scheduler.y() else self.dialog_scheduler.y()};"
+            geometry += f"{self.dialog_jisu.x()};{self.dialog_jisu.y() - 31 if geo_len > 7 and self.dict_set['창위치'][7] + 31 == self.dialog_jisu.y() else self.dialog_jisu.y()};"
+            geometry += f"{self.dialog_info.x()};{self.dialog_info.y() - 31 if geo_len > 9 and self.dict_set['창위치'][9] + 31 == self.dialog_info.y() else self.dialog_info.y()};"
+            geometry += f"{self.dialog_web.x()};{self.dialog_web.y() - 31 if geo_len > 11 and self.dict_set['창위치'][11] + 31 == self.dialog_web.y() else self.dialog_web.y()};"
+            geometry += f"{self.dialog_tree.x()};{self.dialog_tree.y() - 31 if geo_len > 13 and self.dict_set['창위치'][13] + 31 == self.dialog_tree.y() else self.dialog_tree.y()};"
+            geometry += f"{self.dialog_chart_day.x()};{self.dialog_chart_day.y() - 31 if geo_len > 15 and self.dict_set['창위치'][15] + 31 == self.dialog_chart_day.y() else self.dialog_chart_day.y()};"
+            geometry += f"{self.dialog_chart_min.x()};{self.dialog_chart_min.y() - 31 if geo_len > 17 and self.dict_set['창위치'][17] + 31 == self.dialog_chart_min.y() else self.dialog_chart_min.y()};"
+            geometry += f"{self.dialog_kimp.x()};{self.dialog_kimp.y() - 31 if geo_len > 19 and self.dict_set['창위치'][19] + 31 == self.dialog_kimp.y() else self.dialog_kimp.y()};"
+            geometry += f"{self.dialog_hoga.x()};{self.dialog_hoga.y() - 31 if geo_len > 21 and self.dict_set['창위치'][21] + 31 == self.dialog_hoga.y() else self.dialog_hoga.y()};"
+            geometry += f"{self.dialog_backengine.x()};{self.dialog_backengine.y() - 31 if geo_len > 23 and self.dict_set['창위치'][23] + 31 == self.dialog_backengine.y() else self.dialog_backengine.y()};"
+            geometry += f"{self.dialog_order.x()};{self.dialog_order.y() - 31 if geo_len > 25 and self.dict_set['창위치'][25] + 31 == self.dialog_order.y() else self.dialog_order.y()}"
             query = f"UPDATE etc SET 창위치 = '{geometry}'"
             queryQ.put(['설정디비', query])
 
@@ -12846,24 +12945,7 @@ class Window(QMainWindow):
         if self.dialog_chart_min.isVisible(): self.dialog_chart_min.close()
         if self.dialog_graph.isVisible():     self.dialog_graph.close()
         if self.dialog_kimp.isVisible():      self.dialog_kimp.close()
-
         if self.StockLiveProcessAlive():      self.proc_stomlive_stock.kill()
-        if self.StockReceiverProcessAlive():  self.proc_receiver_stock.kill()
-        if self.StockCollectorProcessAlive():
-            self.proc_collector_stock1.kill()
-            self.proc_collector_stock2.kill()
-            self.proc_collector_stock3.kill()
-            self.proc_collector_stock4.kill()
-            self.proc_collector_stock5.kill()
-            self.proc_collector_stock6.kill()
-            self.proc_collector_stock7.kill()
-            self.proc_collector_stock8.kill()
-        if self.StockStrategy1ProcessAlive(): self.proc_strategy_stock1.kill()
-        if self.StockStrategy2ProcessAlive(): self.proc_strategy_stock2.kill()
-        if self.StockTraderProcessAlive():    self.proc_trader_stock.kill()
-        if self.SimulatorProcessAlive():
-            self.proc_simulator_rv.kill()
-            self.proc_simulator_td.kill()
 
         if self.CoinKimpProcessAlive():
             kimpQ.put('프로세스종료')
@@ -12872,18 +12954,27 @@ class Window(QMainWindow):
             creceivQ.put('프로세스종료')
             qtest_qwait(3)
             self.proc_receiver_coin.kill()
-        if self.CoinCollectorProcessAlive():  self.proc_collector_coin.kill()
         if self.CoinTraderProcessAlive():
             if self.dict_set['거래소'] == '바이낸스선물':
                 ctraderQ.put('프로세스종료')
             self.proc_trader_coin.kill()
-        if self.CoinStrategyProcessAlive():   self.proc_strategy_coin.kill()
-        if self.BacktestProcessAlive():       self.BacktestProcessKill()
+        if self.CoinStrategyProcessAlive():
+            self.proc_strategy_coin.kill()
+
+        if self.SimulatorProcessAlive():
+            self.proc_simulator_rv.kill()
+            self.proc_simulator_td.kill()
+        if self.BacktestProcessAlive():
+            self.BacktestProcessKill()
 
         qtest_qwait(1)
         if self.back_procs:
             for proc in self.back_procs:
                 proc.kill()
+        if self.bact_procs:
+            for proc in self.bact_procs:
+                proc.kill()
+        if self.back_procs or self.bact_procs:
             qtest_qwait(3)
 
         sys.exit()
@@ -12892,22 +12983,13 @@ class Window(QMainWindow):
 if __name__ == '__main__':
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
+    auto_run = 1 if len(sys.argv) > 1 and sys.argv[1] == 'stocklogin' else 0
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--blink-settings=forceDarkModeEnabled=true"
-    subprocess.Popen('python ./utility/timesync.py')
+    subprocess.Popen('python64 ./utility/timesync.py')
 
-    auto_run = 0
-    if len(sys.argv) > 1:
-        if sys.argv[1] == 'stocklogin':      auto_run = 1
-        elif sys.argv[1] == 'backscheduler': auto_run = 2
-
-    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, sreceivQ, creceivQ, straderQ, ctraderQ, sstg1Q, sstg2Q, \
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, totalQ, testQ, kimpQ = \
-        Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), \
-        Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), \
-        Queue(), Queue(), Queue(), Queue()
-
-    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-             cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ]
+    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, totalQ, testQ, kimpQ, wdservQ = \
+        Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue()
+    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdservQ]
 
     proc_tele  = Process(target=TelegramMsg, args=(qlist,), daemon=True)
     proc_webc  = Process(target=WebCrawling, args=(qlist,), daemon=True)

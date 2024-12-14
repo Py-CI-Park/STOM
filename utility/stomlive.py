@@ -39,13 +39,11 @@ class StomLiveSender(Thread):
 class StomLiveClient:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
-        self.liveQ   = qlist[23]
         self.windowQ = qlist[0]
+        self.liveQ   = qlist[11]
         self.Start()
 
     def Start(self):
@@ -54,7 +52,6 @@ class StomLiveClient:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect((HOST, PORT))
                 sender = StomLiveSender(s, self.liveQ)
-                sender.setDaemon(True)
                 sender.start()
                 print('스톰라이브 서버에 연결되었습니다.')
                 while True:

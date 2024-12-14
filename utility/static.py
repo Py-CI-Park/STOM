@@ -1,5 +1,6 @@
 import os
 import re
+import psutil
 import _pickle
 import datetime
 import numpy as np
@@ -9,6 +10,29 @@ from threading import Thread
 from PyQt5.QtTest import QTest
 from traceback import print_exc
 from cryptography.fernet import Fernet
+
+
+def GetPortNumber():
+    port_number = 5500
+    run_count   = 0
+    for proc in psutil.process_iter():
+        if 'cmd' in proc.name():
+            run_count += 1
+    port_number += run_count * 10
+    return port_number
+
+
+def win_proc_alive(name):
+    alive = False
+    for proc in psutil.process_iter():
+        if name in proc.name():
+            alive = True
+    return alive
+
+
+def opstarter_kill():
+    if win_proc_alive('opstarter'):
+        os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
 
 
 # noinspection PyTypeChecker
@@ -292,12 +316,9 @@ def GetUpbitHogaunit(price):
         return 1000
 
 def GetKiwoomPgSgSp(bg, cg):
-    gbfee = bg * 0.00015
-    gsfee = cg * 0.00015
-    gtexs = cg * 0.002
-    bfee = gbfee - gbfee % 10
-    sfee = gsfee - gsfee % 10
-    texs = gtexs - gtexs % 1
+    texs = int(cg * 0.0018)
+    bfee = int(bg * 0.00015 / 10) * 10
+    sfee = int(cg * 0.00015 / 10) * 10
     pg = int(cg - texs - bfee - sfee)
     sg = int(round(pg - bg))
     sp = round(sg / bg * 100, 2)

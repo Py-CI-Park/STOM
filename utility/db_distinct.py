@@ -32,11 +32,11 @@ def Updater(gubun, file_list_):
 
 if __name__ == '__main__':
     file_list = os.listdir(DB_PATH)
-    file_list = [x for x in file_list if 'stock_tick_' in x and 'back' not in x and '.zip' not in x]
+    file_list = [x for x in file_list if '_tick_' in x and 'back' not in x and '.zip' not in x]
 
     file_lists = []
-    for i in range(4):
-        file_lists.append([file for j, file in enumerate(file_list) if j % 4 == i])
+    for i in range(8):
+        file_lists.append([file for j, file in enumerate(file_list) if j % 8 == i])
 
     proc_list = []
     for i, file_list in enumerate(file_lists):

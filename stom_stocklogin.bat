@@ -19,5 +19,6 @@ if '%errorlevel%' NEQ '0' (
 :gotAdmin
     pushd "%CD%"
     CD /D "%~dp0"
-    python ./utility/db_update_20220713.py
+    python64 ./utility/database_check.py
+    python64 stom.py stocklogin
     pause

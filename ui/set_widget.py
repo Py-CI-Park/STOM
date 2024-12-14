@@ -193,7 +193,7 @@ class WidgetCreater:
             qdate = QDate.currentDate().addDays(addday)
             qweek = qdate.dayOfWeek()
             if qweek != 1:
-                qdate = qdate.addDays(8 - qweek)
+                qdate = qdate.addDays(1 - qweek)
         else:
             qdate = QDate.currentDate()
             qweek = qdate.dayOfWeek()

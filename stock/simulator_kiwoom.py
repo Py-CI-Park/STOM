@@ -6,16 +6,12 @@ from utility.static import now, strf_time, strp_time, timedelta_sec, roundfigure
 
 class ReceiverKiwoom2:
     def __init__(self, qlist):
-        """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
-        """
-        self.hogaQ     = qlist[5]
-        self.sreceivQ  = qlist[7]
-        self.straderQ  = qlist[8]
-        self.sstg1Q    = qlist[9]
+        self.kwmservQ  = qlist[0]
+        self.sreceivQ  = qlist[1]
+        self.straderQ  = qlist[2]
+        self.sstgQ     = qlist[3][0]
+        self.dict_set  = DICT_SET
+
         self.dict_name = {}
         self.list_jang = []
         self.LoadCodename()
@@ -35,10 +31,10 @@ class ReceiverKiwoom2:
         df_cn = pd.read_sql('SELECT * FROM codename', con).set_index('index')
         con.close()
         self.dict_name = df_cn['종목명'].to_dict()
-        dict_sgbn = {code: 1 for code, _ in self.dict_name.items()}
+        dict_sgbn = {code: 0 for code, _ in self.dict_name.items()}
         list_kosd = list(df_cn[df_cn['코스닥'] == 1].index)
-        self.sstg1Q.put(dict_sgbn)
-        self.sstg1Q.put(['코스닥목록', list_kosd])
+        self.sstgQ.put(dict_sgbn)
+        self.sstgQ.put(['코스닥목록', list_kosd])
 
     def UpdateTestMode(self, data):
         code = data[-1]
@@ -46,13 +42,13 @@ class ReceiverKiwoom2:
         data[16] = strp_time('%Y%m%d%H%M%S', str(int(vitime)))
         hogadata = data[21:43]
         name = self.dict_name[code]
-        self.sstg1Q.put(data + [now(), name])
+        self.sstgQ.put(data + [code, name, 0])
         if code in self.list_jang:
             self.straderQ.put([code, c])
-        self.hogaQ.put([name, c, per, sgta, uvi, o, h, low])
-        self.hogaQ.put([bids, ch])
-        self.hogaQ.put([-asks, ch])
-        self.hogaQ.put([name] + hogadata + [0, 0])
+        self.kwmservQ.put(['hoga', [name, c, per, sgta, uvi, o, h, low]])
+        self.kwmservQ.put(['hoga', [bids, ch]])
+        self.kwmservQ.put(['hoga', [-asks, ch]])
+        self.kwmservQ.put(['hoga', [name] + hogadata + [0, 0]])
 
     def UpdateList(self, data):
         gubun, data = data
@@ -61,18 +57,11 @@ class ReceiverKiwoom2:
 
 class TraderKiwoom2:
     def __init__(self, qlist):
-        """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
-        """
-        self.windowQ  = qlist[0]
-        self.soundQ   = qlist[1]
-        self.sreceivQ = qlist[7]
-        self.straderQ = qlist[8]
-        self.sstg1Q   = qlist[9]
-        self.dict_set = DICT_SET
+        self.kwmservQ  = qlist[0]
+        self.sreceivQ  = qlist[1]
+        self.straderQ  = qlist[2]
+        self.sstgQ     = qlist[3][0]
+        self.dict_set  = DICT_SET
 
         self.df_cj = pd.DataFrame(columns=columns_cj)
         self.df_jg = pd.DataFrame(columns=columns_jg)
@@ -122,7 +111,7 @@ class TraderKiwoom2:
                 self.UpdateTotaljango(inthms)
                 self.dict_time['계좌평가계산'] = timedelta_sec(1)
             if curr_time > self.dict_time['잔고목록전송']:
-                self.sstg1Q.put(self.df_jg.copy())
+                self.sstgQ.put(self.df_jg.copy())
                 self.dict_time['잔고목록전송'] = timedelta_sec(0.5)
 
     def LoadCodename(self):
@@ -281,7 +270,7 @@ class TraderKiwoom2:
             self.df_jg[columns] = self.df_jg[columns].astype(int)
             self.df_jg.sort_values(by=['매입금액'], ascending=False, inplace=True)
 
-            self.sstg1Q.put(self.df_jg.copy())
+            self.sstgQ.put(self.df_jg.copy())
             if mc == 0:
                 self.PutOrderComplete(og + '완료', code)
 
@@ -294,8 +283,8 @@ class TraderKiwoom2:
                 self.dict_intg['추정예수금'] += jg + sg
 
             if self.dict_set['주식알림소리']:
-                self.soundQ.put(f'{name} {cc}주를 {og}하였습니다')
-            self.windowQ.put([ui_num['S로그텍스트'], f'주문 관리 시스템 알림 - [{ot}] {name} | {cp} | {cc} | {og}'])
+                self.kwmservQ.put(['sound', f'{name} {cc}주를 {og}하였습니다'])
+            self.kwmservQ.put(['window', [ui_num['S로그텍스트'], f'주문 관리 시스템 알림 - [{ot}] {name} | {cp} | {cc} | {og}']])
 
         elif ot == '체결' and og == '시드부족':
             self.UpdateChegeollist(index, code, name, og, oc, cc, mc, cp, ct, op, on)
@@ -304,7 +293,7 @@ class TraderKiwoom2:
 
     def UpdateTradelist(self, index, name, jg, pg, cc, sp, sg, ct):
         self.df_td.loc[index] = name, jg, pg, cc, sp, sg, ct
-        self.windowQ.put([ui_num['S거래목록'], self.df_td[::-1]])
+        self.kwmservQ.put(['window', [ui_num['S거래목록'], self.df_td[::-1]]])
         self.UpdateTotaltradelist()
 
     def UpdateTotaltradelist(self):
@@ -316,12 +305,12 @@ class TraderKiwoom2:
         sg  = self.df_td['수익금'].sum()
         sp  = round(sg / self.dict_intg['추정예탁자산'] * 100, 2)
         self.df_tt = pd.DataFrame([[tdt, tbg, tsg, sig, ssg, sp, sg]], columns=columns_tt, index=[self.dict_strg['당일날짜']])
-        self.windowQ.put([ui_num['S실현손익'], self.df_tt])
+        self.kwmservQ.put(['window', [ui_num['S실현손익'], self.df_tt]])
 
     def UpdateChegeollist(self, index, code, name, og, oc, cc, mc, cp, ct, op, on):
         self.dict_name[code][2] = timedelta_sec(self.dict_set['주식매수금지간격초'])
         self.df_cj.loc[index] = name, og, oc, cc, mc, cp, ct, op, on
-        self.windowQ.put([ui_num['S체결목록'], self.df_cj[::-1]])
+        self.kwmservQ.put(['window', [ui_num['S체결목록'], self.df_cj[::-1]]])
 
     def UpdateTotaljango(self, inthms):
         if len(self.df_jg) > 0:
@@ -335,8 +324,8 @@ class TraderKiwoom2:
         else:
             self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['예수금'], self.dict_intg['예수금'], 0, 0.0, 0, 0, 0
 
-        self.windowQ.put([ui_num['S잔고목록'], self.df_jg.copy()])
-        self.windowQ.put([ui_num['S잔고평가'], self.df_tj.copy()])
+        self.kwmservQ.put(['window', [ui_num['S잔고목록'], self.df_jg.copy()]])
+        self.kwmservQ.put(['window', [ui_num['S잔고평가'], self.df_tj.copy()]])
 
         if self.dict_set['주식투자금고정']:
             if inthms < self.dict_set['주식장초전략종료시간']:
@@ -357,7 +346,7 @@ class TraderKiwoom2:
 
         if self.dict_intg['종목당투자금'] != tujagm:
             self.dict_intg['종목당투자금'] = tujagm
-            self.sstg1Q.put(self.dict_intg['종목당투자금'])
+            self.sstgQ.put(self.dict_intg['종목당투자금'])
 
     def PutOrderComplete(self, cmsg, code):
-        self.sstg1Q.put([cmsg, code])
+        self.sstgQ.put([cmsg, code])

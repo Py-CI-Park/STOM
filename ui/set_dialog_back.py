@@ -11,11 +11,14 @@ class SetDialogBack:
         self.set()
 
     def set(self):
-        self.ui.dialog_backengine = self.wc.setDialog('STOM BACKTEST ENGINE', tab=self.ui)
+        self.ui.dialog_backengine = self.wc.setDialog('STOM BACKTEST ENGINE')
         self.ui.dialog_backengine.geometry().center()
 
         self.ui.be_groupBoxxxxx_01 = QGroupBox('', self.ui.dialog_backengine)
-        self.ui.be_labellllllll_01 = QLabel('▣ 백테엔진에 로딩할 데이터의 시작 및 종료의 날짜와 시간를 입력하십시오.', self.ui.be_groupBoxxxxx_01)
+        self.ui.be_labellllllll_04 = QLabel('▣ 백테엔진의 데이터 로딩 시 분류 방법을 선택하십시오. 한종목 백테 시 우측 콤보박스 선택', self.ui.be_groupBoxxxxx_01)
+        self.ui.be_comboBoxxxxx_01 = self.wc.setCombobox(self.ui.dialog_backengine, items=['종목코드별 분류', '일자별 분류', '한종목 로딩'])
+        self.ui.be_comboBoxxxxx_02 = self.wc.setCombobox(self.ui.dialog_backengine, items=['데이터없음'])
+        self.ui.be_labellllllll_01 = QLabel('▣ 백테엔진에 로딩할 데이터의 시작 및 종료 날짜와 시간를 입력하십시오.', self.ui.be_groupBoxxxxx_01)
         if self.ui.dict_set['백테날짜고정']:
             self.ui.be_dateEdittttt_01 = self.wc.setDateEdit(self.ui.be_groupBoxxxxx_01, qday=QDate.fromString(self.ui.dict_set['백테날짜'], 'yyyyMMdd'))
         else:
@@ -484,19 +487,27 @@ class SetDialogBack:
             self.ui.sd_progressBarr_09, self.ui.sd_progressBarr_10, self.ui.sd_progressBarr_11, self.ui.sd_progressBarr_12,
             self.ui.sd_progressBarr_13, self.ui.sd_progressBarr_14, self.ui.sd_progressBarr_15, self.ui.sd_progressBarr_16
         ]
-        self.ui.dialog_backengine.setFixedSize(480, 535)
-        self.ui.be_groupBoxxxxx_01.setGeometry(5, 5, 470, 525)
-        self.ui.be_labellllllll_01.setGeometry(10, 5, 450, 30)
-        self.ui.be_dateEdittttt_01.setGeometry(10, 40, 220, 30)
-        self.ui.be_dateEdittttt_02.setGeometry(240, 40, 220, 30)
-        self.ui.be_lineEdittttt_01.setGeometry(10, 75, 220, 30)
-        self.ui.be_lineEdittttt_02.setGeometry(240, 75, 220, 30)
-        self.ui.be_labellllllll_02.setGeometry(10, 110, 450, 30)
-        self.ui.be_lineEdittttt_03.setGeometry(10, 145, 220, 30)
-        self.ui.be_lineEdittttt_04.setGeometry(240, 145, 220, 30)
-        self.ui.be_labellllllll_03.setGeometry(10, 180, 450, 80)
-        self.ui.be_pushButtonnn_01.setGeometry(10, 270, 450, 30)
-        self.ui.be_textEditxxxx_01.setGeometry(10, 310, 450, 205)
+        self.ui.dialog_backengine.setFixedSize(480, 600)
+        if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
+            try:
+                self.ui.dialog_backengine.move(self.ui.dict_set['창위치'][22], self.ui.dict_set['창위치'][23])
+            except:
+                pass
+        self.ui.be_groupBoxxxxx_01.setGeometry(5, 5, 470, 595)
+        self.ui.be_labellllllll_04.setGeometry(10, 5, 450, 30)
+        self.ui.be_comboBoxxxxx_01.setGeometry(15, 40, 220, 30)
+        self.ui.be_comboBoxxxxx_02.setGeometry(245, 40, 220, 30)
+        self.ui.be_labellllllll_01.setGeometry(10, 70, 450, 30)
+        self.ui.be_dateEdittttt_01.setGeometry(10, 105, 220, 30)
+        self.ui.be_dateEdittttt_02.setGeometry(240, 105, 220, 30)
+        self.ui.be_lineEdittttt_01.setGeometry(10, 140, 220, 30)
+        self.ui.be_lineEdittttt_02.setGeometry(240, 140, 220, 30)
+        self.ui.be_labellllllll_02.setGeometry(10, 175, 450, 30)
+        self.ui.be_lineEdittttt_03.setGeometry(10, 210, 220, 30)
+        self.ui.be_lineEdittttt_04.setGeometry(240, 210, 220, 30)
+        self.ui.be_labellllllll_03.setGeometry(10, 245, 450, 80)
+        self.ui.be_pushButtonnn_01.setGeometry(10, 335, 450, 30)
+        self.ui.be_textEditxxxx_01.setGeometry(10, 375, 450, 205)
 
         self.ui.dialog_scheduler.setFixedSize(1403, 575)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:

@@ -6,18 +6,19 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SubTotal, GetBackResult, SendTextAndStd, GetQuery
-from utility.static import factorial, strf_time, now, timedelta_day, strp_time, timedelta_sec
+from backtester.back_static import SubTotal, SendTextAndStd, GetMoneytopQuery
+from utility.static import factorial, strf_time, now, timedelta_day, strp_time
 from utility.setting import ui_num, DB_STRATEGY, DICT_SET, DB_BACKTEST, DB_STOCK_BACK, DB_COIN_BACK
 
 
 class Total:
-    def __init__(self, wq, tq, mq, tdq_list, vdq_list, ui_gubun):
+    def __init__(self, wq, tq, mq, tdq_list, vdq_list, ctq_list, ui_gubun):
         self.wq           = wq
         self.tq           = tq
         self.mq           = mq
         self.tdq_list     = tdq_list
         self.vdq_list     = vdq_list
+        self.ctq_list     = ctq_list
         self.ui_gubun     = ui_gubun
         self.dict_set     = DICT_SET
 
@@ -26,8 +27,6 @@ class Total:
 
         self.std_list     = None
         self.optistandard = None
-        self.buy_conds    = None
-        self.sell_conds   = None
         self.day_count    = None
 
         self.betting      = None
@@ -40,23 +39,9 @@ class Total:
 
         self.df_tsg       = None
         self.df_bct       = None
-        self.arry_bct     = None
 
-        self.dict_train   = {}
-        self.dict_valid   = {}
-        self.dict_tsg1    = {}
-        self.dict_tsg2    = {}
-        self.dict_tsg3    = {}
-        self.dict_tsg4    = {}
-        self.dict_tsg5    = {}
-        self.dict_tsg6    = {}
-        self.dict_tsg7    = {}
-        self.dict_tsg8    = {}
-        self.dict_tsg9    = {}
-        self.dict_tsg10   = {}
-        self.dict_tsg11   = {}
-        self.dict_tsg12   = {}
-        self.dict_tsg13   = {}
+        self.dict_t       = {}
+        self.dict_v       = {}
 
         self.stdp         = -100_000_000_000
         self.sub_total    = 0
@@ -65,117 +50,80 @@ class Total:
         self.Start()
 
     def Start(self):
-        st  = 0
+        st  = {}
+        tc  = 0
         bc  = 0
         tbc = 0
         while True:
             data = self.tq.get()
             if data[0] == '백테결과':
-                index = str(data[3]) if self.dict_set['백테매수시간기준'] else str(data[4])
-                while index in self.dict_tsg1.keys():
-                    index = strf_time('%Y%m%d%H%M%S', timedelta_sec(1, strp_time('%Y%m%d%H%M%S', index)))
-                self.dict_tsg1[index]  = data[1]
-                self.dict_tsg2[index]  = data[2]
-                self.dict_tsg3[index]  = data[3]
-                self.dict_tsg4[index]  = data[4]
-                self.dict_tsg5[index]  = data[5]
-                self.dict_tsg6[index]  = data[6]
-                self.dict_tsg7[index]  = data[7]
-                self.dict_tsg8[index]  = data[8]
-                self.dict_tsg9[index]  = data[9]
-                self.dict_tsg10[index] = data[10]
-                self.dict_tsg11[index] = data[11]
-                self.dict_tsg12[index] = data[12]
-                self.dict_tsg13[index] = data[13]
-                if data[14] and self.arry_bct is not None:
-                    arry_bct = self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])]
-                    arry_bct[:, 1] += 1
-                    self.arry_bct[(self.arry_bct[:, 0] >= data[3]) & (self.arry_bct[:, 0] <= data[4])] = arry_bct
-            elif data[0] == '백테완료':
-                bc  += 1
-                tbc += 1
-                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start])
-
-                if bc == self.back_count:
+                _, vars_key, list_k, list_c, arry_bct = data
+                if vars_key is not None:
                     columns = ['종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간',
                                '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    self.df_tsg = pd.DataFrame(
-                        dict(zip(columns,
-                                 [self.dict_tsg1.values(), self.dict_tsg2.values(), self.dict_tsg3.values(),
-                                  self.dict_tsg4.values(), self.dict_tsg5.values(), self.dict_tsg6.values(),
-                                  self.dict_tsg7.values(), self.dict_tsg8.values(), self.dict_tsg9.values(),
-                                  self.dict_tsg10.values(), self.dict_tsg11.values(), self.dict_tsg12.values(),
-                                  self.dict_tsg13.values()])),
-                        index=list(self.dict_tsg1.keys())
-                    )
-                    self.df_tsg.sort_index(inplace=True)
-                    arry_bct    = self.arry_bct[self.arry_bct[:, 1] > 0]
-                    self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
-
                     if self.valid_days is not None:
-                        data = [self.df_tsg, self.df_bct]
+                        data = [columns, list_c, list_k, arry_bct]
                         for i, vdays in enumerate(self.valid_days):
-                            data_ = data + [vdays[0], vdays[1], vdays[2], vdays[3], i]
+                            data_ = data + [vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key]
                             self.tdq_list[i].put(data_)
                             self.vdq_list[i].put(data_)
                     else:
-                        _, _, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, self.optistandard, self.day_count)
-                        self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, result)
-                        self.InitData()
-                        bc = 0
-            elif data[0] == 'TRAIN':
-                self.dict_train[data[1]] = data[2]
-                st += 1
-                if st == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, self.dict_train, self.dict_valid, self.dict_set['교차검증가중치'])
-                    self.InitData()
-                    st = 0
+                        data = [columns, list_k, list_k, arry_bct, self.day_count, vars_key]
+                        self.tdq_list[vars_key].put(data)
+
+            elif data == '백테완료':
+                bc  += 1
+                tbc += 1
+                if data[1]: tc += 1
+                self.wq.put([ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start])
+
+                if bc == self.back_count:
                     bc = 0
-            elif data[0] == 'VALID':
-                self.dict_valid[data[1]] = data[2]
-                st += 1
-                if st == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(), self.std_list, self.betting, self.dict_train, self.dict_valid, self.dict_set['교차검증가중치'])
-                    self.InitData()
-                    st = 0
-                    bc = 0
+                    if tc > 0:
+                        tc = 0
+                        for ctq in self.ctq_list:
+                            ctq.put('백테완료')
+                    else:
+                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 종목이 없어 결과를 표시할 수 없습니다.'])
+                        self.BackStop()
+                        break
+
+            elif data[0] in ['TRAIN', 'VALID', 'ALL']:
+                vars_key = data[-1]
+                if data[0] == 'ALL':
+                    self.stdp = SendTextAndStd(self.GetSendData(data[-1]), self.std_list, self.betting, data[2])
+                else:
+                    if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
+                    if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
+                    if vars_key not in st.keys(): st[vars_key] = 0
+                    if data[0] == 'TRAIN':
+                        self.dict_t[vars_key][data[1]] = data[2]
+                    else:
+                        self.dict_v[vars_key][data[1]] = data[2]
+                    st[vars_key] += 1
+                    if st[vars_key] == self.sub_total:
+                        self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, self.dict_t[vars_key], self.dict_v[vars_key], self.dict_set['교차검증가중치'])
+                        st[vars_key] = 0
+
             elif data[0] == '백테정보':
                 self.BackInfo(data)
             elif data[0] == '경우의수':
                 self.total_count = data[1]
                 self.back_count  = data[2]
-            elif data[0] == '조건정보':
-                self.buy_conds  = data[1]
-                self.sell_conds = data[2]
             elif data == '백테중지':
-                if self.tdq_list:
-                    for q in self.tdq_list:
-                        q.put('서브집계프로세스종료')
-                    for q in self.vdq_list:
-                        q.put('서브집계프로세스종료')
-                self.mq.put('백테중지')
+                self.BackStop()
                 break
 
         time.sleep(1)
         sys.exit()
 
-    def InitData(self):
-        self.dict_train = {}
-        self.dict_valid = {}
-        self.dict_tsg1  = {}
-        self.dict_tsg2  = {}
-        self.dict_tsg3  = {}
-        self.dict_tsg4  = {}
-        self.dict_tsg5  = {}
-        self.dict_tsg6  = {}
-        self.dict_tsg7  = {}
-        self.dict_tsg8  = {}
-        self.dict_tsg9  = {}
-        self.dict_tsg10 = {}
-        self.dict_tsg11 = {}
-        self.dict_tsg12 = {}
-        self.dict_tsg13 = {}
-        self.arry_bct[:, 1] = 0
+    def BackStop(self):
+        if self.tdq_list:
+            for q in self.tdq_list:
+                q.put('서브집계프로세스종료')
+            for q in self.vdq_list:
+                q.put('서브집계프로세스종료')
+        self.mq.put('백테중지')
 
     def BackInfo(self, data):
         self.betting      = data[1]
@@ -186,26 +134,26 @@ class Total:
         self.endtime      = data[6]
         self.std_list     = data[7]
         self.optistandard = data[8]
-        self.arry_bct     = data[9]
-        self.valid_days   = data[10]
-        self.day_count    = data[11]
+        self.valid_days   = data[9]
+        self.day_count    = data[10]
         if self.valid_days is not None:
             self.sub_total = len(self.valid_days) * 2
         else:
             self.sub_total = 2
 
-    def GetSendData(self):
-        return ['조건최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, None, None, self.startday, self.endday]
+    def GetSendData(self, vars_key):
+        return ['조건최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vars_key, None, self.startday, self.endday]
 
 
 class OptimizeConditions:
-    def __init__(self, wq, bq, sq, tq, lq, pq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, pq_list, ctq_list, backname, ui_gubun):
         self.wq           = wq
         self.bq           = bq
         self.sq           = sq
         self.tq           = tq
         self.lq           = lq
         self.pq_list      = pq_list
+        self.ctq_list     = ctq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
         self.result       = {}
@@ -238,7 +186,7 @@ class OptimizeConditions:
         self.scount   = int(data[9])
         rcount        = int(data[10])
         back_count        = data[11]
-        weeks_train       = data[12]
+        weeks_train   = int(data[12])
         weeks_valid   = int(data[13])
         _             = int(data[14])
         backengin_sday    = data[15]
@@ -279,7 +227,7 @@ class OptimizeConditions:
             self.SysExit(True)
 
         con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
-        query = GetQuery(self.ui_gubun, startday, endday, starttime, endtime)
+        query = GetMoneytopQuery(self.ui_gubun, startday, endday, starttime, endtime)
         df_mt = pd.read_sql(query, con)
         con.close()
 
@@ -310,6 +258,9 @@ class OptimizeConditions:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
+        data = ['보유종목수어레이', arry_bct]
+        for q in self.ctq_list:
+            q.put(data)
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'])
 
         con = sqlite3.connect(DB_STRATEGY)
@@ -332,13 +283,14 @@ class OptimizeConditions:
 
         self.buyconds  = [x for x in self.buyconds if x != '' and '#' not in x]
         self.sellconds = [x for x in self.sellconds if x != '' and '#' not in x]
-        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수조건 로딩 완료'])
+        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수조건 설정 완료'])
 
         bc = factorial(len(self.buyconds)) / (factorial(self.bcount) * factorial(len(self.buyconds) - self.bcount))
         sc = factorial(len(self.sellconds)) / (factorial(self.scount) * factorial(len(self.sellconds) - self.scount))
         total_count = int(bc * sc)
         if total_count < rcount:
             rcount = total_count
+        rcount = int(rcount / 10)
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 전체 경우의 수 계산 완료 [{total_count:,.0f}]'])
 
         mq = Queue()
@@ -351,12 +303,19 @@ class OptimizeConditions:
                 vdq_list.append(vdq)
                 Process(target=SubTotal, args=(self.tq, tdq, betting, self.optistandard, 1)).start()
                 Process(target=SubTotal, args=(self.tq, vdq, betting, self.optistandard, 0)).start()
-        Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.ui_gubun)).start()
+        else:
+            for _ in range(10):
+                tdq = Queue()
+                tdq_list.append(tdq)
+                Process(target=SubTotal, args=(self.tq, tdq, betting, self.optistandard, 1)).start()
+
+        Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.ctq_list, self.ui_gubun)).start()
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'])
 
-        self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, std_text, self.optistandard, arry_bct, valid_days, len(day_list)])
-        for pq in self.pq_list:
-            pq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime])
+        self.tq.put(['백테정보', betting, avgtime, startday, endday, starttime, endtime, std_text, self.optistandard, valid_days, len(day_list)])
+        data = ['백테정보', betting, avgtime, startday, endday, starttime, endtime]
+        for q in self.pq_list:
+            q.put(data)
 
         start = now()
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작'])
@@ -364,22 +323,25 @@ class OptimizeConditions:
 
         for _ in range(rcount):
             buy_conds, sell_conds = self.GetCondlist()
-            self.tq.put(['조건정보', buy_conds, sell_conds])
-            for pq in self.pq_list:
+            for q in self.ctq_list:
+                q.put('백테시작')
+            for q in self.pq_list:
                 if is_long is None:
-                    pq.put(['조건정보', buy_conds, sell_conds])
+                    q.put(['조건정보', buy_conds, sell_conds])
                 else:
-                    pq.put(['조건정보', is_long, buy_conds, sell_conds])
+                    q.put(['조건정보', is_long, buy_conds, sell_conds])
 
-            std = mq.get()
-            if type(std) != str:
-                if std > 0:
-                    self.result[std] = [buy_conds, sell_conds]
-            else:
-                if len(self.result) > 0:
-                    self.ShowTopCondlist(5)
-                    self.ShowTopConds()
-                self.SysExit(True)
+            for _ in range(10):
+                data = mq.get()
+                if type(data) == str:
+                    if len(self.result) > 0:
+                        self.ShowTopCondlist(5)
+                        self.ShowTopConds()
+                    self.SysExit(True)
+                else:
+                    std, vars_key = data
+                    if std > 0:
+                        self.result[std] = [buy_conds[vars_key], sell_conds[vars_key]]
 
         if len(self.result) > 0:
             self.ShowTopCondlist(5)
@@ -395,17 +357,20 @@ class OptimizeConditions:
 
     def GetCondlist(self):
         opti_list = []
-        buyconds  = None
-        sellconds = None
-        while opti_list == [] or opti_list in self.opti_list:
-            random.shuffle(self.buyconds)
-            random.shuffle(self.sellconds)
-            buyconds  = self.buyconds[:self.bcount]
-            sellconds = self.sellconds[:self.scount]
-            buyconds.sort()
-            sellconds.sort()
-            opti_list = buyconds + sellconds
-        self.opti_list.append(opti_list)
+        buyconds  = []
+        sellconds = []
+        for _ in range(10):
+            while opti_list == [] or opti_list in self.opti_list:
+                random.shuffle(self.buyconds)
+                random.shuffle(self.sellconds)
+                buycond  = self.buyconds[:self.bcount]
+                sellcond = self.sellconds[:self.scount]
+                buycond.sort()
+                sellcond.sort()
+                opti_list = [buycond, sellcond]
+            buyconds.append(opti_list[0])
+            sellconds.append(opti_list[1])
+            self.opti_list.append(opti_list)
         return buyconds, sellconds
 
     def ShowTopCondlist(self, rank):

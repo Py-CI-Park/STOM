@@ -1,3 +1,4 @@
+import zmq
 import time
 import json
 import uuid
@@ -8,29 +9,41 @@ import operator
 import websockets
 import numpy as np
 import pandas as pd
-from threading import Timer
+from threading import Thread, Timer
 from multiprocessing import Process, Queue
 from utility.setting import ui_num, DICT_SET, DB_COIN_DAY, DB_COIN_MIN
 from utility.static import now, strf_time, strp_time, timedelta_sec, from_timestamp, int_hms_utc
 
 
+class ZmqServ(Thread):
+    def __init__(self, zq):
+        super().__init__()
+        self.zq = zq
+        zctx = zmq.Context()
+        self.sock = zctx.socket(zmq.PUB)
+        self.sock.bind(f'tcp://*:5680')
+
+    def run(self):
+        while True:
+            msg, data = self.zq.get()
+            self.sock.send_string(msg, zmq.SNDMORE)
+            self.sock.send_pyobj(data)
+
+
 class ReceiverUpbit:
     def __init__(self, qlist):
         """
-           0        1       2      3       4      5      6       7         8        9       10       11        12
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, sreceivQ, straderQ, sstg1Q, sstg2Q, creceivQ, ctraderQ,
-        cstgQ, tick1Q, tick2Q, tick3Q, tick4Q, tick5Q, tick6Q, tick7Q, tick8Q, tick9Q, liveQ, backQ, kimpQ
-         13      14      15      16      17      18      19      20      21      22     23     24     25
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdservQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
         self.windowQ  = qlist[0]
         self.soundQ   = qlist[1]
         self.queryQ   = qlist[2]
         self.teleQ    = qlist[3]
         self.hogaQ    = qlist[5]
-        self.creceivQ = qlist[11]
-        self.ctraderQ = qlist[12]
-        self.cstgQ    = qlist[13]
-        self.tick9Q   = qlist[22]
+        self.creceivQ = qlist[8]
+        self.ctraderQ = qlist[9]
+        self.cstgQ    = qlist[10]
         self.dict_set = DICT_SET
 
         self.dict_bool = {
@@ -64,10 +77,15 @@ class ReceiverUpbit:
         self.proc_webs_orderb = None
         self.codes            = None
 
+        self.zq = Queue()
+        if self.dict_set['리시버공유'] == 1:
+            self.zmqserver = ZmqServ(self.zq)
+            self.zmqserver.start()
+
         self.Start()
 
     def Start(self):
-        text = '코인 리시버 및 콜렉터를 시작하였습니다.' if self.dict_set['코인콜렉터'] else '코인 리시버를 시작하였습니다.'
+        text = '코인 리시버를 시작하였습니다.'
         if self.dict_set['코인알림소리']: self.soundQ.put(text)
         self.teleQ.put(text)
         self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'])
@@ -88,7 +106,8 @@ class ReceiverUpbit:
                     self.dict_set = data
                 elif type(data) == str:
                     if data == '프로세스종료':
-                        self.tick9Q.put('프로세스종료')
+                        self.ctraderQ.put('프로세스종료')
+                        self.cstgQ.put('프로세스종료')
                         self.WebProcessKill()
                         break
                     else:
@@ -170,6 +189,8 @@ class ReceiverUpbit:
                 if len(codes) > len(self.codes):
                     self.codes = codes
                     self.ctraderQ.put('코인명갱신')
+                    if self.dict_set['리시버공유'] == 1:
+                        self.zq.put(['updatecodes', ''])
                     self.WebProcessKill()
                 self.dict_time['티커리스트재조회'] = timedelta_sec(600)
 
@@ -177,7 +198,7 @@ class ReceiverUpbit:
                 time.sleep(0.001)
 
         self.windowQ.put([ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 종료'])
-        time.sleep(3)
+        time.sleep(1)
 
     def ReceiverProcKill(self):
         self.dict_bool['프로세스종료'] = True
@@ -211,7 +232,10 @@ class ReceiverUpbit:
         for code in self.list_prmt:
             self.InsertGsjmlist(code)
         self.list_gsjm1 = self.list_prmt[:-3]
-        self.cstgQ.put(['관심목록', self.list_gsjm1.copy(), self.list_gsjm2.copy()])
+        data1, data2 = self.list_gsjm1.copy(), self.list_gsjm2.copy()
+        self.cstgQ.put(['관심목록', data1, data2])
+        if self.dict_set['리시버공유'] == 1:
+            self.zq.put(['focuscodes', [data1, data2]])
 
     def UpdateList(self, data):
         gubun, code_list = data
@@ -279,7 +303,7 @@ class ReceiverUpbit:
         if ticksend:
             csp, cbp = self.dict_hgbs[code]
 
-            if csp != 0 and hoga_seprice[-1] < csp:
+            if hoga_seprice[-1] < csp:
                 index = 0
                 for i, price in enumerate(hoga_seprice[::-1]):
                     if price >= csp:
@@ -295,7 +319,7 @@ class ReceiverUpbit:
                 hoga_seprice = hoga_seprice[-5:]
                 hoga_samount = hoga_samount[-5:]
 
-            if cbp != 0 and hoga_buprice[0] > cbp:
+            if hoga_buprice[0] > cbp:
                 index = 0
                 for i, price in enumerate(hoga_buprice):
                     if price <= cbp:
@@ -316,14 +340,11 @@ class ReceiverUpbit:
             logt  = now() if self.int_logt < int_logt else 0
             data  = [dt] + self.dict_tick[code][:9] + [sm, hlp] + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + [hgjrt, code, logt]
 
-            if self.dict_set['코인트레이더']:
-                if code in self.list_oder or code in self.list_jang:
-                    self.ctraderQ.put([code, c])
-                self.cstgQ.put(data)
-
-            if self.dict_set['코인콜렉터']:
-                if code in self.list_gsjm2 or code in self.list_jang:
-                    self.tick9Q.put(data)
+            self.cstgQ.put(data)
+            if code in self.list_oder or code in self.list_jang:
+                self.ctraderQ.put([code, c])
+            if self.dict_set['리시버공유'] == 1:
+                self.zq.put(['tickdata', data])
 
             self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
             self.dict_tick[code][7:9] = [0, 0]
@@ -337,7 +358,10 @@ class ReceiverUpbit:
             self.int_logt = int_logt
 
     def UpdateMoneyTop(self):
-        self.cstgQ.put(['관심목록', self.list_gsjm1.copy(), self.list_gsjm2.copy()])
+        data1, data2 = self.list_gsjm1.copy(), self.list_gsjm2.copy()
+        self.cstgQ.put(['관심목록', data1, data2])
+        if self.dict_set['리시버공유'] == 1:
+            self.zq.put(['focuscodes', [data1, data2]])
 
         text_gsjm = ';'.join(self.list_gsjm1)
         curr_strtime = str(self.int_jcct)
@@ -374,16 +398,14 @@ class ReceiverUpbit:
     def InsertGsjmlist(self, code):
         if code not in self.list_gsjm2:
             self.list_gsjm2.append(code)
-            if self.dict_set['코인트레이더']:
-                if self.dict_set['코인매도취소관심진입']:
-                    self.ctraderQ.put(['관심진입', code])
+            if self.dict_set['코인매도취소관심진입']:
+                self.ctraderQ.put(['관심진입', code])
 
     def DeleteGsjmlist(self, code):
         if code in self.list_gsjm2:
             self.list_gsjm2.remove(code)
-            if self.dict_set['코인트레이더']:
-                if self.dict_set['코인매수취소관심이탈']:
-                    self.ctraderQ.put(['관심이탈', code])
+            if self.dict_set['코인매수취소관심이탈']:
+                self.ctraderQ.put(['관심이탈', code])
 
     def DaydataDownload(self):
         last = len(self.codes)
@@ -466,6 +488,8 @@ class ReceiverUpbit:
 
             print('코인 분봉데이터 다운로드 완료')
             self.cstgQ.put(['분봉데이터', dict_min_ar])
+            if self.dict_set['리시버공유'] == 1:
+                self.zq.put(['mindata', dict_min_ar])
             con.close()
 
         if self.dict_set['코인일봉데이터']:
@@ -543,6 +567,8 @@ class ReceiverUpbit:
 
             print('코인 일봉데이터 다운로드 완료')
             self.cstgQ.put(['일봉데이터', dict_day_ar])
+            if self.dict_set['리시버공유'] == 1:
+                self.zq.put(['daydata', dict_day_ar])
             con.close()
 
 

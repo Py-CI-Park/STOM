@@ -1,5 +1,4 @@
 import sys
-import struct
 import sqlite3
 import pandas as pd
 from traceback import print_exc
@@ -10,7 +9,6 @@ OPENAPI_PATH  = 'C:/OpenAPI'
 ICON_PATH     = './icon'
 LOGIN_PATH    = './stock/login_kiwoom'
 GRAPH_PATH    = './backtester/graph'
-BACKVC_PATH   = './_databasevc'
 BACK_TEMP     = './backtester/temp'
 DB_PATH       = './_database'
 DB_SETTING    = './_database/setting.db'
@@ -61,7 +59,6 @@ for readline in coinreadlines:
     blacklist_coin.append(readline.strip())
 
 EN_KEY = read_key()
-BIT32  = True if struct.calcsize('P'*8) == 32 else False
 
 binance_leverage_ = []
 for text_ in df_m['바이낸스선물변동레버리지값'][0].split('^'):
@@ -74,12 +71,12 @@ try:
         '키':            EN_KEY,
         '증권사':         df_m['증권사'][0],
         '주식리시버':      df_m['주식리시버'][0],
-        '주식콜렉터':      df_m['주식콜렉터'][0],
         '주식트레이더':    df_m['주식트레이더'][0],
+        '주식틱데이터저장': df_m['주식틱데이터저장'][0],
         '거래소':         df_m['거래소'][0],
         '코인리시버':      df_m['코인리시버'][0],
-        '코인콜렉터':      df_m['코인콜렉터'][0],
         '코인트레이더':    df_m['코인트레이더'][0],
+        '코인틱데이터저장': df_m['코인틱데이터저장'][0],
         '주식순위시간':    df_m['주식순위시간'][0],
         '주식순위선정':    df_m['주식순위선정'][0],
         '코인순위시간':    df_m['코인순위시간'][0],
@@ -93,23 +90,25 @@ try:
         '바이낸스선물변동레버리지값': binance_leverage_,
         '바이낸스선물마진타입':     df_m['바이낸스선물마진타입'][0],
         '바이낸스선물포지션':       df_m['바이낸스선물포지션'][0],
+        '버전업':                df_m['버전업'][0],
+        '리시버공유':             df_m['리시버공유'][0],
 
-        '아이디1':        de_text(EN_KEY, df_sa['아이디1'][0])         if len(df_sa) > 0 and df_sa['아이디1'][0] != '' and BIT32 else None,
-        '비밀번호1':      de_text(EN_KEY, df_sa['비밀번호1'][0])       if len(df_sa) > 0 and df_sa['비밀번호1'][0] != '' and BIT32 else None,
-        '인증서비밀번호1': de_text(EN_KEY, df_sa['인증서비밀번호1'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호1'][0] != '' and BIT32 else None,
-        '계좌비밀번호1':   de_text(EN_KEY, df_sa['계좌비밀번호1'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호1'][0] != '' and BIT32 else None,
-        '아이디2':        de_text(EN_KEY, df_sa['아이디2'][0])         if len(df_sa) > 0 and df_sa['아이디2'][0] != '' and BIT32 else None,
-        '비밀번호2':      de_text(EN_KEY, df_sa['비밀번호2'][0])        if len(df_sa) > 0 and df_sa['비밀번호2'][0] != '' and BIT32 else None,
-        '인증서비밀번호2': de_text(EN_KEY, df_sa['인증서비밀번호2'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호2'][0] != '' and BIT32 else None,
-        '계좌비밀번호2':   de_text(EN_KEY, df_sa['계좌비밀번호2'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호2'][0] != '' and BIT32 else None,
-        '아이디3':        de_text(EN_KEY, df_sa['아이디3'][0])         if len(df_sa) > 0 and df_sa['아이디3'][0] != '' and BIT32 else None,
-        '비밀번호3':      de_text(EN_KEY, df_sa['비밀번호3'][0])        if len(df_sa) > 0 and df_sa['비밀번호3'][0] != '' and BIT32 else None,
-        '인증서비밀번호3': de_text(EN_KEY, df_sa['인증서비밀번호3'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호3'][0] != '' and BIT32 else None,
-        '계좌비밀번호3':   de_text(EN_KEY, df_sa['계좌비밀번호3'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호3'][0] != '' and BIT32 else None,
-        '아이디4':        de_text(EN_KEY, df_sa['아이디4'][0])         if len(df_sa) > 0 and df_sa['아이디4'][0] != '' and BIT32 else None,
-        '비밀번호4':      de_text(EN_KEY, df_sa['비밀번호4'][0])        if len(df_sa) > 0 and df_sa['비밀번호4'][0] != '' and BIT32 else None,
-        '인증서비밀번호4': de_text(EN_KEY, df_sa['인증서비밀번호4'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호4'][0] != '' and BIT32 else None,
-        '계좌비밀번호4':   de_text(EN_KEY, df_sa['계좌비밀번호4'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호4'][0] != '' and BIT32 else None,
+        '아이디1':        de_text(EN_KEY, df_sa['아이디1'][0])         if len(df_sa) > 0 and df_sa['아이디1'][0] != '' else None,
+        '비밀번호1':      de_text(EN_KEY, df_sa['비밀번호1'][0])       if len(df_sa) > 0 and df_sa['비밀번호1'][0] != '' else None,
+        '인증서비밀번호1': de_text(EN_KEY, df_sa['인증서비밀번호1'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호1'][0] != '' else None,
+        '계좌비밀번호1':   de_text(EN_KEY, df_sa['계좌비밀번호1'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호1'][0] != '' else None,
+        '아이디2':        de_text(EN_KEY, df_sa['아이디2'][0])         if len(df_sa) > 0 and df_sa['아이디2'][0] != '' else None,
+        '비밀번호2':      de_text(EN_KEY, df_sa['비밀번호2'][0])        if len(df_sa) > 0 and df_sa['비밀번호2'][0] != '' else None,
+        '인증서비밀번호2': de_text(EN_KEY, df_sa['인증서비밀번호2'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호2'][0] != '' else None,
+        '계좌비밀번호2':   de_text(EN_KEY, df_sa['계좌비밀번호2'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호2'][0] != '' else None,
+        '아이디3':        de_text(EN_KEY, df_sa['아이디3'][0])         if len(df_sa) > 0 and df_sa['아이디3'][0] != '' else None,
+        '비밀번호3':      de_text(EN_KEY, df_sa['비밀번호3'][0])        if len(df_sa) > 0 and df_sa['비밀번호3'][0] != '' else None,
+        '인증서비밀번호3': de_text(EN_KEY, df_sa['인증서비밀번호3'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호3'][0] != '' else None,
+        '계좌비밀번호3':   de_text(EN_KEY, df_sa['계좌비밀번호3'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호3'][0] != '' else None,
+        '아이디4':        de_text(EN_KEY, df_sa['아이디4'][0])         if len(df_sa) > 0 and df_sa['아이디4'][0] != '' else None,
+        '비밀번호4':      de_text(EN_KEY, df_sa['비밀번호4'][0])        if len(df_sa) > 0 and df_sa['비밀번호4'][0] != '' else None,
+        '인증서비밀번호4': de_text(EN_KEY, df_sa['인증서비밀번호4'][0])   if len(df_sa) > 0 and df_sa['인증서비밀번호4'][0] != '' else None,
+        '계좌비밀번호4':   de_text(EN_KEY, df_sa['계좌비밀번호4'][0])    if len(df_sa) > 0 and df_sa['계좌비밀번호4'][0] != '' else None,
 
         'Access_key1':   de_text(EN_KEY, df_ca['Access_key1'][0])    if len(df_ca) > 0 and df_ca['Access_key1'][0] != '' else None,
         'Secret_key1':   de_text(EN_KEY, df_ca['Secret_key1'][0])    if len(df_ca) > 0 and df_ca['Secret_key1'][0] != '' else None,
@@ -194,13 +193,16 @@ try:
         '그래프띄우지않기':     df_b['그래프띄우지않기'][0],
         '디비자동관리':         df_b['디비자동관리'][0],
         '교차검증가중치':       df_b['교차검증가중치'][0],
+        '백테스케쥴실행':       df_b['백테스케쥴실행'][0],
+        '백테스케쥴요일':       df_b['백테스케쥴요일'][0],
+        '백테스케쥴시간':       df_b['백테스케쥴시간'][0],
         '백테스케쥴구분':       df_b['백테스케쥴구분'][0],
         '백테스케쥴명':         df_b['백테스케쥴명'][0],
         '백테날짜고정':         df_b['백테날짜고정'][0],
         '백테날짜':            df_b['백테날짜'][0],
         '최적화기준값제한':      df_b['최적화기준값제한'][0],
+        '백테엔진분류방법':      df_b['백테엔진분류방법'][0],
 
-        '주식틱자동저장':       df_e['주식틱자동저장'][0],
         '저해상도':            df_e['저해상도'][0],
         '휴무프로세스종료':      df_e['휴무프로세스종료'][0],
         '휴무컴퓨터종료':       df_e['휴무컴퓨터종료'][0],
@@ -357,7 +359,7 @@ ui_num = {'설정로그': 1, '종목명데이터': 1.2, 'S오더텍스트': 1.3,
           'S단순텍스트': 2, 'S로그텍스트': 3, 'C단순텍스트': 4, 'C로그텍스트': 5,
           'S백테스트': 6, 'C백테스트': 7, 'CF백테스트': 7.5, 'S백테바': 8, 'C백테바': 9, 'CF백테바': 9.5, 'DB관리': 10,
           'S실현손익': 11, 'S거래목록': 12, 'S잔고평가': 13, 'S잔고목록': 14, 'S체결목록': 15,
-          'S당일합계': 16, 'S당일상세': 17, 'S누적합계': 18, 'S누적상세': 19, 'S관심종목1': 19.5, 'S관심종목2': 20,
+          'S당일합계': 16, 'S당일상세': 17, 'S누적합계': 18, 'S누적상세': 19, 'S관심종목': 20,
           'C실현손익': 21, 'C거래목록': 22, 'C잔고평가': 23, 'C잔고목록': 24, 'C체결목록': 25,
           'C당일합계': 26, 'C당일상세': 27, 'C누적합계': 28, 'C누적상세': 29, 'C관심종목': 30,
           'S호가종목': 31, 'S호가체결': 32, 'S호가잔량': 33, 'C호가종목': 34, 'C호가체결': 35, 'C호가잔량': 36, 'S호가체결2': 36.1, 'C호가체결2': 36.2,

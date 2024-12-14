@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets
 from multiprocessing import Process
 from PyQt5.QAxContainer import QAxWidget
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))))
-from utility.static import now, timedelta_sec
+from utility.static import now, timedelta_sec, opstarter_kill
 from utility.setting import OPENAPI_PATH, DICT_SET
 
 
@@ -36,12 +36,13 @@ class Window(QtWidgets.QMainWindow):
     def OnEventConnect(self, err_code):
         if err_code == 0:
             self.bool_connected = True
+            sys.exit()
 
 
 if __name__ == '__main__':
-    login_info = f'{OPENAPI_PATH}/system/Autologin.dat'
-    if os.path.isfile(login_info):
-        os.remove(f'{OPENAPI_PATH}/system/Autologin.dat')
+    opstarter_kill()
+    autologin_dat = f'{OPENAPI_PATH}/system/Autologin.dat'
+    if os.path.isfile(autologin_dat): os.remove(autologin_dat)
     print('자동 로그인 설정 파일 삭제 완료')
 
     proc = Process(target=Window, daemon=True)
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     print('아이디 및 패스워드 입력 완료')
 
     update = False
-    endtime = timedelta_sec(120)
+    endtime = timedelta_sec(90)
     while find_window('Open API login') != 0:
         hwnd = find_window('인증서 만료공지')
         if hwnd != 0:
@@ -79,24 +80,20 @@ if __name__ == '__main__':
                 static_hwnd = win32gui.GetDlgItem(hwnd, 0xFFFF)
                 text = win32gui.GetWindowText(static_hwnd)
                 if '버전처리' in text:
-                    if proc.is_alive():
-                        proc.kill()
-                    print('버전처리용 로그인 프로세스 종료')
+                    if proc.is_alive(): proc.kill()
                     click_button(win32gui.GetDlgItem(hwnd, 0x2))
                     print('버전 업그레이드 완료')
                     update = True
-                if '핸들값이 없습니다' in text:
-                    click_button(win32gui.GetDlgItem(hwnd, 0x2))
-                    break
             except:
-                if proc.is_alive():
-                    proc.kill()
+                pass
+
+        if not proc.is_alive():
+            break
 
         print('버전처리 및 로그인창 닫힘 대기 중 ...')
         time.sleep(1)
         if now() > endtime:
-            if proc.is_alive():
-                proc.kill()
+            opstarter_kill()
             break
 
     if update:
@@ -106,5 +103,5 @@ if __name__ == '__main__':
             win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
         print('버전 업그레이드 확인 완료')
 
-    os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
+    opstarter_kill()
     sys.exit()
