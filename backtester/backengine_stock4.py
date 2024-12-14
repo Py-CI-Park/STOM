@@ -745,22 +745,22 @@ class StockBackEngine4(StockBackEngine2):
                 if self.gubun == 0: print_exc()
                 self.BackStop()
         else:
-            self.bhogainfo = {
+            bhogainfo = {
                 1: {매도호가1: 매도잔량1},
                 2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
                 3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
                 4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
                 5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
             }
-            self.shogainfo = {
+            shogainfo = {
                 1: {매수호가1: 매수잔량1},
                 2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
                 3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
                 4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
                 5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
             }
-            self.bhogainfo = self.bhogainfo[self.dict_set['주식매수시장가잔량범위']]
-            self.shogainfo = self.shogainfo[self.dict_set['주식매도시장가잔량범위']]
+            self.bhogainfo = bhogainfo[self.dict_set['주식매수시장가잔량범위']]
+            self.shogainfo = shogainfo[self.dict_set['주식매도시장가잔량범위']]
 
             for j in range(self.vars_count):
                 self.vars_key = j

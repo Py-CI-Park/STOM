@@ -659,22 +659,22 @@ class StrategyKiwoom2:
             def 일봉이평240N(pre):
                 return self.dict_day_ar[종목코드][-pre, 11]
 
-        self.bhogainfo = {
+        bhogainfo = {
             1: {매도호가1: 매도잔량1},
             2: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2},
             3: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3},
             4: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4},
             5: {매도호가1: 매도잔량1, 매도호가2: 매도잔량2, 매도호가3: 매도잔량3, 매도호가4: 매도잔량4, 매도호가5: 매도잔량5}
         }
-        self.shogainfo = {
+        shogainfo = {
             1: {매수호가1: 매수잔량1},
             2: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2},
             3: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3},
             4: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4},
             5: {매수호가1: 매수잔량1, 매수호가2: 매수잔량2, 매수호가3: 매수잔량3, 매수호가4: 매수잔량4, 매수호가5: 매수잔량5}
         }
-        self.bhogainfo = self.bhogainfo[self.dict_set['주식매수시장가잔량범위']]
-        self.shogainfo = self.shogainfo[self.dict_set['주식매도시장가잔량범위']]
+        self.bhogainfo = bhogainfo[self.dict_set['주식매수시장가잔량범위']]
+        self.shogainfo = shogainfo[self.dict_set['주식매도시장가잔량범위']]
 
         시분초 = int(str(체결시간)[8:])
         호가단위 = GetHogaunit(종목코드 in self.list_kosd, 현재가, 체결시간)

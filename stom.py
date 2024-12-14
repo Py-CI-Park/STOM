@@ -8,6 +8,7 @@ import operator
 import win32gui
 import win32api
 import subprocess
+import webbrowser
 
 from PIL import Image
 from PyQt5.QtGui import QPalette, QPixmap
@@ -60,7 +61,7 @@ from coin.simulator_upbit import ReceiverUpbit2, TraderUpbit2
 from coin.simulator_binance import ReceiverBinanceFuture2, TraderBinanceFuture2
 from stock.login_kiwoom.manuallogin import leftClick, enter_keys, press_keys
 
-from backtester.back_static import CollectTotal, GetMoneytopQuery
+from backtester.back_static import CollectTotal, GetMoneytopQuery, RunOptunaServer
 from backtester.back_code_test import BackCodeTest
 from backtester.backengine_stock import StockBackEngine
 from backtester.backengine_stock2 import StockBackEngine2
@@ -312,8 +313,8 @@ class Window(QMainWindow):
         self.buy_index        = []
         self.sell_index       = []
         self.back_procs       = []
-        self.bact_procs       = []
         self.back_pques       = []
+        self.bact_procs       = []
         self.bact_pques       = []
         self.avg_list         = []
         self.back_count       = 0
@@ -324,23 +325,32 @@ class Window(QMainWindow):
         self.ct_test          = 0
         self.back_scount      = 0
 
-        self.proc_backtester_bt    = None
+        self.proc_backtester_bb    = None
         self.proc_backtester_bf    = None
-        self.proc_backtester_oh    = None
+        self.proc_backtester_o     = None
         self.proc_backtester_ov    = None
         self.proc_backtester_ovc   = None
+        self.proc_backtester_ot    = None
+        self.proc_backtester_ovt   = None
+        self.proc_backtester_ovct  = None
+        self.proc_backtester_or    = None
+        self.proc_backtester_orv   = None
+        self.proc_backtester_orvc  = None
+        self.proc_backtester_b     = None
+        self.proc_backtester_bv    = None
+        self.proc_backtester_bvc   = None
+        self.proc_backtester_bt    = None
+        self.proc_backtester_bvt   = None
+        self.proc_backtester_bvct  = None
+        self.proc_backtester_br    = None
+        self.proc_backtester_brv   = None
+        self.proc_backtester_brvc  = None
         self.proc_backtester_og    = None
         self.proc_backtester_ogv   = None
         self.proc_backtester_ogvc  = None
         self.proc_backtester_oc    = None
         self.proc_backtester_ocv   = None
         self.proc_backtester_ocvc  = None
-        self.proc_backtester_oht   = None
-        self.proc_backtester_ovt   = None
-        self.proc_backtester_ovct  = None
-        self.proc_backtester_rh    = None
-        self.proc_backtester_rv    = None
-        self.proc_backtester_rvc   = None
 
         self.proc_stomlive_stock   = None
         self.proc_receiver_coin    = None
@@ -593,7 +603,7 @@ class Window(QMainWindow):
         self.bs_pushButton.setStyleSheet(style_bc_bb if not self.dialog_scheduler.isVisible() else style_bc_bt)
         self.tt_pushButton.setStyleSheet(style_bc_bb if not self.s_calendarWidgett.isVisible() and not self.c_calendarWidgett.isVisible() else style_bc_bt)
 
-        style_ = style_bc_bt if self.proc_backtester_bt is not None and self.proc_backtester_bt.is_alive() and self.counter % 2 != 0 else style_bc_by
+        style_ = style_bc_bt if self.proc_backtester_bb is not None and self.proc_backtester_bb.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.svj_pushButton_01.setStyleSheet(style_)
         self.cvj_pushButton_01.setStyleSheet(style_)
 
@@ -601,17 +611,41 @@ class Window(QMainWindow):
         self.svj_pushButton_02.setStyleSheet(style_)
         self.cvj_pushButton_02.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_oh is not None and self.proc_backtester_oh.is_alive() and self.counter % 2 != 0 else style_bc_by
+        style_ = style_bc_bt if self.proc_backtester_ovc is not None and self.proc_backtester_ovc.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.svc_pushButton_06.setStyleSheet(style_)
         self.cvc_pushButton_06.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_ovc is not None and self.proc_backtester_ovc.is_alive() and self.counter % 2 != 0 else style_bc_by
+        style_ = style_bc_bt if self.proc_backtester_ov is not None and self.proc_backtester_ov.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.svc_pushButton_07.setStyleSheet(style_)
         self.cvc_pushButton_07.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_ov is not None and self.proc_backtester_ov.is_alive() and self.counter % 2 != 0 else style_bc_by
+        style_ = style_bc_bt if self.proc_backtester_o is not None and self.proc_backtester_o.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.svc_pushButton_08.setStyleSheet(style_)
         self.cvc_pushButton_08.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_ovct is not None and self.proc_backtester_ovct.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svc_pushButton_15.setStyleSheet(style_)
+        self.cvc_pushButton_15.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_ovt is not None and self.proc_backtester_ovt.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svc_pushButton_16.setStyleSheet(style_)
+        self.cvc_pushButton_16.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_ot is not None and self.proc_backtester_ot.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svc_pushButton_17.setStyleSheet(style_)
+        self.cvc_pushButton_17.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_orvc is not None and self.proc_backtester_orvc.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svc_pushButton_18.setStyleSheet(style_)
+        self.cvc_pushButton_18.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_orv is not None and self.proc_backtester_orv.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svc_pushButton_19.setStyleSheet(style_)
+        self.cvc_pushButton_19.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_or is not None and self.proc_backtester_or.is_alive() and self.counter % 2 != 0 else style_bc_by
+        self.svc_pushButton_20.setStyleSheet(style_)
+        self.cvc_pushButton_20.setStyleSheet(style_)
 
         style_ = style_bc_bt if self.proc_backtester_ogvc is not None and self.proc_backtester_ogvc.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.sva_pushButton_01.setStyleSheet(style_)
@@ -625,18 +659,6 @@ class Window(QMainWindow):
         self.sva_pushButton_03.setStyleSheet(style_)
         self.cva_pushButton_03.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_oht is not None and self.proc_backtester_oht.is_alive() and self.counter % 2 != 0 else style_bc_by
-        self.svc_pushButton_15.setStyleSheet(style_)
-        self.cvc_pushButton_15.setStyleSheet(style_)
-
-        style_ = style_bc_bt if self.proc_backtester_ovct is not None and self.proc_backtester_ovct.is_alive() and self.counter % 2 != 0 else style_bc_by
-        self.svc_pushButton_16.setStyleSheet(style_)
-        self.cvc_pushButton_16.setStyleSheet(style_)
-
-        style_ = style_bc_bt if self.proc_backtester_ovt is not None and self.proc_backtester_ovt.is_alive() and self.counter % 2 != 0 else style_bc_by
-        self.svc_pushButton_17.setStyleSheet(style_)
-        self.cvc_pushButton_17.setStyleSheet(style_)
-
         style_ = style_bc_bt if self.proc_backtester_ocvc is not None and self.proc_backtester_ocvc.is_alive() and self.counter % 2 != 0 else style_bc_by
         self.svo_pushButton_05.setStyleSheet(style_)
         self.cvo_pushButton_05.setStyleSheet(style_)
@@ -649,17 +671,41 @@ class Window(QMainWindow):
         self.svo_pushButton_07.setStyleSheet(style_)
         self.cvo_pushButton_07.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_rh is not None and self.proc_backtester_rh.is_alive() and self.counter % 2 != 0 else style_bc_by
-        self.svc_pushButton_18.setStyleSheet(style_)
-        self.cvc_pushButton_18.setStyleSheet(style_)
+        style_ = style_bc_bt if self.proc_backtester_bvc is not None and self.proc_backtester_bvc.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_27.setStyleSheet(style_)
+        self.cvc_pushButton_27.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_rvc is not None and self.proc_backtester_rvc.is_alive() and self.counter % 2 != 0 else style_bc_by
-        self.svc_pushButton_19.setStyleSheet(style_)
-        self.cvc_pushButton_19.setStyleSheet(style_)
+        style_ = style_bc_bt if self.proc_backtester_bv is not None and self.proc_backtester_bv.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_28.setStyleSheet(style_)
+        self.cvc_pushButton_28.setStyleSheet(style_)
 
-        style_ = style_bc_bt if self.proc_backtester_rv is not None and self.proc_backtester_rv.is_alive() and self.counter % 2 != 0 else style_bc_by
-        self.svc_pushButton_20.setStyleSheet(style_)
-        self.cvc_pushButton_20.setStyleSheet(style_)
+        style_ = style_bc_bt if self.proc_backtester_b is not None and self.proc_backtester_b.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_29.setStyleSheet(style_)
+        self.cvc_pushButton_29.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_bvct is not None and self.proc_backtester_bvct.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_30.setStyleSheet(style_)
+        self.cvc_pushButton_30.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_bvt is not None and self.proc_backtester_bvt.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_31.setStyleSheet(style_)
+        self.cvc_pushButton_31.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_bt is not None and self.proc_backtester_bt.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_32.setStyleSheet(style_)
+        self.cvc_pushButton_32.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_brvc is not None and self.proc_backtester_brvc.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_33.setStyleSheet(style_)
+        self.cvc_pushButton_33.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_brv is not None and self.proc_backtester_brv.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_34.setStyleSheet(style_)
+        self.cvc_pushButton_34.setStyleSheet(style_)
+
+        style_ = style_bc_bt if self.proc_backtester_br is not None and self.proc_backtester_br.is_alive() and self.counter % 2 != 0 else style_bc_sl
+        self.svc_pushButton_35.setStyleSheet(style_)
+        self.cvc_pushButton_35.setStyleSheet(style_)
 
         style_ = style_bc_bb if self.ct_test > 0 and self.counter % 2 != 0 else style_bc_bt
         self.tt_pushButtonnn_03.setStyleSheet(style_)
@@ -740,15 +786,16 @@ class Window(QMainWindow):
                 self.ss_textEditttt_09.append(text)
                 self.log6.info(re.sub('(<([^>]+)>)', '', text))
                 if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.back_condition: self.BacktestProcessKill()
-                if data[1] in ['백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화OH 완료', '최적화OV 완료', '최적화OVC 완료',
-                               '최적화OHT 완료', '최적화OVT 완료', '최적화OVCT 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', '전진분석RH 완료', '전진분석RV 완료', '전진분석RVC 완료']:
-                    if data[1] in ['최적화OH 완료', '최적화OV 완료', '최적화OVC 완료']:
+                if data[1] in ['백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
+                               '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
+                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석O 완료', '전진분석OV 완료', '전진분석OVC 완료',
+                               '전진분석B 완료', '전진분석BV 완료', '전진분석BVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
+                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', ]:
+                    if data[1] in ['최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료']:
                         self.sActivated_04()
                     if data[1] in ['최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료']:
                         self.sActivated_06()
-                    if not self.dict_set['그래프띄우지않기'] and \
-                            data[1] not in ['백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료']:
+                    if not self.dict_set['그래프띄우지않기'] and data[1] not in ['백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료']:
                         self.svjButtonClicked_08()
                     self.BacktestProcessKill()
                     self.ssicon_alert = False
@@ -768,15 +815,16 @@ class Window(QMainWindow):
                 self.cs_textEditttt_09.append(text)
                 self.log6.info(re.sub('(<([^>]+)>)', '', text))
                 if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.back_condition: self.BacktestProcessKill()
-                if data[1] in ['백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화OH 완료', '최적화OV 완료', '최적화OVC 완료',
-                               '최적화OHT 완료', '최적화OVT 완료', '최적화OVCT 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', '전진분석RH 완료', '전진분석RV 완료', '전진분석RVC 완료']:
-                    if data[1] in ['최적화OH 완료', '최적화OV 완료', '최적화OVC 완료']:
+                if data[1] in ['백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
+                               '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
+                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석O 완료', '전진분석OV 완료', '전진분석OVC 완료',
+                               '전진분석B 완료', '전진분석BV 완료', '전진분석BVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
+                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', ]:
+                    if data[1] in ['최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료']:
                         self.cActivated_04()
                     if data[1] in ['최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료']:
                         self.cActivated_06()
-                    if not self.dict_set['그래프띄우지않기'] and \
-                            data[1] not in ['백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료']:
+                    if not self.dict_set['그래프띄우지않기'] and data[1] not in ['백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료']:
                         self.cvjButtonClicked_08()
                     self.BacktestProcessKill()
                     self.csicon_alert = False
@@ -2717,11 +2765,14 @@ class Window(QMainWindow):
         gubun = self.list_checkBoxxxxxx.index(self.dialog_scheduler.focusWidget())
         if state == Qt.Checked:
             for item in ['백테스트',
-                         '분할 검증 최적화', '교차 검증 최적화', '검증 최적화',
-                         '분할 검증 최적화 테스트', '교차 검증 최적화 테스트', '검증 최적화 테스트',
-                         '분할 검증 최적화 전진분석', '교차 검증 최적화 전진분석', '검증 최적화 전진분석',
-                         '교차 검증 GA최적화', '검증 GA최적화', 'GA최적화',
-                         '교차 검증 조건 최적화', '검증 조건 최적화', '조건 최적화']:
+                         '그리드 최적화', '그리드 검증 최적화', '그리드 교차검증 최적화',
+                         '그리드 최적화 테스트', '그리드 검증 최적화 테스트', '그리드 교차검증 최적화 테스트',
+                         '그리드 최적화 전진분석', '그리드 검증 최적화 전진분석', '그리드 교차검증 최적화 전진분석',
+                         '베이지안 최적화', '베이지안 검증 최적화', '베이지안 교차검증 최적화',
+                         '베이지안 최적화 테스트', '베이지안 검증 최적화 테스트', '베이지안 교차검증 최적화 테스트',
+                         '베이지안 최적화 전진분석', '베이지안 검증 최적화 전진분석', '베이지안 교차검증 최적화 전진분석',
+                         'GA 최적화', '검증 GA 최적화', '교차검증 GA 최적화',
+                         '조건 최적화', '검증 조건 최적화', '교차검증 조건 최적화']:
                 self.list_gcomboBoxxxxx[gubun].addItem(item)
         else:
             self.list_gcomboBoxxxxx[gubun].clear()
@@ -2858,6 +2909,12 @@ class Window(QMainWindow):
                 if widget != self.focusWidget():
                     if widget.isChecked():
                         widget.nextCheckState()
+
+    @staticmethod
+    def opButtonClicked_01():
+        RunOptunaServer()
+        qtest_qwait(3)
+        webbrowser.open_new('http://localhost:8080/')
 
     # =================================================================================================================
 
@@ -3565,10 +3622,7 @@ class Window(QMainWindow):
             self.showQsize = False
 
     def ShowDialogFactor(self):
-        if not self.dialog_factor.isVisible():
-            self.dialog_factor.show()
-        else:
-            self.dialog_factor.close()
+        self.dialog_factor.show() if not self.dialog_factor.isVisible() else self.dialog_factor.close()
 
     def ShowDialogTest(self):
         if not self.dialog_test.isVisible():
@@ -3622,10 +3676,7 @@ class Window(QMainWindow):
             self.webEngineView.load(QUrl('https://markets.hankyung.com/'))
         else:
             self.dialog_web.close()
-        if not self.dialog_info.isVisible():
-            self.dialog_info.show()
-        else:
-            self.dialog_info.close()
+        self.dialog_info.show() if not self.dialog_info.isVisible() else self.dialog_info.close()
 
     def ShowTreemap(self):
         if not self.dialog_tree.isVisible():
@@ -3635,10 +3686,7 @@ class Window(QMainWindow):
             self.dialog_tree.close()
 
     def ShowJisu(self):
-        if not self.dialog_jisu.isVisible():
-            self.dialog_jisu.show()
-        else:
-            self.dialog_jisu.close()
+        self.dialog_jisu.show() if not self.dialog_jisu.isVisible() else self.dialog_jisu.close()
 
     def ShowDB(self):
         if not self.dialog_db.isVisible():
@@ -3788,22 +3836,13 @@ class Window(QMainWindow):
             self.ct_tableWidgett_01.setRowCount(100)
 
     def ShowBackScheduler(self):
-        if not self.dialog_scheduler.isVisible():
-            self.dialog_scheduler.show()
-        else:
-            self.dialog_scheduler.close()
+        self.dialog_scheduler.show() if not self.dialog_scheduler.isVisible() else self.dialog_scheduler.close()
 
     def ShowChartDay(self):
-        if not self.dialog_chart_day.isVisible():
-            self.dialog_chart_day.show()
-        else:
-            self.dialog_chart_day.close()
+        self.dialog_chart_day.show() if not self.dialog_chart_day.isVisible() else self.dialog_chart_day.close()
 
     def ShowChartMin(self):
-        if not self.dialog_chart_min.isVisible():
-            self.dialog_chart_min.show()
-        else:
-            self.dialog_chart_min.close()
+        self.dialog_chart_min.show() if not self.dialog_chart_min.isVisible() else self.dialog_chart_min.close()
 
     def ShowKimp(self):
         if not self.dialog_kimp.isVisible():
@@ -3878,8 +3917,8 @@ class Window(QMainWindow):
                     bpq.put(['백테유형', '백테스트'])
 
                 backQ.put([betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', self.dict_cn, self.back_count, bl, False, self.df_kp, self.df_kd, False])
-                self.proc_backtester_bt = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S'))
-                self.proc_backtester_bt.start()
+                self.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S'))
+                self.proc_backtester_bb.start()
                 self.svjButtonClicked_07()
                 self.ss_progressBar_01.setValue(0)
                 self.ssicon_alert = True
@@ -4339,8 +4378,8 @@ class Window(QMainWindow):
                         backQ.put([betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, self.back_count, bl, True, None, None, False])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
-                    self.proc_backtester_bt = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, gubun))
-                    self.proc_backtester_bt.start()
+                    self.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, gubun))
+                    self.proc_backtester_bb.start()
 
                     if bt_gubun == '주식':
                         self.svjButtonClicked_07()
@@ -4382,24 +4421,24 @@ class Window(QMainWindow):
                     else:
                         gubun = 'CF'
 
-                    if '교차 검증' in back_name:
-                        self.proc_backtester_ocvc = Process(
-                            target=OptimizeConditions,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', gubun)
-                        )
-                        self.proc_backtester_ocvc.start()
-                    elif '검증' in back_name:
-                        self.proc_backtester_ocv = Process(
-                            target=OptimizeConditions,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', gubun)
-                        )
-                        self.proc_backtester_ocv.start()
-                    else:
+                    if back_name == '조건 최적화':
                         self.proc_backtester_oc = Process(
                             target=OptimizeConditions,
                             args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OC', gubun)
                         )
                         self.proc_backtester_oc.start()
+                    elif back_name == '검증 조건 최적화':
+                        self.proc_backtester_ocv = Process(
+                            target=OptimizeConditions,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', gubun)
+                        )
+                        self.proc_backtester_ocv.start()
+                    elif back_name == '교차검증 조건 최적화':
+                        self.proc_backtester_ocvc = Process(
+                            target=OptimizeConditions,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', gubun)
+                        )
+                        self.proc_backtester_ocvc.start()
 
                     if bt_gubun == '주식':
                         self.svjButtonClicked_07()
@@ -4440,24 +4479,24 @@ class Window(QMainWindow):
                         ])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
-                    if '교차 검증' in back_name:
-                        self.proc_backtester_ogvc = Process(
-                            target=OptimizeGeneticAlgorithm,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', gubun)
-                        )
-                        self.proc_backtester_ogvc.start()
-                    elif '검증' in back_name:
-                        self.proc_backtester_ogv = Process(
-                            target=OptimizeGeneticAlgorithm,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', gubun)
-                        )
-                        self.proc_backtester_ogv.start()
-                    else:
+                    if back_name == '그리드 GA 최적화':
                         self.proc_backtester_og = Process(
                             target=OptimizeGeneticAlgorithm,
                             args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OG', gubun)
                         )
                         self.proc_backtester_og.start()
+                    elif back_name == '그리드 검증 GA 최적화':
+                        self.proc_backtester_ogv = Process(
+                            target=OptimizeGeneticAlgorithm,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', gubun)
+                        )
+                        self.proc_backtester_ogv.start()
+                    elif back_name == '그리드 교차검증 GA 최적화':
+                        self.proc_backtester_ogvc = Process(
+                            target=OptimizeGeneticAlgorithm,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', gubun)
+                        )
+                        self.proc_backtester_ogvc.start()
 
                     if bt_gubun == '주식':
                         self.svjButtonClicked_07()
@@ -4484,6 +4523,7 @@ class Window(QMainWindow):
                     optistd     = self.list_tcomboBoxxxxx[self.back_scount].currentText()
                     benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
+                    optunasampl = self.op_comboBoxxxx_01.currentText()
 
                     for bpq in self.back_pques:
                         bpq.put(['백테유형', '전진분석'])
@@ -4492,35 +4532,53 @@ class Window(QMainWindow):
                         backQ.put([
                             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn,
                             ccount, self.dict_set['최적화기준값제한'], optistd, self.back_count, True, self.df_kp,
-                            self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                            self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
                         ])
                         gubun = 'S'
                     else:
                         backQ.put([
                             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount,
                             self.dict_set['최적화기준값제한'], optistd, self.back_count, True, None, None, weeks_train,
-                            weeks_valid, weeks_test, benginesday, bengineeday
+                            weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
                         ])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
-                    if back_name == '분할 최적화 전진분석':
-                        self.proc_backtester_rh = Process(
+                    if back_name == '그리드 최적화 전진분석':
+                        self.proc_backtester_or = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RH', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석O', gubun)
                         )
-                        self.proc_backtester_rh.start()
-                    elif back_name == '교차 검증 최적화 전진분석':
-                        self.proc_backtester_rvc = Process(
+                        self.proc_backtester_or.start()
+                    elif back_name == '그리드 검증 최적화 전진분석':
+                        self.proc_backtester_orv = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RVC', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석OV', gubun)
                         )
-                        self.proc_backtester_rvc.start()
-                    else:
-                        self.proc_backtester_rv = Process(
+                        self.proc_backtester_orv.start()
+                    elif back_name == '그리드 교차검증 최적화 전진분석':
+                        self.proc_backtester_orvc = Process(
                             target=RollingWalkForwardTest,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RV', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석OVC', gubun)
                         )
-                        self.proc_backtester_rv.start()
+                        self.proc_backtester_orvc.start()
+                    elif back_name == '베이지안 최적화 전진분석':
+                        self.proc_backtester_br = Process(
+                            target=RollingWalkForwardTest,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석B', gubun)
+                        )
+                        self.proc_backtester_br.start()
+                    elif back_name == '베이지안 검증 최적화 전진분석':
+                        self.proc_backtester_brv = Process(
+                            target=RollingWalkForwardTest,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BV', gubun)
+                        )
+                        self.proc_backtester_brv.start()
+                    elif back_name == '베이지안 교차검증 최적화 전진분석':
+                        self.proc_backtester_brvc = Process(
+                            target=RollingWalkForwardTest,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석BVC', gubun)
+                        )
+                        self.proc_backtester_brvc.start()
 
                     if bt_gubun == '주식':
                         self.svjButtonClicked_07()
@@ -4545,6 +4603,7 @@ class Window(QMainWindow):
                     weeks_test  = self.list_p3comboBoxxxx[self.back_scount].currentText()
                     benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
                     bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
+                    optunasampl = self.op_comboBoxxxx_01.currentText()
 
                     for bpq in self.back_pques:
                         bpq.put(['백테유형', '최적화'])
@@ -4552,52 +4611,88 @@ class Window(QMainWindow):
                     if bt_gubun == '주식':
                         backQ.put([
                             betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                            optistd, self.back_count, True, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                            optistd, self.back_count, True, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
                         ])
                         gubun = 'S'
                     else:
                         backQ.put([
                             betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                            optistd, self.back_count, True, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                            optistd, self.back_count, True, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
                         ])
                         gubun = 'C' if self.dict_set['거래소'] == '업비트' else 'CF'
 
-                    if back_name == '교차 검증 최적화 테스트':
-                        self.proc_backtester_ovct = Process(
+                    if back_name == '그리드 최적화':
+                        self.proc_backtester_o = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화O', gubun)
                         )
-                        self.proc_backtester_ovct.start()
-                    elif back_name == '검증 최적화 테스트':
-                        self.proc_backtester_ovt = Process(
-                            target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', gubun)
-                        )
-                        self.proc_backtester_ovt.start()
-                    elif back_name == '분할 검증 최적화 테스트':
-                        self.proc_backtester_oht = Process(
-                            target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OHT', gubun)
-                        )
-                        self.proc_backtester_oht.start()
-                    elif back_name == '교차 검증 최적화':
-                        self.proc_backtester_ovc = Process(
-                            target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', gubun)
-                        )
-                        self.proc_backtester_ovc.start()
-                    elif back_name == '검증 최적화':
+                        self.proc_backtester_o.start()
+                    elif back_name == '그리드 검증 최적화':
                         self.proc_backtester_ov = Process(
                             target=Optimize,
                             args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OV', gubun)
                         )
                         self.proc_backtester_ov.start()
-                    else:
-                        self.proc_backtester_oh = Process(
+                    elif back_name == '그리드 교차검증 최적화':
+                        self.proc_backtester_ovc = Process(
                             target=Optimize,
-                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OH', gubun)
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', gubun)
                         )
-                        self.proc_backtester_oh.start()
+                        self.proc_backtester_ovc.start()
+                    elif back_name == '베이지안 최적화':
+                        self.proc_backtester_b = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화B', gubun)
+                        )
+                        self.proc_backtester_b.start()
+                    elif back_name == '베이지안 검증 최적화':
+                        self.proc_backtester_bv = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화BV', gubun)
+                        )
+                        self.proc_backtester_bv.start()
+                    elif back_name == '베이지안 교차검증 최적화':
+                        self.proc_backtester_bvc = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화BVC', gubun)
+                        )
+                        self.proc_backtester_bvc.start()
+                    elif back_name == '그리드 최적화 테스트':
+                        self.proc_backtester_ot = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OT', gubun)
+                        )
+                        self.proc_backtester_ot.start()
+                    elif back_name == '그리드 검증 최적화 테스트':
+                        self.proc_backtester_ovt = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', gubun)
+                        )
+                        self.proc_backtester_ovt.start()
+                    elif back_name == '그리드 교차검증 최적화 테스트':
+                        self.proc_backtester_ovct = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', gubun)
+                        )
+                        self.proc_backtester_ovct.start()
+                    elif back_name == '베이지안 최적화 테스트':
+                        self.proc_backtester_bt = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화BT', gubun)
+                        )
+                        self.proc_backtester_bt.start()
+                    elif back_name == '베이지안 검증 최적화 테스트':
+                        self.proc_backtester_bvt = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화BVT', gubun)
+                        )
+                        self.proc_backtester_bvt.start()
+                    elif back_name == '베이지안 교차검증 최적화 테스트':
+                        self.proc_backtester_bvct = Process(
+                            target=Optimize,
+                            args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화BVCT', gubun)
+                        )
+                        self.proc_backtester_bvct.start()
 
                     if bt_gubun == '주식':
                         self.svjButtonClicked_07()
@@ -6483,6 +6578,9 @@ class Window(QMainWindow):
         self.svc_pushButton_06.setVisible(False)
         self.svc_pushButton_07.setVisible(False)
         self.svc_pushButton_08.setVisible(False)
+        self.svc_pushButton_27.setVisible(False)
+        self.svc_pushButton_28.setVisible(False)
+        self.svc_pushButton_29.setVisible(False)
 
         self.sva_pushButton_01.setVisible(False)
         self.sva_pushButton_02.setVisible(False)
@@ -6836,11 +6934,11 @@ class Window(QMainWindow):
                 betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.dict_cn, self.back_count,
                 bl, False, self.df_kp, self.df_kd, back_club
             ])
-            self.proc_backtester_bt = Process(
+            self.proc_backtester_bb = Process(
                 target=BackTest,
                 args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'S')
             )
-            self.proc_backtester_bt.start()
+            self.proc_backtester_bb.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
             self.ssicon_alert = True
@@ -6896,7 +6994,7 @@ class Window(QMainWindow):
             self.ss_textEditttt_02.clear()
             self.ss_textEditttt_01.append(example_finder)
 
-    def svjButtonClicked_14(self):
+    def svjButtonClicked_14(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -6920,60 +7018,9 @@ class Window(QMainWindow):
             weeks_test  = self.svc_comboBoxxx_05.currentText()
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
+            optunasampl = self.op_comboBoxxxx_01.currentText()
 
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_oh = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OH', 'S')
-            )
-            self.proc_backtester_oh.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_15(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
                 return
             if '' in [starttime, endtime, betting]:
@@ -6992,229 +7039,85 @@ class Window(QMainWindow):
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
             ])
-            self.proc_backtester_ovc = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', 'S')
-            )
-            self.proc_backtester_ovc.start()
+            if back_name == '최적화O':
+                self.proc_backtester_o = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_o.start()
+            elif back_name == '최적화OV':
+                self.proc_backtester_ov = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ov.start()
+            elif back_name == '최적화OVC':
+                self.proc_backtester_ovc = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ovc.start()
+            elif back_name == '최적화B':
+                self.proc_backtester_b = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_b.start()
+            elif back_name == '최적화BV':
+                self.proc_backtester_bv = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_bv.start()
+            elif back_name == '최적화BVC':
+                self.proc_backtester_bvc = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_bvc.start()
+            elif back_name == '최적화OT':
+                self.proc_backtester_ot = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ot.start()
+            elif back_name == '최적화OVT':
+                self.proc_backtester_ovt = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ovt.start()
+            elif back_name == '최적화OVCT':
+                self.proc_backtester_ovct = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ovct.start()
+            elif back_name == '최적화BT':
+                self.proc_backtester_bt = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_bt.start()
+            elif back_name == '최적화BVT':
+                self.proc_backtester_bvt = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_bvt.start()
+            else:
+                self.proc_backtester_bvct = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_bvct.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
             self.ssicon_alert = True
 
-    def svjButtonClicked_16(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ov = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OV', 'S')
-            )
-            self.proc_backtester_ov.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_17(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_oht = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OHT', 'S')
-            )
-            self.proc_backtester_oht.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_18(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
-                QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ovct = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', 'S')
-            )
-            self.proc_backtester_ovct.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_19(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ovt = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', 'S')
-            )
-            self.proc_backtester_ovt.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_20(self):
+    def svjButtonClicked_15(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -7240,124 +7143,11 @@ class Window(QMainWindow):
             weeks_test  = self.svc_comboBoxxx_05.currentText()
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
+            optunasampl = self.op_comboBoxxxx_01.currentText()
 
-            if weeks_train == 'ALL':
-                QMessageBox.critical(self, '오류 알림', '전진분석 학습기간은 전체를 선택할 수 없습니다.\n')
-                return
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '전진분석'])
-
-            backQ.put([
-                betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_rh = Process(
-                target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RH', 'S')
-            )
-            self.proc_backtester_rh.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_21(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            startday    = self.svjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday      = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train == 'ALL':
-                QMessageBox.critical(self, '오류 알림', '전진분석 학습기간은 전체를 선택할 수 없습니다.\n')
-                return
-            if int(weeks_train) % int(weeks_valid) != 0:
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
                 return
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '전진분석'])
-
-            backQ.put([
-                betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_rvc = Process(
-                target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RVC', 'S')
-            )
-            self.proc_backtester_rvc.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_22(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            startday    = self.svjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday      = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.svc_comboBoxxx_02.currentText()
-            ccount      = self.svc_comboBoxxx_06.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
             if weeks_train == 'ALL':
                 QMessageBox.critical(self, '오류 알림', '전진분석 학습기간은 전체를 선택할 수 없습니다.\n')
                 return
@@ -7377,18 +7167,49 @@ class Window(QMainWindow):
 
             backQ.put([
                 betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                optistd, self.back_count, False, self.df_kp, self.df_kd, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
             ])
-            self.proc_backtester_rv = Process(
-                target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RV', 'S')
-            )
-            self.proc_backtester_rv.start()
+            if back_name == '전진분석O':
+                self.proc_backtester_or = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_or.start()
+            elif back_name == '전진분석OV':
+                self.proc_backtester_orv = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_orv.start()
+            elif back_name == '전진분석OVC':
+                self.proc_backtester_orvc = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_orvc.start()
+            elif back_name == '전진분석B':
+                self.proc_backtester_br = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_br.start()
+            elif back_name == '전진분석BV':
+                self.proc_backtester_brv = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_brv.start()
+            else:
+                self.proc_backtester_brvc = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_brvc.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
             self.ssicon_alert = True
 
-    def svjButtonClicked_23(self):
+    def svjButtonClicked_16(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -7412,7 +7233,7 @@ class Window(QMainWindow):
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
                 return
             if '' in [starttime, endtime, betting]:
@@ -7433,16 +7254,29 @@ class Window(QMainWindow):
                 betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, self.dict_set['최적화기준값제한'],
                 optistd, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
             ])
-            self.proc_backtester_ogvc = Process(
-                target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', 'S')
-            )
-            self.proc_backtester_ogvc.start()
+            if back_name == '최적화OG':
+                self.proc_backtester_og = Process(
+                    target=OptimizeGeneticAlgorithm,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_og.start()
+            elif back_name == '최적화OGV':
+                self.proc_backtester_ogv = Process(
+                    target=OptimizeGeneticAlgorithm,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ogv.start()
+            else:
+                self.proc_backtester_ogvc = Process(
+                    target=OptimizeGeneticAlgorithm,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ogvc.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
             self.ssicon_alert = True
 
-    def svjButtonClicked_24(self):
+    def svjButtonClicked_17(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -7456,9 +7290,12 @@ class Window(QMainWindow):
             starttime   = self.svjb_lineEditt_02.text()
             endtime     = self.svjb_lineEditt_03.text()
             betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.sva_comboBoxxx_01.currentText()
+            avgtime     = self.svjb_lineEditt_05.text()
+            buystg      = self.svo_comboBoxxx_01.currentText()
+            sellstg     = self.svo_comboBoxxx_02.currentText()
+            bcount      = self.svo_lineEdittt_03.text()
+            scount      = self.svo_lineEdittt_04.text()
+            rcount      = self.svo_lineEdittt_05.text()
             optistd     = self.svc_comboBoxxx_07.currentText()
             weeks_train = self.svc_comboBoxxx_03.currentText()
             weeks_valid = self.svc_comboBoxxx_04.currentText()
@@ -7466,80 +7303,45 @@ class Window(QMainWindow):
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
-            if '' in [starttime, endtime, betting]:
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
+                QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
+                return
+            if int(avgtime) not in self.avg_list:
+                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                return
+            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
                 QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
                 return
             if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
+                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
                 return
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', 'GA최적화'])
+                bpq.put(['백테유형', '조건최적화'])
 
             backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
+                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
             ])
-            self.proc_backtester_ogv = Process(
-                target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', 'S')
-            )
-            self.proc_backtester_ogv.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_25(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            buystg      = self.svc_comboBoxxx_01.currentText()
-            sellstg     = self.svc_comboBoxxx_08.currentText()
-            optivars    = self.sva_comboBoxxx_01.currentText()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', 'GA최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, self.dict_cn, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_og = Process(
-                target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OG', 'S')
-            )
-            self.proc_backtester_og.start()
+            if back_name == '최적화OC':
+                self.proc_backtester_oc = Process(
+                    target=OptimizeConditions,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_oc.start()
+            elif back_name == '최적화OCV':
+                self.proc_backtester_ocv = Process(
+                    target=OptimizeConditions,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ocv.start()
+            else:
+                self.proc_backtester_ocvc = Process(
+                    target=OptimizeConditions,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'S')
+                )
+                self.proc_backtester_ocvc.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
             self.ssicon_alert = True
@@ -7570,171 +7372,6 @@ class Window(QMainWindow):
         self.ss_textEditttt_04.clear()
         self.ss_textEditttt_03.append(buystg_str)
         self.ss_textEditttt_04.append(sellstg_str)
-
-    def svjButtonClicked_29(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            avgtime     = self.svjb_lineEditt_05.text()
-            buystg      = self.svo_comboBoxxx_01.currentText()
-            sellstg     = self.svo_comboBoxxx_02.currentText()
-            bcount      = self.svo_lineEdittt_03.text()
-            scount      = self.svo_lineEdittt_04.text()
-            rcount      = self.svo_lineEdittt_05.text()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
-                QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
-                return
-            if int(avgtime) not in self.avg_list:
-                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '조건최적화'])
-
-            backQ.put([
-                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
-                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ocvc = Process(
-                target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', 'S')
-            )
-            self.proc_backtester_ocvc.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_30(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            avgtime     = self.svjb_lineEditt_05.text()
-            buystg      = self.svo_comboBoxxx_01.currentText()
-            sellstg     = self.svo_comboBoxxx_02.currentText()
-            bcount      = self.svo_lineEdittt_03.text()
-            scount      = self.svo_lineEdittt_04.text()
-            rcount      = self.svo_lineEdittt_05.text()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if int(avgtime) not in self.avg_list:
-                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '조건최적화'])
-
-            backQ.put([
-                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
-                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ocv = Process(
-                target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', 'S')
-            )
-            self.proc_backtester_ocv.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
-
-    def svjButtonClicked_31(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('주식')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.svjb_lineEditt_02.text()
-            endtime     = self.svjb_lineEditt_03.text()
-            betting     = self.svjb_lineEditt_04.text()
-            avgtime     = self.svjb_lineEditt_05.text()
-            buystg      = self.svo_comboBoxxx_01.currentText()
-            sellstg     = self.svo_comboBoxxx_02.currentText()
-            bcount      = self.svo_lineEdittt_03.text()
-            scount      = self.svo_lineEdittt_04.text()
-            rcount      = self.svo_lineEdittt_05.text()
-            optistd     = self.svc_comboBoxxx_07.currentText()
-            weeks_train = self.svc_comboBoxxx_03.currentText()
-            weeks_valid = self.svc_comboBoxxx_04.currentText()
-            weeks_test  = self.svc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if int(avgtime) not in self.avg_list:
-                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '조건최적화'])
-
-            backQ.put([
-                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
-                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_oc = Process(
-                target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OC', 'S')
-            )
-            self.proc_backtester_oc.start()
-            self.svjButtonClicked_07()
-            self.ss_progressBar_01.setValue(0)
-            self.ssicon_alert = True
 
     def svjButtonClicked_32(self):
         optivars = self.ss_textEditttt_05.toPlainText()
@@ -8089,10 +7726,14 @@ class Window(QMainWindow):
         QMessageBox.information(self, '저장 알림', '최적값으로 매도전략을 저장하였습니다.\n')
 
     def svcButtonClicked_11(self):
-        if not self.dialog_std.isVisible():
-            self.dialog_std.show()
+        self.dialog_std.show() if not self.dialog_std.isVisible() else self.dialog_std.close()
+
+    def svcButtonClicked_12(self):
+        if not self.dialog_optuna.isVisible():
+            self.dialog_optuna.show()
+            self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
         else:
-            self.dialog_std.close()
+            self.dialog_optuna.close()
 
     def svaButtonClicked_01(self):
         con = sqlite3.connect(DB_STRATEGY)
@@ -8519,6 +8160,9 @@ class Window(QMainWindow):
         self.cvc_pushButton_06.setVisible(False)
         self.cvc_pushButton_07.setVisible(False)
         self.cvc_pushButton_08.setVisible(False)
+        self.cvc_pushButton_27.setVisible(False)
+        self.cvc_pushButton_28.setVisible(False)
+        self.cvc_pushButton_29.setVisible(False)
 
         self.cva_pushButton_01.setVisible(False)
         self.cva_pushButton_02.setVisible(False)
@@ -8872,11 +8516,11 @@ class Window(QMainWindow):
                 betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, self.back_count,
                 bl, False, None, None, back_club
             ])
-            self.proc_backtester_bt = Process(
+            self.proc_backtester_bb = Process(
                 target=BackTest,
                 args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '백테스트', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
             )
-            self.proc_backtester_bt.start()
+            self.proc_backtester_bb.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
             self.csicon_alert = True
@@ -8932,7 +8576,7 @@ class Window(QMainWindow):
             self.cs_textEditttt_02.clear()
             self.cs_textEditttt_01.append(example_finder if self.dict_set['거래소'] == '업비트' else example_finder_future)
 
-    def cvjButtonClicked_14(self):
+    def cvjButtonClicked_14(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -8956,60 +8600,9 @@ class Window(QMainWindow):
             weeks_test  = self.cvc_comboBoxxx_05.currentText()
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
+            optunasampl = self.op_comboBoxxxx_01.currentText()
 
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_oh = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OH', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_oh.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_15(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
                 return
             if '' in [starttime, endtime, betting]:
@@ -9028,229 +8621,85 @@ class Window(QMainWindow):
 
             backQ.put([
                 betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl
             ])
-            self.proc_backtester_ovc = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ovc.start()
+            if back_name == '최적화O':
+                self.proc_backtester_o = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_o.start()
+            elif back_name == '최적화OV':
+                self.proc_backtester_ov = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ov.start()
+            elif back_name == '최적화OVC':
+                self.proc_backtester_ovc = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ovc.start()
+            elif back_name == '최적화B':
+                self.proc_backtester_b = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_b.start()
+            elif back_name == '최적화BV':
+                self.proc_backtester_bv = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_bv.start()
+            elif back_name == '최적화BVC':
+                self.proc_backtester_bvc = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_bvc.start()
+            elif back_name == '최적화OT':
+                self.proc_backtester_ot = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ot.start()
+            elif back_name == '최적화OVT':
+                self.proc_backtester_ovt = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ovt.start()
+            elif back_name == '최적화OVCT':
+                self.proc_backtester_ovct = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ovct.start()
+            elif back_name == '최적화BT':
+                self.proc_backtester_bt = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_bt.start()
+            elif back_name == '최적화BVT':
+                self.proc_backtester_bvt = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_bvt.start()
+            else:
+                self.proc_backtester_bvct = Process(
+                    target=Optimize,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_bvct.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
             self.csicon_alert = True
 
-    def cvjButtonClicked_16(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ov = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ov.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_17(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_oht = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OHT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_oht.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_18(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
-                QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ovct = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVCT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ovct.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_19(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ovt = Process(
-                target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OVT', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ovt.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_20(self):
+    def cvjButtonClicked_15(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -9277,123 +8726,9 @@ class Window(QMainWindow):
             benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
             bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
-            if weeks_train == 'ALL':
-                QMessageBox.critical(self, '오류 알림', '전진분석 학습기간은 전체를 선택할 수 없습니다.\n')
-                return
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '전진분석'])
-
-            backQ.put([
-                betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_rh = Process(
-                target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RH', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_rh.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_21(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            startday    = self.cvjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday      = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train == 'ALL':
-                QMessageBox.critical(self, '오류 알림', '전진분석 학습기간은 전체를 선택할 수 없습니다.\n')
-                return
-            if int(weeks_train) % int(weeks_valid) != 0:
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
                 return
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '전진분석'])
-
-            backQ.put([
-                betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
-                optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_rvc = Process(
-                target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_rvc.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_22(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            startday    = self.cvjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday      = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cvc_comboBoxxx_02.currentText()
-            ccount      = self.cvc_comboBoxxx_06.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
             if weeks_train == 'ALL':
                 QMessageBox.critical(self, '오류 알림', '전진분석 학습기간은 전체를 선택할 수 없습니다.\n')
                 return
@@ -9415,16 +8750,47 @@ class Window(QMainWindow):
                 betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount, self.dict_set['최적화기준값제한'],
                 optistd, self.back_count, False, None, None, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
             ])
-            self.proc_backtester_rv = Process(
-                target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '전진분석RV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_rv.start()
+            if back_name == '전진분석O':
+                self.proc_backtester_or = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_or.start()
+            elif back_name == '전진분석OV':
+                self.proc_backtester_orv = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_orv.start()
+            elif back_name == '전진분석OVC':
+                self.proc_backtester_orvc = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_orvc.start()
+            elif back_name == '전진분석B':
+                self.proc_backtester_br = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_br.start()
+            elif back_name == '전진분석BV':
+                self.proc_backtester_brv = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_brv.start()
+            else:
+                self.proc_backtester_brvc = Process(
+                    target=RollingWalkForwardTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_brvc.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
             self.csicon_alert = True
 
-    def cvjButtonClicked_23(self):
+    def cvjButtonClicked_16(self, back_name):
         if self.BacktestProcessAlive():
             QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
@@ -9441,6 +8807,76 @@ class Window(QMainWindow):
             buystg      = self.cvc_comboBoxxx_01.currentText()
             sellstg     = self.cvc_comboBoxxx_08.currentText()
             optivars    = self.cva_comboBoxxx_01.currentText()
+            optistd     = self.cvc_comboBoxxx_07.currentText()
+            weeks_train = self.cvc_comboBoxxx_03.currentText()
+            weeks_valid = self.cvc_comboBoxxx_04.currentText()
+            weeks_test  = self.cvc_comboBoxxx_05.currentText()
+            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
+            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
+
+            if 'VC' in back_name and weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
+                QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
+                return
+            if '' in [starttime, endtime, betting]:
+                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
+                return
+            if '' in [buystg, sellstg]:
+                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
+                return
+            if optivars == '':
+                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
+                return
+
+            self.ClearBacktestQ()
+            for bpq in self.back_pques:
+                bpq.put(['백테유형', 'GA최적화'])
+
+            backQ.put([
+                betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
+                self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+            ])
+            if back_name == '최적화OG':
+                self.proc_backtester_og = Process(
+                    target=OptimizeGeneticAlgorithm,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_og.start()
+            elif back_name == '최적화OGV':
+                self.proc_backtester_ogv = Process(
+                    target=OptimizeGeneticAlgorithm,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ogv.start()
+            else:
+                self.proc_backtester_ogvc = Process(
+                    target=OptimizeGeneticAlgorithm,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ogvc.start()
+            self.cvjButtonClicked_07()
+            self.cs_progressBar_01.setValue(0)
+            self.csicon_alert = True
+
+    def cvjButtonClicked_17(self, back_name):
+        if self.BacktestProcessAlive():
+            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        else:
+            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+                self.BackengineShow('코인')
+                return
+            if not self.back_condition:
+                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
+                return
+
+            starttime   = self.cvjb_lineEditt_02.text()
+            endtime     = self.cvjb_lineEditt_03.text()
+            betting     = self.cvjb_lineEditt_04.text()
+            avgtime     = self.cvjb_lineEditt_05.text()
+            buystg      = self.cvo_comboBoxxx_01.currentText()
+            sellstg     = self.cvo_comboBoxxx_02.currentText()
+            bcount      = self.cvo_lineEdittt_03.text()
+            scount      = self.cvo_lineEdittt_04.text()
+            rcount      = self.cvo_lineEdittt_05.text()
             optistd     = self.cvc_comboBoxxx_07.currentText()
             weeks_train = self.cvc_comboBoxxx_03.currentText()
             weeks_valid = self.cvc_comboBoxxx_04.currentText()
@@ -9451,131 +8887,42 @@ class Window(QMainWindow):
             if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
                 QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
                 return
-            if '' in [starttime, endtime, betting]:
+            if int(avgtime) not in self.avg_list:
+                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                return
+            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
                 QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
                 return
             if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
+                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
                 return
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
-                bpq.put(['백테유형', 'GA최적화'])
+                bpq.put(['백테유형', '조건최적화'])
 
             backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
-                self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
+                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
             ])
-            self.proc_backtester_ogvc = Process(
-                target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ogvc.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_24(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cva_comboBoxxx_01.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', 'GA최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
-                self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ogv = Process(
-                target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OGV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ogv.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_25(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            buystg      = self.cvc_comboBoxxx_01.currentText()
-            sellstg     = self.cvc_comboBoxxx_08.currentText()
-            optivars    = self.cva_comboBoxxx_01.currentText()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if '' in [starttime, endtime, betting]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-            if optivars == '':
-                QMessageBox.critical(self, '오류 알림', '변수를 설장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', 'GA최적화'])
-
-            backQ.put([
-                betting, starttime, endtime, buystg, sellstg, optivars, None, self.dict_set['최적화기준값제한'], optistd,
-                self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_og = Process(
-                target=OptimizeGeneticAlgorithm,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OG', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_og.start()
+            if back_name == '최적화OC':
+                self.proc_backtester_oc = Process(
+                    target=OptimizeConditions,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_oc.start()
+            elif back_name == '최적화OCV':
+                self.proc_backtester_ocv = Process(
+                    target=OptimizeConditions,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ocv.start()
+            else:
+                self.proc_backtester_ocvc = Process(
+                    target=OptimizeConditions,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, back_name, 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
+                )
+                self.proc_backtester_ocvc.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
             self.csicon_alert = True
@@ -9606,171 +8953,6 @@ class Window(QMainWindow):
         self.cs_textEditttt_04.clear()
         self.cs_textEditttt_03.append(buystg_str)
         self.cs_textEditttt_04.append(sellstg_str)
-
-    def cvjButtonClicked_29(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            avgtime     = self.cvjb_lineEditt_05.text()
-            buystg      = self.cvo_comboBoxxx_01.currentText()
-            sellstg     = self.cvo_comboBoxxx_02.currentText()
-            bcount      = self.cvo_lineEdittt_03.text()
-            scount      = self.cvo_lineEdittt_04.text()
-            rcount      = self.cvo_lineEdittt_05.text()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if weeks_train != 'ALL' and int(weeks_train) % int(weeks_valid) != 0:
-                QMessageBox.critical(self, '오류 알림', '교차검증의 학습기간은 검증기간의 배수로 선택하십시오.\n')
-                return
-            if int(avgtime) not in self.avg_list:
-                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '조건최적화'])
-
-            backQ.put([
-                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
-                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ocvc = Process(
-                target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCVC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ocvc.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_30(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            avgtime     = self.cvjb_lineEditt_05.text()
-            buystg      = self.cvo_comboBoxxx_01.currentText()
-            sellstg     = self.cvo_comboBoxxx_02.currentText()
-            bcount      = self.cvo_lineEdittt_03.text()
-            scount      = self.cvo_lineEdittt_04.text()
-            rcount      = self.cvo_lineEdittt_05.text()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if int(avgtime) not in self.avg_list:
-                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '조건최적화'])
-
-            backQ.put([
-                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
-                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_ocv = Process(
-                target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OCV', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_ocv.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
-
-    def cvjButtonClicked_31(self):
-        if self.BacktestProcessAlive():
-            QMessageBox.critical(self, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-        else:
-            if not self.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-                self.BackengineShow('코인')
-                return
-            if not self.back_condition:
-                QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-                return
-
-            starttime   = self.cvjb_lineEditt_02.text()
-            endtime     = self.cvjb_lineEditt_03.text()
-            betting     = self.cvjb_lineEditt_04.text()
-            avgtime     = self.cvjb_lineEditt_05.text()
-            buystg      = self.cvo_comboBoxxx_01.currentText()
-            sellstg     = self.cvo_comboBoxxx_02.currentText()
-            bcount      = self.cvo_lineEdittt_03.text()
-            scount      = self.cvo_lineEdittt_04.text()
-            rcount      = self.cvo_lineEdittt_05.text()
-            optistd     = self.cvc_comboBoxxx_07.currentText()
-            weeks_train = self.cvc_comboBoxxx_03.currentText()
-            weeks_valid = self.cvc_comboBoxxx_04.currentText()
-            weeks_test  = self.cvc_comboBoxxx_05.currentText()
-            benginesday = self.be_dateEdittttt_01.date().toString('yyyyMMdd')
-            bengineeday = self.be_dateEdittttt_02.date().toString('yyyyMMdd')
-
-            if int(avgtime) not in self.avg_list:
-                QMessageBox.critical(self, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-                return
-            if '' in [starttime, endtime, betting, avgtime, bcount, scount, rcount]:
-                QMessageBox.critical(self, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-                return
-            if '' in [buystg, sellstg]:
-                QMessageBox.critical(self, '오류 알림', '조건을 저장하고 콤보박스에서 선택하십시오.\n')
-                return
-
-            self.ClearBacktestQ()
-            for bpq in self.back_pques:
-                bpq.put(['백테유형', '조건최적화'])
-
-            backQ.put([
-                betting, avgtime, starttime, endtime, buystg, sellstg, self.dict_set['최적화기준값제한'], optistd, bcount,
-                scount, rcount, self.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
-            ])
-            self.proc_backtester_oc = Process(
-                target=OptimizeConditions,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, self.back_pques, self.bact_pques, '최적화OC', 'C' if self.dict_set['거래소'] == '업비트' else 'CF')
-            )
-            self.proc_backtester_oc.start()
-            self.cvjButtonClicked_07()
-            self.cs_progressBar_01.setValue(0)
-            self.csicon_alert = True
 
     def cvjButtonClicked_32(self):
         optivars = self.cs_textEditttt_05.toPlainText()
@@ -10128,6 +9310,13 @@ class Window(QMainWindow):
 
     def cvcButtonClicked_11(self):
         self.dialog_std.show() if not self.dialog_std.isVisible() else self.dialog_std.close()
+
+    def cvcButtonClicked_12(self):
+        if not self.dialog_optuna.isVisible():
+            self.dialog_optuna.show()
+            self.op_comboBoxxxx_01.setCurrentText(self.dict_set['옵튜나샘플러'])
+        else:
+            self.dialog_optuna.close()
 
     def cvaButtonClicked_01(self):
         con = sqlite3.connect(DB_STRATEGY)
@@ -10611,23 +9800,23 @@ class Window(QMainWindow):
         self.back_condition = False
         totalQ.put('백테중지')
         qtest_qwait(3)
-        if self.proc_backtester_bt is not None and   self.proc_backtester_bt.is_alive():   self.proc_backtester_bt.kill()
+        if self.proc_backtester_bb is not None and   self.proc_backtester_bb.is_alive():   self.proc_backtester_bb.kill()
         if self.proc_backtester_bf is not None and   self.proc_backtester_bf.is_alive():   self.proc_backtester_bf.kill()
-        if self.proc_backtester_oh is not None and   self.proc_backtester_oh.is_alive():   self.proc_backtester_oh.kill()
+        if self.proc_backtester_o is not None and   self.proc_backtester_o.is_alive():   self.proc_backtester_o.kill()
         if self.proc_backtester_ov is not None and   self.proc_backtester_ov.is_alive():   self.proc_backtester_ov.kill()
         if self.proc_backtester_ovc is not None and  self.proc_backtester_ovc.is_alive():  self.proc_backtester_ovc.kill()
         if self.proc_backtester_og is not None and   self.proc_backtester_og.is_alive():   self.proc_backtester_og.kill()
         if self.proc_backtester_ogv is not None and  self.proc_backtester_ogv.is_alive():  self.proc_backtester_ogv.kill()
         if self.proc_backtester_ogvc is not None and self.proc_backtester_ogvc.is_alive(): self.proc_backtester_ogvc.kill()
-        if self.proc_backtester_oht is not None and  self.proc_backtester_oht.is_alive():  self.proc_backtester_oht.kill()
+        if self.proc_backtester_ot is not None and  self.proc_backtester_ot.is_alive():  self.proc_backtester_ot.kill()
         if self.proc_backtester_ovt is not None and  self.proc_backtester_ovt.is_alive():  self.proc_backtester_ovt.kill()
         if self.proc_backtester_ovct is not None and self.proc_backtester_ovct.is_alive(): self.proc_backtester_ovct.kill()
         if self.proc_backtester_oc is not None and   self.proc_backtester_oc.is_alive():   self.proc_backtester_oc.kill()
         if self.proc_backtester_ocv is not None and  self.proc_backtester_ocv.is_alive():  self.proc_backtester_ocv.kill()
         if self.proc_backtester_ocvc is not None and self.proc_backtester_ocvc.is_alive(): self.proc_backtester_ocvc.kill()
-        if self.proc_backtester_rh is not None and   self.proc_backtester_rh.is_alive():   self.proc_backtester_rh.kill()
-        if self.proc_backtester_rv is not None and   self.proc_backtester_rv.is_alive():   self.proc_backtester_rv.kill()
-        if self.proc_backtester_rvc is not None and  self.proc_backtester_rvc.is_alive():  self.proc_backtester_rvc.kill()
+        if self.proc_backtester_or is not None and   self.proc_backtester_or.is_alive():   self.proc_backtester_or.kill()
+        if self.proc_backtester_orv is not None and   self.proc_backtester_orv.is_alive():   self.proc_backtester_orv.kill()
+        if self.proc_backtester_orvc is not None and  self.proc_backtester_orvc.is_alive():  self.proc_backtester_orvc.kill()
         if self.main_btn == 2:   self.ss_pushButtonn_08.setStyleSheet(style_bc_dk)
         elif self.main_btn == 3: self.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
         self.back_condition = True
@@ -12473,23 +11662,23 @@ class Window(QMainWindow):
         return self.proc_coin_kimp is not None and self.proc_coin_kimp.is_alive()
 
     def BacktestProcessAlive(self):
-        return (self.proc_backtester_bt is not None and self.proc_backtester_bt.is_alive()) or \
+        return (self.proc_backtester_bb is not None and self.proc_backtester_bb.is_alive()) or \
                (self.proc_backtester_bf is not None and self.proc_backtester_bf.is_alive()) or \
-               (self.proc_backtester_oh is not None and self.proc_backtester_oh.is_alive()) or \
+               (self.proc_backtester_o is not None and self.proc_backtester_o.is_alive()) or \
                (self.proc_backtester_ovc is not None and self.proc_backtester_ovc.is_alive()) or \
                (self.proc_backtester_ov is not None and self.proc_backtester_ov.is_alive()) or \
                (self.proc_backtester_ogvc is not None and self.proc_backtester_ogvc.is_alive()) or \
                (self.proc_backtester_ogv is not None and self.proc_backtester_ogv.is_alive()) or \
                (self.proc_backtester_og is not None and self.proc_backtester_og.is_alive()) or \
-               (self.proc_backtester_oht is not None and self.proc_backtester_oht.is_alive()) or \
+               (self.proc_backtester_ot is not None and self.proc_backtester_ot.is_alive()) or \
                (self.proc_backtester_ovct is not None and self.proc_backtester_ovct.is_alive()) or \
                (self.proc_backtester_ovt is not None and self.proc_backtester_ovt.is_alive()) or \
                (self.proc_backtester_ocvc is not None and self.proc_backtester_ocvc.is_alive()) or \
                (self.proc_backtester_ocv is not None and self.proc_backtester_ocv.is_alive()) or \
                (self.proc_backtester_oc is not None and self.proc_backtester_oc.is_alive()) or \
-               (self.proc_backtester_rh is not None and self.proc_backtester_rh.is_alive()) or \
-               (self.proc_backtester_rv is not None and self.proc_backtester_rv.is_alive()) or \
-               (self.proc_backtester_rvc is not None and self.proc_backtester_rvc.is_alive())
+               (self.proc_backtester_or is not None and self.proc_backtester_or.is_alive()) or \
+               (self.proc_backtester_orv is not None and self.proc_backtester_orv.is_alive()) or \
+               (self.proc_backtester_orvc is not None and self.proc_backtester_orvc.is_alive())
 
     # =================================================================================================================
 
@@ -12938,7 +12127,8 @@ class Window(QMainWindow):
         query = f"UPDATE etc SET 팩터선택 = '{factor_choice[:-1]}'"
         queryQ.put(['설정디비', query])
         divid_mode = self.be_comboBoxxxxx_01.currentText()
-        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}'"
+        optuna_sampler = self.op_comboBoxxxx_01.currentText()
+        query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}', '옵튜나샘플러' = '{optuna_sampler}'"
         queryQ.put(['설정디비', query])
 
         if self.dict_set['창위치기억']:

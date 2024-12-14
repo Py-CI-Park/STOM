@@ -24,6 +24,7 @@ DB_COIN_BACK  = './_database/coin_tick_back.db'
 DB_COIN_DAY   = './_database/coin_day.db'
 DB_COIN_MIN   = './_database/coin_min.db'
 DB_STRATEGY   = './_database/strategy.db'
+DB_OPTUNA     = 'sqlite:///./_database/optuna.db'
 
 
 def database_load():
@@ -202,6 +203,7 @@ try:
         '백테날짜':            df_b['백테날짜'][0],
         '최적화기준값제한':      df_b['최적화기준값제한'][0],
         '백테엔진분류방법':      df_b['백테엔진분류방법'][0],
+        '옵튜나샘플러':         df_b['옵튜나샘플러'][0],
 
         '저해상도':            df_e['저해상도'][0],
         '휴무프로세스종료':      df_e['휴무프로세스종료'][0],
@@ -384,8 +386,8 @@ columns_dt   = ['거래일자', '누적매수금액', '누적매도금액', '누
 columns_dd   = ['체결시간', '종목명', '매수금액', '매도금액', '주문수량', '수익률', '수익금']
 columns_nt   = ['기간', '누적매수금액', '누적매도금액', '누적수익금액', '누적손실금액', '누적수익률', '누적수익금']
 columns_nd   = ['일자', '총매수금액', '총매도금액', '총수익금액', '총손실금액', '수익률', '수익금합계']
-columns_sb   = ['구분', '백테스트', '백파인더', '최적화OH', '최적화OV', '최적화OVC', '최적화OHT', '최적화OVT', '최적화OVCT',
-                '최적화OG', '최적화OGV', '최적화OGVC', '최적화OC', '최적화OCV', '최적화OCVC', '전진분석RH', '전진분석RV', '전진분석RVC', '합계']
+columns_sb   = ['구분', '백테스트', '백파인더', '최적화', '최적화V', '최적화VC', '최적화T', '최적화VT', '최적화VCT',
+                '최적화OG', '최적화OGV', '최적화OGVC', '최적화OC', '최적화OCV', '최적화OCVC', '전진분석', '전진분석V', '전진분석VC', '합계']
 columns_sd   = ['period', 'time', 'dc', 'at', 'bettings', 'onegm', 'ttc', 'atc', 'mhc', 'aht', 'pc', 'mc', 'wr', 'asp', 'tsp', 'mdd', 'tsg', 'cagr']
 
 columns_vj   = ['배팅금액', '필요자금', '거래횟수', '일평균거래횟수', '최대보유종목수', '평균보유기간', '익절', '손절',

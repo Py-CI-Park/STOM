@@ -1,12 +1,13 @@
 import sys
 import time
+import optuna
 import sqlite3
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
 from backtester.back_static import SubTotal, SendTextAndStd, GetBackResult, PltShow, GetMoneytopQuery
 from utility.static import strf_time, strp_time, now, timedelta_day
-from utility.setting import DB_STOCK_BACK, DB_COIN_BACK, ui_num, DB_STRATEGY, DB_BACKTEST, columns_vc, DICT_SET, DB_SETTING
+from utility.setting import DB_STOCK_BACK, DB_COIN_BACK, ui_num, DB_STRATEGY, DB_BACKTEST, columns_vc, DICT_SET, DB_SETTING, DB_OPTUNA
 
 
 class Total:
@@ -89,9 +90,8 @@ class Total:
                                 self.tdq_list[i].put(data_)
                                 self.vdq_list[i].put(data_)
                         else:
-                            data_ = data + [train_days[1], int(train_days[2] / 2), vars_key]
+                            data_ = data + [train_days[2], vars_key]
                             self.tdq_list[0].put(data_)
-                            self.vdq_list[0].put(data_)
                     else:
                         self.df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
                         self.df_tsg.set_index('index', inplace=True)
@@ -103,7 +103,8 @@ class Total:
             elif data[0] == '백테완료':
                 bc  += 1
                 tbc += 1
-                if data[1]: tc += 1
+                if data[1]:
+                    tc += 1
                 self.wq.put([ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start])
 
                 if bc == self.back_count:
@@ -124,20 +125,22 @@ class Total:
                             self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'])
                             self.mq.put('백테스트 완료')
 
-            elif data[0] in ['TRAIN', 'VALID']:
+            elif data[0] in ['TRAIN', 'VALID', 'ALL']:
                 vars_key = data[-1]
-                if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
-                if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
-                if vars_key not in st.keys(): st[vars_key] = 0
-                if data[0] == 'TRAIN':
-                    self.dict_t[vars_key][data[1]] = data[2]
+                if data[0] == 'ALL':
+                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, data[2])
                 else:
-                    self.dict_v[vars_key][data[1]] = data[2]
-
-                st[vars_key] += 1
-                if st[vars_key] == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, self.dict_t[vars_key], self.dict_v[vars_key], self.dict_set['교차검증가중치'])
-                    st[vars_key] = 0
+                    if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
+                    if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
+                    if vars_key not in st.keys(): st[vars_key] = 0
+                    if data[0] == 'TRAIN':
+                        self.dict_t[vars_key][data[1]] = data[2]
+                    else:
+                        self.dict_v[vars_key][data[1]] = data[2]
+                    st[vars_key] += 1
+                    if st[vars_key] == self.sub_total:
+                        self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, self.dict_t[vars_key], self.dict_v[vars_key], self.dict_set['교차검증가중치'])
+                        st[vars_key] = 0
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
@@ -151,6 +154,8 @@ class Total:
             elif data[0] == '경우의수':
                 self.total_count = data[1]
                 self.back_count  = data[2]
+            elif data[0] == '횟수변경':
+                self.total_count = data[1]
             elif data == '백테중지':
                 self.BackStop()
                 break
@@ -210,7 +215,7 @@ class Total:
 
         self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, self.optistandard, self.day_count)
         SendTextAndStd(self.GetSendData(), self.std_list, self.betting, result)
-        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
+        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
         startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
         startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
@@ -228,11 +233,11 @@ class Total:
         else:
             back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증/확인기간 : {self.weeks_train}/{self.weeks_valid}/{self.weeks_test}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.vars[0]}'
 
-        mdd_ = f'최대낙폭금액 {mdd:,.0f}{bet_unit}' if 'G' in self.optistandard else f'최대낙폭률 {mdd:,.2f}%'
+        mdd_text   = f'최대낙폭금액 {mdd_:,.0f}{bet_unit}' if 'G' in self.optistandard else f'최대낙폭률 {mdd:,.2f}%'
         label_text = f'변수 {self.vars}\n종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {onegm:,}{bet_unit}, ' \
                      f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
                      f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, ' \
-                     f'{mdd_}, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
+                     f'{mdd_text}, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
 
         if self.dict_set['스톰라이브']:
             backlive_text = f'back;{startday}~{endday};{starttime}~{endtime};{self.day_count};{self.vars[0]};{int(self.betting)};'\
@@ -277,6 +282,28 @@ class Total:
         self.mq.put('백테스트 완료')
 
 
+class StopWhenNotUpdateBestCallBack:
+    def __init__(self, wq, tq, back_count, ui_gubun, len_vars):
+        self.wq         = wq
+        self.tq         = tq
+        self.back_count = back_count
+        self.ui_gubun   = ui_gubun
+        self.len_vars   = len_vars
+        self.start = now()
+
+    def __call__(self, study: optuna.study.Study, trial: optuna.trial.FrozenTrial) -> None:
+        best_opt = study.best_value
+        best_num = study.best_trial.number
+        curr_num = trial.number
+        last_num = best_num + self.len_vars
+        rema_num = last_num - curr_num
+        total_count = self.back_count * (last_num + 1)
+        self.tq.put(['횟수변경', total_count])
+        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA INFO 최고기준값[{best_opt:,}] 기준값갱신[{best_num}] 현재횟수[{curr_num}] 남은횟수[{rema_num}]</font>'])
+        if curr_num == last_num:
+            study.stop()
+
+
 class Optimize:
     def __init__(self, wq, bq, sq, tq, lq, pq_list, ctq_list, backname, ui_gubun):
         self.wq        = wq
@@ -286,11 +313,13 @@ class Optimize:
         self.lq        = lq
         self.pq_list   = pq_list
         self.ctq_list  = ctq_list
-        self.backname  = backname   # '최적화OH', '최적화OV', '최적화OVC', '최적화OHT', '최적화OVT', '최적화OVCT'
+        self.backname  = backname
         self.ui_gubun  = ui_gubun   # 'S', 'C', 'CF'
         self.dict_set  = DICT_SET
         self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.vars      = {}
+        self.study     = None
+        self.dict_optuna_vars = {}
         self.Start()
 
     def Start(self):
@@ -318,13 +347,23 @@ class Optimize:
         weeks_test  = int(data[16])
         backengin_sday  = data[17]
         backengin_eday  = data[18]
+        optunasampl     = data[19]
+        if optunasampl == 'BruteForceSampler':
+            sampler = optuna.samplers.BruteForceSampler()
+        elif optunasampl == 'QMCSampler':
+            sampler = optuna.samplers.QMCSampler()
+        elif optunasampl == 'RandomSampler':
+            sampler = optuna.samplers.RandomSampler()
+        elif optunasampl == 'TPESampler':
+            sampler = optuna.samplers.TPESampler()
+        else:
+            sampler = None
+
         if weeks_train != 'ALL':
             weeks_train = int(weeks_train)
         else:
             allweeks = int(((strp_time('%Y%m%d', backengin_eday) - strp_time('%Y%m%d', backengin_sday)).days + 1) / 7)
-            if 'HT' in self.backname:
-                weeks_train = allweeks - weeks_test
-            elif 'T' in self.backname:
+            if 'T' in self.backname:
                 weeks_train = allweeks - weeks_valid - weeks_test
             elif 'V' in self.backname:
                 weeks_train = allweeks - weeks_valid
@@ -352,7 +391,7 @@ class Optimize:
                 int(strf_time('%Y%m%d', timedelta_day(-(weeks_valid + weeks_test) * 7 + 1, dt_endday))),
                 int(strf_time('%Y%m%d', timedelta_day(-weeks_test * 7, dt_endday)))
             ])
-        elif 'OH' in self.backname:
+        else:
             valid_days_ = None
         if 'T' in self.backname:
             test_days = [int(strf_time('%Y%m%d', timedelta_day(-weeks_test * 7 + 1, dt_endday))), endday]
@@ -361,14 +400,12 @@ class Optimize:
             test_days = [next_day, next_day]
 
         if int(backengin_sday) > startday:
-            if 'OHT' in self.backname:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 확인기간 만큼의 데이터가 필요합니다'])
-            elif 'OH' in self.backname:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 만큼의 데이터가 필요합니다'])
-            elif 'T' in self.backname:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 검증기간 + 확인기간 만큼의 데이터가 필요합니다'])
-            else:
-                self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 + 검증기간 만큼의 데이터가 필요합니다'])
+            perio_text = '학습시간'
+            if 'V' in self.backname:
+                perio_text = f'{perio_text} + 검증기간'
+            if 'T' in self.backname:
+                perio_text = f'{perio_text} + 확인기간'
+            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'백테엔진에 로딩된 데이터가 부족합니다. 최소 {perio_text} 만큼의 데이터가 필요합니다'])
             self.SysExit(True)
 
         con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
@@ -487,53 +524,113 @@ class Optimize:
         for q in self.pq_list:
             q.put(data)
 
-        self.tq.put(['경우의수', total_count, back_count])
+        if 'B' in self.backname:
+            self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'OPTUNA Sampler : {optunasampl}'])
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작'])
 
-        self.tq.put(['변수정보', vars_, -1])
-        for q in self.ctq_list:
-            q.put('백테시작')
-        for q in self.pq_list:
-            q.put(['변수정보', vars_, -1])
-        hstd, _ = mq.get()
+        if 'B' in self.backname:
+            total_count_ = back_count * (len(self.vars) + 1)
+            self.tq.put(['경우의수', total_count_, back_count])
 
-        k = 1
-        total_change = 0
-        change_var_count = None
-        for _ in range(ccount if ccount != 0 else 100):
-            if ccount == 0:
-                if change_var_count == 0:
-                    break
-                if k > 1:
-                    self.tq.put(['재최적화'])
-                    self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'])
+            def objective(trial):
+                optuna_vars = []
+                for n, var_ in enumerate(list(self.vars.values())):
+                    if n < 10:
+                        n = f'00{n}'
+                    elif n < 100:
+                        n = f'0{n}'
+                    else:
+                        n = f'{n}'
 
-            change_var_count = 0
-            for i, vars_list in enumerate(vars_):
-                len_vars_list = len(vars_list) - 2
-                if len_vars_list > 0:
-                    self.tq.put(['변수정보', vars_, i])
-                    for q in self.ctq_list:
-                        q.put('백테시작')
-                    for q in self.pq_list:
-                        q.put(['변수정보', vars_, i])
-
-                    for _ in range(len_vars_list):
-                        data = mq.get()
-                        if type(data) == str:
-                            self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name)
-                            self.SysExit(True)
+                    if var_[0][2] != 0:
+                        if type(var_[0][2]) == int:
+                            if var_[0][0] < var_[0][1]:
+                                trial_ = trial.suggest_int(n, var_[0][0], var_[0][1], step=var_[0][2])
+                            else:
+                                trial_ = trial.suggest_int(n, var_[0][1], var_[0][0], step=-var_[0][2])
                         else:
-                            std, vars_key = data
-                            curr_typ = vars_type[i]
-                            curr_var = vars_list[vars_key]
-                            high_var = vars_list[-1]
-                            if std > hstd or (std == hstd and ((curr_typ and curr_var > high_var) or (not curr_typ and curr_var < high_var))):
-                                hstd = std
-                                vars_list[-1] = curr_var
-                                total_change += 1
-                                change_var_count += 1
-            k += 1
+                            if var_[0][0] < var_[0][1]:
+                                trial_ = trial.suggest_float(n, var_[0][0], var_[0][1], step=var_[0][2])
+                            else:
+                                trial_ = trial.suggest_float(n, var_[0][1], var_[0][0], step=-var_[0][2])
+                        optuna_vars.append([trial_])
+                    else:
+                        trial_ = trial.suggest_int(n, var_[0][0], var_[0][1])
+                        optuna_vars.append([trial_])
+
+                if str(optuna_vars) not in self.dict_optuna_vars.keys():
+                    self.tq.put(['변수정보', optuna_vars, -1])
+                    for ctq in self.ctq_list:
+                        ctq.put('백테시작')
+                    for pq in self.pq_list:
+                        pq.put(['변수정보', optuna_vars, -1])
+                    data_ = mq.get()
+                    if type(data_) == str:
+                        ostd = 0
+                        self.SysExit(True)
+                    else:
+                        ostd = data_[0]
+                        self.dict_optuna_vars[str(optuna_vars)] = ostd
+                else:
+                    ostd = self.dict_optuna_vars[str(optuna_vars)]
+                return ostd
+
+            total_change = 1
+            study_name = f'{self.backname}_{buystg_name}_{strf_time("%Y%m%d%H%M%S")}'
+            optuna.logging.disable_default_handler()
+            if sampler is None:
+                self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize')
+            else:
+                self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize', sampler=sampler)
+            self.study.optimize(objective, n_trials=10000, callbacks=[StopWhenNotUpdateBestCallBack(self.wq, self.tq, back_count, self.ui_gubun, len(self.vars))])
+            for i, var in enumerate(list(self.study.best_params.values())):
+                vars_[i][-1] = var
+        else:
+            self.tq.put(['경우의수', total_count, back_count])
+            self.tq.put(['변수정보', vars_, -1])
+            for q in self.ctq_list:
+                q.put('백테시작')
+            for q in self.pq_list:
+                q.put(['변수정보', vars_, -1])
+            hstd, _ = mq.get()
+
+            k = 1
+            total_change = 0
+            change_var_count = None
+            for _ in range(ccount if ccount != 0 else 100):
+                if ccount == 0:
+                    if change_var_count == 0:
+                        break
+                    if k > 1:
+                        self.tq.put(['재최적화'])
+                        self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'무한모드 {k}단계 시작, 최적값 변경 개수 [{change_var_count}]'])
+
+                change_var_count = 0
+                for i, vars_list in enumerate(vars_):
+                    len_vars_list = len(vars_list) - 2
+                    if len_vars_list > 0:
+                        self.tq.put(['변수정보', vars_, i])
+                        for q in self.ctq_list:
+                            q.put('백테시작')
+                        for q in self.pq_list:
+                            q.put(['변수정보', vars_, i])
+
+                        for _ in range(len_vars_list):
+                            data = mq.get()
+                            if type(data) == str:
+                                self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name)
+                                self.SysExit(True)
+                            else:
+                                std, vars_key = data
+                                curr_typ = vars_type[i]
+                                curr_var = vars_list[vars_key]
+                                high_var = vars_list[-1]
+                                if std > hstd or (std == hstd and ((curr_typ and curr_var > high_var) or (not curr_typ and curr_var < high_var))):
+                                    hstd = std
+                                    vars_list[-1] = curr_var
+                                    total_change += 1
+                                    change_var_count += 1
+                k += 1
 
         self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], '최적값 백테스트 시작'])
         self.tq.put(['변수정보', vars_, -2])
@@ -545,18 +642,19 @@ class Optimize:
         self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name)
 
         mq.close()
-        if self.dict_set['스톰라이브']: self.lq.put(self.backname)
+        if self.dict_set['스톰라이브']: self.lq.put(self.backname.replace('O', '').replace('B', ''))
         self.SysExit(False)
 
     def SaveOptiVars(self, change, optivars, optivars_, vars_, optivars_name):
         if change > 0:
-            cur_vars = [var[-1] for var in vars_]
             optivars = optivars.split('self.vars[0]')[0]
             exec(optivars_, None, locals())
             for i in range(len(self.vars)):
-                if self.vars[i][1] != cur_vars[i]:
-                    self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 {self.vars[i][1]} -> {cur_vars[i]}'])
-                    self.vars[i][1] = cur_vars[i]
+                prev_var = self.vars[i][1]
+                best_var = vars_[i][-1]
+                if prev_var != best_var:
+                    self.wq.put([ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 {prev_var} -> {best_var}'])
+                    self.vars[i][1] = best_var
                 optivars += f'self.vars[{i}] = {self.vars[i]}\n'
 
             if 'T' not in self.backname:

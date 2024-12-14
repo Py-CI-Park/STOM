@@ -8,9 +8,19 @@ import numpy as np
 import pandas as pd
 from traceback import print_exc
 from matplotlib import pyplot as plt
+from optuna_dashboard import run_server
 from matplotlib import font_manager, gridspec
-from utility.static import strp_time, strf_time, timedelta_sec
-from utility.setting import ui_num, GRAPH_PATH, columns_btf, columns_bt, DICT_SET, DB_SETTING
+from utility.static import strp_time, strf_time, timedelta_sec, thread_decorator
+from utility.setting import ui_num, GRAPH_PATH, columns_btf, columns_bt, DICT_SET, DB_SETTING, DB_OPTUNA
+
+
+@thread_decorator
+def RunOptunaServer():
+    try:
+        run_server(DB_OPTUNA)
+    except:
+        pass
+
 
 def GetTradeInfo(gubun):
     if gubun == 1:
@@ -296,14 +306,15 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
         if gubun in ['GA최적화', '조건최적화']:
             text2, std   = GetText2('', optistd, std_list, betting, dict_train)
             text3, stdp_ = GetText3(False, std, stdp)
-            text2 = f'{text2}{text3}'
         elif gubun == '최적화테스트':
             text2, std = GetText2('TEST', optistd, std_list, betting, dict_train)
+            text3 = ''
         else:
-            text2, std = GetText2('TOTAL', optistd, std_list, betting, dict_train)
-        wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
+            text2, std   = GetText2('TOTAL', optistd, std_list, betting, dict_train)
+            text3, stdp_ = GetText3(False, std, stdp)
+        wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'])
     else:
-        std = 0
+        std = -100_000_000_000
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put([ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'])
 
@@ -327,10 +338,10 @@ def GetText1(vars_turn, vars_list):
 
 
 def GetText2(gubun, optistd, std_list, betting, result):
-    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
+    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
     if tsp < 0 < tsg: tsg = -2147483648
-    mdd_ = f'{mdd:,.0f}' if 'G' in optistd else f'{mdd:,.2f}%'
-    text = f'{gubun} TC[{tc:,.0f}] ATC[{atc:,.1f}] MH[{mhct}] WR[{wr:,.2f}%] MDD[{mdd_}] CAGR[{cagr:,.2f}] TPI[{tpi:,.2f}] AP[{ap:,.2f}%] TP[{tsp:,.2f}%] TG[{tsg:,.0f}]'
+    mddt = f'{mdd_:,.0f}' if 'G' in optistd else f'{mdd:,.2f}%'
+    text = f'{gubun} TC[{tc:,.0f}] ATC[{atc:,.1f}] MH[{mhct}] WR[{wr:,.2f}%] MDD[{mddt}] CAGR[{cagr:,.2f}] TPI[{tpi:,.2f}] AP[{ap:,.2f}%] TP[{tsp:,.2f}%] TG[{tsg:,.0f}]'
     std, text = GetOptiStdText(optistd, std_list, betting, result, text)
     text = f'<font color=white>{text}</font>' if tsg >= 0 else f'<font color=#96969b>{text}</font>'
     return text, std
@@ -377,9 +388,8 @@ def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
 
 def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     mdd_low, mdd_high, mhct_low, mhct_high, wr_low, wr_high, ap_low, ap_high, atc_low, atc_high, cagr_low, cagr_high, tpi_low, tpi_high = std_list
-    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
-    mdd_ = round(mdd / tsg * 100, 2) if 'G' in optistd and tsg != 0 else mdd
-    std_true = mdd_low <= mdd_ <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and \
+    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
+    std_true = mdd_low <= mdd <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and \
         ap_low <= ap <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high
     std, pm, p2m, pam, pwm, gm, g2m, gam, gwm, text = 0, 0, 0, 0, 0, 0, 0, 0, 0, ''
     if tc > 0:
@@ -399,13 +409,13 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
                 if optistd == 'TG':
                     std = tsg if std_true else 0
                 elif optistd == 'GM':
-                    std = gm = round(tsg / mdd, 2) if std_true else 0
+                    std = gm = round(tsg / mdd_, 2) if std_true else 0
                 elif optistd == 'G2M':
-                    std = g2m = round(tsg * tsg / mdd / betting, 2) if std_true else 0
+                    std = g2m = round(tsg * tsg / mdd_ / betting, 2) if std_true else 0
                 elif optistd == 'GAM':
-                    std = gam = round(tsg * ap / mdd, 2) if std_true else 0
+                    std = gam = round(tsg * ap / mdd_, 2) if std_true else 0
                 elif optistd == 'GWM':
-                    std = gwm = round(tsg * wr / mdd / 100, 2) if std_true else 0
+                    std = gwm = round(tsg * wr / mdd_ / 100, 2) if std_true else 0
         else:
             if 'P' in optistd:
                 if optistd == 'TP':
@@ -422,13 +432,13 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
                 if optistd == 'TG':
                     std = tsg
                 elif optistd == 'GM':
-                    std = gm = round(tsg / mdd, 2)
+                    std = gm = round(tsg / mdd_, 2)
                 elif optistd == 'G2M':
-                    std = g2m = round(tsg * tsg / mdd / betting, 2)
+                    std = g2m = round(tsg * tsg / mdd_ / betting, 2)
                 elif optistd == 'GAM':
-                    std = gam = round(tsg * ap / mdd, 2)
+                    std = gam = round(tsg * ap / mdd_, 2)
                 elif optistd == 'GWM':
-                    std = gwm = round(tsg * wr / mdd / 100, 2)
+                    std = gwm = round(tsg * wr / mdd_ / 100, 2)
 
     if optistd == 'TP':    text = pre_text
     elif optistd == 'TG':  text = pre_text
@@ -476,17 +486,15 @@ def GetBackResult(df_tsg, df_bct, betting, optistd, day_count):
             array = np.array(df_tsg['수익금합계'], dtype=np.float64)
             lower = np.argmax(np.maximum.accumulate(array) - array)
             upper = np.argmax(array[:lower])
-            if 'G' in optistd:
-                mdd = int(abs(array[upper] - array[lower]))
-            else:
-                mdd = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
+            mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
+            mdd_  = int(abs(array[upper] - array[lower]))
         except:
-            mdd = 0.
+            mdd, mdd_ = 0, 0
     else:
-        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
     if mdd == 0: mdd = round((tsg if 'G' in optistd else tsp) / 100, 2)
-    return df_tsg, df_bct, [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd]
+    return df_tsg, df_bct, [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_]
 
 
 def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
@@ -803,20 +811,6 @@ class SubTotal:
                 df_bct = df_bct[(df_bct.index >= vsday * 1000000) & (df_bct.index <= veday * 1000000 + 240000)]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, tdaycnt if self.gubun else vdaycnt)
             self.tq.put(['TRAIN' if self.gubun else 'VALID', index, result, vars_key])
-        elif len(data) == 6:
-            teday, daycnt, vars_key = data[3:]
-            df_tsg['구분'] = df_tsg['매도시간'].apply(lambda x: 0 if int(x / 1000000) % 2 == 0 else 1)
-            df_bct['구분'] = df_bct.index
-            df_bct['구분'] = df_bct['구분'].apply(lambda x: 0 if int(x / 1000000) % 2 == 0 else 1)
-            gb = 0 if teday % 2 == 0 else 1
-            if self.gubun:
-                df_tsg = df_tsg[(df_tsg['매도시간'] < teday * 1000000) & (df_tsg['구분'] == gb)]
-                df_bct = df_bct[(df_bct.index < teday * 1000000) & (df_bct['구분'] == gb)]
-            else:
-                df_tsg = df_tsg[(df_tsg['매도시간'] < teday * 1000000) & (df_tsg['구분'] != gb)]
-                df_bct = df_bct[(df_bct.index < teday * 1000000) & (df_bct['구분'] != gb)]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)
-            self.tq.put(['TRAIN' if self.gubun else 'VALID', 0, result, vars_key])
         else:
             daycnt, vars_key = data[3:]
             _, _, result = GetBackResult(df_tsg, df_bct, self.betting, self.optistd, daycnt)

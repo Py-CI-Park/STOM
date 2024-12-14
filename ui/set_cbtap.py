@@ -128,16 +128,16 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvj_pushButton_04 = self.wc.setPushbutton('테스트 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_01, color=4, tip='단축키(Ctrl+4)')
-        self.ui.cvj_pushButton_05 = self.wc.setPushbutton('전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_02, color=4, tip='단축키(Ctrl+5)')
-        self.ui.cvj_pushButton_06 = self.wc.setPushbutton('GA 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_03, color=4, tip='단축키(Ctrl+3)')
-        self.ui.cvj_pushButton_07 = self.wc.setPushbutton('범위 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_04, color=4, tip='단축키(Ctrl+6)')
+        self.ui.cvj_pushButton_04 = self.wc.setPushbutton('전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_02, color=4, tip='단축키(Ctrl+4)')
+        self.ui.cvj_pushButton_05 = self.wc.setPushbutton('GA 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_03, color=4, tip='단축키(Ctrl+5)')
+        self.ui.cvj_pushButton_06 = self.wc.setPushbutton('테스트 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_01, color=4, tip='단축키(Ctrl+3)')
+        self.ui.cvj_pushButton_07 = self.wc.setPushbutton('조건 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_10, color=4, tip='단축키(Ctrl+6)')
         self.ui.cvj_pushButton_08 = self.wc.setPushbutton('최적화 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_05, color=4, tip='단축키(Ctrl+2)')
-        self.ui.cvj_pushButton_09 = self.wc.setPushbutton('변수 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_06, color=4, tip='단축키(Ctrl+7)')
+        self.ui.cvj_pushButton_09 = self.wc.setPushbutton('범위 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_04, color=4, tip='단축키(Ctrl+7)')
         self.ui.cvj_pushButton_10 = self.wc.setPushbutton('백테스트 로그', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_07, color=4, tip='단축키(Ctrl+9)')
         self.ui.cvj_pushButton_11 = self.wc.setPushbutton('상세기록', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_08, color=4, tip='단축키(Ctrl+0)')
         self.ui.cvj_pushButton_12 = self.wc.setPushbutton('전략 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_09, color=5, tip='단축키(Ctrl+1)')
-        self.ui.cvj_pushButton_13 = self.wc.setPushbutton('조건 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_10, color=4, tip='단축키(Ctrl+8)')
+        self.ui.cvj_pushButton_13 = self.wc.setPushbutton('변수 편집기', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_06, color=4, tip='단축키(Ctrl+8)')
 
         self.ui.coin_editer_list = [
             self.ui.cvj_pushButton_04, self.ui.cvj_pushButton_05, self.ui.cvj_pushButton_06, self.ui.cvj_pushButton_07,
@@ -165,12 +165,13 @@ class SetCoinBack:
         self.ui.cvc_labellllll_03 = QLabel('최적화 실행횟수                   기준값', self.ui.cs_tab)
         self.ui.cvc_comboBoxxx_06 = self.wc.setCombobox(self.ui.cs_tab, items=optimized_count, tip='최적화 횟수를 선택하십시오. 0선택 시 최적값이 변하지 않을 때까지 반복됩니다.')
         self.ui.cvc_comboBoxxx_07 = self.wc.setCombobox(self.ui.cs_tab, items=opti_standard, tip=optistandard)
-        self.ui.cvc_pushButton_05 = self.wc.setPushbutton('기준값 제한설정', box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_11, tip='백테 결과값 중 특정 수치를 만족하지 못하면\n기준값을 0으로 도출하도록 설정한다.')
+        self.ui.cvc_pushButton_05 = self.wc.setPushbutton('기준값', color=2, box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_11, tip='백테 결과값 중 특정 수치를 만족하지 못하면\n기준값을 0으로 도출하도록 설정한다.')
+        self.ui.cvc_pushButton_36 = self.wc.setPushbutton('optuna', color=3, box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_12, tip='옵튜나의 샘플러를 선택하거나 대시보드를 열람한다')
 
         self.ui.coin_period_list = [
             self.ui.cvc_labellllll_01, self.ui.cvc_labellllll_02, self.ui.cvc_comboBoxxx_03, self.ui.cvc_comboBoxxx_04,
             self.ui.cvc_comboBoxxx_05, self.ui.cvc_comboBoxxx_06, self.ui.cvc_labellllll_03, self.ui.cvc_comboBoxxx_07,
-            self.ui.cvc_pushButton_05
+            self.ui.cvc_pushButton_05, self.ui.cvc_pushButton_36
         ]
 
         for widget in self.ui.coin_period_list:
@@ -178,9 +179,12 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_06 = self.wc.setPushbutton('분할 검증 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, color=2, tip='학습기간만 선택하여 진행되며 설정한 학습기간의\n데이터를 일자기준으로 마지막 일자가 홀수일 경우\n학습(홀수일자), 검증(짝수일자)으로 분류하여 최적화한다.\n마지막 일자가 짝수일 경우 반대로 분류한다.')
-        self.ui.cvc_pushButton_07 = self.wc.setPushbutton('교차 검증 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 최적화는 1회만 검증을 하지만, 교차검증은\n검증기간을 학습기간 / 검증기간 + 1만큼 교차분류하여 최적화한다.')
-        self.ui.cvc_pushButton_08 = self.wc.setPushbutton('검증 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_16, color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n데이터의 시계열 순서대로 학습, 검증기간을 분류하여 최적화한다.')
+        self.ui.cvc_pushButton_06 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVC', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 최적화는 1회만 검증을 하지만, 교차검증은\n검증기간을 학습기간 / 검증기간 + 1만큼 교차분류하여 그리드 최적화한다.')
+        self.ui.cvc_pushButton_07 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OV', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n데이터의 시계열 순서대로 학습, 검증기간을 분류하여 그리드 최적화한다.')
+        self.ui.cvc_pushButton_08 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화O', color=2, tip='학습기간만 선택하여 진행되며\n데이터 전체를 기반으로 그리드 최적화한다.')
+        self.ui.cvc_pushButton_27 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVC', color=3, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 최적화는 1회만 검증을 하지만, 교차검증은\n검증기간을 학습기간 / 검증기간 + 1만큼 교차분류하여 베이지안 최적화한다.')
+        self.ui.cvc_pushButton_28 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BV', color=3, tip='학습기간과 검증기간을 선택하여 진행되며\n데이터의 시계열 순서대로 학습, 검증기간을 분류하여 베이지안 최적화한다.')
+        self.ui.cvc_pushButton_29 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화B', color=3, tip='학습기간만 선택하여 진행되며\n데이터 전체를 기반으로 베이지안 최적화한다.')
 
     # =================================================================================================================
 
@@ -203,7 +207,8 @@ class SetCoinBack:
             self.ui.cvc_pushButton_01, self.ui.cvc_pushButton_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04,
             self.ui.cvc_pushButton_06, self.ui.cvc_pushButton_07, self.ui.cvc_pushButton_08, self.ui.cvc_pushButton_09,
             self.ui.cvc_pushButton_10, self.ui.cvc_pushButton_11, self.ui.cvc_lineEdittt_04, self.ui.cvc_lineEdittt_05,
-            self.ui.cvc_pushButton_13, self.ui.cvc_pushButton_14
+            self.ui.cvc_pushButton_13, self.ui.cvc_pushButton_14, self.ui.cvc_pushButton_27, self.ui.cvc_pushButton_28,
+            self.ui.cvc_pushButton_29
         ]
 
         for widget in self.ui.coin_optimz_list:
@@ -211,13 +216,17 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_15 = self.wc.setPushbutton('분할 검증 최적화 테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_17, color=2, tip='학습기간과 확인기간을 선택하여 진행되며\n분할 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
-        self.ui.cvc_pushButton_16 = self.wc.setPushbutton('교차 검증 최적화 테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_18, color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n교차 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
-        self.ui.cvc_pushButton_17 = self.wc.setPushbutton('검증 최적화 테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_19, color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_15 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVCT', color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n그리드 교차검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_16 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OVT', color=2, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n그리드 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_17 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화OT', color=2, tip='학습기간, 확인기간을 선택하여 진행되며\n그리드 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_30 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVCT', color=3, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n베이지안 교차검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_31 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVT', color=3, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n베이지안 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
+        self.ui.cvc_pushButton_32 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BT', color=3, tip='학습기간, 확인기간을 선택하여 진행되며\n베이지안 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
 
         self.ui.coin_optest_list = [
             self.ui.cvc_pushButton_15, self.ui.cvc_pushButton_16, self.ui.cvc_pushButton_17, self.ui.cvc_comboBoxxx_02,
-            self.ui.cvc_lineEdittt_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04
+            self.ui.cvc_lineEdittt_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04, self.ui.cvc_pushButton_30,
+            self.ui.cvc_pushButton_31, self.ui.cvc_pushButton_32
         ]
 
         for widget in self.ui.coin_optest_list:
@@ -225,14 +234,18 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cvc_pushButton_18 = self.wc.setPushbutton('분할 검증 최적화 전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_20, color=2, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n분할 검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_19 = self.wc.setPushbutton('교차 검증 최적화 전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_21, color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n교차 검증 최적화 테스트를 전진분석한다.')
-        self.ui.cvc_pushButton_20 = self.wc.setPushbutton('검증 최적화 전진분석', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_22, color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_18 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OVC', color=2, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 교차검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_19 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석OV', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_20 = self.wc.setPushbutton('그리드', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석O', color=2, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n그리드 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_33 = self.wc.setPushbutton('교차검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BVC', color=3, tip='학습기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 교차검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_34 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BV', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 검증 최적화 테스트를 전진분석한다.')
+        self.ui.cvc_pushButton_35 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석B', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 최적화 테스트를 전진분석한다.')
 
         self.ui.coin_rwftvd_list = [
             self.ui.cvc_pushButton_18, self.ui.cvc_pushButton_19, self.ui.cvc_pushButton_20, self.ui.cvc_comboBoxxx_02,
             self.ui.cvc_lineEdittt_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04, self.ui.cvjb_labelllll_01,
-            self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02
+            self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02, self.ui.cvc_pushButton_33, self.ui.cvc_pushButton_34,
+            self.ui.cvc_pushButton_35
         ]
 
         for widget in self.ui.coin_rwftvd_list:
@@ -241,9 +254,9 @@ class SetCoinBack:
 
     # =================================================================================================================
 
-        self.ui.cva_pushButton_01 = self.wc.setPushbutton('교차 검증 GA최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_23, color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n교차 검증 GA최적화한다.')
-        self.ui.cva_pushButton_02 = self.wc.setPushbutton('검증 GA최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_24, color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 GA최적화한다.')
-        self.ui.cva_pushButton_03 = self.wc.setPushbutton('GA최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_25, color=2, tip='학습기간을 선택하여 진행되며\n데이터 전체를 사용하여 GA최적화한다.')
+        self.ui.cva_pushButton_01 = self.wc.setPushbutton('교차검증 GA 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_16, cmd='최적화OGVC', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n교차 검증 GA최적화한다.')
+        self.ui.cva_pushButton_02 = self.wc.setPushbutton('검증 GA 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_16, cmd='최적화OGV', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 GA최적화한다.')
+        self.ui.cva_pushButton_03 = self.wc.setPushbutton('GA 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_16, cmd='최적화OG', color=2, tip='학습기간을 선택하여 진행되며\n데이터 전체를 사용하여 GA최적화한다.')
 
         self.ui.cva_comboBoxxx_01 = self.wc.setCombobox(self.ui.cs_tab, font=qfont14, activated=self.ui.cActivated_06)
         self.ui.cva_lineEdittt_01 = self.wc.setLineedit(self.ui.cs_tab, font=qfont14, aleft=True, ltext='F10, F11', style=style_bc_dk)
@@ -288,9 +301,9 @@ class SetCoinBack:
         self.ui.cvo_lineEdittt_04 = self.wc.setLineedit(self.ui.cs_tab, ltext='5', style=style_bc_dk)
         self.ui.cvo_lineEdittt_05 = self.wc.setLineedit(self.ui.cs_tab, ltext='1000', style=style_bc_dk)
 
-        self.ui.cvo_pushButton_05 = self.wc.setPushbutton('교차 검증 조건 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_29, color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n교차 검증 조건최적화한다.')
-        self.ui.cvo_pushButton_06 = self.wc.setPushbutton('검증 조건 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_30, color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 조건최적화한다.')
-        self.ui.cvo_pushButton_07 = self.wc.setPushbutton('조건 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_31, color=2, tip='학습기간을 선택하여 진행되며\n데이터 전체를 사용하여 조건최적화한다.')
+        self.ui.cvo_pushButton_05 = self.wc.setPushbutton('교차검증 조건 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_17, cmd='최적화OCVC', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n교차 검증 조건최적화한다.')
+        self.ui.cvo_pushButton_06 = self.wc.setPushbutton('검증 조건 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_17, cmd='최적화OCV', color=2, tip='학습기간과 검증기간을 선택하여 진행되며\n검증 조건최적화한다.')
+        self.ui.cvo_pushButton_07 = self.wc.setPushbutton('조건 최적화', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_17, cmd='최적화OC', color=2, tip='학습기간을 선택하여 진행되며\n데이터 전체를 사용하여 조건최적화한다.')
 
         self.ui.cvo_pushButton_08 = self.wc.setPushbutton('예제', box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_07, color=3)
 
@@ -412,11 +425,15 @@ class SetCoinBack:
         self.ui.cvc_labellllll_03.setGeometry(1012, 220, 335, 25)
         self.ui.cvc_comboBoxxx_06.setGeometry(1097, 220, 45, 25)
         self.ui.cvc_comboBoxxx_07.setGeometry(1187, 220, 55, 25)
-        self.ui.cvc_pushButton_05.setGeometry(1247, 220, 100, 25)
+        self.ui.cvc_pushButton_05.setGeometry(1247, 220, 47, 25)
+        self.ui.cvc_pushButton_36.setGeometry(1299, 220, 48, 25)
 
-        self.ui.cvc_pushButton_06.setGeometry(1012, 335, 165, 30)
-        self.ui.cvc_pushButton_07.setGeometry(1012, 370, 165, 30)
-        self.ui.cvc_pushButton_08.setGeometry(1012, 405, 165, 30)
+        self.ui.cvc_pushButton_06.setGeometry(1012, 335, 80, 30)
+        self.ui.cvc_pushButton_07.setGeometry(1012, 370, 80, 30)
+        self.ui.cvc_pushButton_08.setGeometry(1012, 405, 80, 30)
+        self.ui.cvc_pushButton_27.setGeometry(1097, 335, 80, 30)
+        self.ui.cvc_pushButton_28.setGeometry(1097, 370, 80, 30)
+        self.ui.cvc_pushButton_29.setGeometry(1097, 405, 80, 30)
 
         self.ui.cvc_comboBoxxx_08.setGeometry(1012, 513, 165, 30)
         self.ui.cvc_lineEdittt_03.setGeometry(1182, 513, 165, 30)
@@ -430,13 +447,19 @@ class SetCoinBack:
         self.ui.cvc_lineEdittt_05.setGeometry(1012, 478, 165, 30)
         self.ui.cvc_pushButton_14.setGeometry(1182, 478, 165, 30)
 
-        self.ui.cvc_pushButton_15.setGeometry(1012, 335, 165, 30)
-        self.ui.cvc_pushButton_16.setGeometry(1012, 370, 165, 30)
-        self.ui.cvc_pushButton_17.setGeometry(1012, 405, 165, 30)
+        self.ui.cvc_pushButton_15.setGeometry(1012, 335, 80, 30)
+        self.ui.cvc_pushButton_16.setGeometry(1012, 370, 80, 30)
+        self.ui.cvc_pushButton_17.setGeometry(1012, 405, 80, 30)
+        self.ui.cvc_pushButton_30.setGeometry(1097, 335, 80, 30)
+        self.ui.cvc_pushButton_31.setGeometry(1097, 370, 80, 30)
+        self.ui.cvc_pushButton_32.setGeometry(1097, 405, 80, 30)
 
-        self.ui.cvc_pushButton_18.setGeometry(1012, 335, 165, 30)
-        self.ui.cvc_pushButton_19.setGeometry(1012, 370, 165, 30)
-        self.ui.cvc_pushButton_20.setGeometry(1012, 405, 165, 30)
+        self.ui.cvc_pushButton_18.setGeometry(1012, 335, 80, 30)
+        self.ui.cvc_pushButton_19.setGeometry(1012, 370, 80, 30)
+        self.ui.cvc_pushButton_20.setGeometry(1012, 405, 80, 30)
+        self.ui.cvc_pushButton_33.setGeometry(1097, 335, 80, 30)
+        self.ui.cvc_pushButton_34.setGeometry(1097, 370, 80, 30)
+        self.ui.cvc_pushButton_35.setGeometry(1097, 405, 80, 30)
 
         self.ui.cva_pushButton_01.setGeometry(1012, 335, 165, 30)
         self.ui.cva_pushButton_02.setGeometry(1012, 370, 165, 30)

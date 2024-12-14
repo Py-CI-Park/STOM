@@ -223,6 +223,29 @@ class SetDialogEtc:
         self.ui.od_pushButtonnn_07 = self.wc.setPushbutton('매수취소', box=self.ui.od_groupBoxxxxx_01, click=self.ui.odButtonClicked_07)
         self.ui.od_pushButtonnn_08 = self.wc.setPushbutton('매도취소', box=self.ui.od_groupBoxxxxx_01, click=self.ui.odButtonClicked_08)
 
+        self.ui.dialog_optuna = self.wc.setDialog('STOM OPTUNA', tab=self.ui)
+        self.ui.dialog_optuna.geometry().center()
+        self.ui.op_groupBoxxxx_01 = QGroupBox(' ', self.ui.dialog_optuna)
+        text = '''
+        optuna의 기본 최적화 알고리즘은
+        베이지안서치(BaseSampler)입니다.
+        아래 콤보박스에서 다른 최적화
+        알고리즘을 선택할 수 있습니다.'
+        '''
+        self.ui.op_labelllllll_01 = QLabel(text, self.ui.op_groupBoxxxx_01)
+        self.ui.op_labelllllll_01.setAlignment(Qt.AlignCenter)
+        item_list = ['BaseSampler', 'BruteForceSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
+        self.ui.op_comboBoxxxx_01 = self.wc.setCombobox(self.ui.op_groupBoxxxx_01, items=item_list)
+        text = '''
+        optuna로 실행된 최적화의 정보는
+        별도의 데이터베이스에 저장됩니다
+        해당 DB의 정보를 열람하려면
+        아래 버튼을 클릭하십시오.'
+        '''
+        self.ui.op_labelllllll_02 = QLabel(text, self.ui.op_groupBoxxxx_01)
+        self.ui.op_labelllllll_02.setAlignment(Qt.AlignCenter)
+        self.ui.op_pushButtonn_01 = self.wc.setPushbutton('OPTUNA DASHBOARD', box=self.ui.op_groupBoxxxx_01, color=3, click=self.ui.opButtonClicked_01)
+
         self.ui.dialog_pass = self.wc.setDialog('STOM PASSWARD', tab=self.ui)
         self.ui.dialog_pass.geometry().center()
         self.ui.pa_groupBoxxxx_01 = QGroupBox(' ', self.ui.dialog_pass)
@@ -478,6 +501,13 @@ class SetDialogEtc:
         self.ui.od_pushButtonnn_06.setGeometry(115, 220, 100, 30)
         self.ui.od_pushButtonnn_07.setGeometry(10, 255, 100, 30)
         self.ui.od_pushButtonnn_08.setGeometry(115, 255, 100, 30)
+
+        self.ui.dialog_optuna.setFixedSize(220, 220)
+        self.ui.op_groupBoxxxx_01.setGeometry(5, -10, 210, 225)
+        self.ui.op_labelllllll_01.setGeometry(-5, 12, 200, 70)
+        self.ui.op_comboBoxxxx_01.setGeometry(5, 90, 200, 30)
+        self.ui.op_labelllllll_02.setGeometry(-5, 112, 200, 70)
+        self.ui.op_pushButtonn_01.setGeometry(5, 190, 200, 30)
 
         self.ui.dialog_pass.setFixedSize(200, 100)
         self.ui.pa_groupBoxxxx_01.setGeometry(5, -10, 190, 105)

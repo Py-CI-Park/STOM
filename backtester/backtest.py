@@ -152,7 +152,7 @@ class Total:
             self.mq.put('벤치테스트 완료')
         else:
             self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, '', self.day_count)
-            tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd = result
+            tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
             save_time = strf_time('%Y%m%d%H%M%S')
             startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
