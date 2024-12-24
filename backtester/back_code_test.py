@@ -1,5 +1,4 @@
 from traceback import print_exc
-from utility.setting import DICT_SET
 # noinspection PyUnresolvedReferences
 from utility.static import now, now_utc, timedelta_sec
 
@@ -12,8 +11,7 @@ class BackCodeTest:
 
         error = False
         if var is None:
-            for i in range(200):
-                self.vars[i] = 1
+            self.vars = {i: 1 for i in range(200)}
         else:
             try:
                 exec(compile(var, '<string>', 'exec'), None, locals())
@@ -44,13 +42,6 @@ class BackCodeTest:
                 error = True
 
             if not error:
-                self.dict_set    = DICT_SET
-                self.bhogainfo   = {}
-                self.shogainfo   = {}
-                self.dict_signal = {}
-                self.list_buy    = []
-                self.list_sell   = []
-
                 if var is None:
                     self.Test()
                 else:
@@ -316,11 +307,8 @@ class BackCodeTest:
 
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
-        self.bhogainfo = bhogainfo[:self.dict_set['주식매수시장가잔량범위']]
-        self.shogainfo = bhogainfo[:self.dict_set['주식매도시장가잔량범위']]
 
-        시분초, VI아래5호가, 데이터길이, 호가단위, 포지션 = int(str(체결시간)[8:]), 1, 1800, 1, 'LONG'
-        평균값계산틱수 = self.dict_set['주식장초평균값계산틱수'] if 시분초 < self.dict_set['주식장초전략종료시간'] else self.dict_set['주식장중평균값계산틱수']
+        시분초, VI아래5호가, 데이터길이, 호가단위, 포지션, 평균값계산틱수 = int(str(체결시간)[8:]), 1, 1800, 1, 'LONG', 30
         분봉시가, 분봉고가, 분봉저가, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240, 분봉거래대금 = 1, 1, 1, 1., 1., 1., 1., 1., 1., 1
         일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240 = 1., 1., 1., 1., 1., 1.
         수익률, 매입가, 보유수량, 매도수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 1, 1, 1, 1, 1, 0, now(), 0, 1, 0

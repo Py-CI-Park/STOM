@@ -7,9 +7,10 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from traceback import print_exc
+from ui.ui_pattern import get_pattern_setup
 # noinspection PyUnresolvedReferences
 from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetUpbitHogaunit, GetUpbitPgSgSp, \
-    GetPatternSetup, pickle_read
+    pickle_read
 from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_min, dict_order_ratio, \
     DB_COIN_MIN, DB_COIN_DAY, PATTERN_PATH
 
@@ -116,7 +117,7 @@ class StrategyUpbit:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['코인장중매도전략']], '<string>', 'exec')
 
         if self.dict_set['코인장초패턴인식'] and self.dict_set['코인장초매수전략'] in dfp.index:
-            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장초매수전략']])
+            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = get_pattern_setup(dfp['패턴설정'][self.dict_set['코인장초매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장초매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
                 self.pattern_buy1  = pickle_read(f'{file_name}_buy')
@@ -124,7 +125,7 @@ class StrategyUpbit:
                 self.pattern_sell1 = pickle_read(f'{file_name}_sell')
 
         if self.dict_set['코인장중패턴인식'] and self.dict_set['코인장중매수전략'] in dfp.index:
-            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장중매수전략']])
+            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = get_pattern_setup(dfp['패턴설정'][self.dict_set['코인장중매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장중매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
                 self.pattern_buy2  = pickle_read(f'{file_name}_buy')
@@ -742,7 +743,7 @@ class StrategyUpbit:
                         self.dict_hilo[종목코드][1] = 수익률
                 최고수익률, 최저수익률 = self.dict_hilo[종목코드]
             else:
-                수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, now_utc(), 0, 0, 0
+                매수틱번호, 수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, 0, now_utc(), 0, 0, 0
 
             BBT = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분초 < self.dict_set['코인매수금지종료시간'])
             BLK = not self.dict_set['코인매수금지블랙리스트'] or 종목코드 not in self.dict_set['코인블랙리스트']
@@ -757,7 +758,6 @@ class StrategyUpbit:
             D = NIB and self.dict_set['코인매도취소매수시그널'] and not NIS
 
             if BBT and BLK and C20 and (A or (B and C) or C or D):
-                매수 = True
                 매수수량 = 0
 
                 if A or (B and C) or C:
@@ -765,6 +765,7 @@ class StrategyUpbit:
                     매수수량 = round(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100, 8)
 
                 if A or (B and C) or D:
+                    매수 = True
                     if 시분초 < self.dict_set['코인장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
@@ -783,9 +784,12 @@ class StrategyUpbit:
                                 print_exc()
                                 self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2'))
                 elif C:
+                    매수 = False
                     분할매수기준수익률 = round((현재가 / self.dict_buyinfo[종목코드][9] - 1) * 100, 2) if self.dict_set['코인매수분할고정수익률'] else 수익률
-                    if self.dict_set['코인매수분할하방'] and 분할매수기준수익률 < -self.dict_set['코인매수분할하방수익률']:  매수 = True
-                    elif self.dict_set['코인매수분할상방'] and 분할매수기준수익률 > self.dict_set['코인매수분할상방수익률']: 매수 = True
+                    if self.dict_set['코인매수분할하방'] and 분할매수기준수익률 < -self.dict_set['코인매수분할하방수익률']:
+                        매수 = True
+                    elif self.dict_set['코인매수분할상방'] and 분할매수기준수익률 > self.dict_set['코인매수분할상방수익률']:
+                        매수 = True
 
                     if 매수:
                         self.Buy(종목코드, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)

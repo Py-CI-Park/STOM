@@ -3,12 +3,12 @@ import sqlite3
 import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox, QApplication
-from ui.set_style import style_bc_st, style_bc_dk
-from ui.set_text import famous_saying, stock_buy_var, stock_buy_var_, stock_buy1, stock_buy2, stock_buy3, stock_buy4, \
-    stock_buy5, stock_buy6, stock_buy_signal
 from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
 
+from ui.set_style import style_bc_st, style_bc_dk
+from ui.set_text import famous_saying, stock_buy_var, stock_buy_var_, stock_buy1, stock_buy2, stock_buy3, stock_buy4, \
+    stock_buy5, stock_buy6, stock_buy_signal
 
 def svjb_button_clicked_01(ui):
     if ui.ss_textEditttt_01.isVisible():
@@ -28,7 +28,7 @@ def svjb_button_clicked_01(ui):
 def svjb_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.svjb_lineEditt_01.text()
     strategy = ui.ss_textEditttt_01.toPlainText()
-    if 'ui.tickcols' not in strategy:
+    if 'self.tickcols' not in strategy:
         strategy = ui.GetFixStrategy(strategy, '매수')
 
     if strategy_name == '':
@@ -38,7 +38,7 @@ def svjb_button_clicked_02(ui, proc_query, queryQ):
     elif strategy == '':
         QMessageBox.critical(ui, '오류 알림', '매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
-        if 'ui.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
+        if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
             if proc_query.is_alive():
                 queryQ.put(('전략디비', f"DELETE FROM stockbuy WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])

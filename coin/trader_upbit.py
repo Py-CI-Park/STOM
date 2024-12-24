@@ -184,7 +184,7 @@ class TraderUpbit:
         Timer(180, self.ctraderQ.put, args=['프로세스종료']).start()
 
     def UpdateTuple(self, data):
-        if len(data) == 7 or len(data) == 8:
+        if len(data) in (6, 7):
             self.CheckOrder(data)
         elif len(data) == 9:
             self.SendOrder(data)

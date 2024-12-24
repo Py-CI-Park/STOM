@@ -7,9 +7,10 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from traceback import print_exc
+from ui.ui_pattern import get_pattern_setup
 # noinspection PyUnresolvedReferences
 from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetBinanceShortPgSgSp, \
-    GetBinanceLongPgSgSp, GetPatternSetup, pickle_read
+    GetBinanceLongPgSgSp, pickle_read
 from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jgf, columns_gj, dict_min, dict_order_ratio, \
     DB_COIN_MIN, DB_COIN_DAY, PATTERN_PATH
 
@@ -118,7 +119,7 @@ class StrategyBinanceFuture:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['코인장중매도전략']], '<string>', 'exec')
 
         if self.dict_set['코인장초패턴인식'] and self.dict_set['코인장초매수전략'] in dfp.index:
-            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장초매수전략']])
+            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = get_pattern_setup(dfp['패턴설정'][self.dict_set['코인장초매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장초매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
                 self.pattern_buy1  = pickle_read(f'{file_name}_buy')
@@ -126,7 +127,7 @@ class StrategyBinanceFuture:
                 self.pattern_sell1 = pickle_read(f'{file_name}_sell')
 
         if self.dict_set['코인장중패턴인식'] and self.dict_set['코인장중매수전략'] in dfp.index:
-            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장중매수전략']])
+            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = get_pattern_setup(dfp['패턴설정'][self.dict_set['코인장중매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장중매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
                 self.pattern_buy2  = pickle_read(f'{file_name}_buy')
@@ -751,7 +752,7 @@ class StrategyBinanceFuture:
                         self.dict_hilo[종목코드][1] = 수익률
                 최고수익률, 최저수익률 = self.dict_hilo[종목코드]
             else:
-                포지션, 수익금, 수익률, 레버리지, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = None, 0, 0, 1, 0, 0, 0, 0, now(), 0, 0, 0
+                포지션, 매수틱번호, 수익금, 수익률, 레버리지, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = None, 0, 0, 0, 1, 0, 0, 0, 0, now(), 0, 0, 0
 
             BBT  = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분초 < self.dict_set['코인매수금지종료시간'])
             BLK  = not self.dict_set['코인매수금지블랙리스트'] or 종목코드 not in self.dict_set['코인블랙리스트']
@@ -770,14 +771,13 @@ class StrategyBinanceFuture:
             G    = NISS and self.dict_set['코인매도취소매수시그널'] and not NIBS
 
             if BBT and BLK and C20 and (A or B or (C and D) or (C and E) or D or E or F or G):
-                BUY_LONG, SELL_SHORT = True, True
                 매수수량 = 0
-
                 if not (F or G):
                     oc_ratio = dict_order_ratio[self.dict_set['코인매수분할방법']][self.dict_set['코인매수분할횟수']][분할매수횟수]
                     매수수량 = round(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100, self.dict_info[종목코드]['소숫점자리수'])
 
                 if A or B or (C and (D or E)) or F or G:
+                    BUY_LONG, SELL_SHORT = True, True
                     if 시분초 < self.dict_set['코인장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
@@ -796,6 +796,7 @@ class StrategyBinanceFuture:
                                 print_exc()
                                 self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2'))
                 elif D or E:
+                    BUY_LONG, SELL_SHORT = False, False
                     분할매수기준수익률 = round((현재가 / self.dict_buyinfo[종목코드][9] - 1) * 100, 2) if self.dict_set['코인매수분할고정수익률'] else 수익률
                     if D:
                         if self.dict_set['코인매수분할하방'] and 분할매수기준수익률 < -self.dict_set['코인매수분할하방수익률']:
@@ -874,7 +875,7 @@ class StrategyBinanceFuture:
                             BUY_SHORT = True
 
                     if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):
-                        self.Sell(종목코드, 포지션, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
+                        self.Sell(종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
 
         if 종목코드 in self.tuple_gsjm2:
             self.df_gj.loc[종목코드] = 종목코드, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
@@ -960,17 +961,17 @@ class StrategyBinanceFuture:
                 self.dict_sgn_tik[종목코드] = 데이터길이 - 1
                 self.ctraderQ.put((구분, 종목코드, 예상체결가, 매수수량, now(), False))
 
-    def Sell(self, 종목코드, 포지션, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산):
+    def Sell(self, 종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산):
         if self.dict_set['코인장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None and self.pattern_sell1 is not None:
-            pattern = self.GetPattern(종목코드, '매도' if 포지션 == 'LONG' else '매수')
-            if pattern not in (self.pattern_sell1 if 포지션 == 'LONG' else self.pattern_buy1):
+            pattern = self.GetPattern(종목코드, '매도' if SELL_LONG else '매수')
+            if pattern not in (self.pattern_sell1 if SELL_LONG else self.pattern_buy1):
                 return
         elif self.dict_set['코인장중패턴인식'] and self.stg_change and self.pattern_buy2 is not None and self.pattern_sell2 is not None:
-            pattern = self.GetPattern(종목코드, '매도' if 포지션 == 'LONG' else '매수')
-            if pattern not in (self.pattern_sell2 if 포지션 == 'LONG' else self.pattern_buy2):
+            pattern = self.GetPattern(종목코드, '매도' if SELL_LONG else '매수')
+            if pattern not in (self.pattern_sell2 if SELL_LONG else self.pattern_buy2):
                 return
 
-        구분 = 'SELL_LONG' if 포지션 == 'LONG' and SELL_LONG else 'BUY_SHORT'
+        구분 = 'SELL_LONG' if SELL_LONG else 'BUY_SHORT'
         if '지정가' in self.dict_set['코인매도주문구분'] and not 강제청산:
             기준가격 = 현재가
             if self.dict_set['코인매도지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1 if 구분 == 'SELL_LONG' else 매수호가1

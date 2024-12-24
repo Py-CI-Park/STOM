@@ -8,6 +8,7 @@ from backtester.pattern_modeling import PatternModeling
 from backtester.optimiz_conditions import OptimizeConditions
 from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from backtester.optimiz_genetic_algorithm import OptimizeGeneticAlgorithm
+from ui.ui_pattern import get_pattern_text, get_pattern_setup
 from ui.set_style import style_bc_by, style_bc_dk, style_bc_bs
 from ui.set_text import testtext, rwfttext, gaoptext, vedittxt, optitext, condtext, cedittxt, example_finder
 
@@ -654,7 +655,7 @@ def svj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         if buystg == '':
             QMessageBox.critical(ui, '오류 알림', '매수전략을 저장하고 콤보박스에서 선택하십시오.\n')
             return
-        if 'ui.tickcols' not in ui.ss_textEditttt_01.toPlainText():
+        if 'self.tickcols' not in ui.ss_textEditttt_01.toPlainText():
             QMessageBox.critical(ui, '오류 알림', '현재 매수전략이 백파인더용이 아닙니다.\n')
             return
 
@@ -1106,21 +1107,21 @@ def svj_button_clicked_23(ui, windowQ, backQ, totalQ):
             QMessageBox.critical(ui, '오류 알림', '학습할 매도전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
             return
 
-        betting = ui.svjb_lineEditt_04.text()
-        avgtime = ui.svjb_lineEditt_05.text()
-        startday = ui.pt_dateEdittttt_01.date().toString('yyyyMMdd')
-        endday = ui.pt_dateEdittttt_02.date().toString('yyyyMMdd')
+        betting   = ui.svjb_lineEditt_04.text()
+        avgtime   = ui.svjb_lineEditt_05.text()
+        startday  = ui.pt_dateEdittttt_01.date().toString('yyyyMMdd')
+        endday    = ui.pt_dateEdittttt_02.date().toString('yyyyMMdd')
         starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        buystg = ui.svjb_comboBoxx_01.currentText()
-        sellstg = ui.svjs_comboBoxx_01.currentText()
-        multi = int(ui.be_lineEdittttt_04.text())
+        endtime   = ui.svjb_lineEditt_03.text()
+        buystg    = ui.svjb_comboBoxx_01.currentText()
+        sellstg   = ui.svjs_comboBoxx_01.currentText()
+        multi     = int(ui.be_lineEdittttt_04.text())
 
         ui.ClearBacktestQ()
         for bpq in ui.back_pques:
             bpq.put(('백테유형', '백테스트'))
 
-        dict_pattern, dict_pattern_buy, dict_pattern_sell = ui.GetPatternSetup()
+        dict_pattern, dict_pattern_buy, dict_pattern_sell = get_pattern_setup(get_pattern_text(ui))
         backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
                    dict_pattern_buy, dict_pattern_sell))
         ui.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, ui.bact_pques, ui.back_pques, 'S', ui.back_count, multi))

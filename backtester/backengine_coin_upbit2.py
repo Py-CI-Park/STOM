@@ -595,16 +595,20 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
         self.dict_set['코인매도주문구분'] = origin_sell_gubun
 
     def CalculationEyun(self):
-        self.total_count += 1
         _, bp, sp, oc, bc, hp, lp, bi, _, abt, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[self.vars_key].values()
-        sgtg = 0
-        ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
         bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
         sg, pg, pp = GetUpbitPgSgSp(bg, oc * sp)
-        sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
-        abt, bcx = '^'.join(abt), bc - oc == 0
-        data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
-        self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
+
+        if not self.pattern:
+            self.total_count += 1
+            sgtg = 0
+            ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
+            sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
+            abt, bcx = '^'.join(abt), bc - oc == 0
+            data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
+            self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
+            self.sell_count += 1
+
         if pp < 0:
             self.day_info[self.vars_key]['손절횟수'] += 1
             self.day_info[self.vars_key]['손절매도시간'] = timedelta_sec(self.dict_set['코인매수금지손절간격초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
@@ -615,118 +619,3 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
             self.trade_info[self.vars_key]['매도분할횟수'] += 1
         else:
             self.trade_info[self.vars_key] = GetTradeInfo(2)
-        self.sell_count += 1
-
-    def CalculationEyun(self):
-        self.total_count += 1
-        _, bp, sp, oc, bc, hp, lp, bi, _ = self.trade_info[self.vars_key].values()
-        sgtg = 0
-        ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
-        bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
-        sg, pg, pp = GetUpbitPgSgSp(bg, oc * sp)
-        sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
-        abt, bcx = '', True
-        data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
-        if not self.pattern:
-            self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
-        self.sell_count += 1
-        self.trade_info[self.vars_key] = GetTradeInfo(1)
-
-    def PatternModeling(self, gubun):
-        if self.tick_count > self.dict_pattern['인식구간']:
-            last_area_index = self.indexn + self.dict_pattern['조건구간']
-            if last_area_index <= self.last and str(self.index)[:8] == str(self.array_tick[last_area_index, 0])[:8]:
-                self.PatternFind(gubun)
-
-    def PatternFind(self, gubun):
-        curr_price = self.array_tick[self.indexn, 1]
-        high_price = self.array_tick[self.indexn + 1:self.indexn + 1 + self.dict_pattern['조건구간'], 1].max()
-        low_price  = self.array_tick[self.indexn + 1:self.indexn + 1 + self.dict_pattern['조건구간'], 1].min()
-        high_price_per = round((high_price / curr_price - 1) * 100, 2)
-        low_price_per  = round((low_price / curr_price - 1) * 100, 2)
-        if gubun == '매수':
-            if self.dict_pattern['매수조건1'] and high_price_per >= self.dict_pattern['매수조건2']:
-                pattern = self.GetPattern('매수')
-                if pattern not in self.pattern_buy:
-                    self.pattern_buy.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : [{self.code}][{self.index}]'))
-            elif self.dict_pattern['매수조건3'] and curr_price <= low_price:
-                pattern = self.GetPattern('매수')
-                if pattern not in self.pattern_buy:
-                    self.pattern_buy.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : [{self.code}][{self.index}]'))
-        else:
-            if self.dict_pattern['매도조건1'] and low_price_per <= -self.dict_pattern['매도조건2']:
-                pattern = self.GetPattern('매도')
-                if pattern not in self.pattern_sell:
-                    self.pattern_sell.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : [{self.code}][{self.index}]'))
-            elif self.dict_pattern['매도조건3'] and curr_price >= high_price:
-                pattern = self.GetPattern('매도')
-                if pattern not in self.pattern_sell:
-                    self.pattern_sell.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : [{self.code}][{self.index}]'))
-
-    def GetPattern(self, gubun):
-        """
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
-           0      1     2    3     4     5        6         7         8           9          10            11
-        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           12        13        14       15       16        17       18        19       20       21        22       23
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
-           24        25       26       27        28       29        30       31       32        33         34
-        """
-        arry_tick = self.array_tick[self.indexn + 1 - self.dict_pattern['인식구간']:self.indexn + 1, :]
-        pattern = None
-        for factor, unit in self.dict_pattern_buy.items() if gubun == '매수' else self.dict_pattern_sell.items():
-            pattern_ = None
-            if factor == '등락율':
-                pattern_ = arry_tick[:, 5]
-            elif factor == '당일거래대금':
-                pattern_ = arry_tick[:, 6]
-            elif factor == '체결강도':
-                pattern_ = arry_tick[:, 7]
-            elif factor == '초당매수금액':
-                bids     = arry_tick[:, 8]
-                price    = arry_tick[:, 1]
-                pattern_ = bids * price
-            elif factor == '초당매도금액':
-                asks     = arry_tick[:, 9]
-                price    = arry_tick[:, 1]
-                pattern_ = asks * price
-            elif factor == '순매수금액':
-                bids     = arry_tick[:, 8]
-                asks     = arry_tick[:, 9]
-                price    = arry_tick[:, 1]
-                pattern_ = (bids - asks) * price
-            elif factor == '초당거래대금':
-                pattern_ = arry_tick[:, 10]
-            elif factor == '고저평균대비등락율':
-                pattern_ = arry_tick[:, 11]
-            elif factor == '매도1잔량금액':
-                asks1    = arry_tick[:, 28]
-                price    = arry_tick[:, 18]
-                pattern_ = asks1 * price
-            elif factor == '매수1잔량금액':
-                bids1    = arry_tick[:, 29]
-                price    = arry_tick[:, 19]
-                pattern_ = bids1 * price
-            elif factor == '매도총잔량금액':
-                tasks    = arry_tick[:, 12]
-                price    = arry_tick[:, 1]
-                pattern_ = tasks * price
-            elif factor == '매수총잔량금액':
-                tbids    = arry_tick[:, 13]
-                price    = arry_tick[:, 1]
-                pattern_ = tbids * price
-            elif factor == '매도수5호가총금액':
-                t5ab     = arry_tick[:, 34]
-                price    = arry_tick[:, 1]
-                pattern_ = t5ab * price
-            pattern_ = pattern_ * unit
-            pattern_ = pattern_.astype(int)
-            if pattern is None:
-                pattern = pattern_
-            else:
-                pattern = np.r_[pattern, pattern_]
-        return pattern.tolist()

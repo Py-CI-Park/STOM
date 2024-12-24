@@ -337,7 +337,7 @@ class Window(QMainWindow):
     def UpdateCpuper(self):                update_cpuper(self)
     def UpdateDictSet(self):               update_dictset(self, wdzservQ, creceivQ, ctraderQ, cstgQ, chartQ, proc_chart)
     def ChartClear(self):                  chart_clear(self)
-    def ExtendWindo(self):                 extend_window(self)
+    def ExtendWindow(self):                extend_window(self)
     def CalendarClicked(self, gubun):      calendar_clicked(self, gubun)
     def AutoBackSchedule(self, gubun):     auto_back_schedule(self, gubun, soundQ, teleQ)
     def VideoWidgetClose(self, state):     video_widget_close(self, state)
@@ -516,7 +516,7 @@ class Window(QMainWindow):
     # =================================================================================================================
     def Activated_01(self):  activated_01(self)
     def Activated_02(self):  activated_02(self)
-    def oActivated_01(self): oactivated_01(self)
+    def Activated_03(self):  activated_03(self)
     # =================================================================================================================
     def sActivated_01(self): sactivated_01(self)
     def sActivated_02(self): sactivated_02(self)
@@ -547,14 +547,14 @@ class Window(QMainWindow):
     def bActivated_02(self): bactivated_02(self)
     def bActivated_03(self): bactivated_03(self)
     # =================================================================================================================
-    def GetFixStrategy(self, strategy, gubun):     get_fix_strategy(self, strategy, gubun)
-    def GetOptivarsToGavars(self, opti_vars_text): get_optivars_to_gavars(self, opti_vars_text)
-    def GetGavarsToOptivars(self, ga_vars_text):   get_gavars_to_optivars(self, ga_vars_text)
-    def GetStgtxtToVarstxt(self, buystg, sellstg): get_stgtxt_to_varstxt(self, buystg, sellstg)
+    def GetFixStrategy(self, strategy, gubun):     return get_fix_strategy(self, strategy, gubun)
+    def GetOptivarsToGavars(self, opti_vars_text): return get_optivars_to_gavars(self, opti_vars_text)
+    def GetGavarsToOptivars(self, ga_vars_text):   return get_gavars_to_optivars(self, ga_vars_text)
+    def GetStgtxtToVarstxt(self, buystg, sellstg): return get_stgtxt_to_varstxt(self, buystg, sellstg)
     @staticmethod
-    def GetStgtxtSort(buystg, sellstg):            get_stgtxt_sort(buystg, sellstg)
+    def GetStgtxtSort(buystg, sellstg):            return get_stgtxt_sort(buystg, sellstg)
     @staticmethod
-    def GetStgtxtSort2(optivars, gavars):          get_stgtxt_sort2(optivars, gavars)
+    def GetStgtxtSort2(optivars, gavars):          return get_stgtxt_sort2(optivars, gavars)
     # =================================================================================================================
     # =================================================================================================================
     def svjbButtonClicked_01(self): svjb_button_clicked_01(self)
@@ -710,14 +710,15 @@ class Window(QMainWindow):
     def BackTestengineShow(self, gubun):  backtest_engine_show(self, gubun)
     def StartBacktestEngine(self, gubun): start_backtest_engine(self, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ)
     # =================================================================================================================
-    def BackCodeTest1(self, stg_code):            back_code_test1(self, stg_code, testQ)
-    def BackCodeTest2(self, vars_code, ga=False): back_code_test2(self, vars_code, testQ, ga)
-    def BackCodeTest3(self, gubun, conds_code):   back_code_test3(self, gubun, conds_code, testQ)
     @staticmethod
-    def BackCodeTestWait(gubun):                  back_code_test_wait(gubun, testQ)
+    def BackCodeTest1(stg_code):            return back_code_test1(stg_code, testQ)
     @staticmethod
-    def ClearBacktestQ():                         clear_backtestQ(backQ, totalQ)
-    def BacktestProcessKill(self):                backtest_process_kill(self, totalQ)
+    def BackCodeTest2(vars_code, ga=False): return back_code_test2(vars_code, testQ, ga)
+    @staticmethod
+    def BackCodeTest3(gubun, conds_code):   return back_code_test3(gubun, conds_code, testQ)
+    @staticmethod
+    def ClearBacktestQ():                   clear_backtestQ(backQ, totalQ)
+    def BacktestProcessKill(self):          backtest_process_kill(self, totalQ)
     # =================================================================================================================
     def lvButtonClicked_01(self):       lvbutton_clicked_01(self)
     def lvButtonClicked_02(self):       lvbutton_clicked_02(self)

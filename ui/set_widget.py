@@ -198,7 +198,9 @@ class WidgetCreater:
         elif addday is not None:
             qdate = QDate.currentDate().addDays(addday)
             qweek = qdate.dayOfWeek()
-            if qweek != 1:
+            if qweek < 5:
+                qdate = qdate.addDays(-6 - qweek)
+            else:
                 qdate = qdate.addDays(1 - qweek)
         else:
             qdate = QDate.currentDate()

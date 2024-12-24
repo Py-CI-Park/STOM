@@ -3,13 +3,13 @@ import sqlite3
 import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox, QApplication
+from utility.setting import DB_STRATEGY
+from utility.static import text_not_in_special_characters
 from ui.set_text import famous_saying, example_opti_vars, example_vars, example_buyconds, example_sellconds, \
     example_coin_buy, example_coin_future_buy, example_coin_sell, example_coin_future_sell, example_coinopti_buy1, \
     example_coinopti_future_buy1, example_coinopti_buy2, example_coinopti_future_buy2, example_coinopti_sell1, \
     example_coinopti_future_sell1, example_coinopti_sell2, example_coinopti_future_sell2, example_opti_future_vars, \
     example_future_vars, example_future_buyconds, example_future_sellconds
-from utility.setting import DB_STRATEGY
-from utility.static import text_not_in_special_characters
 
 
 def cvc_button_clicked_01(ui):
@@ -39,7 +39,7 @@ def cvc_button_clicked_02(ui, proc_query, queryQ):
         elif strategy == '':
             QMessageBox.critical(ui, '오류 알림', '최적화 매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if 'ui.tickcols' in strategy or (
+            if 'self.tickcols' in strategy or (
                     QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
                 con = sqlite3.connect(DB_STRATEGY)
                 df = pd.read_sql(f"SELECT * FROM coinoptibuy WHERE `index` = '{strategy_name}'", con)
@@ -158,7 +158,7 @@ def cvc_button_clicked_06(ui, proc_query, queryQ):
         elif strategy == '':
             QMessageBox.critical(ui, '오류 알림', '최적화 매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
-            if 'ui.tickcols' in strategy or (
+            if 'self.tickcols' in strategy or (
                     QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
                 if proc_query.is_alive():
                     queryQ.put(('전략디비', f"DELETE FROM coinoptisell WHERE `index` = '{strategy_name}'"))
@@ -218,9 +218,11 @@ def cvc_button_clicked_08(ui, proc_query, queryQ):
     con.close()
 
     try:
+        vars_ = {}
+        opt   = opt.replace('self.vars', 'vars_')
         exec(compile(opt, '<string>', 'exec'), None, locals())
-        for i in range(len(ui.vars)):
-            stg = stg.replace(f'ui.vars[{i}]', f'{ui.vars[i][1]}')
+        for i in range(len(vars_)):
+            stg = stg.replace(f'self.vars[{i}]', f'{vars_[i][1]}')
     except Exception as e:
         QMessageBox.critical(ui, '오류 알림', f'{e}')
         return
@@ -251,9 +253,11 @@ def cvc_button_clicked_09(ui, proc_query, queryQ):
     con.close()
 
     try:
+        vars_ = {}
+        opt   = opt.replace('self.vars', 'vars_')
         exec(compile(opt, '<string>', 'exec'), None, locals())
-        for i in range(len(ui.vars)):
-            stg = stg.replace(f'ui.vars[{i}]', f'{ui.vars[i][1]}')
+        for i in range(len(vars_)):
+            stg = stg.replace(f'self.vars[{i}]', f'{vars_[i][1]}')
     except Exception as e:
         QMessageBox.critical(ui, '오류 알림', f'{e}')
         return

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMessageBox
+from traceback import print_exc
 from ui.set_text import stock_buy_signal, coin_buy_signal, coin_future_buy_signal, stock_sell_signal, coin_sell_signal, \
     coin_future_sell_signal
 
@@ -8,7 +8,7 @@ def get_fix_strategy(ui, strategy, gubun):
         if ui.focusWidget() in (ui.svjb_pushButon_02, ui.svc_pushButton_02, ui.ss_textEditttt_01, ui.ss_textEditttt_03, ui.ss_textEditttt_07):
             if '\nif 매수:' in strategy:
                 strategy = strategy.split('\nif 매수:')[0] + stock_buy_signal
-            elif 'ui.tickdata' not in strategy and stock_buy_signal not in strategy:
+            elif 'self.tickdata' not in strategy and stock_buy_signal not in strategy:
                 strategy += '\n' + stock_buy_signal
         else:
             if ui.dict_set['거래소'] == '업비트':
@@ -25,7 +25,7 @@ def get_fix_strategy(ui, strategy, gubun):
         if ui.focusWidget() in (ui.svjs_pushButon_02, ui.svc_pushButton_10, ui.ss_textEditttt_02, ui.ss_textEditttt_04, ui.ss_textEditttt_08):
             if '\nif 매도:' in strategy:
                 strategy = strategy.split('\nif 매도:')[0] + stock_sell_signal
-            elif 'ui.tickdata' not in strategy and stock_sell_signal not in strategy:
+            elif 'self.tickdata' not in strategy and stock_sell_signal not in strategy:
                 strategy += '\n' + stock_sell_signal
         else:
             if ui.dict_set['거래소'] == '업비트':
@@ -45,12 +45,13 @@ def get_fix_strategy(ui, strategy, gubun):
 def get_optivars_to_gavars(ui, opti_vars_text):
     ga_vars_text = ''
     try:
-        ui.vars = {}
+        vars_ = {}
+        opti_vars_text = opti_vars_text.replace('self.vars', 'vars_')
         exec(compile(opti_vars_text, '<string>', 'exec'), None, locals())
-        for i in range(len(ui.vars)):
-            ga_vars_text = f'{ga_vars_text}ui.vars[{i}] = [['
-            vars_start, vars_last, vars_gap = ui.vars[i][0]
-            vars_high = ui.vars[i][1]
+        for i in range(len(vars_)):
+            ga_vars_text = f'{ga_vars_text}self.vars[{i}] = [['
+            vars_start, vars_last, vars_gap = vars_[i][0]
+            vars_high = vars_[i][1]
             vars_curr = vars_start
             if vars_start == vars_last:
                 ga_vars_text = f'{ga_vars_text}{vars_curr}], {vars_curr}]\n'
@@ -59,17 +60,17 @@ def get_optivars_to_gavars(ui, opti_vars_text):
                     ga_vars_text = f'{ga_vars_text}{vars_curr}, '
                     vars_curr += vars_gap
                     if vars_gap < 0:
-                        vars_curr = round(vars_curr, 1)
+                        vars_curr = round(vars_curr, 2)
                 ga_vars_text = f'{ga_vars_text[:-2]}], {vars_high}]\n'
             else:
                 while vars_curr >= vars_last:
                     ga_vars_text = f'{ga_vars_text}{vars_curr}, '
                     vars_curr += vars_gap
                     if vars_gap < 0:
-                        vars_curr = round(vars_curr, 1)
+                        vars_curr = round(vars_curr, 2)
                 ga_vars_text = f'{ga_vars_text[:-2]}], {vars_high}]\n'
-    except Exception as e:
-        QMessageBox.critical(ui, '오류 알림', f'{e}')
+    except:
+        print_exc()
 
     return ga_vars_text[:-1]
 
@@ -77,29 +78,23 @@ def get_optivars_to_gavars(ui, opti_vars_text):
 def get_gavars_to_optivars(ui, ga_vars_text):
     opti_vars_text = ''
     try:
-        ui.vars = {}
+        vars_ = {}
+        ga_vars_text = ga_vars_text.replace('self.vars', 'vars_')
         exec(compile(ga_vars_text, '<string>', 'exec'), None, locals())
-        for i in range(len(ui.vars)):
-            if len(ui.vars[i][0]) == 1:
-                vars_high = ui.vars[i][1]
-                vars_gap_ = 0
+        for i in range(len(vars_)):
+            if len(vars_[i][0]) == 1:
+                vars_high  = vars_[i][1]
+                vars_gap   = 0
                 vars_start = vars_high
-                vars_end = vars_high
+                vars_end   = vars_high
             else:
-                vars_high, vars_gap = ui.vars[i][1], ui.vars[i][0][1] - ui.vars[i][0][0]
-                if type(vars_gap) == float:
-                    vars_gap = round(vars_gap, 1)
-                if vars_gap > 10:
-                    vars_gap_ = int(vars_gap / 5)
-                    vars_start = vars_high - vars_gap + vars_gap_
-                    vars_end = vars_high + vars_gap - vars_gap_
-                else:
-                    vars_gap_ = round(ui.vars[i][0][1] - ui.vars[i][0][0], 1)
-                    vars_start = ui.vars[i][0][0]
-                    vars_end = ui.vars[i][0][-1]
-            opti_vars_text = f'{opti_vars_text}ui.vars[{i}] = [[{vars_start}, {vars_end}, {vars_gap_}], {vars_high}]\n'
-    except Exception as e:
-        QMessageBox.critical(ui, '오류 알림', f'{e}')
+                vars_high, vars_gap = vars_[i][1], vars_[i][0][1] - vars_[i][0][0]
+                if type(vars_gap) == float: vars_gap = round(vars_gap, 2)
+                vars_start = vars_[i][0][0]
+                vars_end   = vars_[i][0][-1]
+            opti_vars_text = f'{opti_vars_text}vars_[{i}] = [[{vars_start}, {vars_end}, {vars_gap}], {vars_high}]\n'
+    except:
+        print_exc()
 
     return opti_vars_text[:-1]
 
@@ -115,7 +110,7 @@ def get_stgtxt_to_varstxt(ui, buystg, sellstg):
                     for text in line:
                         buystg_str += text
                         if buystg_str[-2:] == '변수':
-                            buystg_str = buystg_str.replace('변수', f'ui.vars[{cnt}]')
+                            buystg_str = buystg_str.replace('변수', f'self.vars[{cnt}]')
                             cnt += 1
                     buystg_str += '\n'
                 else:
@@ -127,7 +122,7 @@ def get_stgtxt_to_varstxt(ui, buystg, sellstg):
                     for text in line:
                         sellstg_str += text
                         if sellstg_str[-2:] == '변수':
-                            sellstg_str = sellstg_str.replace('변수', f'ui.vars[{cnt}]')
+                            sellstg_str = sellstg_str.replace('변수', f'self.vars[{cnt}]')
                             cnt += 1
                     sellstg_str += '\n'
                 else:
@@ -140,7 +135,7 @@ def get_stgtxt_to_varstxt(ui, buystg, sellstg):
                     for text in line:
                         sellstg_str += text
                         if sellstg_str[-2:] == '변수':
-                            sellstg_str = sellstg_str.replace('변수', f'ui.vars[{cnt}]')
+                            sellstg_str = sellstg_str.replace('변수', f'self.vars[{cnt}]')
                             cnt += 1
                     sellstg_str += '\n'
                 else:
@@ -152,7 +147,7 @@ def get_stgtxt_to_varstxt(ui, buystg, sellstg):
                     for text in line:
                         buystg_str += text
                         if buystg_str[-2:] == '변수':
-                            buystg_str = buystg_str.replace('변수', f'ui.vars[{cnt}]')
+                            buystg_str = buystg_str.replace('변수', f'self.vars[{cnt}]')
                             cnt += 1
                     buystg_str += '\n'
                 else:
@@ -162,15 +157,15 @@ def get_stgtxt_to_varstxt(ui, buystg, sellstg):
 
 def get_stgtxt_sort(buystg, sellstg):
     buystg_str, sellstg_str = '', ''
-    if buystg != '' and sellstg != '' and 'ui.vars' in buystg and 'ui.vars' in sellstg:
-        buy_num  = int(buystg.split('ui.vars[')[1].split(']')[0])
-        sell_num = int(sellstg.split('ui.vars[')[1].split(']')[0])
+    if buystg != '' and sellstg != '' and 'self.vars' in buystg and 'self.vars' in sellstg:
+        buy_num  = int(buystg.split('self.vars[')[1].split(']')[0])
+        sell_num = int(sellstg.split('self.vars[')[1].split(']')[0])
         cnt      = 1
         buystg   = buystg.split('\n')
         sellstg  = sellstg.split('\n')
         if buy_num < sell_num:
             for line in buystg:
-                if 'ui.vars' in line and '#' not in line:
+                if 'self.vars' in line and '#' not in line:
                     str_pass = False
                     for text in line:
                         if str_pass:
@@ -189,7 +184,7 @@ def get_stgtxt_sort(buystg, sellstg):
                 else:
                     buystg_str += line + '\n'
             for line in sellstg:
-                if 'ui.vars' in line and '#' not in line:
+                if 'self.vars' in line and '#' not in line:
                     str_pass = False
                     for text in line:
                         if str_pass:
@@ -209,7 +204,7 @@ def get_stgtxt_sort(buystg, sellstg):
                     sellstg_str += line + '\n'
         else:
             for line in sellstg:
-                if 'ui.vars' in line and '#' not in line:
+                if 'self.vars' in line and '#' not in line:
                     str_pass = False
                     for text in line:
                         if str_pass:
@@ -228,7 +223,7 @@ def get_stgtxt_sort(buystg, sellstg):
                 else:
                     sellstg_str += line + '\n'
             for line in buystg:
-                if 'ui.vars' in line and '#' not in line:
+                if 'self.vars' in line and '#' not in line:
                     str_pass = False
                     for text in line:
                         if str_pass:
@@ -251,11 +246,11 @@ def get_stgtxt_sort(buystg, sellstg):
 
 def get_stgtxt_sort2(optivars, gavars):
     optivars_str, gavars_str = '', ''
-    if optivars != '' and 'ui.vars' in optivars:
+    if optivars != '' and 'self.vars' in optivars:
         cnt = 0
         optivars = optivars.split('\n')
         for line in optivars:
-            if 'ui.vars' in line and '#' not in line:
+            if 'self.vars' in line and '#' not in line:
                 str_pass = False
                 for text in line:
                     if str_pass:
@@ -273,11 +268,11 @@ def get_stgtxt_sort2(optivars, gavars):
                 optivars_str += '\n'
             else:
                 optivars_str += line + '\n'
-    if gavars != '' and 'ui.vars' in gavars:
+    if gavars != '' and 'self.vars' in gavars:
         cnt = 0
         gavars = gavars.split('\n')
         for line in gavars:
-            if 'ui.vars' in line and '#' not in line:
+            if 'self.vars' in line and '#' not in line:
                 str_pass = False
                 for text in line:
                     if str_pass:

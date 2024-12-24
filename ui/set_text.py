@@ -430,7 +430,7 @@ if BUY_LONG or SELL_SHORT:
 
 coin_future_sell_signal = '''
 if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):
-    self.Sell(종목코드, 포지션, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)'''
+    self.Sell(종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)'''
 
 example_stock_buy = '''if not (3 <= 등락율 <= 25):
     매수 = False
@@ -586,7 +586,7 @@ if 수익률 <= -2 or 수익률 >= 3:
     BUY_SHORT = True
 
 if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):
-    self.Sell(종목코드, 포지션, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)'''
+    self.Sell(종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)'''
 
 example_coinopti_future_buy1 = '''# 최적화할 값들을 self.vars[1] 형태로 변경해야합니다.
 # 최적화할 변수들을 모두 "변수"로 변경하고
@@ -643,7 +643,7 @@ if 수익률 <= -self.vars[9] or 수익률 >= self.vars[10]:
     BUY_SHORT = True
 
 if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):
-    self.Sell(종목코드, 포지션, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)'''
+    self.Sell(종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)'''
 
 example_finder = '''# 탐색틱수에 현재틱 이후의 범위를 입력하십시오.
 # 입력된 범위내 최고현재가의 현재가대비등락율이 설정한만큼 상승했을 경우를 탐색합니다.

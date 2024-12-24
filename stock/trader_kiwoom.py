@@ -138,7 +138,7 @@ class TraderKiwoom:
         self.kwzservQ.put(('tele', text))
 
     def UpdateTuple(self, data):
-        if len(data) == 7 or len(data) == 8:
+        if len(data) in (7, 8):
             self.CheckOrder(data)
         elif len(data) == 2:
             if type(data[1]) == int:

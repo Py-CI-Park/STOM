@@ -266,7 +266,7 @@ class TraderBinanceFuture:
         time.sleep(3)
 
     def UpdateTuple(self, data):
-        if len(data) == 7 or len(data) == 8:
+        if len(data) in (6, 7):
             self.CheckOrder(data)
         elif len(data) == 9:
             self.SendOrder(data)

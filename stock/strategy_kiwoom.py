@@ -7,11 +7,12 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from traceback import print_exc
+from ui.ui_pattern import get_pattern_setup
 from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK, \
     PATTERN_PATH
 # noinspection PyUnresolvedReferences
 from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, \
-    GetHogaunit, GetPatternSetup, pickle_read
+    GetHogaunit, pickle_read
 
 
 class StrategyKiwoom:
@@ -118,7 +119,7 @@ class StrategyKiwoom:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['주식장중매도전략']], '<string>', 'exec')
 
         if self.dict_set['주식장초패턴인식'] and self.dict_set['주식장초매수전략'] in dfp.index:
-            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = GetPatternSetup(dfp['패턴설정'][self.dict_set['주식장초매수전략']])
+            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = get_pattern_setup(dfp['패턴설정'][self.dict_set['주식장초매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_stock_{self.dict_set['주식장초매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
                 self.pattern_buy1  = pickle_read(f'{file_name}_buy')
@@ -126,7 +127,7 @@ class StrategyKiwoom:
                 self.pattern_sell1 = pickle_read(f'{file_name}_sell')
 
         if self.dict_set['주식장중패턴인식'] and self.dict_set['주식장중매수전략'] in dfp.index:
-            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = GetPatternSetup(dfp['패턴설정'][self.dict_set['주식장중매수전략']])
+            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = get_pattern_setup(dfp['패턴설정'][self.dict_set['주식장중매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_stock_{self.dict_set['주식장중매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
                 self.pattern_buy2  = pickle_read(f'{file_name}_buy')
@@ -540,7 +541,6 @@ class StrategyKiwoom:
             D = NIB and self.dict_set['주식매도취소매수시그널'] and not NIS
 
             if BBT and BLK and (A or (B and C) or C or D):
-                매수 = True
                 매수수량 = 0
 
                 if A or (B and C) or C:
@@ -548,6 +548,7 @@ class StrategyKiwoom:
                     매수수량 = int(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100)
 
                 if A or (B and C) or D:
+                    매수 = True
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
@@ -566,6 +567,7 @@ class StrategyKiwoom:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2')))
                 elif C:
+                    매수 = False
                     분할매수기준수익률 = round((현재가 / 현재가N(-1) - 1) * 100, 2) if self.dict_set['주식매수분할고정수익률'] else 수익률
                     if self.dict_set['주식매수분할하방'] and 분할매수기준수익률 < -self.dict_set['주식매수분할하방수익률']:
                         매수 = True

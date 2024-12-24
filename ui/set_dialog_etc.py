@@ -208,7 +208,7 @@ class SetDialogEtc:
 
         self.ui.od_groupBoxxxxx_01 = QGroupBox('', self.ui.dialog_order)
         self.ui.od_labellllllll_01 = QLabel('주문종목명', self.ui.od_groupBoxxxxx_01)
-        self.ui.od_comboBoxxxxx_01 = self.wc.setCombobox(self.ui.od_groupBoxxxxx_01, activated=self.ui.oActivated_01)
+        self.ui.od_comboBoxxxxx_01 = self.wc.setCombobox(self.ui.od_groupBoxxxxx_01, activated=self.ui.Activated_03)
         self.ui.od_labellllllll_02 = QLabel('주문유형', self.ui.od_groupBoxxxxx_01)
         self.ui.od_comboBoxxxxx_02 = self.wc.setCombobox(self.ui.od_groupBoxxxxx_01, items=['지정가', '시장가', '최유리지정가', '최우선지정가', '지정가IOC', '시장가IOC', '최유리IOC', '지정가FOK', '시장가FOK', '최유리FOK'])
         self.ui.od_labellllllll_03 = QLabel('주문가격', self.ui.od_groupBoxxxxx_01)
@@ -649,7 +649,7 @@ class SetDialogEtc:
         self.ui.dialog_pattern.setFixedSize(495, 765)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
             try:
-                self.ui.dialog_order.move(self.ui.dict_set['창위치'][26], self.ui.dict_set['창위치'][27])
+                self.ui.dialog_pattern.move(self.ui.dict_set['창위치'][26], self.ui.dict_set['창위치'][27])
             except:
                 pass
         self.ui.pt_groupBoxxxxx_01.setGeometry(5, 10, 485, 240)

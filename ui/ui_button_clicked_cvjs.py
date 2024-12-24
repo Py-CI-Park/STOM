@@ -3,11 +3,11 @@ import sqlite3
 import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox, QApplication
+from utility.setting import DB_STRATEGY
+from utility.static import text_not_in_special_characters
 from ui.set_style import style_bc_st, style_bc_dk
 from ui.set_text import famous_saying, coin_sell_var, coin_future_sell_var, coin_sell1, coin_sell2, coin_sell3, \
     coin_sell4, coin_sell5, coin_sell6, coin_sell7, coin_sell8, coin_sell_signal, coin_future_sell_signal
-from utility.setting import DB_STRATEGY
-from utility.static import text_not_in_special_characters
 
 
 def cvjs_button_clicked_01(ui):
@@ -37,7 +37,7 @@ def cvjs_button_clicked_02(ui, proc_query, queryQ):
     elif strategy == '':
         QMessageBox.critical(ui, '오류 알림', '매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
-        if 'ui.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(
+        if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(
                 strategy):
             if proc_query.is_alive():
                 queryQ.put(('전략디비', f"DELETE FROM coinsell WHERE `index` = '{strategy_name}'"))

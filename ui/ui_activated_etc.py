@@ -35,7 +35,7 @@ def activated_02(ui):
     name = ui.sj_set_comBoxx_01.currentText()
     ui.sj_set_liEditt_01.setText(name)
 
-def oactivated_01(ui):
+def activated_03(ui):
     name = ui.od_comboBoxxxxx_01.currentText()
     ui.od_comboBoxxxxx_02.clear()
     if 'KRW' in name:

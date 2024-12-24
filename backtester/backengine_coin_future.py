@@ -680,7 +680,7 @@ class CoinFutureBackEngine:
                         except:
                             continue
 
-                        self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
+                        self.trade_info[j]['주문수량'] = round(self.betting / 현재가, 8)
                         BUY_LONG, SELL_SHORT = True, True
                         if self.back_type != '조건최적화':
                             exec(self.buystg, None, locals())
@@ -805,22 +805,23 @@ class CoinFutureBackEngine:
                 self.CalculationEyun()
 
     def CalculationEyun(self):
-        self.total_count += 1
-        _, bp, sp, oc, bc, hp, lp, bi, _ = self.trade_info[self.vars_key].values()
-        ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
-        bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
-        if self.trade_info[self.vars_key]['보유중'] == 1:
-            ps = 'LONG'
-            sg, pg, pp = GetBinanceLongPgSgSp(bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
-        else:
-            ps = 'SHORT'
-            sg, pg, pp = GetBinanceShortPgSgSp(bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
-        sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
-        abt, bcx = '', True
-        data = ('백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
         if not self.pattern:
+            self.total_count += 1
+            _, bp, sp, oc, bc, hp, lp, bi, _ = self.trade_info[self.vars_key].values()
+            ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
+            bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
+            if self.trade_info[self.vars_key]['보유중'] == 1:
+                ps = 'LONG'
+                sg, pg, pp = GetBinanceLongPgSgSp(bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
+            else:
+                ps = 'SHORT'
+                sg, pg, pp = GetBinanceShortPgSgSp(bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
+            sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
+            abt, bcx = '', True
+            data = ('백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
             self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
-        self.sell_count += 1
+            self.sell_count += 1
+
         self.trade_info[self.vars_key] = GetTradeInfo(1)
 
     def PatternModeling(self, gubun):
@@ -840,23 +841,23 @@ class CoinFutureBackEngine:
                 pattern = self.GetPattern('매수')
                 if pattern not in self.pattern_buy:
                     self.pattern_buy.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : [{self.code}][{self.index}]'))
+                    self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : {pattern}'))
             elif self.dict_pattern['매수조건3'] and curr_price <= low_price:
                 pattern = self.GetPattern('매수')
                 if pattern not in self.pattern_buy:
                     self.pattern_buy.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : [{self.code}][{self.index}]'))
+                    self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : {pattern}'))
         else:
             if self.dict_pattern['매도조건1'] and low_price_per <= -self.dict_pattern['매도조건2']:
                 pattern = self.GetPattern('매도')
                 if pattern not in self.pattern_sell:
                     self.pattern_sell.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : [{self.code}][{self.index}]'))
+                    self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : {pattern}'))
             elif self.dict_pattern['매도조건3'] and curr_price >= high_price:
                 pattern = self.GetPattern('매도')
                 if pattern not in self.pattern_sell:
                     self.pattern_sell.append(pattern)
-                self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : [{self.code}][{self.index}]'))
+                    self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : {pattern}'))
 
     def GetPattern(self, gubun):
         """

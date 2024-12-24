@@ -378,17 +378,17 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         windowQ.put((ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'))
     windowQ.put((ui_num['백테엔진'], '백테엔진 준비 완료'))
 
-def back_code_test1(ui, stg_code, testQ):
+def back_code_test1(stg_code, testQ):
     print('전략 코드 오류 테스트 시작')
     Process(target=BackCodeTest, args=(testQ, stg_code), daemon=True).start()
-    return ui.BackCodeTestWait('전략')
+    return back_code_test_wait('전략', testQ)
 
-def back_code_test2(ui, vars_code, testQ, ga):
+def back_code_test2(vars_code, testQ, ga):
     print('범위 코드 오류 테스트 시작')
     Process(target=BackCodeTest, args=(testQ, '', vars_code, ga), daemon=True).start()
-    return ui.BackCodeTestWait('범위')
+    return back_code_test_wait('범위', testQ)
 
-def back_code_test3(ui, gubun, conds_code, testQ):
+def back_code_test3(gubun, conds_code, testQ):
     print('조건 코드 오류 테스트 시작')
     conds_code = conds_code.split('\n')
     conds_code = [x for x in conds_code if x != '' and '#' not in x]
@@ -397,7 +397,7 @@ def back_code_test3(ui, gubun, conds_code, testQ):
     else:
         conds_code = 'if ' + ':\n    매도 = True\nelif '.join(conds_code) + ':\n    매도 = True'
     Process(target=BackCodeTest, args=(testQ, conds_code), daemon=True).start()
-    return ui.BackCodeTestWait('조건')
+    return back_code_test_wait('조건', testQ)
 
 def back_code_test_wait(gubun, testQ):
     test_ok   = False
@@ -430,6 +430,8 @@ def backtest_process_kill(ui, totalQ):
     qtest_qwait(3)
     if ui.proc_backtester_bb is not None and   ui.proc_backtester_bb.is_alive():   ui.proc_backtester_bb.kill()
     if ui.proc_backtester_bf is not None and   ui.proc_backtester_bf.is_alive():   ui.proc_backtester_bf.kill()
+    if ui.proc_backtester_bc is not None and   ui.proc_backtester_bc.is_alive():   ui.proc_backtester_bc.kill()
+    if ui.proc_backtester_bp is not None and   ui.proc_backtester_bp.is_alive():   ui.proc_backtester_bp.kill()
     if ui.proc_backtester_o is not None and    ui.proc_backtester_o.is_alive():    ui.proc_backtester_o.kill()
     if ui.proc_backtester_ov is not None and   ui.proc_backtester_ov.is_alive():   ui.proc_backtester_ov.kill()
     if ui.proc_backtester_ovc is not None and  ui.proc_backtester_ovc.is_alive():  ui.proc_backtester_ovc.kill()

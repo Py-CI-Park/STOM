@@ -21,7 +21,6 @@ def GetPortNumber():
     port_number += run_count * 10
     return port_number
 
-
 def win_proc_alive(name):
     alive = False
     for proc in psutil.process_iter():
@@ -29,11 +28,9 @@ def win_proc_alive(name):
             alive = True
     return alive
 
-
 def opstarter_kill():
     if win_proc_alive('opstarter'):
         os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
-
 
 def array_to_bytes(x: np.ndarray) -> bytes:
     np_bytes = BytesIO()
@@ -41,16 +38,13 @@ def array_to_bytes(x: np.ndarray) -> bytes:
     np.save(np_bytes, x, allow_pickle=True)
     return np_bytes.getvalue()
 
-
 def bytes_to_array(b: bytes) -> np.ndarray:
     np_bytes = BytesIO(b)
     return np.load(np_bytes, allow_pickle=True)
 
-
 def pickle_write(file, data):
     with open(f'{file}.pkl', "wb") as f:
         _pickle.dump(data, f, protocol=-1)
-
 
 def pickle_read(file):
     data = None
@@ -59,17 +53,14 @@ def pickle_read(file):
             data = _pickle.load(f)
     return data
 
-
 def pickle_delete(file):
     if os.path.isfile(file):
         os.remove(file)
-
 
 def thread_decorator(func):
     def wrapper(*args):
         Thread(target=func, args=args, daemon=True).start()
     return wrapper
-
 
 def error_decorator(func):
     def wrapper(*args):
@@ -79,35 +70,27 @@ def error_decorator(func):
             print_exc()
     return wrapper
 
-
 def qtest_qwait(sec):
     # noinspection PyArgumentList
     QTest.qWait(int(sec * 1000))
 
-
 def now():
     return datetime.datetime.now()
-
 
 def now_utc():
     return timedelta_sec(-32400)
 
-
 def int_hms():
     return int(strf_time('%H%M%S'))
-
 
 def int_hms_utc():
     return int(strf_time('%H%M%S', timedelta_sec(-32400)))
 
-
 def timedelta_sec(second, std_time=None):
     return now() + datetime.timedelta(seconds=float(second)) if std_time is None else std_time + datetime.timedelta(seconds=float(second))
 
-
 def timedelta_day(day, std_time=None):
     return now() + datetime.timedelta(days=float(day)) if std_time is None else std_time + datetime.timedelta(days=float(day))
-
 
 def strp_time(timetype, str_time):
     if timetype == '%Y%m%d%H%M%S':
@@ -118,14 +101,11 @@ def strp_time(timetype, str_time):
         str_time = f'2000-01-01 {str_time[:2]}:{str_time[2:4]}:{str_time[4:6]}'
     return datetime.datetime.fromisoformat(str_time)
 
-
 def strf_time(timetype, std_time=None):
     return now().strftime(timetype) if std_time is None else std_time.strftime(timetype)
 
-
 def from_timestamp(time):
     return datetime.datetime.fromtimestamp(time)
-
 
 def change_format(text, dotdowndel=False, dotdown4=False, dotdown8=False):
     text = str(text)
@@ -142,12 +122,10 @@ def change_format(text, dotdowndel=False, dotdown4=False, dotdown8=False):
             format_data = f'{float(text):,.2f}'
     return format_data
 
-
 def floor_down(float_, decimal_point):
     float_ = int(float_ * (1 / decimal_point))
     float_ = float_ * decimal_point
     return float_
-
 
 def comma2int(t):
     if '.' in t: t = t.split('.')[0]
@@ -156,12 +134,10 @@ def comma2int(t):
     if ',' in t: t = t.replace(',', '')
     return int(t)
 
-
 def comma2float(t):
     if ' ' in t: t = t.replace(' ', '')
     if ',' in t: t = t.replace(',', '')
     return float(t)
-
 
 def write_key():
     key = str(Fernet.generate_key(), 'utf-8')
@@ -171,34 +147,28 @@ def write_key():
     reg.SetValueEx(openkey, 'EN_KEY', 0, reg.REG_SZ, key)
     reg.CloseKey(openkey)
 
-
 def read_key():
     openkey = reg.OpenKey(reg.HKEY_LOCAL_MACHINE, r'SOFTWARE\WOW6432Node\STOM\EN_KEY', 0, reg.KEY_ALL_ACCESS)
     key, _  = reg.QueryValueEx(openkey, 'EN_KEY')
     reg.CloseKey(openkey)
     return key
 
-
 def en_text(key, text):
     fernet = Fernet(bytes(key, 'utf-8'))
     return str(fernet.encrypt(bytes(text, 'utf-8')), 'utf-8')
-
 
 def de_text(key, text):
     fernet = Fernet(bytes(key, 'utf-8'))
     return str(fernet.decrypt(bytes(text, 'utf-8')), 'utf-8')
 
-
 def factorial(x):
     return 1 if x <= 1 else factorial(x - 1) * x
-
 
 def text_not_in_special_characters(t):
     t = t.replace(' ', '')
     if t == re.findall(r'\w+', t)[0]:
         return True
     return False
-
 
 def roundfigure_upper5(price, index):
     if index < 20230125000000:
@@ -229,7 +199,6 @@ def roundfigure_upper5(price, index):
             return True
     return False
 
-
 def roundfigure_upper(price, unit, index):
     if index < 20230125000000:
         if 1000 <= price <= 1000 + 5 * unit:
@@ -259,7 +228,6 @@ def roundfigure_upper(price, unit, index):
             return True
     return False
 
-
 def roundfigure_lower(price, unit, index):
     if index < 20230125000000:
         if 1000 - 1 * unit <= price <= 1000:
@@ -288,7 +256,6 @@ def roundfigure_lower(price, unit, index):
         if 500000 - 500 * unit <= price <= 500000:
             return True
     return False
-
 
 def GetUpbitHogaunit(price):
     if price < 0.01:
@@ -323,7 +290,6 @@ def GetKiwoomPgSgSp(bg, cg):
     sp = round(sg / bg * 100, 2)
     return pg, sg, sp
 
-
 def GetUpbitPgSgSp(bg, cg):
     bfee = bg * 0.0005
     sfee = cg * 0.0005
@@ -331,7 +297,6 @@ def GetUpbitPgSgSp(bg, cg):
     sg = int(round(pg - bg))
     sp = round(sg / bg * 100, 2)
     return pg, sg, sp
-
 
 def GetBinanceLongPgSgSp(bg, cg, market1, market2):
     bfee = bg * (0.0004 if market1 else 0.0002)
@@ -341,7 +306,6 @@ def GetBinanceLongPgSgSp(bg, cg, market1, market2):
     sp = round(sg / bg * 100, 2)
     return pg, sg, sp
 
-
 def GetBinanceShortPgSgSp(bg, cg, market1, market2):
     bfee = bg * (0.0004 if market1 else 0.0002)
     sfee = (cg - bfee) * (0.0004 if market2 else 0.0002)
@@ -349,7 +313,6 @@ def GetBinanceShortPgSgSp(bg, cg, market1, market2):
     sg = round(pg - bg, 4)
     sp = round(sg / bg * 100, 2)
     return pg, sg, sp
-
 
 def GetVIPrice(kosd, std_price, index):
     uvi = int(std_price * 1.1)
@@ -362,7 +325,6 @@ def GetVIPrice(kosd, std_price, index):
         dvi -= dvi % y
     return int(uvi), int(dvi), int(x)
 
-
 def GetSangHahanga(kosd, predayclose, index):
     uplimitprice = int(predayclose * 1.30)
     x = GetHogaunit(kosd, uplimitprice, index)
@@ -373,7 +335,6 @@ def GetSangHahanga(kosd, predayclose, index):
     if downlimitprice % x != 0:
         downlimitprice += x - downlimitprice % x
     return int(uplimitprice), int(downlimitprice)
-
 
 def GetUvilower5(uvi, hogaunit, index):
     upper5 = uvi - hogaunit * 5
@@ -388,7 +349,6 @@ def GetUvilower5(uvi, hogaunit, index):
             k += 1
         upper5 = uvi - hogaunit * k - hogaunit2 * (5 - k)
     return upper5
-
 
 def GetHogaunit(kosd, price, index):
     if index < 20230125000000:
@@ -424,73 +384,3 @@ def GetHogaunit(kosd, price, index):
         else:
             x = 1000
     return x
-
-
-def GetPatternSetup(pattern_text):
-    pattern_setup = pattern_text.split('^')
-    dict_pattern = {
-        '패턴이름': pattern_setup[0],
-        '인식구간': int(pattern_setup[1]),
-        '조건구간': int(pattern_setup[2]),
-        '매수조건1': 1 if pattern_setup[3] == '1' else 0,
-        '매수조건2': float(pattern_setup[4]),
-        '매수조건3': 1 if pattern_setup[5] == '1' else 0,
-        '매도조건1': 1 if pattern_setup[6] == '1' else 0,
-        '매도조건2': float(pattern_setup[7]),
-        '매도조건3': 1 if pattern_setup[8] == '1' else 0
-    }
-    dict_pattern_buy = {}
-    if pattern_setup[9] == '1':
-        dict_pattern_buy['등락율'] = float(pattern_setup[10])
-    if pattern_setup[11] == '1':
-        dict_pattern_buy['당일거래대금'] = float(pattern_setup[12])
-    if pattern_setup[13] == '1':
-        dict_pattern_buy['체결강도'] = float(pattern_setup[14])
-    if pattern_setup[15] == '1':
-        dict_pattern_buy['초당매수금액'] = float(pattern_setup[16])
-    if pattern_setup[17] == '1':
-        dict_pattern_buy['초당매도금액'] = float(pattern_setup[18])
-    if pattern_setup[19] == '1':
-        dict_pattern_buy['순매수금액'] = float(pattern_setup[20])
-    if pattern_setup[21] == '1':
-        dict_pattern_buy['초당거래대금'] = float(pattern_setup[22])
-    if pattern_setup[23] == '1':
-        dict_pattern_buy['고저평균대비등락율'] = float(pattern_setup[24])
-    if pattern_setup[25] == '1':
-        dict_pattern_buy['매도1잔량금액'] = float(pattern_setup[26])
-    if pattern_setup[27] == '1':
-        dict_pattern_buy['매수1잔량금액'] = float(pattern_setup[28])
-    if pattern_setup[29] == '1':
-        dict_pattern_buy['매도총잔량금액'] = float(pattern_setup[30])
-    if pattern_setup[31] == '1':
-        dict_pattern_buy['매수총잔량금액'] = float(pattern_setup[32])
-    if pattern_setup[33] == '1':
-        dict_pattern_buy['매도수5호가총금액'] = float(pattern_setup[34])
-    dict_pattern_sell = {}
-    if pattern_setup[35] == '1':
-        dict_pattern_sell['등락율'] = float(pattern_setup[36])
-    if pattern_setup[37] == '1':
-        dict_pattern_sell['당일거래대금'] = float(pattern_setup[38])
-    if pattern_setup[39] == '1':
-        dict_pattern_sell['체결강도'] = float(pattern_setup[40])
-    if pattern_setup[41] == '1':
-        dict_pattern_sell['초당매수금액'] = float(pattern_setup[42])
-    if pattern_setup[43] == '1':
-        dict_pattern_sell['초당매도금액'] = float(pattern_setup[44])
-    if pattern_setup[45] == '1':
-        dict_pattern_sell['순매수금액'] = float(pattern_setup[46])
-    if pattern_setup[47] == '1':
-        dict_pattern_sell['초당거래대금'] = float(pattern_setup[48])
-    if pattern_setup[49] == '1':
-        dict_pattern_sell['고저평균대비등락율'] = float(pattern_setup[50])
-    if pattern_setup[51] == '1':
-        dict_pattern_sell['매도1잔량금액'] = float(pattern_setup[52])
-    if pattern_setup[53] == '1':
-        dict_pattern_sell['매수1잔량금액'] = float(pattern_setup[54])
-    if pattern_setup[55] == '1':
-        dict_pattern_sell['매도총잔량금액'] = float(pattern_setup[56])
-    if pattern_setup[57] == '1':
-        dict_pattern_sell['매수총잔량금액'] = float(pattern_setup[58])
-    if pattern_setup[59] == '1':
-        dict_pattern_sell['매도수5호가총금액'] = float(pattern_setup[60])
-    return dict_pattern, dict_pattern_buy, dict_pattern_sell
