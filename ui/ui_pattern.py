@@ -145,14 +145,14 @@ def ptbutton_clicked_03(ui):
         pattern_sell_name = f'{PATTERN_PATH}/pattern_{middle_name}_{last_name}_sell'
         if os.path.isfile(f'{pattern_buy_name}.pkl') and os.path.isfile(f'{pattern_sell_name}.pkl'):
             if ui.backtest_engine:
-                for q in ui.back_pques:
+                for q in ui.back_eques:
                     q.put(('백테유형', '백테스트'))
                 dict_pattern, dict_pattern_buy, dict_pattern_sell = get_pattern_setup(get_pattern_text(ui))
-                for q in ui.back_pques:
+                for q in ui.back_eques:
                     q.put(('패턴정보', dict_pattern, dict_pattern_buy, dict_pattern_sell))
                 pattern_buy  = pickle_read(pattern_buy_name)
                 pattern_sell = pickle_read(pattern_sell_name)
-                for q in ui.back_pques:
+                for q in ui.back_eques:
                     q.put(('모델정보', pattern_buy, pattern_sell))
                 QMessageBox.information(ui.dialog_pattern, '전송 완료', random.choice(famous_saying))
             else:

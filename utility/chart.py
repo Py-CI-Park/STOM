@@ -9,7 +9,7 @@ from matplotlib import font_manager
 from matplotlib import pyplot as plt
 # noinspection PyUnresolvedReferences
 from backtester.back_static import AddTalib
-from utility.static import strp_time, timedelta_sec, strf_time
+from utility.static import strp_time, timedelta_sec, strf_time, error_decorator
 from utility.setting import ui_num, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH, DB_STOCK_BACK, DB_COIN_BACK, DB_BACKTEST
 
 
@@ -92,12 +92,13 @@ class Chart:
         except:
             pass
 
+    @error_decorator
     def UpdateChart(self, data):
-        if len(data) == 6:
-            coin, code, tickcount, searchdate, starttime, endtime = data
+        if len(data) == 7:
+            coin, code, tickcount, searchdate, starttime, endtime, k_list = data
             detail, buytimes = None, None
         else:
-            coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes = data
+            coin, code, tickcount, searchdate, starttime, endtime, k_list, detail, buytimes = data
 
         if coin:
             db_name1 = DB_COIN_BACK
@@ -195,7 +196,7 @@ class Chart:
             sell_index = []
             df['매수가'] = 0
             df['매도가'] = 0
-            if 'USDT' in code:
+            if coin:
                 df['매수가2'] = 0
                 df['매도가2'] = 0
 
@@ -286,12 +287,12 @@ class Chart:
                 ]
 
             columns += ['매수가', '매도가']
-            if 'USDT' in code:
+            if coin:
                 columns += ['매수가2', '매도가2']
             df = df[columns]
             df.fillna(0, inplace=True)
             arry_tick = np.array(df)
-            if self.dict_set['보조지표사용']:
-                arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
-            xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
-            self.windowQ.put((ui_num['차트'], coin, xticks, arry_tick, buy_index, sell_index))
+            arry_tick = AddTalib(arry_tick, k_list)
+            if arry_tick is not None:
+                xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
+                self.windowQ.put((ui_num['차트'], coin, xticks, arry_tick, buy_index, sell_index))

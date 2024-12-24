@@ -143,7 +143,7 @@ def cell_clicked_07(ui, row, chartQ):
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-    chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text()))
+    chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), ui.GetKlist()))
 
 def cell_clicked_08(ui, row):
     item = ui.dialog_info.focusWidget().item(row, 3)

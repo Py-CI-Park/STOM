@@ -80,6 +80,8 @@ stock_buy_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(int), 최저현재가(int), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(int), 누적초당매도수량(int), 최고초당매수수량(int), 최고초당매도수량(int), 당일거래대금각도(float), 전일비각도(float)
+# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
+BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(int), 호가단위(int), 데이터길이(int), 시분초(int)
 종목명(str), 종목코드(str), 매수(True)
@@ -133,6 +135,8 @@ stock_sell_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(int), 최저현재가(int), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(int), 누적초당매도수량(int), 최고초당매수수량(int), 최고초당매도수량(int), 당일거래대금각도(float), 전일비각도(float)
+# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
+BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(int), 호가단위(int), 데이터길이(int), 시분초(int),
 종목명(str), 종목코드(str), 매도(False)
@@ -154,6 +158,8 @@ coin_buy_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float)
+# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
+BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 호가단위(float), 데이터길이(int), 시분초(int), 종목코드(str), 매수(True)
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다.
@@ -199,6 +205,8 @@ coin_sell_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float), 전일비각도(float)
+# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
+BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 관심종목(int), 호가단위(int), 데이터길이(int), 시분초(int), 종목코드(str), 매도(False)
 # 잔고종목 변수들, 보유시간은 초단위이다.
@@ -219,6 +227,8 @@ coin_future_buy_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float)
+# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
+BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 호가단위(float), 데이터길이(int), 시분초(int), 종목코드(str), BUY_LONG(True), SELL_SHORT(True)
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다.
@@ -254,24 +264,6 @@ coin_future_buy_var = '''"""
 시분초 : 호가정보에 기록된 서버의 현재시간을 시분초 단위로 만든 숫자 (예: 93000)
 """'''
 
-coin_future_buy_var_ = '''"""
-# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
-# 변수명 뒤에 'N(이전틱수)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1틱전 현재가
-현재가(float), 시가(float), 고가(float), 저가(float), 등락율(float), 고저평균대비등락율(float), 당일거래대금(int), 체결강도(float),
-초당매수수량(float), 초당매도수량(float), 초당거래대금(int), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
-매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float), 관심종목(int)
-# 구간연산 변수들 - 괄호 안에 '변수명(구간틱수, 이전틱수)' 형태로 사용한다.
-# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
-이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
-누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float)
-# 그외 변수들
-호가단위(float), 데이터길이(int), 시분초(int), 종목코드(str), BUY_LONG(True), SELL_SHORT(True)
-# 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다.
-# 평균값틱수 초과값을 조회하려면 반드시 '데이터길이'를 확인하고 사용해야한다. 예: if 데이터길이 > 30 and 현재가 > 현재가N(30)
-# 구간연산변수는 구간틱수 + 이전틱값 만큼 데이터길이를 확인해야한다. 예: if 데이터길이 > 90 and 이동평균(60, 30)
-# N의 한계값은 1799 입니다.
-"""'''
-
 coin_future_sell_var = '''"""
 # 기본 변수들 - 괄호없이 변수명만으로 사용한다.
 # 변수명 뒤에 'N(이전틱수 또는 -1)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1틱전 현재가
@@ -282,6 +274,8 @@ coin_future_sell_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float), 전일비각도(float)
+# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
+BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 호가단위(int), 데이터길이(int), 시분초(int), 종목코드(str), SELL_LONG(False), BUY_SHORT(False)
 # 잔고종목 변수들, 보유시간은 초단위이다.

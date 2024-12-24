@@ -63,7 +63,7 @@ def update_dictset(ui, wdzservQ, creceivQ, ctraderQ, cstgQ, chartQ, proc_chart):
     if ui.CoinStrategyProcessAlive(): cstgQ.put(('설정변경', ui.dict_set))
     if proc_chart.is_alive():         chartQ.put(('설정변경', ui.dict_set))
     if ui.backtest_engine:
-        for bpq in ui.back_pques:
+        for bpq in ui.back_eques:
             bpq.put(('설정변경', ui.dict_set))
 
 def chart_clear(ui):

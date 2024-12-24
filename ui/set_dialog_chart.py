@@ -28,8 +28,8 @@ class SetDialogChart:
         self.ui.ct_labellllllll_05 = QLabel('종목명', self.ui.ct_groupBoxxxxx_01)
         self.ui.ct_lineEdittttt_05 = self.wc.setLineedit(self.ui.ct_groupBoxxxxx_01, enter=self.ui.ReturnPress_01, style=style_bc_dk)
         self.ui.ct_pushButtonnn_01 = self.wc.setPushbutton('검색하기', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.ReturnPress_01)
-        self.ui.ct_checkBoxxxxx_21 = self.wc.setCheckBox('십자선', self.ui.ct_groupBoxxxxx_01, checked=True, style=style_ck_bx)
-        self.ui.ct_checkBoxxxxx_22 = self.wc.setCheckBox('정보창', self.ui.ct_groupBoxxxxx_01, checked=True, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_31 = self.wc.setCheckBox('십자선', self.ui.ct_groupBoxxxxx_01, checked=True, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_32 = self.wc.setCheckBox('정보창', self.ui.ct_groupBoxxxxx_01, checked=True, style=style_ck_bx)
         self.ui.ct_pushButtonnn_02 = self.wc.setPushbutton('펙터설정', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.ShowDialogFactor)
         text = '1. 시작시간과 종료시간을 설정하면 해당시간의 데이터만 표시됩니다.\n' \
                '2. 평균틱수를 설정하면 평균, 최고, 최저값의 기준이 설정한 값으로 변경됩니다.\n' \
@@ -108,8 +108,8 @@ class SetDialogChart:
         self.ui.ct_labellllllll_05.setGeometry(605, 25, 50, 30)
         self.ui.ct_lineEdittttt_05.setGeometry(655, 25, 100, 30)
         self.ui.ct_pushButtonnn_01.setGeometry(765, 25, 60, 30)
-        self.ui.ct_checkBoxxxxx_21.setGeometry(835, 25, 60, 30)
-        self.ui.ct_checkBoxxxxx_22.setGeometry(900, 25, 60, 30)
+        self.ui.ct_checkBoxxxxx_31.setGeometry(835, 25, 60, 30)
+        self.ui.ct_checkBoxxxxx_32.setGeometry(900, 25, 60, 30)
         self.ui.ct_pushButtonnn_02.setGeometry(965, 25, 80, 30)
         self.ui.ct_pushButtonnn_03.setGeometry(1050, 25, 80, 30)
         self.ui.ct_pushButtonnn_04.setGeometry(1135, 25, 80, 30)

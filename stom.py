@@ -159,10 +159,10 @@ class Window(QMainWindow):
         self.vars             = {}
         self.buy_index        = []
         self.sell_index       = []
-        self.back_procs       = []
-        self.back_pques       = []
-        self.bact_procs       = []
-        self.bact_pques       = []
+        self.back_eprocs      = []
+        self.back_eques       = []
+        self.back_cprocs      = []
+        self.back_cques       = []
         self.avg_list         = []
         self.back_count       = 0
         self.startday         = 0
@@ -705,6 +705,9 @@ class Window(QMainWindow):
     def ctButtonClicked_04(self):       ct_button_clicked_04(self)
     def ctButtonClicked_05(self):       ct_button_clicked_05(self)
     def ctButtonClicked_06(self):       ct_button_clicked_06(self)
+    def ctButtonClicked_07(self):       ct_button_clicked_07(self)
+    def ctButtonClicked_08(self):       ct_button_clicked_08(self)
+    def ctButtonClicked_09(self):       ct_button_clicked_09(self, proc_query, queryQ)
     def TickInput(self, code, gubun):   tick_put(self, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ)
     # =================================================================================================================
     def hgButtonClicked_01(self, gubun): hg_button_clicked_01(self, gubun, hogaQ)
@@ -753,6 +756,7 @@ class Window(QMainWindow):
     def keyPressEvent(self, event):       key_press_event(self, event)
     def eventFilter(self, widget, event): return event_filter(self, widget, event)
     def closeEvent(self, a):              close_event(self, a)
+    def GetKlist(self):                   return get_k_list(self)
     # =================================================================================================================
 
 

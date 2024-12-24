@@ -143,36 +143,29 @@ def AddAvgData(df, r, avg_list):
     return df
 
 def AddTalib(arry_tick, k):
-    arry_tick = np.r_['1', arry_tick, np.zeros((len(arry_tick), 18))]
+    arry_tick = np.r_['1', arry_tick, np.zeros((len(arry_tick), 14))]
     bbu, bbm, bbl      = talib.BBANDS(   arry_tick[:, 1], timeperiod=k[0], nbdevup=k[1], nbdevdn=k[2], matype=k[3])
     macd, macds, macdh = talib.MACD(     arry_tick[:, 1], fastperiod=k[4], slowperiod=k[5], signalperiod=k[6])
+    apo                = talib.APO(      arry_tick[:, 1], fastperiod=k[7], slowperiod=k[8], matype=k[9])
+    kama               = talib.KAMA(     arry_tick[:, 1], timeperiod=k[10])
+    rsi                = talib.RSI(      arry_tick[:, 1], timeperiod=k[11])
     htsine, htlsine    = talib.HT_SINE(  arry_tick[:, 1])
     htphase, htqudra   = talib.HT_PHASOR(arry_tick[:, 1])
-    kema               = talib.KAMA(     arry_tick[:, 1], timeperiod=k[7])
-    dema               = talib.DEMA(     arry_tick[:, 1], timeperiod=k[8])
-    mama, pama         = talib.MAMA(     arry_tick[:, 1], fastlimit=k[9], slowlimit=k[10])
-    rsi                = talib.RSI(      arry_tick[:, 1], timeperiod=k[11])
     obv                = talib.OBV(      arry_tick[:, 1], arry_tick[:, 10])
-    apo                = talib.APO(      arry_tick[:, 1], fastperiod=k[12], slowperiod=k[13], matype=k[14])
-    ppo                = talib.PPO(      arry_tick[:, 5], fastperiod=k[15], slowperiod=k[16], matype=k[17])
-    arry_tick[:, -18] = bbu
-    arry_tick[:, -17] = bbm
-    arry_tick[:, -16] = bbl
-    arry_tick[:, -15] = macd
-    arry_tick[:, -14] = macds
-    arry_tick[:, -13] = macdh
-    arry_tick[:, -12] = htsine
-    arry_tick[:, -11] = htlsine
-    arry_tick[:, -10] = htphase
-    arry_tick[:, -9]  = htqudra
-    arry_tick[:, -8]  = kema
-    arry_tick[:, -7]  = dema
-    arry_tick[:, -6]  = mama
-    arry_tick[:, -5]  = pama
-    arry_tick[:, -4]  = rsi
-    arry_tick[:, -3]  = obv
-    arry_tick[:, -2]  = apo
-    arry_tick[:, -1]  = ppo
+    arry_tick[:, -14] = bbu
+    arry_tick[:, -13] = bbm
+    arry_tick[:, -12] = bbl
+    arry_tick[:, -11] = macd
+    arry_tick[:, -10] = macds
+    arry_tick[:, -9]  = macdh
+    arry_tick[:, -8]  = apo
+    arry_tick[:, -7]  = kama
+    arry_tick[:, -6]  = rsi
+    arry_tick[:, -5]  = htsine
+    arry_tick[:, -4]  = htlsine
+    arry_tick[:, -3]  = htphase
+    arry_tick[:, -2]  = htqudra
+    arry_tick[:, -1]  = obv
     arry_tick = np.nan_to_num(arry_tick)
     return arry_tick
 
@@ -757,141 +750,3 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
 
     if not schedul and not plotgraph:
         plt.show()
-
-
-class SubTotal:
-    def __init__(self, vk, tq, stqs, buystd, gubun):
-        self.vars_key   = vk
-        self.tq         = tq
-        self.stqs       = stqs
-        self.stq        = self.stqs[self.vars_key]
-        self.buystd     = buystd
-        self.gubun      = gubun
-        self.dict_dict_tsg = {}
-        self.dict_dict_bct = {}
-        self.list_tsg   = None
-        self.arry_bct   = None
-        self.arry_bct_  = None
-        self.betting    = None
-        self.complete1  = False
-        self.complete2  = False
-        self.separation = None
-        self.Start()
-
-    def Start(self):
-        while True:
-            data = self.stq.get()
-            if data[0] == '백테결과':
-                self.CollectData(data)
-            elif data[0] == '백테완료':
-                self.complete1 = True
-                self.separation = data[1]
-            elif data == '결과분리':
-                self.DivideData()
-            elif data[0] == '분리결과':
-                self.ConcatData(data)
-            elif data == '결과전송':
-                self.complete2 = True
-            elif data[0] == '결과집계':
-                self.SendSubTotal(data)
-            elif data[0] == '백테정보':
-                self.arry_bct_ = data[1]
-                self.betting   = data[2]
-            elif data == '백테시작':
-                self.complete1 = False
-                self.complete2 = False
-                self.list_tsg  = None
-                self.arry_bct  = None
-                self.dict_dict_tsg = {}
-                self.dict_dict_bct = {}
-
-            if self.complete1 and self.stq.empty():
-                if self.separation == '분리집계':
-                    self.tq.put('집계완료')
-                else:
-                    self.tq.put(('백테결과', self.vars_key, self.dict_dict_tsg, self.dict_dict_bct))
-                self.complete1 = False
-
-            if self.complete2 and self.stq.empty():
-                self.tq.put(('백테결과', self.vars_key, self.list_tsg, self.arry_bct))
-                self.complete2 = False
-
-    def CollectData(self, data):
-        _, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간, 잔량없음, vars_turn, vars_key = data
-        if vars_turn not in self.dict_dict_tsg.keys():
-            self.dict_dict_tsg[vars_turn] = {}
-            self.dict_dict_bct[vars_turn] = {}
-        if vars_key not in self.dict_dict_tsg[vars_turn].keys():
-            self.dict_dict_tsg[vars_turn][vars_key] = [[] for _ in range(14)]
-            self.dict_dict_bct[vars_turn][vars_key] = self.arry_bct_.copy()
-
-        index = str(매수시간) if self.buystd else str(매도시간)
-        self.dict_dict_tsg[vars_turn][vars_key][0].append(index)
-        self.dict_dict_tsg[vars_turn][vars_key][1].append(종목명)
-        self.dict_dict_tsg[vars_turn][vars_key][2].append(시가총액또는포지션)
-        self.dict_dict_tsg[vars_turn][vars_key][3].append(매수시간)
-        self.dict_dict_tsg[vars_turn][vars_key][4].append(매도시간)
-        self.dict_dict_tsg[vars_turn][vars_key][5].append(보유시간)
-        self.dict_dict_tsg[vars_turn][vars_key][6].append(매수가)
-        self.dict_dict_tsg[vars_turn][vars_key][7].append(매도가)
-        self.dict_dict_tsg[vars_turn][vars_key][8].append(매수금액)
-        self.dict_dict_tsg[vars_turn][vars_key][9].append(매도금액)
-        self.dict_dict_tsg[vars_turn][vars_key][10].append(수익률)
-        self.dict_dict_tsg[vars_turn][vars_key][11].append(수익금)
-        self.dict_dict_tsg[vars_turn][vars_key][12].append(매도조건)
-        self.dict_dict_tsg[vars_turn][vars_key][13].append(추가매수시간)
-
-        if 잔량없음:
-            arry_bct  = self.dict_dict_bct[vars_turn][vars_key]
-            arry_bct_ = arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)]
-            arry_bct_[:, 1] += 1
-            arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)] = arry_bct_
-            self.dict_dict_bct[vars_turn][vars_key] = arry_bct
-
-    def DivideData(self):
-        if self.dict_dict_tsg:
-            self.stqs[0].put(('분리결과', self.dict_dict_tsg[0][0], self.dict_dict_bct[0][0]))
-        self.tq.put('분리완료')
-
-    def ConcatData(self, data):
-        _, list_tsg, arry_bct = data
-        if self.list_tsg is None:
-            self.list_tsg = [[] for _ in range(14)]
-            self.arry_bct = arry_bct
-        else:
-            self.arry_bct[:, 1] += arry_bct[:, 1]
-        for i, list_ in enumerate(list_tsg):
-            self.list_tsg[i] += list_
-
-    def SendSubTotal(self, data):
-        _, columns, list_data, arry_bct = data[:4]
-        df_tsg = pd.DataFrame(dict(zip(columns, list_data)))
-        df_tsg.set_index('index', inplace=True)
-        df_tsg.sort_index(inplace=True)
-        arry_bct = arry_bct[arry_bct[:, 1] > 0]
-        df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
-
-        if len(data) == 12:
-            vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_turn, vars_key = data[4:]
-            if self.gubun:
-                df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | ((veday * 1000000 + 240000 < df_tsg['매도시간']) & (df_tsg['매도시간'] < tsday * 1000000))]
-                df_bct = df_bct[(df_bct.index < vsday * 1000000) | ((veday * 1000000 + 240000 < df_bct.index) & (df_bct.index < tsday * 1000000))]
-            else:
-                df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
-                df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, tdaycnt if self.gubun else vdaycnt)
-            self.tq.put(('TRAIN' if self.gubun else 'VALID', index, result, vars_turn, vars_key))
-        elif len(data) == 11:
-            vsday, veday, tdaycnt, vdaycnt, index, vars_turn, vars_key = data[4:]
-            if self.gubun:
-                df_tsg = df_tsg[(df_tsg['매도시간'] < vsday * 1000000) | (veday * 1000000 + 240000 < df_tsg['매도시간'])]
-                df_bct = df_bct[(vsday * 1000000 < df_bct.index) | (df_bct.index > veday * 1000000 + 240000)]
-            else:
-                df_tsg = df_tsg[(vsday * 1000000 <= df_tsg['매도시간']) & (df_tsg['매도시간'] <= veday * 1000000 + 240000)]
-                df_bct = df_bct[(vsday * 1000000 <= df_bct.index) & (df_bct.index <= veday * 1000000 + 240000)]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, tdaycnt if self.gubun else vdaycnt)
-            self.tq.put(('TRAIN' if self.gubun else 'VALID', index, result, vars_turn, vars_key))
-        else:
-            daycnt, vars_turn, vars_key = data[4:]
-            _, _, result = GetBackResult(df_tsg, df_bct, self.betting, daycnt)
-            self.tq.put(('ALL', 0, result, vars_turn, vars_key))

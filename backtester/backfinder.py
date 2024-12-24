@@ -76,13 +76,13 @@ class Total:
 
 
 class BackFinder:
-    def __init__(self, wq, bq, sq, tq, lq, pq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, beq_list, backname, ui_gubun):
         self.wq       = wq
         self.bq       = bq
         self.sq       = sq
         self.tq       = tq
         self.lq       = lq
-        self.pq_list  = pq_list
+        self.beq_list = beq_list
         self.backname = backname
         self.ui_gubun = ui_gubun
         self.dict_set = DICT_SET
@@ -121,7 +121,7 @@ class BackFinder:
 
         self.tq.put(('백테정보', avgtime, startday, endday, starttime, endtime, buystg_name, back_count, self.tickcols))
         data = ('백테정보', avgtime, startday, endday, starttime, endtime, buystg, None)
-        for q in self.pq_list:
+        for q in self.beq_list:
             q.put(data)
 
         data = self.bq.get()

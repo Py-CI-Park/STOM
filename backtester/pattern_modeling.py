@@ -63,17 +63,17 @@ class Total:
 
 
 class PatternModeling:
-    def __init__(self, wq, bq, tq, stq_list, pq_list, ui_gubun, back_cnt, multi):
-        self.wq       = wq
-        self.bq       = bq
-        self.tq       = tq
-        self.stq_list = stq_list
-        self.pq_list  = pq_list
-        self.ui_gubun = ui_gubun
-        self.back_cnt = back_cnt
-        self.multi    = multi
-        self.dict_set = DICT_SET
-        self.gubun    = 'stock' if self.ui_gubun == 'S' else 'coin'
+    def __init__(self, wq, bq, tq, bctq_list, beq_list, ui_gubun, back_cnt, multi):
+        self.wq        = wq
+        self.bq        = bq
+        self.tq        = tq
+        self.bctq_list = bctq_list
+        self.beq_list  = beq_list
+        self.ui_gubun  = ui_gubun
+        self.back_cnt  = back_cnt
+        self.multi     = multi
+        self.dict_set  = DICT_SET
+        self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.Start()
 
     def Start(self):
@@ -107,7 +107,7 @@ class PatternModeling:
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 시작'))
         data = ('학습정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern, dict_pattern_buy, dict_pattern_sell)
-        for q in self.pq_list:
+        for q in self.beq_list:
             q.put(data)
 
         data = mq.get()
@@ -119,7 +119,7 @@ class PatternModeling:
             pickle_write(f"{PATTERN_PATH}/pattern_{self.gubun}_{dict_pattern['패턴이름']}_sell", pattern_sell)
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 데이터 저장 완료'))
             pattern_data = ('모델정보', pattern_buy, pattern_sell)
-            for q in self.pq_list:
+            for q in self.beq_list:
                 q.put(pattern_data)
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 데이터 백테엔진으로 전송 완료'))
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 백테스트 소요시간 {now() - start_time}'))

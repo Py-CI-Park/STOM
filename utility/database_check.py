@@ -148,7 +148,7 @@ if 'back' not in table_list:
     data = [0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 4, 160000, '', '', 1, '20220323',
             '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;-10000.0;10000.0;0.0;10.0',
             '종목코드별 분류', 'TPESampler', '', 0, 0, 0, 0,
-            '5;2;2;0;12;26;9;30;30;0.5;0.05;14;12;26;0;12;26;0']
+            '5;2;2;0;12;26;9;12;26;0;30;14']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('back', con)
 else:
@@ -170,12 +170,12 @@ else:
         df.drop(columns=columns, inplace=True)
     if '보조지표사용' not in df.columns:
         df['보조지표사용'] = 0
-        df['보조지표설정'] = '5;2;2;0;12;26;9;30;30;0.5;0.05;14;12;26;0;12;26;0'
+        df['보조지표설정'] = '5;2;2;0;12;26;9;12;26;0;30;14'
     df.to_sql('back', con, if_exists='replace')
 
 if 'etc' not in table_list:
     columns = ["index", "테마", "인트로숨김", "저해상도", "휴무프로세스종료", "휴무컴퓨터종료", "창위치기억", "창위치", "스톰라이브", "프로그램종료", "팩터선택"]
-    data = [0, '다크블루', 0, 0, 1, 0, 1, '', 1, 0, '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1']
+    data = [0, '다크블루', 0, 0, 1, 0, 1, '', 1, 0, '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('etc', con)
 else:
@@ -184,8 +184,8 @@ else:
         df.drop(columns=['주식틱자동저장'], inplace=True)
     factor_text = df['팩터선택'][0]
     len_factor  = len(factor_text.split(';'))
-    if len_factor < 18:
-        df['팩터선택'] = '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1'
+    if len_factor < 26:
+        df['팩터선택'] = '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1'
     if '인트로숨김' not in df.columns:
         df['인트로숨김'] = 0
     df.to_sql('etc', con, if_exists='replace')

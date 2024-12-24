@@ -27,7 +27,7 @@ for db_name in file_list:
         df = pd.read_sql(f"SELECT * FROM '{code}'", con)
         df['관심종목'] = df['index'].apply(lambda x: convert(x))
         df.to_sql(code, con, index=False, if_exists='replace', chunksize=1000)
-        print('백테디비 관심종목 칼럼 업데이트 중 ... [{i + 1}/{last}]')
+        print(f'백테디비 관심종목 칼럼 업데이트 중 ... [{i + 1}/{last}]')
     con.close()
 
 print('백테디비 관심종목 칼럼 업데이트 완료')

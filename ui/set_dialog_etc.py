@@ -38,12 +38,47 @@ class SetDialogEtc:
         self.ui.ct_checkBoxxxxx_17 = self.wc.setCheckBox('전일동시간비', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[16] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
         self.ui.ct_checkBoxxxxx_18 = self.wc.setCheckBox('전일비각도', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[17] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
 
+        self.ui.ct_checkBoxxxxx_19 = self.wc.setCheckBox('BBAND       tp                     nu                    nd                      ma', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[18] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_20 = self.wc.setCheckBox('MACD        fp                     sp                     sip', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[19] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_21 = self.wc.setCheckBox('APO            fp                     sp                     ma', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[20] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_22 = self.wc.setCheckBox('KAMA        tp', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[21] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_23 = self.wc.setCheckBox('RSI              tp', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[22] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_24 = self.wc.setCheckBox('HT_SINE, HT_LSINE', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[23] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_25 = self.wc.setCheckBox('HT_PHASE, HT_QUDRA', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[24] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+        self.ui.ct_checkBoxxxxx_26 = self.wc.setCheckBox('OBV', self.ui.jp_groupBoxxxxx_01, checked=True if checkbox_choice[25] else False, changed=self.ui.CheckboxChanged_23, style=style_ck_bx)
+
+        k = [str(x) for x in self.ui.dict_set['보조지표설정']]
+        self.ui.ct_lineEdittttt_21 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[0], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_22 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[1], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_23 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[2], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_24 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[3], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_25 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[4], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_26 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[5], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_27 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[6], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_28 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[7], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_29 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[8], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_30 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[9], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_31 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[10], style=style_bc_dk)
+        self.ui.ct_lineEdittttt_32 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[11], style=style_bc_dk)
+
+        self.ui.ct_pushButtonnn_07 = self.wc.setPushbutton('보조지표설정 기본값', box=self.ui.jp_groupBoxxxxx_01, click=self.ui.ctButtonClicked_07)
+        self.ui.ct_pushButtonnn_08 = self.wc.setPushbutton('보조지표설정 불러오기', box=self.ui.jp_groupBoxxxxx_01, click=self.ui.ctButtonClicked_08)
+        self.ui.ct_pushButtonnn_09 = self.wc.setPushbutton('보조지표설정 저장하기', box=self.ui.jp_groupBoxxxxx_01, click=self.ui.ctButtonClicked_09)
+
         self.ui.factor_checkbox_list = [
             self.ui.ct_checkBoxxxxx_01, self.ui.ct_checkBoxxxxx_02, self.ui.ct_checkBoxxxxx_03, self.ui.ct_checkBoxxxxx_04,
             self.ui.ct_checkBoxxxxx_05, self.ui.ct_checkBoxxxxx_06, self.ui.ct_checkBoxxxxx_07, self.ui.ct_checkBoxxxxx_08,
             self.ui.ct_checkBoxxxxx_09, self.ui.ct_checkBoxxxxx_10, self.ui.ct_checkBoxxxxx_11, self.ui.ct_checkBoxxxxx_12,
             self.ui.ct_checkBoxxxxx_13, self.ui.ct_checkBoxxxxx_14, self.ui.ct_checkBoxxxxx_15, self.ui.ct_checkBoxxxxx_16,
-            self.ui.ct_checkBoxxxxx_17, self.ui.ct_checkBoxxxxx_18
+            self.ui.ct_checkBoxxxxx_17, self.ui.ct_checkBoxxxxx_18,  self.ui.ct_checkBoxxxxx_19, self.ui.ct_checkBoxxxxx_20,
+            self.ui.ct_checkBoxxxxx_21, self.ui.ct_checkBoxxxxx_22,  self.ui.ct_checkBoxxxxx_23, self.ui.ct_checkBoxxxxx_24,
+            self.ui.ct_checkBoxxxxx_25, self.ui.ct_checkBoxxxxx_26
+        ]
+
+        self.ui.factor_linedit_list = [
+            self.ui.ct_lineEdittttt_21, self.ui.ct_lineEdittttt_22, self.ui.ct_lineEdittttt_23, self.ui.ct_lineEdittttt_24,
+            self.ui.ct_lineEdittttt_25, self.ui.ct_lineEdittttt_26, self.ui.ct_lineEdittttt_27, self.ui.ct_lineEdittttt_28,
+            self.ui.ct_lineEdittttt_29, self.ui.ct_lineEdittttt_30, self.ui.ct_lineEdittttt_31, self.ui.ct_lineEdittttt_32
         ]
 
         self.ui.dialog_test = self.wc.setDialog('STOM SIMULATOR', tab=self.ui.dialog_chart)
@@ -465,27 +500,53 @@ class SetDialogEtc:
 
         self.ui.lv_checkbox_listt = [self.ui.lv_checkBoxxxx_01, self.ui.lv_checkBoxxxx_02]
 
-        self.ui.dialog_factor.setFixedSize(395, 230)
-        self.ui.jp_groupBoxxxxx_01.setGeometry(5, -10, 385, 233)
+        self.ui.dialog_factor.setFixedSize(395, 370)
+        self.ui.jp_groupBoxxxxx_01.setGeometry(5, -10, 385, 373)
 
-        self.ui.ct_checkBoxxxxx_01.setGeometry(10, 25, 120, 30)
-        self.ui.ct_checkBoxxxxx_02.setGeometry(135, 25, 120, 30)
-        self.ui.ct_checkBoxxxxx_03.setGeometry(260, 25, 120, 30)
-        self.ui.ct_checkBoxxxxx_04.setGeometry(10, 60, 120, 30)
-        self.ui.ct_checkBoxxxxx_05.setGeometry(135, 60, 120, 30)
-        self.ui.ct_checkBoxxxxx_06.setGeometry(260, 60, 120, 30)
-        self.ui.ct_checkBoxxxxx_07.setGeometry(10, 95, 120, 30)
-        self.ui.ct_checkBoxxxxx_08.setGeometry(135, 95, 120, 30)
-        self.ui.ct_checkBoxxxxx_09.setGeometry(260, 95, 120, 30)
-        self.ui.ct_checkBoxxxxx_10.setGeometry(10, 130, 120, 30)
-        self.ui.ct_checkBoxxxxx_11.setGeometry(135, 130, 120, 30)
-        self.ui.ct_checkBoxxxxx_12.setGeometry(260, 130, 120, 30)
-        self.ui.ct_checkBoxxxxx_13.setGeometry(10, 165, 120, 30)
-        self.ui.ct_checkBoxxxxx_14.setGeometry(135, 165, 120, 30)
-        self.ui.ct_checkBoxxxxx_15.setGeometry(260, 165, 120, 30)
-        self.ui.ct_checkBoxxxxx_16.setGeometry(10, 200, 120, 30)
-        self.ui.ct_checkBoxxxxx_17.setGeometry(135, 200, 120, 30)
-        self.ui.ct_checkBoxxxxx_18.setGeometry(260, 200, 120, 30)
+        self.ui.ct_checkBoxxxxx_01.setGeometry(10, 25, 120, 20)
+        self.ui.ct_checkBoxxxxx_02.setGeometry(140, 25, 120, 20)
+        self.ui.ct_checkBoxxxxx_03.setGeometry(275, 25, 120, 20)
+        self.ui.ct_checkBoxxxxx_04.setGeometry(10, 50, 120, 20)
+        self.ui.ct_checkBoxxxxx_05.setGeometry(140, 50, 120, 20)
+        self.ui.ct_checkBoxxxxx_06.setGeometry(275, 50, 120, 20)
+        self.ui.ct_checkBoxxxxx_07.setGeometry(10, 75, 120, 20)
+        self.ui.ct_checkBoxxxxx_08.setGeometry(140, 75, 120, 20)
+        self.ui.ct_checkBoxxxxx_09.setGeometry(275, 75, 120, 20)
+        self.ui.ct_checkBoxxxxx_10.setGeometry(10, 100, 120, 20)
+        self.ui.ct_checkBoxxxxx_11.setGeometry(140, 100, 120, 20)
+        self.ui.ct_checkBoxxxxx_12.setGeometry(275, 100, 120, 20)
+        self.ui.ct_checkBoxxxxx_13.setGeometry(10, 125, 120, 20)
+        self.ui.ct_checkBoxxxxx_14.setGeometry(140, 125, 120, 20)
+        self.ui.ct_checkBoxxxxx_15.setGeometry(275, 125, 120, 20)
+        self.ui.ct_checkBoxxxxx_16.setGeometry(10, 150, 120, 20)
+        self.ui.ct_checkBoxxxxx_17.setGeometry(140, 150, 120, 20)
+        self.ui.ct_checkBoxxxxx_18.setGeometry(275, 150, 120, 20)
+
+        self.ui.ct_checkBoxxxxx_19.setGeometry(10, 175, 380, 20)
+        self.ui.ct_checkBoxxxxx_20.setGeometry(10, 200, 380, 20)
+        self.ui.ct_checkBoxxxxx_21.setGeometry(10, 225, 380, 20)
+        self.ui.ct_checkBoxxxxx_22.setGeometry(10, 250, 380, 20)
+        self.ui.ct_checkBoxxxxx_23.setGeometry(10, 275, 380, 20)
+        self.ui.ct_checkBoxxxxx_24.setGeometry(10, 300, 380, 20)
+        self.ui.ct_checkBoxxxxx_25.setGeometry(10, 325, 380, 20)
+        self.ui.ct_checkBoxxxxx_26.setGeometry(10, 350, 380, 20)
+
+        self.ui.ct_lineEdittttt_21.setGeometry(110, 175, 40, 20)
+        self.ui.ct_lineEdittttt_22.setGeometry(190, 175, 40, 20)
+        self.ui.ct_lineEdittttt_23.setGeometry(270, 175, 40, 20)
+        self.ui.ct_lineEdittttt_24.setGeometry(350, 175, 30, 20)
+        self.ui.ct_lineEdittttt_25.setGeometry(110, 200, 40, 20)
+        self.ui.ct_lineEdittttt_26.setGeometry(190, 200, 40, 20)
+        self.ui.ct_lineEdittttt_27.setGeometry(270, 200, 40, 20)
+        self.ui.ct_lineEdittttt_28.setGeometry(110, 225, 40, 20)
+        self.ui.ct_lineEdittttt_29.setGeometry(190, 225, 40, 20)
+        self.ui.ct_lineEdittttt_30.setGeometry(270, 225, 40, 20)
+        self.ui.ct_lineEdittttt_31.setGeometry(110, 250, 40, 20)
+        self.ui.ct_lineEdittttt_32.setGeometry(110, 275, 40, 20)
+
+        self.ui.ct_pushButtonnn_07.setGeometry(227, 265, 150, 30)
+        self.ui.ct_pushButtonnn_08.setGeometry(227, 300, 150, 30)
+        self.ui.ct_pushButtonnn_09.setGeometry(227, 335, 150, 30)
 
         self.ui.dialog_hoga.setFixedSize(572, 355)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:

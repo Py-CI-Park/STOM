@@ -128,12 +128,12 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
     elif ui.dict_set['주식트레이더']:
         text = f'{text} | 키움증권'
     if ui.showQsize:
-        bkqsize = sum((stq.qsize() for stq in ui.back_pques)) if ui.back_pques else 0
-        stqsize = sum((stq.qsize() for stq in ui.bact_pques)) if ui.bact_pques else 0
+        beqsize  = sum((stq.qsize() for stq in ui.back_eques)) if ui.back_eques else 0
+        bstqsize = sum((ctq.qsize() for ctq in ui.back_cques)) if ui.back_cques else 0
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
                f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
-               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backegQ[{bkqsize}] | backstQ[{stqsize}]'
+               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backegQ[{beqsize}] | backstQ[{bstqsize}]'
     else:
         if ui.dict_set['코인트레이더']:
             text = f'{text} | 모의' if ui.dict_set['코인모의투자'] else f'{text} | 실전'

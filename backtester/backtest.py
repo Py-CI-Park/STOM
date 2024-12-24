@@ -12,14 +12,14 @@ from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, co
 
 
 class Total:
-    def __init__(self, wq, sq, tq, mq, lq, bq, stq_list, backname, ui_gubun, gubun):
+    def __init__(self, wq, sq, tq, mq, lq, bq, bctq_list, backname, ui_gubun, gubun):
         self.wq           = wq
         self.sq           = sq
         self.tq           = tq
         self.mq           = mq
         self.lq           = lq
         self.bq           = bq
-        self.stq_list     = stq_list
+        self.bctq_list    = bctq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
         self.gubun        = gubun
@@ -76,7 +76,7 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for q in self.stq_list:
+                        for q in self.bctq_list:
                             q.put(('백테완료', '분리집계'))
                     else:
                         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'))
@@ -86,14 +86,14 @@ class Total:
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for q in self.stq_list:
+                    for q in self.bctq_list:
                         q.put('결과분리')
 
             elif data == '분리완료':
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for q in self.stq_list:
+                    for q in self.bctq_list:
                         q.put('결과전송')
 
             elif data[0] == '백테결과':
@@ -234,19 +234,19 @@ class Total:
 
 
 class BackTest:
-    def __init__(self, wq, bq, sq, tq, lq, pq_list, stq_list, backname, ui_gubun):
-        self.wq       = wq
-        self.bq       = bq
-        self.sq       = sq
-        self.tq       = tq
-        self.lq       = lq
-        self.pq_list  = pq_list
-        self.stq_list = stq_list
-        self.backname = backname
-        self.ui_gubun = ui_gubun
-        self.dict_set = DICT_SET
-        self.pattern  = False
-        self.gubun    = 'stock' if self.ui_gubun == 'S' else 'coin'
+    def __init__(self, wq, bq, sq, tq, lq, beq_list, bctq_list, backname, ui_gubun):
+        self.wq        = wq
+        self.bq        = bq
+        self.sq        = sq
+        self.tq        = tq
+        self.lq        = lq
+        self.beq_list  = beq_list
+        self.bctq_list = bctq_list
+        self.backname  = backname
+        self.ui_gubun  = ui_gubun
+        self.dict_set  = DICT_SET
+        self.pattern   = False
+        self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.Start()
 
     def Start(self):
@@ -293,8 +293,8 @@ class BackTest:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ('백테정보', arry_bct, betting)
-        for q in self.stq_list:
+        data = ('백테정보', arry_bct)
+        for q in self.bctq_list:
             q.put(data)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
 
@@ -312,24 +312,24 @@ class BackTest:
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
 
         mq = Queue()
-        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, self.bq, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
+        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, self.bq, self.bctq_list, self.backname, self.ui_gubun, self.gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
         self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
                      dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
         data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.pattern)
-        for q in self.stq_list:
+        for q in self.bctq_list:
             q.put('백테시작')
-        for q in self.pq_list:
+        for q in self.beq_list:
             q.put(data)
 
         data = mq.get()
         if buystg_name == '벤치전략':
             bench_point = 0
             total_ticks = 0
-            for q in self.pq_list:
+            for q in self.beq_list:
                 q.put('벤치점수요청')
-            for i, _ in enumerate(self.pq_list):
+            for i, _ in enumerate(self.beq_list):
                 tc, ts, bp = self.bq.get()
                 total_ticks += tc
                 bench_point += bp

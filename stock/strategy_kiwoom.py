@@ -5,7 +5,6 @@ import time
 import sqlite3
 import numpy as np
 import pandas as pd
-# noinspection PyUnresolvedReferences
 from talib import stream
 from traceback import print_exc
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
@@ -435,6 +434,49 @@ class StrategyKiwoom:
         def 전일비각도(tick, pre=0):
             return Parameter_Dgree(61, 9, tick, pre, 1)
 
+        if self.dict_set['보조지표사용']:
+            def BBU_N(pre):
+                return Parameter_Previous(-14, pre)
+
+            def BBM_N(pre):
+                return Parameter_Previous(-13, pre)
+
+            def BBL_N(pre):
+                return Parameter_Previous(-12, pre)
+
+            def MACD_N(pre):
+                return Parameter_Previous(-11, pre)
+
+            def MACDS_N(pre):
+                return Parameter_Previous(-10, pre)
+
+            def MACDH_N(pre):
+                return Parameter_Previous(-9, pre)
+
+            def APO_N(pre):
+                return Parameter_Previous(-8, pre)
+
+            def KAMA_N(pre):
+                return Parameter_Previous(-7, pre)
+
+            def RSI_N(pre):
+                return Parameter_Previous(-6, pre)
+
+            def HT_SINE_N(pre):
+                return Parameter_Previous(-5, pre)
+
+            def HT_LSINE_N(pre):
+                return Parameter_Previous(-4, pre)
+
+            def HT_PHASE_N(pre):
+                return Parameter_Previous(-3, pre)
+
+            def HT_QUDRA_N(pre):
+                return Parameter_Previous(-2, pre)
+
+            def OBV_N(pre):
+                return Parameter_Previous(-1, pre)
+
         시분초 = int(str(체결시간)[8:])
         호가단위 = GetHogaunit(종목코드 in self.tuple_kosd, 현재가, 체결시간)
         VI아래5호가 = GetUvilower5(VI가격, VI호가단위, 체결시간)
@@ -443,6 +485,8 @@ class StrategyKiwoom:
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_ = 0., 0., 0., 0., 0, 0
         체결강도평균_, 최고체결강도_, 최저체결강도_, 최고초당매수수량_, 최고초당매도수량_ = 0., 0., 0., 0, 0
         누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_ = 0, 0, 0., 0., 0., 0.
+        BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV = \
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -470,46 +514,69 @@ class StrategyKiwoom:
                 당일거래대금각도_ = round(math.atan2((당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6]) / 100, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 전일비각도_      = round(math.atan2(전일비 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 9], 평균값계산틱수) / (2 * math.pi) * 360, 2)
 
-        new_data_tick = [
+            """
             체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
-            초당매수수량, 초당매도수량, VI해제시간_, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+               0      1     2    3    4     5         6         7         8        9      10       11        12           13
+            초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+                14         15          16      17       18         19            20            21        22
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
-            이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
-            최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-        ]
+               23       24       25        26       27        28       29        30       31        32
+            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목
+               33       34       35        36       37        38       39        40       41       42          43           44
+            이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
+                45         46          47           48           49         50         51           52           53
+            최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_,
+                  54            55               56              57              58             59         60            61
+            BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE, HT_PHASE, HT_QUDRA, OBV
+            62    63  64    65    66     67     68   69    70    71        72       73         74      75
+            """
 
-        """
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
-           0      1     2    3    4     5         6         7         8        9      10       11        12           13
-        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
-            14         15          16      17       18         19            20            21        22
-        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           23       24       25        26       27        28       29        30       31        32
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목
-           33       34       35        36       37        38       39        40       41       42          43           44
-        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
-            45         46          47           48           49         50         51           52           53
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-              54            55               56              57              58             59         60            61
-        """
+            if self.dict_set['보조지표사용']:
+                k = self.dict_set['보조지표설정']
+                close, volume = self.dict_tik_ar[종목코드][:, 1], self.dict_tik_ar[종목코드][:, 10]
+                try:    BBU, BBM, BBL      = stream.BBANDS(   close, timeperiod=k[0],  nbdevup=k[1],     nbdevdn=k[2], matype=k[3])
+                except: BBU, BBM, BBL      = 0, 0, 0
+                try:    MACD, MACDS, MACDH = stream.MACD(     close, fastperiod=k[4],  slowperiod=k[5],  signalperiod=k[6])
+                except: MACD, MACDS, MACDH = 0, 0, 0
+                try:    APO                = stream.APO(      close, fastperiod=k[7],  slowperiod=k[8],  matype=k[9])
+                except: APO                = 0
+                try:    KAMA               = stream.KAMA(     close, timeperiod=k[17])
+                except: KAMA               = 0
+                try:    RSI                = stream.RSI(      close, timeperiod=k[18])
+                except: RSI                = 0
+                try:    HT_SINE, HT_LSINE  = stream.HT_SINE(  close)
+                except: HT_SINE, HT_LSINE  = 0, 0
+                try:    HT_PHASE, HT_QUDRA = stream.HT_PHASOR(close)
+                except: HT_PHASE, HT_QUDRA = 0, 0
+                try:    OBV                = stream.OBV(      close, volume)
+                except: OBV                = 0
+
+        if self.dict_set['보조지표사용']:
+            new_data_tick = [
+                체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액,
+                라운드피겨위5호가이내, 초당매수수량, 초당매도수량, VI해제시간_, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율,
+                매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4,
+                매수호가5, 매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5,
+                매도수5호가잔량합, 관심종목, 이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_,
+                체결강도평균_, 최고체결강도_, 최저체결강도_, 최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_,
+                초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_, BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI,
+                HT_SINE, HT_LSINE, HT_PHASE, HT_QUDRA, OBV
+            ]
+        else:
+            new_data_tick = [
+                체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액,
+                라운드피겨위5호가이내, 초당매수수량, 초당매도수량, VI해제시간_, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율,
+                매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4,
+                매수호가5, 매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5,
+                매도수5호가잔량합, 관심종목, 이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_,
+                체결강도평균_, 최고체결강도_, 최저체결강도_, 최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_,
+                초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
+            ]
 
         if 종목코드 not in self.dict_tik_ar.keys():
             self.dict_tik_ar[종목코드] = np.array([new_data_tick])
         else:
             self.dict_tik_ar[종목코드] = np.r_[self.dict_tik_ar[종목코드], np.array([new_data_tick])]
-
-        BBU, BBM, BBL = stream.BBANDS(self.dict_tik_ar[종목코드][:, 1], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
-        MACD, MACDS, MACDH = stream.MACD(self.dict_tik_ar[종목코드][:, 1], fastperiod=12, slowperiod=26, signalperiod=9)
-        HT_SINE, HT_LSINE = stream.HT_SINE(self.dict_tik_ar[종목코드][:, 1])
-        HT_PHASE, HT_QUDRA = stream.HT_PHASOR(self.dict_tik_ar[종목코드][:, 1])
-        KAMA = stream.KAMA(self.dict_tik_ar[종목코드][:, 1], timeperiod=30)
-        DEMA = stream.DEMA(self.dict_tik_ar[종목코드][:, 1], timeperiod=30)
-        MAMA, PAMA = stream.MAMA(self.dict_tik_ar[종목코드][:, 1], fastlimit=0.5, slowlimit=0.05)
-        RSI = stream.RSI(self.dict_tik_ar[종목코드][:, 1], timeperiod=14)
-        OBV = stream.OBV(self.dict_tik_ar[종목코드][:, 1], self.dict_tik_ar[종목코드][:, 10])
-        APO = stream.APO(self.dict_tik_ar[종목코드][:, 1], fastperiod=12, slowperiod=26, matype=0)
-        PPO = stream.PPO(self.dict_tik_ar[종목코드][:, 5], fastperiod=12, slowperiod=26, matype=0)
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
         self.indexn = 데이터길이 - 1

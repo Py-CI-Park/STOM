@@ -6,6 +6,7 @@ from ui.ui_get_label_text import get_label_text
 from utility.chart_items import ChuseItem
 from ui.set_style import qfont12, color_fg_bt, color_bg_bt, color_bg_ld
 from stock.login_kiwoom.manuallogin import leftClick, enter_keys, press_keys
+from utility.setting import list_stock, list_coin
 from utility.static import error_decorator, strf_time, from_timestamp, thread_decorator
 
 
@@ -16,49 +17,8 @@ class DrawChart:
 
     @error_decorator
     def draw_chart(self, data):
-        def cindex(number):
-            return dict_stock[number] if not coin else dict_coin[number]
-
-        """ 주식
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
-           0      1     2    3    4     5         6         7         8        9      10       11        12           13
-        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
-            14         15          16      17       18         19            20            21        22
-        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           23       24       25        26       27        28       29        30       31        32
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목
-           33       34       35        36       37        38       39        40       41       42          43           44
-        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
-            45         46          47           48           49         50         51           52           53
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-              54            55               56              57              58             59         60            61
-        매수가, 매도가
-          62    63
-        """
-        dict_stock = {
-            1: 45, 2: 46, 3: 47, 4: 48, 5: 1, 6: 51, 7: 52, 8: 53, 9: 7, 10: 19, 11: 58, 12: 14, 13: 15, 14: 5, 15: 20,
-            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 56, 23: 57, 24: 59, 25: 60, 26: 61, 27: 8, 28: 9, 29: 10,
-            30: 11, 40: 44, 41: 62, 42: 63
-        }
-        """ 코인
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
-           0      1     2    3     4     5        6         7         8           9          10            11
-        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           12        13        14       15       16        17       18        19       20       21        22       23
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
-           24        25       26       27        28       29        30       31       32        33         34           35
-        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
-            36         37           38          39          40         51          42           43          44
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
-               45            46              47              48              49           50           51
-        매수가, 매도가, 매수가2, 매도가2
-          52    53     54      55
-        """
-        dict_coin = {
-            1: 36, 2: 37, 3: 38, 4: 39, 5: 1, 6: 42, 7: 43, 8: 44, 9: 7, 10: 10, 11: 49, 12: 8, 13: 9, 14: 5, 15: 11,
-            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 47, 23: 48, 24: 50, 25: 51, 40: 35, 41: 52, 42: 53,
-            43: 54, 44: 55
-        }
+        def ci(fname):
+            return list_stock.index(fname) if not coin else list_coin.index(fname)
 
         self.ui.ChartClear()
         if not self.ui.dialog_chart.isVisible():
@@ -70,6 +30,11 @@ class DrawChart:
             return
 
         xmin, xmax = self.ui.ctpg_tik_xticks[0], self.ui.ctpg_tik_xticks[-1]
+        hms  = from_timestamp(xmax).strftime('%H:%M:%S')
+        code = self.ui.ct_lineEdittttt_04.text()
+        date = strf_time('%Y%m%d', from_timestamp(xmin))
+        if not coin: self.KiwoomHTSChart(code, date)
+
         if self.ui.ct_pushButtonnn_04.text() == 'CHART 8':
             chart_count = 8
         elif self.ui.ct_pushButtonnn_04.text() == 'CHART 12':
@@ -77,14 +42,8 @@ class DrawChart:
         else:
             chart_count = 16
 
-        code = self.ui.ct_lineEdittttt_04.text()
-        date = strf_time('%Y%m%d', from_timestamp(xmin))
-        if not coin: self.KiwoomHTSChart(code, date)
-
         self.ui.ctpg_tik_factors = []
         if self.ui.ct_checkBoxxxxx_01.isChecked():     self.ui.ctpg_tik_factors.append('현재가')
-        # self.ui.ctpg_tik_factors.append('MACD')
-        # self.ui.ctpg_tik_factors.append('RSI')
         if self.ui.ct_checkBoxxxxx_02.isChecked():     self.ui.ctpg_tik_factors.append('체결강도')
         if self.ui.ct_checkBoxxxxx_03.isChecked():     self.ui.ctpg_tik_factors.append('초당거래대금')
         if self.ui.ct_checkBoxxxxx_04.isChecked():     self.ui.ctpg_tik_factors.append('초당체결수량')
@@ -92,7 +51,7 @@ class DrawChart:
         if self.ui.ct_checkBoxxxxx_06.isChecked():     self.ui.ctpg_tik_factors.append('고저평균대비등락율')
         if self.ui.ct_checkBoxxxxx_07.isChecked():     self.ui.ctpg_tik_factors.append('호가총잔량')
         if self.ui.ct_checkBoxxxxx_08.isChecked():     self.ui.ctpg_tik_factors.append('1호가잔량')
-        if self.ui.ct_checkBoxxxxx_09.isChecked():     self.ui.ctpg_tik_factors.append('5호가잔량합')
+        if self.ui.ct_checkBoxxxxx_09.isChecked():     self.ui.ctpg_tik_factors.append('매도수5호가잔량합')
         if self.ui.ct_checkBoxxxxx_10.isChecked():     self.ui.ctpg_tik_factors.append('당일거래대금')
         if self.ui.ct_checkBoxxxxx_11.isChecked():     self.ui.ctpg_tik_factors.append('누적초당매도수수량')
         if self.ui.ct_checkBoxxxxx_12.isChecked():     self.ui.ctpg_tik_factors.append('등락율각도')
@@ -103,154 +62,136 @@ class DrawChart:
             if self.ui.ct_checkBoxxxxx_16.isChecked(): self.ui.ctpg_tik_factors.append('회전율')
             if self.ui.ct_checkBoxxxxx_17.isChecked(): self.ui.ctpg_tik_factors.append('전일동시간비')
             if self.ui.ct_checkBoxxxxx_18.isChecked(): self.ui.ctpg_tik_factors.append('전일비각도')
+        if self.ui.ct_checkBoxxxxx_19.isChecked():     self.ui.ctpg_tik_factors.append('BBAND')
+        if self.ui.ct_checkBoxxxxx_20.isChecked():     self.ui.ctpg_tik_factors.append('MACD')
+        if self.ui.ct_checkBoxxxxx_21.isChecked():     self.ui.ctpg_tik_factors.append('APO')
+        if self.ui.ct_checkBoxxxxx_22.isChecked():     self.ui.ctpg_tik_factors.append('KAMA')
+        if self.ui.ct_checkBoxxxxx_23.isChecked():     self.ui.ctpg_tik_factors.append('RSI')
+        if self.ui.ct_checkBoxxxxx_24.isChecked():     self.ui.ctpg_tik_factors.append('HT_SINE, HT_LSINE')
+        if self.ui.ct_checkBoxxxxx_25.isChecked():     self.ui.ctpg_tik_factors.append('HT_PHASE, HT_QUDRA')
+        if self.ui.ct_checkBoxxxxx_26.isChecked():     self.ui.ctpg_tik_factors.append('OBV')
 
-        for j in range(len(self.ui.ctpg_tik_arry[0, :])):
-            # if j in (cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25), 64, 65, 66, 67, 68, 69):
-            if j in (cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25)):
-                self.ui.ctpg_tik_data[j] = [x for x in self.ui.ctpg_tik_arry[:, j] if x != 0]
+        for i in range(len(self.ui.ctpg_tik_arry[0, :])):
+            tick_arry = self.ui.ctpg_tik_arry[:, i]
+            if i in (ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금평균'),
+                     ci('등락율각도'), ci('당일거래대금각도'), ci('전일비각도'), ci('관심종목'), ci('APO'), ci('HT_SINE'),
+                     ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')):
+                self.ui.ctpg_tik_data[i] = tick_arry
             else:
-                self.ui.ctpg_tik_data[j] = self.ui.ctpg_tik_arry[:, j]
+                self.ui.ctpg_tik_data[i] = tick_arry[tick_arry != 0]
 
-        hms  = from_timestamp(xmax).strftime('%H:%M:%S')
+        len_list = []
         tlen = len(self.ui.ctpg_tik_xticks)
-        len1 = len(self.ui.ctpg_tik_data[cindex(1)])
-        len2 = len(self.ui.ctpg_tik_data[cindex(2)])
-        len3 = len(self.ui.ctpg_tik_data[cindex(3)])
-        len4 = len(self.ui.ctpg_tik_data[cindex(4)])
-        len5 = len(self.ui.ctpg_tik_data[cindex(6)])
-        len6 = len(self.ui.ctpg_tik_data[cindex(7)])
-        len7 = len(self.ui.ctpg_tik_data[cindex(8)])
-        len8 = len(self.ui.ctpg_tik_data[cindex(25)])
-        # len9 = len(self.ui.ctpg_tik_data[64])
-        # len10 = len(self.ui.ctpg_tik_data[65])
-        # len11 = len(self.ui.ctpg_tik_data[66])
-        # len12 = len(self.ui.ctpg_tik_data[67])
-        # len13 = len(self.ui.ctpg_tik_data[68])
-        # len14 = len(self.ui.ctpg_tik_data[69])
-        chuse_exist = True if len(self.ui.ctpg_tik_arry[self.ui.ctpg_tik_arry[:, cindex(40)] > 0]) > 0 else False
+        for data in self.ui.ctpg_tik_data.values():
+            len_list.append(tlen - len(data))
+        gsjm_arry   = self.ui.ctpg_tik_arry[:, ci('관심종목')]
+        chuse_exist = True if len(gsjm_arry[gsjm_arry > 0]) > 0 else False
 
         for i, factor in enumerate(self.ui.ctpg_tik_factors):
             self.ui.ctpg[i].clear()
-            ymin, ymax = 0, 0
             if factor == '현재가':
-                list_ = self.ui.ctpg_tik_data[cindex(1)] + self.ui.ctpg_tik_data[cindex(2)] + self.ui.ctpg_tik_data[cindex(3)] + self.ui.ctpg_tik_data[cindex(4)] + list(self.ui.ctpg_tik_data[cindex(5)])
-                ymax, ymin = max(list_), min(list_)
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                # self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len9:], y=self.ui.ctpg_tik_data[64], pen=(100, 180, 100))
-                # self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len10:], y=self.ui.ctpg_tik_data[65], pen=(100, 100, 180))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len1:], y=self.ui.ctpg_tik_data[cindex(1)], pen=(140, 140, 145))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len2:], y=self.ui.ctpg_tik_data[cindex(2)], pen=(120, 120, 125))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len3:], y=self.ui.ctpg_tik_data[cindex(3)], pen=(100, 100, 105))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len4:], y=self.ui.ctpg_tik_data[cindex(4)], pen=(80, 80, 85))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(5)], pen=(200, 50, 50))
-                for j, price in enumerate(self.ui.ctpg_tik_arry[:, cindex(41)]):
+                ymax = self.ui.ctpg_tik_data[ci('현재가')].max()
+                ymin = self.ui.ctpg_tik_data[ci('현재가')].min()
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균60')]:], y=self.ui.ctpg_tik_data[ci('이동평균60')], pen=(180, 180, 180))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균300')]:], y=self.ui.ctpg_tik_data[ci('이동평균300')], pen=(140, 140, 140))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균600')]:], y=self.ui.ctpg_tik_data[ci('이동평균600')], pen=(100, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균1200')]:], y=self.ui.ctpg_tik_data[ci('이동평균1200')], pen=(60, 60, 60))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')], pen=(200, 100, 100))
+                for j, price in enumerate(self.ui.ctpg_tik_arry[:, ci('매수가')]):
                     if price > 0:
                         arrow = pg.ArrowItem(angle=-180, tipAngle=60, headLen=10, pen='w', brush='r')
                         arrow.setPos(self.ui.ctpg_tik_xticks[j], price)
                         self.ui.ctpg[i].addItem(arrow)
-                for j, price in enumerate(self.ui.ctpg_tik_arry[:, cindex(42)]):
+                for j, price in enumerate(self.ui.ctpg_tik_arry[:, ci('매도가')]):
                     if price > 0:
                         arrow = pg.ArrowItem(angle=0, tipAngle=60, headLen=10, pen='w', brush='b')
                         arrow.setPos(self.ui.ctpg_tik_xticks[j], price)
                         self.ui.ctpg[i].addItem(arrow)
                 if 'USDT' in code:
-                    for j, price in enumerate(self.ui.ctpg_tik_arry[:, cindex(43)]):
+                    for j, price in enumerate(self.ui.ctpg_tik_arry[:, ci('매수가2')]):
                         if price > 0:
                             arrow = pg.ArrowItem(angle=-180, tipAngle=60, headLen=10, pen='w', brush='m')
                             arrow.setPos(self.ui.ctpg_tik_xticks[j], price)
                             self.ui.ctpg[i].addItem(arrow)
-                    for j, price in enumerate(self.ui.ctpg_tik_arry[:, cindex(44)]):
+                    for j, price in enumerate(self.ui.ctpg_tik_arry[:, ci('매도가2')]):
                         if price > 0:
                             arrow = pg.ArrowItem(angle=0, tipAngle=60, headLen=10, pen='w', brush='b')
                             arrow.setPos(self.ui.ctpg_tik_xticks[j], price)
                             self.ui.ctpg[i].addItem(arrow)
-            # elif factor == 'MACD':
-            #     list_ = self.ui.ctpg_tik_data[66] + self.ui.ctpg_tik_data[67] + self.ui.ctpg_tik_data[68]
-            #     ymax, ymin = max(list_), min(list_)
-            #     if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len11:], y=self.ui.ctpg_tik_data[66], pen=(100, 250, 100))
-            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len12:], y=self.ui.ctpg_tik_data[67], pen=(250, 100, 100))
-            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len13:], y=self.ui.ctpg_tik_data[68], pen=(100, 100, 250))
-            # elif factor == 'RSI':
-            #     ymax, ymin = max(self.ui.ctpg_tik_data[69]), min(self.ui.ctpg_tik_data[69])
-            #     if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len14:], y=self.ui.ctpg_tik_data[69], pen=(250, 100, 100))
             elif factor == '체결강도':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(7)]), min(self.ui.ctpg_tik_data[cindex(8)])
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len5:], y=self.ui.ctpg_tik_data[cindex(6)], pen=(50, 50, 200))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len6:], y=self.ui.ctpg_tik_data[cindex(7)], pen=(200, 50, 50))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len7:], y=self.ui.ctpg_tik_data[cindex(8)], pen=(50, 200, 200))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(9)], pen=(50, 200, 50))
+                ymax = max(self.ui.ctpg_tik_data[ci('체결강도')].max(), self.ui.ctpg_tik_data[ci('최고체결강도')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('체결강도')].min(), self.ui.ctpg_tik_data[ci('최저체결강도')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('체결강도평균')]:], y=self.ui.ctpg_tik_data[ci('체결강도평균')], pen=(100, 200, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('최저체결강도')]:], y=self.ui.ctpg_tik_data[ci('최저체결강도')], pen=(100, 100, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('최고체결강도')]:], y=self.ui.ctpg_tik_data[ci('최고체결강도')], pen=(200, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('체결강도')]:], y=self.ui.ctpg_tik_data[ci('체결강도')], pen=(100, 200, 100))
             elif factor == '초당거래대금':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(10)].max(), self.ui.ctpg_tik_data[cindex(10)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(10)], pen=(200, 50, 50))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(11)], pen=(50, 200, 50))
+                ymax = self.ui.ctpg_tik_data[ci('초당거래대금')].max()
+                ymin = self.ui.ctpg_tik_data[ci('초당거래대금평균')].min()
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당거래대금')]:], y=self.ui.ctpg_tik_data[ci('초당거래대금')], pen=(200, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당거래대금평균')]:], y=self.ui.ctpg_tik_data[ci('초당거래대금평균')], pen=(100, 200, 100))
             elif factor == '초당체결수량':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(12)].max(), self.ui.ctpg_tik_data[cindex(13)].max()), min(self.ui.ctpg_tik_data[cindex(12)].min(), self.ui.ctpg_tik_data[cindex(13)].min())
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(12)], pen=(200, 50, 50))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(13)], pen=(50, 50, 200))
-            elif factor == '등락율':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(14)].max(), self.ui.ctpg_tik_data[cindex(14)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(14)], pen=(200, 50, 200))
-            elif factor == '고저평균대비등락율':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(15)].max(), self.ui.ctpg_tik_data[cindex(15)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(15)], pen=(50, 200, 200))
+                ymax = max(self.ui.ctpg_tik_data[ci('초당매수수량')].max(), self.ui.ctpg_tik_data[ci('초당매도수량')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('초당매수수량')].min(), self.ui.ctpg_tik_data[ci('초당매도수량')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당매도수량')]:], y=self.ui.ctpg_tik_data[ci('초당매도수량')], pen=(100, 100, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당매수수량')]:], y=self.ui.ctpg_tik_data[ci('초당매수수량')], pen=(200, 100, 100))
             elif factor == '호가총잔량':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(16)].max(), self.ui.ctpg_tik_data[cindex(17)].max()), min(self.ui.ctpg_tik_data[cindex(16)].min(), self.ui.ctpg_tik_data[cindex(17)].min())
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(16)], pen=(200, 50, 50))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(17)], pen=(50, 50, 200))
+                ymax = max(self.ui.ctpg_tik_data[ci('매수총잔량')].max(), self.ui.ctpg_tik_data[ci('매도총잔량')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('매수총잔량')].min(), self.ui.ctpg_tik_data[ci('매도총잔량')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매수총잔량')]:], y=self.ui.ctpg_tik_data[ci('매수총잔량')], pen=(200, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매도총잔량')]:], y=self.ui.ctpg_tik_data[ci('매도총잔량')], pen=(100, 100, 200))
             elif factor == '1호가잔량':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(18)].max(), self.ui.ctpg_tik_data[cindex(19)].max()), min(self.ui.ctpg_tik_data[cindex(18)].min(), self.ui.ctpg_tik_data[cindex(19)].min())
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(18)], pen=(200, 50, 50))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(19)], pen=(50, 50, 200))
-            elif factor == '5호가잔량합':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(20)].max(), self.ui.ctpg_tik_data[cindex(20)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(20)], pen=(200, 50, 50))
-            elif factor == '당일거래대금':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(21)].max(), self.ui.ctpg_tik_data[cindex(21)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(21)], pen=(200, 50, 50))
+                ymax = max(self.ui.ctpg_tik_data[ci('매수잔량1')].max(), self.ui.ctpg_tik_data[ci('매도잔량1')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('매수잔량1')].min(), self.ui.ctpg_tik_data[ci('매도잔량1')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매수잔량1')]:], y=self.ui.ctpg_tik_data[ci('매수잔량1')], pen=(200, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매도잔량1')]:], y=self.ui.ctpg_tik_data[ci('매도잔량1')], pen=(100, 100, 200))
             elif factor == '누적초당매도수수량':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(22)].max(), self.ui.ctpg_tik_data[cindex(23)].max()), min(self.ui.ctpg_tik_data[cindex(22)].min(), self.ui.ctpg_tik_data[cindex(23)].min())
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(22)], pen=(200, 50, 50))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(23)], pen=(50, 50, 200))
-            elif factor == '등락율각도':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(24)]), min(self.ui.ctpg_tik_data[cindex(24)])
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(24)], pen=(200, 50, 50))
-            elif factor == '당일거래대금각도':
-                ymax, ymin = max(self.ui.ctpg_tik_data[cindex(25)]), min(self.ui.ctpg_tik_data[cindex(25)])
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len8:], y=self.ui.ctpg_tik_data[cindex(25)], pen=(200, 50, 50))
-            elif factor == '전일비각도':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(26)].max(), self.ui.ctpg_tik_data[cindex(26)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(26)], pen=(200, 50, 50))
-            elif factor == '거래대금증감':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(27)].max(), self.ui.ctpg_tik_data[cindex(27)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(27)], pen=(200, 50, 50))
-            elif factor == '전일비':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(28)].max(), self.ui.ctpg_tik_data[cindex(28)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(28)], pen=(200, 50, 50))
-            elif factor == '회전율':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(29)].max(), self.ui.ctpg_tik_data[cindex(29)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(29)], pen=(200, 50, 50))
-            elif factor == '전일동시간비':
-                ymax, ymin = self.ui.ctpg_tik_data[cindex(30)].max(), self.ui.ctpg_tik_data[cindex(30)].min()
-                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
-                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(30)], pen=(200, 50, 50))
+                ymax = max(self.ui.ctpg_tik_data[ci('누적초당매수수량')].max(), self.ui.ctpg_tik_data[ci('누적초당매도수량')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('누적초당매수수량')].min(), self.ui.ctpg_tik_data[ci('누적초당매도수량')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('누적초당매도수량')]:], y=self.ui.ctpg_tik_data[ci('누적초당매도수량')], pen=(100, 100, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('누적초당매수수량')]:], y=self.ui.ctpg_tik_data[ci('누적초당매수수량')], pen=(200, 100, 100))
+            elif factor == 'BBAND':
+                ymax = max(self.ui.ctpg_tik_data[ci('BBU')].max(), self.ui.ctpg_tik_data[ci('현재가')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('BBL')].min(), self.ui.ctpg_tik_data[ci('현재가')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('BBM')]:], y=self.ui.ctpg_tik_data[ci('BBM')], pen=(100, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('BBL')]:], y=self.ui.ctpg_tik_data[ci('BBL')], pen=(100, 100, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('BBU')]:], y=self.ui.ctpg_tik_data[ci('BBU')], pen=(100, 200, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')], pen=(200, 100, 100))
+            elif factor == 'MACD':
+                ymax = self.ui.ctpg_tik_data[ci('MACD')].max()
+                ymin = self.ui.ctpg_tik_data[ci('MACD')].min()
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('MACDH')]:], y=self.ui.ctpg_tik_data[ci('MACDH')], pen=(100, 100, 100))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('MACDS')]:], y=self.ui.ctpg_tik_data[ci('MACDS')], pen=(100, 100, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('MACD')]:], y=self.ui.ctpg_tik_data[ci('MACD')], pen=(100, 200, 100))
+            elif factor == 'HT_SINE, HT_LSINE':
+                ymax = max(self.ui.ctpg_tik_data[ci('HT_SINE')].max(), self.ui.ctpg_tik_data[ci('HT_LSINE')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('HT_SINE')].min(), self.ui.ctpg_tik_data[ci('HT_LSINE')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_LSINE')]:], y=self.ui.ctpg_tik_data[ci('HT_LSINE')], pen=(100, 50, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_SINE')]:], y=self.ui.ctpg_tik_data[ci('HT_SINE')], pen=(100, 200, 100))
+            elif factor == 'HT_PHASE, HT_QUDRA':
+                ymax = max(self.ui.ctpg_tik_data[ci('HT_PHASE')].max(), self.ui.ctpg_tik_data[ci('HT_QUDRA')].max())
+                ymin = min(self.ui.ctpg_tik_data[ci('HT_PHASE')].min(), self.ui.ctpg_tik_data[ci('HT_QUDRA')].min())
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_QUDRA')]:], y=self.ui.ctpg_tik_data[ci('HT_QUDRA')], pen=(100, 100, 200))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_PHASE')]:], y=self.ui.ctpg_tik_data[ci('HT_PHASE')], pen=(100, 200, 100))
+            else:
+                pen  = (100, 200, 100) if (not coin and ci(factor) < 63) or (coin and ci(factor) < 53) else (100, 200, 200)
+                ymax = self.ui.ctpg_tik_data[ci(factor)].max()
+                ymin = self.ui.ctpg_tik_data[ci(factor)].min()
+                if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, ci('관심종목')], ymin, ymax, self.ui.ctpg_tik_xticks))
+                self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci(factor)]:], y=self.ui.ctpg_tik_data[ci(factor)], pen=pen)
+                if factor == 'KAMA':
+                    self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')], pen=(200, 100, 100))
 
             if self.ui.ct_checkBoxxxxx_22.isChecked():
                 legend = pg.TextItem(anchor=(1, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
@@ -262,13 +203,26 @@ class DrawChart:
 
             if i != 0: self.ui.ctpg[i].setXLink(self.ui.ctpg[0])
             self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
-            if self.ui.ct_checkBoxxxxx_22.isChecked(): self.ui.ctpg_tik_legend[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][1], self.ui.ctpg_cvb[i].state['viewRange'][1][1])
+            if self.ui.ct_checkBoxxxxx_22.isChecked():
+                self.ui.ctpg_tik_legend[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][1], self.ui.ctpg_cvb[i].state['viewRange'][1][1])
             if i == chart_count - 1: break
 
-        if self.ui.ct_checkBoxxxxx_21.isChecked():
-            if chart_count == 8:    self.crosshair.crosshair(False, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7])
-            elif chart_count == 12: self.crosshair.crosshair(False, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9], self.ui.ctpg[10], self.ui.ctpg[11])
-            elif chart_count == 16: self.crosshair.crosshair(False, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9], self.ui.ctpg[10], self.ui.ctpg[11], self.ui.ctpg[12], self.ui.ctpg[13], self.ui.ctpg[14], self.ui.ctpg[15])
+        if self.ui.ct_checkBoxxxxx_31.isChecked():
+            if chart_count == 8:
+                self.crosshair.crosshair(
+                    False, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4],
+                    self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7])
+            elif chart_count == 12:
+                self.crosshair.crosshair(
+                    False, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4],
+                    self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9],
+                    self.ui.ctpg[10], self.ui.ctpg[11])
+            elif chart_count == 16:
+                self.crosshair.crosshair(
+                    False, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4],
+                    self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9],
+                    self.ui.ctpg[10], self.ui.ctpg[11], self.ui.ctpg[12], self.ui.ctpg[13], self.ui.ctpg[14],
+                    self.ui.ctpg[15])
 
         self.ui.ctpg_tik_name = self.ui.ct_lineEdittttt_05.text()
         if not self.ui.database_chart: self.ui.database_chart = True

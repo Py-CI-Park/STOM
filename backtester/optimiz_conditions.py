@@ -7,18 +7,20 @@ import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
 from backtester.back_static import SendTextAndStd, GetMoneytopQuery
+from backtester.back_subtotal import BackSubTotal
 from utility.static import factorial, strf_time, now, timedelta_day, strp_time, timedelta_sec
 from utility.setting import ui_num, DB_STRATEGY, DICT_SET, DB_BACKTEST, DB_STOCK_BACK, DB_COIN_BACK
 
 
 class Total:
-    def __init__(self, wq, tq, mq, tdq_list, vdq_list, stq_list, ui_gubun):
+    def __init__(self, wq, tq, mq, bctq_list, bstq_list, ui_gubun):
         self.wq           = wq
         self.tq           = tq
         self.mq           = mq
-        self.tdq_list     = tdq_list
-        self.vdq_list     = vdq_list
-        self.stq_list     = stq_list
+        self.bctq_list    = bctq_list
+        self.bstq_list    = bstq_list
+        self.tstq_list    = bstq_list[:30]
+        self.vstq_list    = bstq_list[30:]
         self.ui_gubun     = ui_gubun
         self.dict_set     = DICT_SET
 
@@ -61,7 +63,7 @@ class Total:
                 bc  += 1
                 if bc == self.back_count:
                     bc = 0
-                    for stq in self.stq_list:
+                    for stq in self.bctq_list:
                         stq.put(('백테완료', '미분리집계'))
 
             elif data[0] == '백테결과':
@@ -87,12 +89,12 @@ class Total:
                             if self.valid_days is not None:
                                 for i, vdays in enumerate(self.valid_days):
                                     data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_turn, vars_key)
-                                    self.tdq_list[k % 10].put(data_)
-                                    self.vdq_list[k % 10].put(data_)
+                                    self.vstq_list[k % 10].put(data_)
+                                    self.tstq_list[k % 30].put(data_)
                                     k += 1
                             else:
                                 data_ = data + (self.day_count, vars_turn, vars_key)
-                                self.stq_list[k % 20].put(data_)
+                                self.bstq_list[k % 40].put(data_)
                                 k += 1
                     for vars_key in range(20):
                         if vars_key not in dict_dict_tsg[0].keys():
@@ -168,18 +170,19 @@ class Total:
 
 
 class OptimizeConditions:
-    def __init__(self, wq, bq, sq, tq, lq, pq_list, stq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, beq_list, bctq_list, backname, ui_gubun):
         self.wq           = wq
         self.bq           = bq
         self.sq           = sq
         self.tq           = tq
         self.lq           = lq
-        self.pq_list      = pq_list
-        self.stq_list     = stq_list
+        self.beq_list     = beq_list
+        self.bctq_list    = bctq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
         self.result       = {}
         self.opti_list    = []
+        self.bst_procs    = []
         self.bcount       = None
         self.scount       = None
         self.buyconds     = None
@@ -282,8 +285,8 @@ class OptimizeConditions:
 
         arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
-        data = ('백테정보', arry_bct, betting)
-        for q in self.stq_list:
+        data = ('백테정보', arry_bct)
+        for q in self.bctq_list:
             q.put(data)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
 
@@ -317,15 +320,25 @@ class OptimizeConditions:
         rcount = int(rcount / 20)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 전체 경우의 수 계산 완료 [{total_count:,.0f}]'))
 
+        bstq_list = []
+        for i in range(40):
+            bstq = Queue()
+            if i < 30:
+                proc = Process(target=BackSubTotal, args=(1, self.tq, bstq, betting))
+            else:
+                proc = Process(target=BackSubTotal, args=(0, self.tq, bstq, betting))
+            proc.start()
+            bstq_list.append(bstq)
+            self.bst_procs.append(proc)
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 계산용 프로세스 생성 완료'))
+
         mq = Queue()
-        tdq_list = self.stq_list[:10]
-        vdq_list = self.stq_list[10:]
-        Process(target=Total, args=(self.wq, self.tq, mq, tdq_list, vdq_list, self.stq_list, self.ui_gubun)).start()
+        Process(target=Total, args=(self.wq, self.tq, mq, self.bctq_list, bstq_list, self.ui_gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
         self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, std_text, self.optistandard, valid_days, len(day_list)))
         data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime)
-        for q in self.pq_list:
+        for q in self.beq_list:
             q.put(data)
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 시작'))
@@ -336,13 +349,13 @@ class OptimizeConditions:
             buy_conds, sell_conds = self.GetCondlist()
             if len(buy_conds) == 20:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 [{i+1}/{rcount}]단계 시작, 최고 기준값[{hstd}]'))
-                for q in self.stq_list:
+                for q in self.bctq_list:
                     q.put('백테시작')
                 if is_long is None:
                     data = ('조건정보', buy_conds, sell_conds)
                 else:
                     data = ('조건정보', is_long, buy_conds, sell_conds)
-                for q in self.pq_list:
+                for q in self.beq_list:
                     q.put(data)
 
                 for _ in range(20):
@@ -444,6 +457,8 @@ class OptimizeConditions:
         con.close()
 
     def SysExit(self, cancel):
+        for proc in self.bst_procs:
+            proc.kill()
         if cancel:
             self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         else:

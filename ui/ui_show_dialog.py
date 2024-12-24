@@ -152,9 +152,9 @@ def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ,
         else:
             ui.ChartClear()
             if detail is None:
-                chartQ.put((coin, code, tickcount, searchdate, starttime, endtime))
+                chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist()))
             else:
-                chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes))
+                chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(), detail, buytimes))
 
 def show_dialog_chart2(ui):
     if ui.ct_pushButtonnn_06.text() == '확장':

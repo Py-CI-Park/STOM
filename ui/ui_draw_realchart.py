@@ -1,7 +1,8 @@
 import pyqtgraph as pg
-from ui.ui_crosshair import CrossHair 
+from ui.ui_crosshair import CrossHair
 from ui.ui_get_label_text import get_label_text
 from ui.set_style import qfont12, color_fg_bt, color_bg_bt, color_bg_ld
+from utility.setting import list_stock_real, list_coin_real
 from utility.static import error_decorator, from_timestamp, strp_time
 
 
@@ -9,18 +10,27 @@ class DrawRealChart:
     def __init__(self, ui):
         self.ui = ui
         self.crosshair = CrossHair(self.ui)
+        self.chart_item_index = 0
 
     @error_decorator
     def draw_realchart(self, data):
-        def cindex(number):
-            return dict_stock[number] if not coin else dict_coin[number]
+        def ci(fname):
+            return list_stock_real.index(fname) if not coin else list_coin_real.index(fname)
+
+        def cii():
+            self.chart_item_index += 1
+            return self.chart_item_index
 
         if not self.ui.dialog_chart.isVisible():
             self.ui.ChartClear()
             return
 
+        self.chart_item_index = 0
         name, self.ui.ctpg_tik_arry = data[1:]
         coin = True if 'KRW' in name or 'USDT' in name else False
+        self.ui.ctpg_tik_xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.ui.ctpg_tik_data[0]]
+        xmin, xmax = self.ui.ctpg_tik_xticks[0], self.ui.ctpg_tik_xticks[-1]
+        hms = from_timestamp(xmax).strftime('%H:%M:%S')
 
         if self.ui.ct_pushButtonnn_04.text() == 'CHART 8':
             chart_count = 8
@@ -42,7 +52,7 @@ class DrawRealChart:
             if self.ui.ct_checkBoxxxxx_06.isChecked():     self.ui.ctpg_tik_factors.append('고저평균대비등락율')
             if self.ui.ct_checkBoxxxxx_07.isChecked():     self.ui.ctpg_tik_factors.append('호가총잔량')
             if self.ui.ct_checkBoxxxxx_08.isChecked():     self.ui.ctpg_tik_factors.append('1호가잔량')
-            if self.ui.ct_checkBoxxxxx_09.isChecked():     self.ui.ctpg_tik_factors.append('5호가잔량합')
+            if self.ui.ct_checkBoxxxxx_09.isChecked():     self.ui.ctpg_tik_factors.append('매도수5호가잔량합')
             if self.ui.ct_checkBoxxxxx_10.isChecked():     self.ui.ctpg_tik_factors.append('당일거래대금')
             if self.ui.ct_checkBoxxxxx_11.isChecked():     self.ui.ctpg_tik_factors.append('누적초당매도수수량')
             if self.ui.ct_checkBoxxxxx_12.isChecked():     self.ui.ctpg_tik_factors.append('등락율각도')
@@ -53,112 +63,106 @@ class DrawRealChart:
                 if self.ui.ct_checkBoxxxxx_16.isChecked(): self.ui.ctpg_tik_factors.append('회전율')
                 if self.ui.ct_checkBoxxxxx_17.isChecked(): self.ui.ctpg_tik_factors.append('전일동시간비')
                 if self.ui.ct_checkBoxxxxx_18.isChecked(): self.ui.ctpg_tik_factors.append('전일비각도')
+            if self.ui.ct_checkBoxxxxx_19.isChecked():     self.ui.ctpg_tik_factors.append('BBAND')
+            if self.ui.ct_checkBoxxxxx_20.isChecked():     self.ui.ctpg_tik_factors.append('MACD')
+            if self.ui.ct_checkBoxxxxx_21.isChecked():     self.ui.ctpg_tik_factors.append('APO')
+            if self.ui.ct_checkBoxxxxx_22.isChecked():     self.ui.ctpg_tik_factors.append('KAMA')
+            if self.ui.ct_checkBoxxxxx_23.isChecked():     self.ui.ctpg_tik_factors.append('RSI')
+            if self.ui.ct_checkBoxxxxx_24.isChecked():     self.ui.ctpg_tik_factors.append('HT_SINE, HT_LSINE')
+            if self.ui.ct_checkBoxxxxx_25.isChecked():     self.ui.ctpg_tik_factors.append('HT_PHASE, HT_QUDRA')
+            if self.ui.ct_checkBoxxxxx_26.isChecked():     self.ui.ctpg_tik_factors.append('OBV')
 
-        dict_stock = {
-            1: 45, 2: 46, 3: 47, 4: 48, 5: 1, 6: 51, 7: 52, 8: 53, 9: 7, 10: 19, 11: 58, 12: 14, 13: 15, 14: 5, 15: 20,
-            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 56, 23: 57, 24: 59, 25: 60, 26: 61, 27: 8, 28: 9, 29: 10,
-            30: 11, 40: 44, 41: 62, 42: 63
-        }
-        dict_coin = {
-            1: 36, 2: 37, 3: 38, 4: 39, 5: 1, 6: 42, 7: 43, 8: 44, 9: 7, 10: 10, 11: 49, 12: 8, 13: 9, 14: 5, 15: 11,
-            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 47, 23: 48, 24: 50, 25: 51, 40: 35, 41: 52, 42: 53,
-            43: 54, 44: 55
-        }
-
-        for j in range(len(self.ui.ctpg_tik_arry[0, :])):
-            if j in (cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25)):
-                self.ui.ctpg_tik_data[j] = [x for x in self.ui.ctpg_tik_arry[:, j] if x != 0]
+        for i in range(len(self.ui.ctpg_tik_arry[0, :])):
+            tick_arry = self.ui.ctpg_tik_arry[:, i]
+            if i in (ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금평균'),
+                     ci('등락율각도'), ci('당일거래대금각도'), ci('전일비각도'), ci('관심종목'), ci('APO'), ci('HT_SINE'),
+                     ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')):
+                self.ui.ctpg_tik_data[i] = tick_arry
             else:
-                self.ui.ctpg_tik_data[j] = self.ui.ctpg_tik_arry[:, j]
+                self.ui.ctpg_tik_data[i] = tick_arry[tick_arry != 0]
 
-        self.ui.ctpg_tik_xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in self.ui.ctpg_tik_data[0]]
-        xmin, xmax = self.ui.ctpg_tik_xticks[0], self.ui.ctpg_tik_xticks[-1]
-        hms  = from_timestamp(xmax).strftime('%H:%M:%S')
+        len_list = []
         tlen = len(self.ui.ctpg_tik_xticks)
-        len1 = len(self.ui.ctpg_tik_data[cindex(1)])
-        len2 = len(self.ui.ctpg_tik_data[cindex(2)])
-        len3 = len(self.ui.ctpg_tik_data[cindex(3)])
-        len4 = len(self.ui.ctpg_tik_data[cindex(4)])
-        len5 = len(self.ui.ctpg_tik_data[cindex(6)])
-        len6 = len(self.ui.ctpg_tik_data[cindex(7)])
-        len7 = len(self.ui.ctpg_tik_data[cindex(8)])
-        len8 = len(self.ui.ctpg_tik_data[cindex(25)])
+        for data in self.ui.ctpg_tik_data.values():
+            len_list.append(tlen - len(data))
 
         if self.ui.ctpg_tik_name != name:
             for i, factor in enumerate(self.ui.ctpg_tik_factors):
                 self.ui.ctpg[i].clear()
-                ymin, ymax = 0, 0
                 if factor == '현재가':
-                    self.ui.ctpg_tik_item[1] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len1:], y=self.ui.ctpg_tik_data[cindex(1)], pen=(140, 140, 145))
-                    self.ui.ctpg_tik_item[2] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len2:], y=self.ui.ctpg_tik_data[cindex(2)], pen=(120, 120, 125))
-                    self.ui.ctpg_tik_item[3] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len3:], y=self.ui.ctpg_tik_data[cindex(3)], pen=(100, 100, 105))
-                    self.ui.ctpg_tik_item[4] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len4:], y=self.ui.ctpg_tik_data[cindex(4)], pen=(80, 80, 85))
-                    self.ui.ctpg_tik_item[5] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(5)], pen=(200, 50, 50))
+                    ymax = self.ui.ctpg_tik_data[ci('현재가')].max()
+                    ymin = min(self.ui.ctpg_tik_data[ci('이동평균1200')].min(), self.ui.ctpg_tik_data[ci('현재가')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균60')]:], y=self.ui.ctpg_tik_data[ci('이동평균60')], pen=(180, 180, 180))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균300')]:], y=self.ui.ctpg_tik_data[ci('이동평균300')], pen=(140, 140, 140))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균600')]:], y=self.ui.ctpg_tik_data[ci('이동평균600')], pen=(100, 100, 100))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균1200')]:], y=self.ui.ctpg_tik_data[ci('이동평균1200')], pen=(60, 60, 60))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')], pen=(200, 50, 50))
                     self.ui.ctpg_tik_cline = pg.InfiniteLine(angle=0)
                     self.ui.ctpg_tik_cline.setPen(pg.mkPen(color_fg_bt))
-                    self.ui.ctpg_tik_cline.setPos(self.ui.ctpg_tik_data[cindex(5)][-1])
+                    self.ui.ctpg_tik_cline.setPos(self.ui.ctpg_tik_data[ci(5)][-1])
                     self.ui.ctpg[i].addItem(self.ui.ctpg_tik_cline)
-                    list_ = self.ui.ctpg_tik_data[cindex(1)] + self.ui.ctpg_tik_data[cindex(2)] + self.ui.ctpg_tik_data[cindex(3)] + self.ui.ctpg_tik_data[cindex(4)] + list(self.ui.ctpg_tik_data[cindex(5)])
-                    ymax, ymin = max(list_), min(list_)
                 elif factor == '체결강도':
-                    self.ui.ctpg_tik_item[6] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len5:], y=self.ui.ctpg_tik_data[cindex(6)], pen=(50, 50, 200))
-                    self.ui.ctpg_tik_item[7] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len6:], y=self.ui.ctpg_tik_data[cindex(7)], pen=(200, 50, 50))
-                    self.ui.ctpg_tik_item[8] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len7:], y=self.ui.ctpg_tik_data[cindex(8)], pen=(50, 200, 200))
-                    self.ui.ctpg_tik_item[9] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(9)], pen=(50, 200, 50))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(7)]), min(self.ui.ctpg_tik_data[cindex(8)])
+                    ymax = max(self.ui.ctpg_tik_data[ci('체결강도')].max(), self.ui.ctpg_tik_data[ci('최고체결강도')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('체결강도')].min(), self.ui.ctpg_tik_data[ci('최저체결강도')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('체결강도평균')]:], y=self.ui.ctpg_tik_data[ci('체결강도평균')], pen=(50, 200, 50))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('최저체결강도')]:], y=self.ui.ctpg_tik_data[ci('최저체결강도')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('최고체결강도')]:], y=self.ui.ctpg_tik_data[ci('최고체결강도')], pen=(200, 50, 50))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('체결강도')]:], y=self.ui.ctpg_tik_data[ci('체결강도')], pen=(50, 200, 50))
                 elif factor == '초당거래대금':
-                    self.ui.ctpg_tik_item[10] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(10)], pen=(200, 50, 50))
-                    self.ui.ctpg_tik_item[11] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(11)], pen=(50, 200, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(10)].max(), self.ui.ctpg_tik_data[cindex(10)].min()
+                    ymax = self.ui.ctpg_tik_data[ci('초당거래대금')].max()
+                    ymin = self.ui.ctpg_tik_data[ci('초당거래대금평균')].min()
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당거래대금')]:], y=self.ui.ctpg_tik_data[ci('초당거래대금')], pen=(200, 50, 50))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당거래대금평균')]:], y=self.ui.ctpg_tik_data[ci('초당거래대금평균')], pen=(50, 200, 50))
                 elif factor == '초당체결수량':
-                    self.ui.ctpg_tik_item[12] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(12)], pen=(200, 50, 50))
-                    self.ui.ctpg_tik_item[13] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(13)], pen=(50, 50, 200))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(12)].max(), self.ui.ctpg_tik_data[cindex(13)].max()), min(self.ui.ctpg_tik_data[cindex(12)].min(), self.ui.ctpg_tik_data[cindex(13)].min())
-                elif factor == '등락율':
-                    self.ui.ctpg_tik_item[14] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(14)], pen=(200, 50, 200))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(14)].max(), self.ui.ctpg_tik_data[cindex(14)].min()
-                elif factor == '고저평균대비등락율':
-                    self.ui.ctpg_tik_item[15] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(15)], pen=(50, 200, 200))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(15)].max(), self.ui.ctpg_tik_data[cindex(15)].min()
+                    ymax = max(self.ui.ctpg_tik_data[ci('초당매수수량')].max(), self.ui.ctpg_tik_data[ci('초당매도수량')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('초당매수수량')].min(), self.ui.ctpg_tik_data[ci('초당매도수량')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당매도수량')]:], y=self.ui.ctpg_tik_data[ci('초당매도수량')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('초당매수수량')]:], y=self.ui.ctpg_tik_data[ci('초당매수수량')], pen=(200, 50, 50))
                 elif factor == '호가총잔량':
-                    self.ui.ctpg_tik_item[16] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(16)], pen=(200, 50, 50))
-                    self.ui.ctpg_tik_item[17] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(17)], pen=(50, 50, 200))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(16)].max(), self.ui.ctpg_tik_data[cindex(17)].max()), min(self.ui.ctpg_tik_data[cindex(16)].min(), self.ui.ctpg_tik_data[cindex(17)].min())
+                    ymax = max(self.ui.ctpg_tik_data[ci('매수총잔량')].max(), self.ui.ctpg_tik_data[ci('매도총잔량')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('매수총잔량')].min(), self.ui.ctpg_tik_data[ci('매도총잔량')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매수총잔량')]:], y=self.ui.ctpg_tik_data[ci('매수총잔량')], pen=(200, 50, 50))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매도총잔량')]:], y=self.ui.ctpg_tik_data[ci('매도총잔량')], pen=(50, 50, 200))
                 elif factor == '1호가잔량':
-                    self.ui.ctpg_tik_item[18] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(18)], pen=(200, 50, 50))
-                    self.ui.ctpg_tik_item[19] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(19)], pen=(50, 50, 200))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(18)].max(), self.ui.ctpg_tik_data[cindex(19)].max()), min(self.ui.ctpg_tik_data[cindex(18)].min(), self.ui.ctpg_tik_data[cindex(19)].min())
-                elif factor == '5호가잔량합':
-                    self.ui.ctpg_tik_item[20] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(20)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(20)].max(), self.ui.ctpg_tik_data[cindex(20)].min()
-                elif factor == '당일거래대금':
-                    self.ui.ctpg_tik_item[21] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(21)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(21)].max(), self.ui.ctpg_tik_data[cindex(21)].min()
+                    ymax = max(self.ui.ctpg_tik_data[ci('매수잔량1')].max(), self.ui.ctpg_tik_data[ci('매도잔량1')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('매수잔량1')].min(), self.ui.ctpg_tik_data[ci('매도잔량1')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매수잔량1')]:], y=self.ui.ctpg_tik_data[ci('매수잔량1')], pen=(200, 50, 50))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('매도잔량1')]:], y=self.ui.ctpg_tik_data[ci('매도잔량1')], pen=(50, 50, 200))
                 elif factor == '누적초당매도수수량':
-                    self.ui.ctpg_tik_item[22] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(22)], pen=(200, 50, 50))
-                    self.ui.ctpg_tik_item[23] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(23)], pen=(50, 50, 200))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(22)].max(), self.ui.ctpg_tik_data[cindex(23)].max()), min(self.ui.ctpg_tik_data[cindex(22)].min(), self.ui.ctpg_tik_data[cindex(23)].min())
-                elif factor == '등락율각도':
-                    self.ui.ctpg_tik_item[24] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(24)], pen=(200, 50, 50))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(24)]), min(self.ui.ctpg_tik_data[cindex(24)])
-                elif factor == '당일거래대금각도':
-                    self.ui.ctpg_tik_item[25] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len8:], y=self.ui.ctpg_tik_data[cindex(25)], pen=(200, 50, 50))
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(25)]), min(self.ui.ctpg_tik_data[cindex(25)])
-                elif factor == '전일비각도':
-                    self.ui.ctpg_tik_item[26] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(26)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(26)].max(), self.ui.ctpg_tik_data[cindex(26)].min()
-                elif factor == '거래대금증감':
-                    self.ui.ctpg_tik_item[27] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(27)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(27)].max(), self.ui.ctpg_tik_data[cindex(27)].min()
-                elif factor == '전일비':
-                    self.ui.ctpg_tik_item[28] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(28)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(28)].max(), self.ui.ctpg_tik_data[cindex(28)].min()
-                elif factor == '회전율':
-                    self.ui.ctpg_tik_item[29] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(29)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(29)].max(), self.ui.ctpg_tik_data[cindex(29)].min()
-                elif factor == '전일동시간비':
-                    self.ui.ctpg_tik_item[30] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(30)], pen=(200, 50, 50))
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(30)].max(), self.ui.ctpg_tik_data[cindex(30)].min()
+                    ymax = max(self.ui.ctpg_tik_data[ci('누적초당매수수량')].max(), self.ui.ctpg_tik_data[ci('누적초당매도수량')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('누적초당매수수량')].min(), self.ui.ctpg_tik_data[ci('누적초당매도수량')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('누적초당매도수량')]:], y=self.ui.ctpg_tik_data[ci('누적초당매도수량')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('누적초당매수수량')]:], y=self.ui.ctpg_tik_data[ci('누적초당매수수량')], pen=(200, 50, 50))
+                elif factor == 'BBAND':
+                    ymax = max(self.ui.ctpg_tik_data[ci('BBU')].max(), self.ui.ctpg_tik_data[ci('현재가')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('BBL')].min(), self.ui.ctpg_tik_data[ci('현재가')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('BBM')]:], y=self.ui.ctpg_tik_data[ci('BBM')], pen=(140, 140, 140))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('BBL')]:], y=self.ui.ctpg_tik_data[ci('BBL')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('BBU')]:], y=self.ui.ctpg_tik_data[ci('BBU')], pen=(50, 200, 50))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')], pen=(200, 50, 50))
+                elif factor == 'MACD':
+                    ymax = self.ui.ctpg_tik_data[ci('MACD')].max()
+                    ymin = self.ui.ctpg_tik_data[ci('MACD')].min()
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('MACDH')]:], y=self.ui.ctpg_tik_data[ci('MACDH')], pen=(140, 140, 140))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('MACDS')]:], y=self.ui.ctpg_tik_data[ci('MACDS')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('MACD')]:], y=self.ui.ctpg_tik_data[ci('MACD')], pen=(50, 200, 50))
+                elif factor == 'HT_SINE, HT_LSINE':
+                    ymax = max(self.ui.ctpg_tik_data[ci('HT_SINE')].max(), self.ui.ctpg_tik_data[ci('HT_LSINE')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('HT_SINE')].min(), self.ui.ctpg_tik_data[ci('HT_LSINE')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_LSINE')]:], y=self.ui.ctpg_tik_data[ci('HT_LSINE')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_SINE')]:], y=self.ui.ctpg_tik_data[ci('HT_SINE')], pen=(50, 200, 50))
+                elif factor == 'HT_PHASE, HT_QUDRA':
+                    ymax = max(self.ui.ctpg_tik_data[ci('HT_PHASE')].max(), self.ui.ctpg_tik_data[ci('HT_QUDRA')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('HT_PHASE')].min(), self.ui.ctpg_tik_data[ci('HT_QUDRA')].min())
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_QUDRA')]:], y=self.ui.ctpg_tik_data[ci('HT_QUDRA')], pen=(50, 50, 200))
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_PHASE')]:], y=self.ui.ctpg_tik_data[ci('HT_PHASE')], pen=(50, 200, 50))
+                else:
+                    if factor == 'KAMA':
+                        self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')], pen=(200, 50, 50))
+                    pen = (200, 200, 50) if (not coin and ci(factor) < 62) or (coin and ci(factor) < 52) else (50, 200, 200)
+                    ymax = self.ui.ctpg_tik_data[ci(factor)].max()
+                    ymin = self.ui.ctpg_tik_data[ci(factor)].min()
+                    self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci(factor)]:], y=self.ui.ctpg_tik_data[ci(factor)], pen=pen)
 
                 if self.ui.ct_checkBoxxxxx_22.isChecked():
                     legend = pg.TextItem(anchor=(0, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
@@ -174,81 +178,94 @@ class DrawRealChart:
                 if i == chart_count - 1: break
 
             self.ui.ctpg_tik_name = name
-            if self.ui.ct_checkBoxxxxx_21.isChecked():
-                if chart_count == 8:    self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7])
-                elif chart_count == 12: self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9], self.ui.ctpg[10], self.ui.ctpg[11])
-                elif chart_count == 16: self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2], self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6], self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9], self.ui.ctpg[10], self.ui.ctpg[11], self.ui.ctpg[12], self.ui.ctpg[13], self.ui.ctpg[14], self.ui.ctpg[15])
+            if self.ui.ct_checkBoxxxxx_31.isChecked():
+                if chart_count == 8:
+                    self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2],
+                                             self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6],
+                                             self.ui.ctpg[7])
+                elif chart_count == 12:
+                    self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2],
+                                             self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6],
+                                             self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9], self.ui.ctpg[10],
+                                             self.ui.ctpg[11])
+                elif chart_count == 16:
+                    self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2],
+                                             self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6],
+                                             self.ui.ctpg[7], self.ui.ctpg[8], self.ui.ctpg[9], self.ui.ctpg[10],
+                                             self.ui.ctpg[11], self.ui.ctpg[12], self.ui.ctpg[13], self.ui.ctpg[14],
+                                             self.ui.ctpg[15])
         else:
             for i, factor in enumerate(self.ui.ctpg_tik_factors):
-                ymin, ymax = 0, 0
                 if factor == '현재가':
-                    list_ = self.ui.ctpg_tik_data[cindex(1)] + self.ui.ctpg_tik_data[cindex(2)] + self.ui.ctpg_tik_data[cindex(3)] + self.ui.ctpg_tik_data[cindex(4)] + list(self.ui.ctpg_tik_data[cindex(5)])
-                    ymax, ymin = max(list_), min(list_)
-                    self.ui.ctpg_tik_item[1].setData(x=self.ui.ctpg_tik_xticks[tlen - len1:], y=self.ui.ctpg_tik_data[cindex(1)])
-                    self.ui.ctpg_tik_item[2].setData(x=self.ui.ctpg_tik_xticks[tlen - len2:], y=self.ui.ctpg_tik_data[cindex(2)])
-                    self.ui.ctpg_tik_item[3].setData(x=self.ui.ctpg_tik_xticks[tlen - len3:], y=self.ui.ctpg_tik_data[cindex(3)])
-                    self.ui.ctpg_tik_item[4].setData(x=self.ui.ctpg_tik_xticks[tlen - len4:], y=self.ui.ctpg_tik_data[cindex(4)])
-                    self.ui.ctpg_tik_item[5].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(5)])
-                    self.ui.ctpg_tik_cline.setPos(self.ui.ctpg_tik_data[cindex(5)][-1])
+                    ymax = self.ui.ctpg_tik_data[ci('현재가')].max()
+                    ymin = self.ui.ctpg_tik_data[ci('현재가')].min()
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균60')]:], y=self.ui.ctpg_tik_data[ci('이동평균60')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균300')]:], y=self.ui.ctpg_tik_data[ci('이동평균300')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균600')]:], y=self.ui.ctpg_tik_data[ci('이동평균600')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('이동평균1200')]:], y=self.ui.ctpg_tik_data[ci('이동평균1200')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')])
+                    self.ui.ctpg_tik_cline.setPos(self.ui.ctpg_tik_data[ci('현재가')][-1])
                 elif factor == '체결강도':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(7)]), min(self.ui.ctpg_tik_data[cindex(8)])
-                    self.ui.ctpg_tik_item[6].setData(x=self.ui.ctpg_tik_xticks[tlen - len5:], y=self.ui.ctpg_tik_data[cindex(6)])
-                    self.ui.ctpg_tik_item[7].setData(x=self.ui.ctpg_tik_xticks[tlen - len6:], y=self.ui.ctpg_tik_data[cindex(7)])
-                    self.ui.ctpg_tik_item[8].setData(x=self.ui.ctpg_tik_xticks[tlen - len7:], y=self.ui.ctpg_tik_data[cindex(8)])
-                    self.ui.ctpg_tik_item[9].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(9)])
+                    ymax = max(self.ui.ctpg_tik_data[ci('체결강도')].max(), self.ui.ctpg_tik_data[ci('최고체결강도')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('체결강도')].min(), self.ui.ctpg_tik_data[ci('최저체결강도')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('체결강도평균')]:], y=self.ui.ctpg_tik_data[ci('체결강도평균')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('최저체결강도')]:], y=self.ui.ctpg_tik_data[ci('최저체결강도')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('최고체결강도')]:], y=self.ui.ctpg_tik_data[ci('최고체결강도')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('체결강도')]:], y=self.ui.ctpg_tik_data[ci('체결강도')])
                 elif factor == '초당거래대금':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(10)].max(), self.ui.ctpg_tik_data[cindex(10)].min()
-                    self.ui.ctpg_tik_item[10].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(10)])
-                    self.ui.ctpg_tik_item[11].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(11)])
+                    ymax = self.ui.ctpg_tik_data[ci('초당거래대금')].max()
+                    ymin = self.ui.ctpg_tik_data[ci('초당거래대금평균')].min()
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('초당거래대금')]:], y=self.ui.ctpg_tik_data[ci('초당거래대금')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('초당거래대금평균')]:], y=self.ui.ctpg_tik_data[ci('초당거래대금평균')])
                 elif factor == '초당체결수량':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(12)].max(), self.ui.ctpg_tik_data[cindex(13)].max()), min(self.ui.ctpg_tik_data[cindex(12)].min(), self.ui.ctpg_tik_data[cindex(13)].min())
-                    self.ui.ctpg_tik_item[12].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(12)])
-                    self.ui.ctpg_tik_item[13].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(13)])
-                elif factor == '등락율':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(14)].max(), self.ui.ctpg_tik_data[cindex(14)].min()
-                    self.ui.ctpg_tik_item[14].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(14)])
-                elif factor == '고저평균대비등락율':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(15)].max(), self.ui.ctpg_tik_data[cindex(15)].min()
-                    self.ui.ctpg_tik_item[15].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(15)])
+                    ymax = max(self.ui.ctpg_tik_data[ci('초당매수수량')].max(), self.ui.ctpg_tik_data[ci('초당매도수량')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('초당매수수량')].min(), self.ui.ctpg_tik_data[ci('초당매도수량')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('초당매도수량')]:], y=self.ui.ctpg_tik_data[ci('초당매도수량')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('초당매수수량')]:], y=self.ui.ctpg_tik_data[ci('초당매수수량')])
                 elif factor == '호가총잔량':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(16)].max(), self.ui.ctpg_tik_data[cindex(17)].max()), min(self.ui.ctpg_tik_data[cindex(16)].min(), self.ui.ctpg_tik_data[cindex(17)].min())
-                    self.ui.ctpg_tik_item[16].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(16)])
-                    self.ui.ctpg_tik_item[17].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(17)])
+                    ymax = max(self.ui.ctpg_tik_data[ci('매수총잔량')].max(), self.ui.ctpg_tik_data[ci('매도총잔량')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('매수총잔량')].min(), self.ui.ctpg_tik_data[ci('매도총잔량')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('매수총잔량')]:], y=self.ui.ctpg_tik_data[ci('매수총잔량')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('매도총잔량')]:], y=self.ui.ctpg_tik_data[ci('매도총잔량')])
                 elif factor == '1호가잔량':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(18)].max(), self.ui.ctpg_tik_data[cindex(19)].max()), min(self.ui.ctpg_tik_data[cindex(18)].min(), self.ui.ctpg_tik_data[cindex(19)].min())
-                    self.ui.ctpg_tik_item[18].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(18)])
-                    self.ui.ctpg_tik_item[19].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(19)])
-                elif factor == '5호가잔량합':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(20)].max(), self.ui.ctpg_tik_data[cindex(20)].min()
-                    self.ui.ctpg_tik_item[20].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(20)])
-                elif factor == '당일거래대금':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(21)].max(), self.ui.ctpg_tik_data[cindex(21)].min()
-                    self.ui.ctpg_tik_item[21].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(21)])
+                    ymax = max(self.ui.ctpg_tik_data[ci('매수잔량1')].max(), self.ui.ctpg_tik_data[ci('매도잔량1')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('매수잔량1')].min(), self.ui.ctpg_tik_data[ci('매도잔량1')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('매수잔량1')]:], y=self.ui.ctpg_tik_data[ci('매수잔량1')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('매도잔량1')]:], y=self.ui.ctpg_tik_data[ci('매도잔량1')])
                 elif factor == '누적초당매도수수량':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(22)].max(), self.ui.ctpg_tik_data[cindex(23)].max()), min(self.ui.ctpg_tik_data[cindex(22)].min(), self.ui.ctpg_tik_data[cindex(23)].min())
-                    self.ui.ctpg_tik_item[22].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(22)])
-                    self.ui.ctpg_tik_item[23].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(23)])
-                elif factor == '등락율각도':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(24)]), min(self.ui.ctpg_tik_data[cindex(24)])
-                    self.ui.ctpg_tik_item[24].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(24)])
-                elif factor == '당일거래대금각도':
-                    ymax, ymin = max(self.ui.ctpg_tik_data[cindex(25)]), min(self.ui.ctpg_tik_data[cindex(25)])
-                    self.ui.ctpg_tik_item[25].setData(x=self.ui.ctpg_tik_xticks[tlen - len8:], y=self.ui.ctpg_tik_data[cindex(25)])
-                elif factor == '전일비각도':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(26)].max(), self.ui.ctpg_tik_data[cindex(26)].min()
-                    self.ui.ctpg_tik_item[26].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(26)])
-                elif factor == '거래대금증감':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(27)].max(), self.ui.ctpg_tik_data[cindex(27)].min()
-                    self.ui.ctpg_tik_item[27].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(27)])
-                elif factor == '전일비':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(28)].max(), self.ui.ctpg_tik_data[cindex(28)].min()
-                    self.ui.ctpg_tik_item[28].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(28)])
-                elif factor == '회전율':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(29)].max(), self.ui.ctpg_tik_data[cindex(29)].min()
-                    self.ui.ctpg_tik_item[29].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(29)])
-                elif factor == '전일동시간비':
-                    ymax, ymin = self.ui.ctpg_tik_data[cindex(30)].max(), self.ui.ctpg_tik_data[cindex(30)].min()
-                    self.ui.ctpg_tik_item[30].setData(x=self.ui.ctpg_tik_xticks, y=self.ui.ctpg_tik_data[cindex(30)])
+                    ymax = max(self.ui.ctpg_tik_data[ci('누적초당매수수량')].max(), self.ui.ctpg_tik_data[ci('누적초당매도수량')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('누적초당매수수량')].min(), self.ui.ctpg_tik_data[ci('누적초당매도수량')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('누적초당매도수량')]:], y=self.ui.ctpg_tik_data[ci('누적초당매도수량')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('누적초당매수수량')]:], y=self.ui.ctpg_tik_data[ci('누적초당매수수량')])
+                elif factor == 'BBAND':
+                    ymax = max(self.ui.ctpg_tik_data[ci('BBU')].max(), self.ui.ctpg_tik_data[ci('현재가')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('BBL')].min(), self.ui.ctpg_tik_data[ci('현재가')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('BBM')]:], y=self.ui.ctpg_tik_data[ci('BBM')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('BBL')]:], y=self.ui.ctpg_tik_data[ci('BBL')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('BBU')]:], y=self.ui.ctpg_tik_data[ci('BBU')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')])
+                elif factor == 'MACD':
+                    ymax = self.ui.ctpg_tik_data[ci('MACD')].max()
+                    ymin = self.ui.ctpg_tik_data[ci('MACD')].min()
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('MACDH')]:], y=self.ui.ctpg_tik_data[ci('MACDH')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('MACDS')]:], y=self.ui.ctpg_tik_data[ci('MACDS')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('MACD')]:], y=self.ui.ctpg_tik_data[ci('MACD')])
+                elif factor == 'HT_SINE, HT_LSINE':
+                    ymax = max(self.ui.ctpg_tik_data[ci('HT_SINE')].max(), self.ui.ctpg_tik_data[ci('HT_LSINE')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('HT_SINE')].min(), self.ui.ctpg_tik_data[ci('HT_LSINE')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_LSINE')]:], y=self.ui.ctpg_tik_data[ci('HT_LSINE')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_SINE')]:], y=self.ui.ctpg_tik_data[ci('HT_SINE')])
+                elif factor == 'HT_PHASE, HT_QUDRA':
+                    ymax = max(self.ui.ctpg_tik_data[ci('HT_PHASE')].max(), self.ui.ctpg_tik_data[ci('HT_QUDRA')].max())
+                    ymin = min(self.ui.ctpg_tik_data[ci('HT_PHASE')].min(), self.ui.ctpg_tik_data[ci('HT_QUDRA')].min())
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_QUDRA')]:], y=self.ui.ctpg_tik_data[ci('HT_QUDRA')])
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('HT_PHASE')]:], y=self.ui.ctpg_tik_data[ci('HT_PHASE')])
+                else:
+                    if factor == 'KAMA':
+                        self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci('현재가')]:], y=self.ui.ctpg_tik_data[ci('현재가')])
+                    ymax = self.ui.ctpg_tik_data[ci(factor)].max()
+                    ymin = self.ui.ctpg_tik_data[ci(factor)].min()
+                    self.ui.ctpg_tik_item[cii()].setData(x=self.ui.ctpg_tik_xticks[len_list[ci(factor)]:], y=self.ui.ctpg_tik_data[ci(factor)])
 
                 self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
                 self.SetPosLegendLabel(i, coin, hms)
@@ -261,7 +278,7 @@ class DrawRealChart:
         self.ui.ctpg[i].setRange(xRange=(xmin, xmax), yRange=(ymin, ymax))
 
     def SetPosLegendLabel(self, i, coin, hms):
-        if self.ui.ct_checkBoxxxxx_21.isChecked():
+        if self.ui.ct_checkBoxxxxx_31.isChecked():
             self.ui.ctpg_tik_labels[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][0], self.ui.ctpg_cvb[i].state['viewRange'][1][0])
         if self.ui.ct_checkBoxxxxx_22.isChecked():
             self.ui.ctpg_tik_legend[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][0], self.ui.ctpg_cvb[i].state['viewRange'][1][1])
