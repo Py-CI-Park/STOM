@@ -405,6 +405,8 @@ class Optimize:
         optuna_count = int(data[21])
         optuna_autostep  = data[22]
         random_optivars  = data[23]
+        only_buy         = data[24]
+        only_sell        = data[25]
 
         if weeks_train != 'ALL':
             weeks_train = int(weeks_train)
@@ -477,6 +479,10 @@ class Optimize:
         optivars = df['전략코드'][optivars_name]
         con.close()
 
+        buy_num   = int(buystg.split('self.vars[')[1].split(']')[0])
+        sell_num  = int(sellstg.split('self.vars[')[1].split(']')[0])
+        buy_first = True if buy_num < sell_num else False
+
         optivars_ = compile(optivars, '<string>', 'exec')
         try:
             exec(optivars_, None, locals())
@@ -484,7 +490,7 @@ class Optimize:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - {self.backname} 변수설정 {e}'))
             self.SysExit(True)
 
-        total_count, vars_type, vars_ = self.GetOptomizeVarsList(random_optivars)
+        total_count, vars_type, vars_ = self.GetOptomizeVarsList(random_optivars, only_buy, only_sell, buy_first, buy_num, sell_num)
 
         len_vars    = len(vars_)
         avg_list    = vars_[0][0]
@@ -497,7 +503,8 @@ class Optimize:
         mq = Queue()
         tdq_list = self.stq_list[:10]
         vdq_list = self.stq_list[10:]
-        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
+        args_ = (self.wq, self.sq, self.tq, mq, self.lq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)
+        Process(target=Total, args=args_).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,
@@ -511,12 +518,21 @@ class Optimize:
         if 'B' in self.backname:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'))
 
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작'))
+        if only_buy:
+            add_text = ', 매수전략의 변수만 최적화합니다.'
+        elif only_sell:
+            add_text = ', 매도전략의 변수만 최적화합니다.'
+        else:
+            add_text = ''
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작{add_text}'))
 
         if 'B' not in self.backname:
-            vars_, total_change = self.OptimizeGrid(mq, total_count, back_count, len_vars, ccount, random_optivars, optivars, optivars_, optivars_name, vars_type, vars_)
+            vars_, total_change = self.OptimizeGrid(mq, total_count, back_count, len_vars, ccount, random_optivars,
+                                                    optivars, optivars_, optivars_name, vars_type, vars_, only_buy,
+                                                    only_sell, buy_first, buy_num, sell_num)
         else:
-            vars_, total_change = self.OptimizeOptuna(mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name, sampler, vars_)
+            vars_, total_change = self.OptimizeOptuna(mq, optuna_count, back_count, len_vars, optuna_fixvars,
+                                                      optuna_autostep, buystg_name, sampler, vars_)
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '최적값 백테스트 시작'))
         self.tq.put(('변수정보', vars_, -2))
@@ -526,7 +542,7 @@ class Optimize:
             q.put(('변수정보', vars_, -2))
         _ = mq.get()
 
-        self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name)
+        self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name, only_buy, only_sell, buy_first, buy_num, sell_num)
 
         mq.close()
         if self.dict_set['스톰라이브']: self.lq.put(self.backname.replace('O', '').replace('B', ''))
@@ -576,7 +592,7 @@ class Optimize:
         list_days = [train_days, valid_days, test_days]
         return list_days
 
-    def GetOptomizeVarsList(self, random_optivars):
+    def GetOptomizeVarsList(self, random_optivars, only_buy, only_sell, buy_first, buy_num, sell_num):
         total_count = 0
         vars_type = []
         vars_ = []
@@ -602,7 +618,9 @@ class Optimize:
             lowhigh = low < high
             vars_type.append(lowhigh)
             vars_list = [[], opti]
-            if gap == 0:
+            fixed = ((only_buy and ((buy_first and i >= sell_num) or (not buy_first and i < buy_num))) or
+                     (only_sell and ((buy_first and i < sell_num) or (not buy_first and i >= buy_num))))
+            if gap == 0 or fixed:
                 vars_list[0].append(opti)
             else:
                 total_count += 1
@@ -621,7 +639,8 @@ class Optimize:
 
         return total_count, vars_type, vars_
 
-    def OptimizeGrid(self, mq, total_count, back_count, len_vars, ccount, random_optivars, optivars, optivars_, optivars_name, vars_type, vars_):
+    def OptimizeGrid(self, mq, total_count, back_count, len_vars, ccount, random_optivars, optivars, optivars_,
+                     optivars_name, vars_type, vars_, only_buy, only_sell, buy_first, buy_num, sell_num):
         self.tq.put(('경우의수', total_count, back_count))
         self.tq.put(('변수정보', vars_, -1))
         for q in self.stq_list:
@@ -675,7 +694,8 @@ class Optimize:
                         data = mq.get()
                         if type(data) == str:
                             if not random_optivars:
-                                self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name)
+                                self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name,
+                                                  only_buy, only_sell, buy_first, buy_num, sell_num)
                             self.SysExit(True)
                         else:
                             std, vars_key = data
@@ -748,6 +768,8 @@ class Optimize:
                         high_var = vars_[i][1]
                         vars_[i] = [[high_var], high_var]
                         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 [{high_var}] 고정'))
+            if fix_vars_list:
+                self.tq.put(('경우의수', total_count - back_count * len(fix_vars_list), back_count))
             k += 1
 
         return vars_, total_change
@@ -833,20 +855,25 @@ class Optimize:
 
         return vars_, 1
 
-    def SaveOptiVars(self, change, optivars, optivars_, vars_, optivars_name):
+    def SaveOptiVars(self, change, optivars, optivars_, vars_, optivars_name, only_buy, only_sell, buy_first, buy_num, sell_num):
         if change > 0:
             optivars = optivars.split('self.vars[0]')[0]
             exec(optivars_, None, locals())
             for i in range(len(self.vars)):
-                preh_var = self.vars[i][1]
-                curh_var = vars_[i][1]
-                if preh_var != curh_var:
-                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 {preh_var} -> {curh_var}'))
-                first   = vars_[i][0][0]
-                last    = vars_[i][0][-1]
-                gap_ori = self.vars[i][0][2]
-                gap     = gap_ori if first != last else 0
-                optivars += f'self.vars[{i}] = [[{first}, {last}, {gap}], {curh_var}]\n'
+                fixed = ((only_buy and ((buy_first and i >= sell_num) or (not buy_first and i < buy_num))) or
+                         (only_sell and ((buy_first and i < sell_num) or (not buy_first and i >= buy_num))))
+                if not fixed:
+                    preh_var = self.vars[i][1]
+                    curh_var = vars_[i][1]
+                    if preh_var != curh_var:
+                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 self.vars[{i}]의 최적값 {preh_var} -> {curh_var}'))
+                    first   = vars_[i][0][0]
+                    last    = vars_[i][0][-1]
+                    gap_ori = self.vars[i][0][2]
+                    gap     = gap_ori if first != last else 0
+                    optivars += f'self.vars[{i}] = [[{first}, {last}, {gap}], {curh_var}]\n'
+                else:
+                    optivars += f'self.vars[{i}] = {self.vars[i]}\n'
 
             if 'T' not in self.backname:
                 optivars = optivars[:-1]

@@ -579,8 +579,7 @@ def svj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
-        back_club = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (
-                    QApplication.keyboardModifiers() & Qt.AltModifier) else False
+        back_club = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) else False
         if back_club and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진을 먼저 실행하십시오.\n')
             return
@@ -591,15 +590,15 @@ def svj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        startday = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
+        startday  = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday    = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
         starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        betting = ui.svjb_lineEditt_04.text()
-        avgtime = ui.svjb_lineEditt_05.text()
-        buystg = ui.svjb_comboBoxx_01.currentText()
-        sellstg = ui.svjs_comboBoxx_01.currentText()
-        bl = True if ui.dict_set['블랙리스트추가'] else False
+        endtime   = ui.svjb_lineEditt_03.text()
+        betting   = ui.svjb_lineEditt_04.text()
+        avgtime   = ui.svjb_lineEditt_05.text()
+        buystg    = ui.svjb_comboBoxx_01.currentText()
+        sellstg   = ui.svjs_comboBoxx_01.currentText()
+        bl        = True if ui.dict_set['블랙리스트추가'] else False
 
         if int(avgtime) not in ui.avg_list:
             QMessageBox.critical(ui, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
@@ -639,12 +638,12 @@ def svj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        startday = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
+        startday  = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday    = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
         starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        avgtime = ui.svjb_lineEditt_05.text()
-        buystg = ui.svjb_comboBoxx_01.currentText()
+        endtime   = ui.svjb_lineEditt_03.text()
+        avgtime   = ui.svjb_lineEditt_05.text()
+        buystg    = ui.svjb_comboBoxx_01.currentText()
 
         if int(avgtime) not in ui.avg_list:
             QMessageBox.critical(ui, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
@@ -683,29 +682,33 @@ def svj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
-        if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+        if not ui.backtest_engine or (not (QApplication.keyboardModifiers() & Qt.ShiftModifier) and
+                                      not (QApplication.keyboardModifiers() & Qt.AltModifier) and
+                                      (QApplication.keyboardModifiers() & Qt.ControlModifier)):
             ui.BackTestengineShow('주식')
             return
         if not ui.back_condition:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        randomopti = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
-        starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        betting = ui.svjb_lineEditt_04.text()
-        buystg = ui.svc_comboBoxxx_01.currentText()
-        sellstg = ui.svc_comboBoxxx_08.currentText()
-        optivars = ui.svc_comboBoxxx_02.currentText()
-        ccount = ui.svc_comboBoxxx_06.currentText()
-        optistd = ui.svc_comboBoxxx_07.currentText()
+        randomopti  = True if not (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
+        onlybuy     = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.ShiftModifier) and 'B' not in back_name else False
+        onlysell    = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
+        starttime   = ui.svjb_lineEditt_02.text()
+        endtime     = ui.svjb_lineEditt_03.text()
+        betting     = ui.svjb_lineEditt_04.text()
+        buystg      = ui.svc_comboBoxxx_01.currentText()
+        sellstg     = ui.svc_comboBoxxx_08.currentText()
+        optivars    = ui.svc_comboBoxxx_02.currentText()
+        ccount      = ui.svc_comboBoxxx_06.currentText()
+        optistd     = ui.svc_comboBoxxx_07.currentText()
         weeks_train = ui.svc_comboBoxxx_03.currentText()
         weeks_valid = ui.svc_comboBoxxx_04.currentText()
-        weeks_test = ui.svc_comboBoxxx_05.currentText()
+        weeks_test  = ui.svc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
         optunasampl = ui.op_comboBoxxxx_01.currentText()
-        optunafixv = ui.op_lineEditttt_01.text()
+        optunafixv  = ui.op_lineEditttt_01.text()
         optunacount = ui.op_lineEditttt_02.text()
         optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
@@ -729,7 +732,7 @@ def svj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
         backQ.put((
             betting, starttime, endtime, buystg, sellstg, optivars, ui.dict_cn, ccount, ui.dict_set['최적화기준값제한'],
             optistd, ui.back_count, False, ui.df_kp, ui.df_kd, weeks_train, weeks_valid, weeks_test, benginesday,
-            bengineeday, optunasampl, optunafixv, optunacount, optunaautos, randomopti
+            bengineeday, optunasampl, optunafixv, optunacount, optunaautos, randomopti, onlybuy, onlysell
         ))
         if back_name == '최적화O':
             ui.proc_backtester_o = Process(
@@ -818,24 +821,24 @@ def svj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        randomopti = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
-        startday = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
-        starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        betting = ui.svjb_lineEditt_04.text()
-        buystg = ui.svc_comboBoxxx_01.currentText()
-        sellstg = ui.svc_comboBoxxx_08.currentText()
-        optivars = ui.svc_comboBoxxx_02.currentText()
-        ccount = ui.svc_comboBoxxx_06.currentText()
-        optistd = ui.svc_comboBoxxx_07.currentText()
+        randomopti  = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
+        startday    = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday      = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
+        starttime   = ui.svjb_lineEditt_02.text()
+        endtime     = ui.svjb_lineEditt_03.text()
+        betting     = ui.svjb_lineEditt_04.text()
+        buystg      = ui.svc_comboBoxxx_01.currentText()
+        sellstg     = ui.svc_comboBoxxx_08.currentText()
+        optivars    = ui.svc_comboBoxxx_02.currentText()
+        ccount      = ui.svc_comboBoxxx_06.currentText()
+        optistd     = ui.svc_comboBoxxx_07.currentText()
         weeks_train = ui.svc_comboBoxxx_03.currentText()
         weeks_valid = ui.svc_comboBoxxx_04.currentText()
-        weeks_test = ui.svc_comboBoxxx_05.currentText()
+        weeks_test  = ui.svc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
         optunasampl = ui.op_comboBoxxxx_01.currentText()
-        optunafixv = ui.op_lineEditttt_01.text()
+        optunafixv  = ui.op_lineEditttt_01.text()
         optunacount = ui.op_lineEditttt_02.text()
         optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
@@ -916,16 +919,16 @@ def svj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        betting = ui.svjb_lineEditt_04.text()
-        buystg = ui.svc_comboBoxxx_01.currentText()
-        sellstg = ui.svc_comboBoxxx_08.currentText()
-        optivars = ui.sva_comboBoxxx_01.currentText()
-        optistd = ui.svc_comboBoxxx_07.currentText()
+        starttime   = ui.svjb_lineEditt_02.text()
+        endtime     = ui.svjb_lineEditt_03.text()
+        betting     = ui.svjb_lineEditt_04.text()
+        buystg      = ui.svc_comboBoxxx_01.currentText()
+        sellstg     = ui.svc_comboBoxxx_08.currentText()
+        optivars    = ui.sva_comboBoxxx_01.currentText()
+        optistd     = ui.svc_comboBoxxx_07.currentText()
         weeks_train = ui.svc_comboBoxxx_03.currentText()
         weeks_valid = ui.svc_comboBoxxx_04.currentText()
-        weeks_test = ui.svc_comboBoxxx_05.currentText()
+        weeks_test  = ui.svc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -983,19 +986,19 @@ def svj_button_clicked_17(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        betting = ui.svjb_lineEditt_04.text()
-        avgtime = ui.svjb_lineEditt_05.text()
-        buystg = ui.svo_comboBoxxx_01.currentText()
-        sellstg = ui.svo_comboBoxxx_02.currentText()
-        bcount = ui.svo_lineEdittt_03.text()
-        scount = ui.svo_lineEdittt_04.text()
-        rcount = ui.svo_lineEdittt_05.text()
-        optistd = ui.svc_comboBoxxx_07.currentText()
+        starttime   = ui.svjb_lineEditt_02.text()
+        endtime     = ui.svjb_lineEditt_03.text()
+        betting     = ui.svjb_lineEditt_04.text()
+        avgtime     = ui.svjb_lineEditt_05.text()
+        buystg      = ui.svo_comboBoxxx_01.currentText()
+        sellstg     = ui.svo_comboBoxxx_02.currentText()
+        bcount      = ui.svo_lineEdittt_03.text()
+        scount      = ui.svo_lineEdittt_04.text()
+        rcount      = ui.svo_lineEdittt_05.text()
+        optistd     = ui.svc_comboBoxxx_07.currentText()
         weeks_train = ui.svc_comboBoxxx_03.currentText()
         weeks_valid = ui.svc_comboBoxxx_04.currentText()
-        weeks_test = ui.svc_comboBoxxx_05.currentText()
+        weeks_test  = ui.svc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -1141,14 +1144,14 @@ def svj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        startday = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
+        startday  = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday    = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
         starttime = ui.svjb_lineEditt_02.text()
-        endtime = ui.svjb_lineEditt_03.text()
-        betting = ui.svjb_lineEditt_04.text()
-        avgtime = ui.svjb_lineEditt_05.text()
-        buystg = ui.svjb_comboBoxx_01.currentText()
-        sellstg = ui.svjs_comboBoxx_01.currentText()
+        endtime   = ui.svjb_lineEditt_03.text()
+        betting   = ui.svjb_lineEditt_04.text()
+        avgtime   = ui.svjb_lineEditt_05.text()
+        buystg    = ui.svjb_comboBoxx_01.currentText()
+        sellstg   = ui.svjs_comboBoxx_01.currentText()
         bl = True if ui.dict_set['블랙리스트추가'] else False
 
         if int(avgtime) not in ui.avg_list:

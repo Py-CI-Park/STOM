@@ -264,7 +264,7 @@ def get_pattern_setup(pattern_text):
     if pattern_setup[18] == '1':
         dict_pattern_buy['매수1잔량금액'] = float(pattern_setup[31])
     if pattern_setup[19] == '1':
-        dict_pattern_buy['매도총잔량금액'] = float(pattern_setup[323])
+        dict_pattern_buy['매도총잔량금액'] = float(pattern_setup[32])
     if pattern_setup[20] == '1':
         dict_pattern_buy['매수총잔량금액'] = float(pattern_setup[33])
     if pattern_setup[21] == '1':

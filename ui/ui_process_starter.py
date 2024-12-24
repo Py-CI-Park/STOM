@@ -29,7 +29,7 @@ def process_starter(ui, qlist):
 
     if ui.int_time < 80000 <= inthms:
         SetLogFile(ui)
-        ui.ClearTextEdit()
+        ClearTextEdit(ui)
 
     A = not ui.dict_set['코인장초프로세스종료'] and not ui.dict_set['코인장중프로세스종료']
     B = ui.dict_set['코인장초프로세스종료'] and inthmsutc < ui.dict_set['코인장초전략종료시간']
@@ -130,7 +130,7 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
         text = f'{text} | 키움증권'
     if ui.showQsize:
         stqsize = sum((stq.qsize() for stq in ui.bact_pques)) if ui.bact_pques else 0
-        text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
+        text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
                f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
                f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backstQ[{stqsize}]'

@@ -380,16 +380,22 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
 
 def back_code_test1(stg_code, testQ):
     print('전략 코드 오류 테스트 시작')
+    while not testQ.empty():
+        testQ.get()
     Process(target=BackCodeTest, args=(testQ, stg_code), daemon=True).start()
     return back_code_test_wait('전략', testQ)
 
 def back_code_test2(vars_code, testQ, ga):
     print('범위 코드 오류 테스트 시작')
+    while not testQ.empty():
+        testQ.get()
     Process(target=BackCodeTest, args=(testQ, '', vars_code, ga), daemon=True).start()
     return back_code_test_wait('범위', testQ)
 
 def back_code_test3(gubun, conds_code, testQ):
     print('조건 코드 오류 테스트 시작')
+    while not testQ.empty():
+        testQ.get()
     conds_code = conds_code.split('\n')
     conds_code = [x for x in conds_code if x != '' and '#' not in x]
     if gubun == '매수':

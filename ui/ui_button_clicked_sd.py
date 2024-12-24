@@ -409,7 +409,7 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                         betting, starttime, endtime, buystg, sellstg, optivars, ui.dict_cn, ccount,
                         ui.dict_set['최적화기준값제한'], optistd, ui.back_count, True, ui.df_kp, ui.df_kd,
                         weeks_train, weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv,
-                        optunacount, optunaautos, False
+                        optunacount, optunaautos, False, False, False
                     ))
                     gubun = 'S'
                 else:
@@ -417,7 +417,7 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                         betting, starttime, endtime, buystg, sellstg, optivars, None, ccount,
                         ui.dict_set['최적화기준값제한'], optistd, ui.back_count, True, None, None, weeks_train,
                         weeks_valid, weeks_test, benginesday, bengineeday, optunasampl, optunafixv, optunacount,
-                        optunaautos, False
+                        optunaautos, False, False, False
                     ))
                     gubun = 'C' if ui.dict_set['거래소'] == '업비트' else 'CF'
 
