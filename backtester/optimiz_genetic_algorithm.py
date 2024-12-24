@@ -88,7 +88,6 @@ class Total:
                                '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
                     k  = 0
                     for vars_key, list_tsg in dict_tsg.items():
-                        print('결과집계', vars_key, len(list_tsg[0]))
                         data = ('결과집계', columns, list_tsg, dict_bct[vars_key])
                         if self.valid_days is not None:
                             for i, vdays in enumerate(self.valid_days):

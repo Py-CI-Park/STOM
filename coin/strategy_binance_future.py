@@ -117,7 +117,7 @@ class StrategyBinanceFuture:
         elif self.dict_set['코인장중매도전략'] in dfos.index:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['코인장중매도전략']], '<string>', 'exec')
 
-        if self.dict_set['코인장초매수전략'] in dfp.index:
+        if self.dict_set['코인장초패턴인식'] and self.dict_set['코인장초매수전략'] in dfp.index:
             self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장초매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장초매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):
@@ -125,7 +125,7 @@ class StrategyBinanceFuture:
             if os.path.isfile(f'{file_name}_sell.pkl'):
                 self.pattern_sell1 = pickle_read(f'{file_name}_sell')
 
-        if self.dict_set['코인장중매수전략'] in dfp.index:
+        if self.dict_set['코인장중패턴인식'] and self.dict_set['코인장중매수전략'] in dfp.index:
             self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장중매수전략']])
             file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장중매수전략']}"
             if os.path.isfile(f'{file_name}_buy.pkl'):

@@ -9628,7 +9628,7 @@ class Window(QMainWindow):
 
             dict_pattern, dict_pattern_buy, dict_pattern_sell = self.GetPatternSetup()
             backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern, dict_pattern_buy, dict_pattern_sell))
-            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', self.back_count, multi))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'C', self.back_count, multi))
             self.proc_backtester_bp.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)

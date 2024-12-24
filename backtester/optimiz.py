@@ -638,7 +638,7 @@ class Optimize:
         k = 1
         total_change = 0
         change_var_count = None
-        last_change_turn = 1000
+        last_update_turn = 1000
         total_del_vars_list = [[] for _ in range(len_vars)]
         for _ in range(ccount if ccount != 0 else 100):
             if ccount == 0:
@@ -652,7 +652,7 @@ class Optimize:
             del_vars_list = []
             change_var_count = 0
             for i in range(len_vars):
-                if change_var_count == 0 and last_change_turn == i:
+                if change_var_count == 0 and last_update_turn == i:
                     break
 
                 del_list = []
@@ -660,8 +660,8 @@ class Optimize:
                 if len_vars_ > 0:
                     start = now()
                     print('========================================================================')
-                    print(
-                        f'opt_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}, high_std : {hstd}')
+                    print(f'opt_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}')
+                    print(f'opt_vars_hstd : {hstd}, last_update_turn : [{last_update_turn}]')
                     print(f'opt_vars_list : {vars_[i][0]}')
                     self.tq.put(('변수정보', vars_, i))
                     for q in self.stq_list:
@@ -690,7 +690,7 @@ class Optimize:
                                 vars_[i][1] = curr_var
                                 total_change += 1
                                 change_var_count += 1
-                                last_change_turn = i
+                                last_update_turn = i
 
                             if self.dict_set['범위자동관리']:
                                 turn_stdk[curr_var] = std
@@ -706,7 +706,7 @@ class Optimize:
                             print('{:>16} : {}'.format('fixed_vars', 'this vars is fixed at next time'))
                         elif len_vars_ > 5:
                             for curr_var, std in turn_stdk.items():
-                                if std < hstd / 2:
+                                if std < hstd / 4:
                                     del_list.append(curr_var)
                             if del_list:
                                 del_list.sort()

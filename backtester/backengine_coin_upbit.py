@@ -1,3 +1,4 @@
+import gc
 import math
 # noinspection PyUnresolvedReferences
 import talib
@@ -14,6 +15,7 @@ from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellCo
 
 class CoinUpbitBackEngine:
     def __init__(self, gubun, wq, pq, tq, bq, stq_list, profile=False):
+        gc.disable()
         self.gubun        = gubun
         self.wq           = wq
         self.pq           = pq
