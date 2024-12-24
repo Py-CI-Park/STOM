@@ -100,11 +100,12 @@ class SetSetupTap:
         self.ui.sj_stock_ckBox_01 = self.wc.setCheckBox('모의투자     |', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_07, tip='모의투자 체크 시 주문이 전송되지 않으며 매도호가1 및 매수호가1을 기준으로\n매수, 매도를 기록한다. 체크 해제 시 실제 주문이 전송된다.')
         self.ui.sj_stock_ckBox_02 = self.wc.setCheckBox('알림소리     |', self.ui.sj_bs_groupBox_05, tip='각종 알림소리를 끄고 켠다.')
         text = '장초전략 매수                                              ' \
-               '매도                                                        ' \
+               '매도                                                                            ' \
                '평균값틱수                       최대종목수                       종료시간'
         self.ui.sj_stock_label_01 = QLabel(text, self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_cbBox_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, activated=self.ui.sActivated_09, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_stock_cbBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
+        self.ui.sj_stock_ckBox_12 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_01 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
@@ -112,11 +113,12 @@ class SetSetupTap:
         self.ui.sj_stock_ckBox_04 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_09, tip='장초전략 마감 후 리시버, 트레이더 프로세스를 종료한다.')
         self.ui.sj_stock_ckBox_05 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_05, changed=self.ui.CheckboxChanged_11, tip='프로세스를 종료 후 컴퓨터를 종료한다.')
         text = '장중전략 매수                                              ' \
-               '매도                                                        ' \
+               '매도                                                                            ' \
                '평균값틱수                       최대종목수                       종료시간'
         self.ui.sj_stock_label_02 = QLabel(text, self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_cbBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, activated=self.ui.sActivated_10, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_stock_cbBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
+        self.ui.sj_stock_ckBox_13 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_04 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
@@ -139,11 +141,12 @@ class SetSetupTap:
         self.ui.sj_coin_cheBox_01 = self.wc.setCheckBox('모의투자    |', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_08, tip='모의투자 체크 시 주문이 전송되지 않으며 매도호가1 및 매수호가1을 기준으로\n매수, 매도를 기록한다. 체크 해제 시 실제 주문이 전송된다.')
         self.ui.sj_coin_cheBox_02 = self.wc.setCheckBox('알림소리    |', self.ui.sj_bs_groupBox_06, tip='각종 알림소리를 끄고 켠다.')
         text = '장초전략 매수                                              ' \
-               '매도                                                        ' \
+               '매도                                                                            ' \
                '평균값틱수                       최대종목수                       종료시간'
         self.ui.sj_coin_labell_01 = QLabel(text, self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_comBox_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, activated=self.ui.cActivated_09, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_coin_comBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
+        self.ui.sj_coin_cheBox_12 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_01 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
@@ -151,11 +154,12 @@ class SetSetupTap:
         self.ui.sj_coin_cheBox_04 = self.wc.setCheckBox('프로세스 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_10, tip='장초전략 마감 후 리시버, 트레이더 프로세스를 종료한다.')
         self.ui.sj_coin_cheBox_05 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_06, changed=self.ui.CheckboxChanged_11, tip='프로세스를 종료 후 컴퓨터를 종료한다.')
         text = '장중전략 매수                                              ' \
-               '매도                                                        ' \
+               '매도                                                                            ' \
                '평균값틱수                       최대종목수                       종료시간'
         self.ui.sj_coin_labell_02 = QLabel(text, self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_comBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, activated=self.ui.cActivated_10, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_coin_comBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
+        self.ui.sj_coin_cheBox_13 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_04 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
@@ -324,22 +328,22 @@ class SetSetupTap:
         self.ui.sj_stock_label_01.setGeometry(100, 25, 920, 20)
         self.ui.sj_stock_cbBox_01.setGeometry(175, 25, 125, 20)
         self.ui.sj_stock_cbBox_02.setGeometry(335, 25, 125, 20)
-        self.ui.sj_stock_lEdit_01.setGeometry(560, 25, 50, 20)
-        self.ui.sj_stock_lEdit_02.setGeometry(685, 25, 50, 20)
-        self.ui.sj_stock_lEdit_03.setGeometry(795, 25, 50, 20)
-        self.ui.sj_stock_ckBox_03.setGeometry(855, 25, 120, 20)
-        self.ui.sj_stock_ckBox_04.setGeometry(930, 25, 120, 20)
-        self.ui.sj_stock_ckBox_05.setGeometry(1030, 25, 120, 20)
+        self.ui.sj_stock_lEdit_01.setGeometry(620, 25, 50, 20)
+        self.ui.sj_stock_lEdit_02.setGeometry(745, 25, 50, 20)
+        self.ui.sj_stock_lEdit_03.setGeometry(855, 25, 50, 20)
+        self.ui.sj_stock_ckBox_03.setGeometry(915, 25, 120, 20)
+        self.ui.sj_stock_ckBox_04.setGeometry(990, 25, 120, 20)
+        self.ui.sj_stock_ckBox_05.setGeometry(1090, 25, 120, 20)
 
         self.ui.sj_stock_label_02.setGeometry(100, 50, 920, 20)
         self.ui.sj_stock_cbBox_03.setGeometry(175, 50, 125, 20)
         self.ui.sj_stock_cbBox_04.setGeometry(335, 50, 125, 20)
-        self.ui.sj_stock_lEdit_04.setGeometry(560, 50, 50, 20)
-        self.ui.sj_stock_lEdit_05.setGeometry(685, 50, 50, 20)
-        self.ui.sj_stock_lEdit_06.setGeometry(795, 50, 50, 20)
-        self.ui.sj_stock_ckBox_06.setGeometry(855, 50, 100, 20)
-        self.ui.sj_stock_ckBox_07.setGeometry(930, 50, 100, 20)
-        self.ui.sj_stock_ckBox_08.setGeometry(1030, 50, 100, 20)
+        self.ui.sj_stock_lEdit_04.setGeometry(620, 50, 50, 20)
+        self.ui.sj_stock_lEdit_05.setGeometry(745, 50, 50, 20)
+        self.ui.sj_stock_lEdit_06.setGeometry(855, 50, 50, 20)
+        self.ui.sj_stock_ckBox_06.setGeometry(915, 50, 100, 20)
+        self.ui.sj_stock_ckBox_07.setGeometry(990, 50, 100, 20)
+        self.ui.sj_stock_ckBox_08.setGeometry(1090, 50, 100, 20)
 
         self.ui.sj_stock_ckBox_09.setGeometry(10, 75, 150, 20)
         self.ui.sj_stock_label_03.setGeometry(145, 75, 1000, 20)
@@ -357,22 +361,27 @@ class SetSetupTap:
         self.ui.sj_coin_labell_01.setGeometry(100, 25, 920, 20)
         self.ui.sj_coin_comBox_01.setGeometry(175, 25, 125, 20)
         self.ui.sj_coin_comBox_02.setGeometry(335, 25, 125, 20)
-        self.ui.sj_coin_liEdit_01.setGeometry(560, 25, 50, 20)
-        self.ui.sj_coin_liEdit_02.setGeometry(685, 25, 50, 20)
-        self.ui.sj_coin_liEdit_03.setGeometry(795, 25, 50, 20)
-        self.ui.sj_coin_cheBox_03.setGeometry(855, 25, 120, 20)
-        self.ui.sj_coin_cheBox_04.setGeometry(930, 25, 120, 20)
-        self.ui.sj_coin_cheBox_05.setGeometry(1030, 25, 120, 20)
+        self.ui.sj_coin_liEdit_01.setGeometry(620, 25, 50, 20)
+        self.ui.sj_coin_liEdit_02.setGeometry(745, 25, 50, 20)
+        self.ui.sj_coin_liEdit_03.setGeometry(855, 25, 50, 20)
+        self.ui.sj_coin_cheBox_03.setGeometry(915, 25, 120, 20)
+        self.ui.sj_coin_cheBox_04.setGeometry(990, 25, 120, 20)
+        self.ui.sj_coin_cheBox_05.setGeometry(1090, 25, 120, 20)
 
         self.ui.sj_coin_labell_02.setGeometry(100, 50, 920, 20)
         self.ui.sj_coin_comBox_03.setGeometry(175, 50, 125, 20)
         self.ui.sj_coin_comBox_04.setGeometry(335, 50, 125, 20)
-        self.ui.sj_coin_liEdit_04.setGeometry(560, 50, 50, 20)
-        self.ui.sj_coin_liEdit_05.setGeometry(685, 50, 50, 20)
-        self.ui.sj_coin_liEdit_06.setGeometry(795, 50, 50, 20)
-        self.ui.sj_coin_cheBox_06.setGeometry(855, 50, 100, 20)
-        self.ui.sj_coin_cheBox_07.setGeometry(930, 50, 100, 20)
-        self.ui.sj_coin_cheBox_08.setGeometry(1030, 50, 100, 20)
+        self.ui.sj_coin_liEdit_04.setGeometry(620, 50, 50, 20)
+        self.ui.sj_coin_liEdit_05.setGeometry(745, 50, 50, 20)
+        self.ui.sj_coin_liEdit_06.setGeometry(855, 50, 50, 20)
+        self.ui.sj_coin_cheBox_06.setGeometry(915, 50, 100, 20)
+        self.ui.sj_coin_cheBox_07.setGeometry(990, 50, 100, 20)
+        self.ui.sj_coin_cheBox_08.setGeometry(1090, 50, 100, 20)
+
+        self.ui.sj_stock_ckBox_12.setGeometry(470, 25, 80, 20)
+        self.ui.sj_stock_ckBox_13.setGeometry(470, 50, 80, 20)
+        self.ui.sj_coin_cheBox_12.setGeometry(470, 25, 80, 20)
+        self.ui.sj_coin_cheBox_13.setGeometry(470, 50, 80, 20)
 
         self.ui.sj_coin_cheBox_09.setGeometry(10, 75, 150, 20)
         self.ui.sj_coin_labell_03.setGeometry(145, 75, 1000, 20)

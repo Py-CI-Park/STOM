@@ -102,22 +102,36 @@ if 'stock' not in table_list:
         "index", "주식모의투자", "주식알림소리", "주식장초매수전략", "주식장초매도전략", "주식장초평균값계산틱수", "주식장초최대매수종목수",
         "주식장초전략종료시간", "주식장초잔고청산", "주식장초프로세스종료", "주식장초컴퓨터종료", "주식장중매수전략", "주식장중매도전략",
         "주식장중평균값계산틱수", "주식장중최대매수종목수", "주식장중전략종료시간", "주식장중잔고청산", "주식장중프로세스종료", "주식장중컴퓨터종료",
-        "주식투자금고정", "주식장초투자금", "주식장중투자금", "주식손실중지", "주식손실중지수익률", "주식수익중지", "주식수익중지수익률"
+        "주식투자금고정", "주식장초투자금", "주식장중투자금", "주식손실중지", "주식손실중지수익률", "주식수익중지", "주식수익중지수익률",
+        "주식장초패턴인식", "주식장중패턴인식"
     ]
-    data = [0, 1, 1, '', '', 30, 10, 93000, 1, 1, 0, '', '', 30, 10, 152900, 1, 0, 0, 1, 20.0, 20.0, 0, 2.0, 0, 2.0]
+    data = [0, 1, 1, '', '', 30, 10, 93000, 1, 1, 0, '', '', 30, 10, 152900, 1, 0, 0, 1, 20.0, 20.0, 0, 2.0, 0, 2.0, 0, 0]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('stock', con)
+else:
+    df = pd.read_sql('SELECT * FROM stock', con).set_index('index')
+    if '주식장초패턴인식' not in df.columns:
+        df['주식장초패턴인식'] = 0
+        df['주식장중패턴인식'] = 0
+        df.to_sql('stock', con, if_exists='replace')
 
 if 'coin' not in table_list:
     columns = [
         "index", "코인모의투자", "코인알림소리", "코인장초매수전략", "코인장초매도전략", "코인장초평균값계산틱수", "코인장초최대매수종목수",
         "코인장초전략종료시간", "코인장초잔고청산", "코인장초프로세스종료", "코인장초컴퓨터종료", "코인장중매수전략", "코인장중매도전략",
         "코인장중평균값계산틱수", "코인장중최대매수종목수", "코인장중전략종료시간", "코인장중잔고청산", "코인장중프로세스종료", "코인장중컴퓨터종료",
-        "코인투자금고정", "코인장초투자금", "코인장중투자금", "코인손실중지", "코인손실중지수익률", "코인수익중지", "코인수익중지수익률"
+        "코인투자금고정", "코인장초투자금", "코인장중투자금", "코인손실중지", "코인손실중지수익률", "코인수익중지", "코인수익중지수익률",
+        "코인장초패턴인식", "코인장중패턴인식"
     ]
-    data = [0, 1, 1, '', '', 30, 10, 100000, 1, 0, 0, '', '', 30, 10, 234500, 1, 0, 0, 1, 1000.0, 1000.0, 0, 2.0, 0, 2.0]
+    data = [0, 1, 1, '', '', 30, 10, 100000, 1, 0, 0, '', '', 30, 10, 234500, 1, 0, 0, 1, 1000.0, 1000.0, 0, 2.0, 0, 2.0, 0, 0]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('coin', con)
+else:
+    df = pd.read_sql('SELECT * FROM coin', con).set_index('index')
+    if '코인장초패턴인식' not in df.columns:
+        df['코인장초패턴인식'] = 0
+        df['코인장중패턴인식'] = 0
+        df.to_sql('coin', con, if_exists='replace')
 
 if 'back' not in table_list:
     columns = [
@@ -281,6 +295,10 @@ if 'coinsellconds' not in table_list:
     cur.execute('CREATE TABLE "coinsellconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinsellconds_index"ON "coinsellconds" ("index")')
 
+if 'coinpattern' not in table_list:
+    cur.execute('CREATE TABLE "coinpattern" ( "index" TEXT, "패턴설정" TEXT )')
+    cur.execute('CREATE INDEX "ix_coinpattern_index" ON "coinpattern"("index")')
+
 if 'stockbuy' not in table_list:
     cur.execute('CREATE TABLE "stockbuy" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockbuy_index"ON "stockbuy" ("index")')
@@ -333,6 +351,10 @@ if 'stockbuyconds' not in table_list:
 if 'stocksellconds' not in table_list:
     cur.execute('CREATE TABLE "stocksellconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stocksellconds_index"ON "stocksellconds" ("index")')
+
+if 'stockpattern' not in table_list:
+    cur.execute('CREATE TABLE "stockpattern" ( "index" TEXT, "패턴설정" TEXT )')
+    cur.execute('CREATE INDEX "ix_stockpattern_index" ON "stockpattern"("index")')
 
 if 'schedule' not in table_list:
     cur.execute('CREATE TABLE "schedule" ( "index" TEXT, "스케쥴" TEXT )')

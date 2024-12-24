@@ -274,6 +274,9 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
 
             self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
 
+        if self.pattern:
+            self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
+
         if self.profile:
             self.pr.print_stats(sort='cumulative')
 
@@ -602,6 +605,8 @@ class CoinFutureBackEngine3(CoinFutureBackEngine):
                 self.vars_key = j
                 if self.back_type in ('백테스트', '조건최적화'):
                     if self.tick_count < self.avgtime:
+                        break
+                    if self.pattern_test and self.tick_count < self.dict_pattern['인식구간']:
                         break
                 elif self.back_type == 'GA최적화':
                     self.vars = self.vars_lists[j]

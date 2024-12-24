@@ -1,3 +1,4 @@
+import os
 import math
 import time
 # noinspection PyUnresolvedReferences
@@ -7,8 +8,10 @@ import numpy as np
 import pandas as pd
 from traceback import print_exc
 # noinspection PyUnresolvedReferences
-from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetUpbitHogaunit, GetUpbitPgSgSp
-from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_min, dict_order_ratio, DB_COIN_MIN, DB_COIN_DAY
+from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetUpbitHogaunit, GetUpbitPgSgSp, \
+    GetPatternSetup, pickle_read
+from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_min, dict_order_ratio, \
+    DB_COIN_MIN, DB_COIN_DAY, PATTERN_PATH
 
 
 class StrategyUpbit:
@@ -50,12 +53,25 @@ class StrategyUpbit:
         self.shogainfo  = {}
         self.dict_hilo  = {}
 
+        self.indexn     = 0
         self.jgrv_count = 0
         self.int_tujagm = 0
         self.stg_change = False
         self.chart_code = None
         self.df_jg      = pd.DataFrame(columns=columns_jg)
         self.df_gj      = pd.DataFrame(columns=columns_gj)
+
+        self.pattern_buy1       = None
+        self.pattern_sell1      = None
+        self.dict_pattern1      = {}
+        self.dict_pattern_buy1  = {}
+        self.dict_pattern_sell1 = {}
+
+        self.pattern_buy2       = None
+        self.pattern_sell2      = None
+        self.dict_pattern2      = {}
+        self.dict_pattern_buy2  = {}
+        self.dict_pattern_sell2 = {}
 
         self.UpdateStringategy()
         self.MainLoop()
@@ -66,6 +82,7 @@ class StrategyUpbit:
         dfs  = pd.read_sql('SELECT * FROM coinsell', con).set_index('index')
         dfob = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
         dfos = pd.read_sql('SELECT * FROM coinoptisell', con).set_index('index')
+        dfp  = pd.read_sql('SELECT * FROM coinpattern', con).set_index('index')
         con.close()
 
         if self.dict_set['코인장초매수전략'] == '':
@@ -97,6 +114,22 @@ class StrategyUpbit:
             self.sellstrategy2 = compile(dfs['전략코드'][self.dict_set['코인장중매도전략']], '<string>', 'exec')
         elif self.dict_set['코인장중매도전략'] in dfos.index:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['코인장중매도전략']], '<string>', 'exec')
+
+        if self.dict_set['코인장초매수전략'] in dfp.index:
+            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장초매수전략']])
+            file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장초매수전략']}"
+            if os.path.isfile(f'{file_name}_buy.pkl'):
+                self.pattern_buy1  = pickle_read(f'{file_name}_buy')
+            if os.path.isfile(f'{file_name}_sell.pkl'):
+                self.pattern_sell1 = pickle_read(f'{file_name}_sell')
+
+        if self.dict_set['코인장중매수전략'] in dfp.index:
+            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = GetPatternSetup(dfp['패턴설정'][self.dict_set['코인장중매수전략']])
+            file_name = f"{PATTERN_PATH}/pattern_coin_{self.dict_set['코인장중매수전략']}"
+            if os.path.isfile(f'{file_name}_buy.pkl'):
+                self.pattern_buy2  = pickle_read(f'{file_name}_buy')
+            if os.path.isfile(f'{file_name}_sell.pkl'):
+                self.pattern_sell2 = pickle_read(f'{file_name}_sell')
 
     def MainLoop(self):
         self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 전략 연산 시작'))
@@ -250,7 +283,7 @@ class StrategyUpbit:
             매도수5호가잔량합, 종목코드, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
-            pindex = (index - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
             return self.dict_tik_ar[종목코드][pindex, aindex]
 
         def 현재가N(pre):
@@ -365,16 +398,16 @@ class StrategyUpbit:
             elif tick == 1200:
                 return Parameter_Previous(38, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 8)
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 if gubun_ == 'max':
                     return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -418,8 +451,8 @@ class StrategyUpbit:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -627,7 +660,7 @@ class StrategyUpbit:
                 self.dict_tik_ar[종목코드] = np.delete(self.dict_tik_ar[종목코드], 0, 0)
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
-        index = 데이터길이 - 1
+        self.indexn = 데이터길이 - 1
 
         new_dbdata_min = None
         new_dbdata_day = None
@@ -853,6 +886,15 @@ class StrategyUpbit:
             self.windowQ.put((ui_num['C단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'))
 
     def Buy(self, 종목코드, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이):
+        if self.dict_set['코인장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None:
+            pattern = self.GetPattern(종목코드, '매수')
+            if pattern not in self.pattern_buy1:
+                return
+        elif self.dict_set['코인장중패턴인식'] and self.stg_change and self.pattern_buy2 is not None:
+            pattern = self.GetPattern(종목코드, '매수')
+            if pattern not in self.pattern_buy2:
+                return
+
         if '지정가' in self.dict_set['코인매수주문구분']:
             기준가격 = 현재가
             if self.dict_set['코인매수지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
@@ -878,6 +920,15 @@ class StrategyUpbit:
                 self.ctraderQ.put(('매수', 종목코드, 예상체결가, 매수수량, now(), False))
 
     def Sell(self, 종목코드, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산):
+        if self.dict_set['코인장초패턴인식'] and not self.stg_change and self.pattern_sell1 is not None:
+            pattern = self.GetPattern(종목코드, '매도')
+            if pattern not in self.pattern_sell1:
+                return
+        elif self.dict_set['코인장중패턴인식'] and self.stg_change and self.pattern_sell2 is not None:
+            pattern = self.GetPattern(종목코드, '매도')
+            if pattern not in self.pattern_sell2:
+                return
+
         if '지정가' in self.dict_set['코인매도주문구분'] and not 강제청산:
             기준가격 = 현재가
             if self.dict_set['코인매도지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
@@ -906,3 +957,65 @@ class StrategyUpbit:
         for code in list(self.dict_hilo.keys()):
             if code not in self.df_jg.index:
                 del self.dict_hilo[code]
+
+    def GetPattern(self, code, gubun):
+        if not self.stg_change:
+            arry_tick    = self.dict_tik_ar[code][self.indexn + 1 - self.dict_pattern1['인식구간']:self.indexn + 1, :]
+            dict_pattern = self.dict_pattern_buy1 if gubun == '매수' else self.dict_pattern_sell1
+        else:
+            arry_tick    = self.dict_tik_ar[code][self.indexn + 1 - self.dict_pattern2['인식구간']:self.indexn + 1, :]
+            dict_pattern = self.dict_pattern_buy2 if gubun == '매수' else self.dict_pattern_sell2
+
+        pattern = None
+        for factor, unit in dict_pattern.items():
+            pattern_ = None
+            if factor == '등락율':
+                pattern_ = arry_tick[:, 5]
+            elif factor == '당일거래대금':
+                pattern_ = arry_tick[:, 6]
+            elif factor == '체결강도':
+                pattern_ = arry_tick[:, 7]
+            elif factor == '초당매수금액':
+                bids     = arry_tick[:, 8]
+                price    = arry_tick[:, 1]
+                pattern_ = bids * price
+            elif factor == '초당매도금액':
+                asks     = arry_tick[:, 9]
+                price    = arry_tick[:, 1]
+                pattern_ = asks * price
+            elif factor == '순매수금액':
+                bids     = arry_tick[:, 8]
+                asks     = arry_tick[:, 9]
+                price    = arry_tick[:, 1]
+                pattern_ = (bids - asks) * price
+            elif factor == '초당거래대금':
+                pattern_ = arry_tick[:, 10]
+            elif factor == '고저평균대비등락율':
+                pattern_ = arry_tick[:, 11]
+            elif factor == '매도1잔량금액':
+                asks1    = arry_tick[:, 28]
+                price    = arry_tick[:, 18]
+                pattern_ = asks1 * price
+            elif factor == '매수1잔량금액':
+                bids1    = arry_tick[:, 29]
+                price    = arry_tick[:, 19]
+                pattern_ = bids1 * price
+            elif factor == '매도총잔량금액':
+                tasks    = arry_tick[:, 12]
+                price    = arry_tick[:, 1]
+                pattern_ = tasks * price
+            elif factor == '매수총잔량금액':
+                tbids    = arry_tick[:, 13]
+                price    = arry_tick[:, 1]
+                pattern_ = tbids * price
+            elif factor == '매도수5호가총금액':
+                t5ab     = arry_tick[:, 34]
+                price    = arry_tick[:, 1]
+                pattern_ = t5ab * price
+            pattern_ = pattern_ * unit
+            pattern_ = pattern_.astype(int)
+            if pattern is None:
+                pattern = pattern_
+            else:
+                pattern = np.r_[pattern, pattern_]
+        return pattern.tolist()

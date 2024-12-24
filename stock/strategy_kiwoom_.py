@@ -137,7 +137,7 @@ class StrategyKiwoom2(StrategyKiwoom):
             매도수5호가잔량합, 종목코드, 종목명, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
-            pindex = (index - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
             return self.dict_tik_ar[종목코드][pindex, aindex]
 
         def 현재가N(pre):
@@ -270,16 +270,16 @@ class StrategyKiwoom2(StrategyKiwoom):
             elif tick == 1200:
                 return Parameter_Previous(47, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 3)
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 if gubun_ == 'max':
                     return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -323,8 +323,8 @@ class StrategyKiwoom2(StrategyKiwoom):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -528,7 +528,7 @@ class StrategyKiwoom2(StrategyKiwoom):
             self.dict_tik_ar[종목코드] = np.r_[self.dict_tik_ar[종목코드], np.array([new_data_tick])]
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
-        index = 데이터길이 - 1
+        self.indexn = 데이터길이 - 1
 
         if 데이터길이 > 1800 and (self.dict_set['리시버공유'] == 2 or not self.dict_set['주식틱데이터저장']):
             self.dict_tik_ar[종목코드] = np.delete(self.dict_tik_ar[종목코드], 0, 0)

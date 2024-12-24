@@ -473,49 +473,50 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 
 def GetBackResult(df_tsg, df_bct, betting, day_count):
     tc  = len(df_tsg)
-    atc = round(tc / day_count, 1)
-    pc  = len(df_tsg[df_tsg['수익률'] >= 0])
-    mc  = len(df_tsg[df_tsg['수익률'] < 0])
-    wr  = round(pc / tc * 100, 2)
-    ah  = round(df_tsg['보유시간'].sum() / tc, 2)
-    ap  = round(df_tsg['수익률'].sum() / tc, 2)
-    tsg = int(df_tsg['수익금'].sum())
-    df_plus  = df_tsg[df_tsg['수익률'] >= 0]
-    df_minus = df_tsg[df_tsg['수익률'] < 0]
-    tpg = df_plus['수익률'].mean()
-    tmg = abs(df_minus['수익률'].mean()) if len(df_minus) > 0 else tpg
+    if tc > 0:
+        atc = round(tc / day_count, 1)
+        pc  = len(df_tsg[df_tsg['수익률'] >= 0])
+        mc  = len(df_tsg[df_tsg['수익률'] < 0])
+        wr  = round(pc / tc * 100, 2)
+        ah  = round(df_tsg['보유시간'].sum() / tc, 2)
+        ap  = round(df_tsg['수익률'].sum() / tc, 2)
+        tsg = int(df_tsg['수익금'].sum())
+        df_plus  = df_tsg[df_tsg['수익률'] >= 0]
+        df_minus = df_tsg[df_tsg['수익률'] < 0]
+        tpg = df_plus['수익률'].mean()
+        tmg = abs(df_minus['수익률'].mean()) if len(df_minus) > 0 else tpg
 
-    df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
-    mhct   = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
-    try:
-        onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
-    except:
-        onegm = betting
-    tsp    = round(tsg / onegm * 100, 2)
-    cname  = df_tsg['종목명'].iloc[0]
-    cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
-    tpi    = round(wr / 100 * (1 + tpg / tmg), 2)
+        df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
+        mhct   = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
+        try:
+            onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
+        except:
+            onegm = betting
+        tsp    = round(tsg / onegm * 100, 2)
+        cname  = df_tsg['종목명'].iloc[0]
+        cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
+        tpi    = round(wr / 100 * (1 + tpg / tmg), 2)
 
-    df_bct.index = df_bct.index.astype(str)
-    df_bct.sort_index(inplace=True)
-    df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
-    df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
+        df_bct.index = df_bct.index.astype(str)
+        df_bct.sort_index(inplace=True)
+        df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
+        df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
 
-    columns = columns_btf if '포지션' in df_tsg.columns else columns_bt
-    df_tsg = df_tsg[columns]
+        columns = columns_btf if '포지션' in df_tsg.columns else columns_bt
+        df_tsg = df_tsg[columns]
 
-    try:
-        array = np.array(df_tsg['수익금합계'], dtype=np.float64)
-        lower = np.argmax(np.maximum.accumulate(array) - array)
-        upper = np.argmax(array[:lower])
-        # noinspection PyTypeChecker
-        mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
-        mdd_  = int(abs(array[upper] - array[lower]))
-    except:
-        mdd, mdd_ = 0, 0
-
-    if mdd  == 0: mdd  = abs(tsp)
-    if mdd_ == 0: mdd_ = abs(tsg)
+        try:
+            array = np.array(df_tsg['수익금합계'], dtype=np.float64)
+            lower = np.argmax(np.maximum.accumulate(array) - array)
+            upper = np.argmax(array[:lower])
+            # noinspection PyTypeChecker
+            mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
+            mdd_  = int(abs(array[upper] - array[lower]))
+        except:
+            mdd   = abs(tsp)
+            mdd_  = abs(tsg)
+    else:
+        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
     return df_tsg, df_bct, [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_]
 

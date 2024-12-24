@@ -1,8 +1,8 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtWidgets import QGroupBox, QLabel, QVBoxLayout, QTabWidget, QWidget
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from ui.set_style import style_ck_bx, style_bc_dk, qfont14, style_fc_dk
+from ui.set_style import style_ck_bx, style_bc_dk, qfont14, style_fc_dk, qfont13
 from utility.setting import columns_hj, columns_hc, columns_hg, columns_gc, columns_ns, columns_jm1, columns_jm2, \
     columns_stg1, columns_stg2, DICT_SET, columns_kp, columns_hc2
 
@@ -113,7 +113,7 @@ class SetDialogEtc:
         tree_layout.setContentsMargins(0, 0, 0, 0)
         tree_layout.addWidget(self.ui.canvas2)
 
-        self.ui.dialog_db = self.wc.setDialog('STOM DATABASE', self.ui)
+        self.ui.dialog_db = self.wc.setDialog('STOM DATABASE')
         self.ui.dialog_db.geometry().center()
 
         self.ui.sdb_tapWidgettt_01 = QTabWidget(self.ui.dialog_db)
@@ -224,7 +224,110 @@ class SetDialogEtc:
         self.ui.od_pushButtonnn_07 = self.wc.setPushbutton('매수취소', box=self.ui.od_groupBoxxxxx_01, click=self.ui.odButtonClicked_07)
         self.ui.od_pushButtonnn_08 = self.wc.setPushbutton('매도취소', box=self.ui.od_groupBoxxxxx_01, click=self.ui.odButtonClicked_08)
 
-        self.ui.dialog_optuna = self.wc.setDialog('STOM OPTUNA', tab=self.ui)
+        self.ui.dialog_pattern = self.wc.setDialog('STOM PATTERN')
+        self.ui.dialog_pattern.geometry().center()
+        self.ui.pt_groupBoxxxxx_01 = QGroupBox('   패턴학습, 패턴테스트, 매매적용 안내', self.ui.dialog_pattern)
+        text = '''
+        패턴학습은 백테스트에 사용한 전략의 매수, 매도 시점을 기준으로
+        조건구간의 틱수 동안, 인식조건을 만족했을 때, 인식구간의 팩터값에
+        팩터의 계수를 곱한 다음, 소숫점은 버린 값으로 패턴 학습합니다.
+        매수와 매도가 별도의 패턴으로 학습되며 매수, 매도 모두 팩터들을
+        중복선택하여 멀티학습시킬 수 있습니다. 인식조건은 현재가대비등락율과
+        현재가와 저가 또는 고가의 비교 중, 하나를 선택하여 설정할 수 있습니다.
+        패턴학습을 완료하면 학습된 패턴데이터를 파일로 저장하고 백테엔진으로 보냅니다.
+        백테엔진으로 전송된 학습데이터는 패턴테스트를 진행할 때 사용됩니다.
+        이전 학습데이터를 백테엔진으로 보내려면 학습데이터전송 버튼을 누르십시오. 
+        패턴 테스트의 기간은 학습에 사용되지 않은 기간을 선택해야합니다.
+        일반 백테스트용 매도수 전략과 학습된 패턴을 사용하여 패턴 테스트가 진행됩니다.
+        학습된 패턴데이터 파일은 전략설정에서 패턴인식을 선택하면 매매에 적용됩니다.
+        '''
+        self.ui.pt_labellllllll_01 = QLabel(text, self.ui.pt_groupBoxxxxx_01)
+        self.ui.pt_labellllllll_01.setFont(qfont13)
+        self.ui.pt_labellllllll_01.setAlignment(Qt.AlignCenter)
+        self.ui.pt_comboBoxxxxx_00 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_01, activated=self.ui.pActivated_01)
+        self.ui.pt_pushButtonnn_01 = self.wc.setPushbutton('불러오기', box=self.ui.pt_groupBoxxxxx_01, color=1, click=self.ui.ptButtonClicked_01)
+        self.ui.pt_pushButtonnn_02 = self.wc.setPushbutton('저장하기', box=self.ui.pt_groupBoxxxxx_01, color=1, click=self.ui.ptButtonClicked_02)
+        self.ui.pt_pushButtonnn_03 = self.wc.setPushbutton('학습데이터전송', box=self.ui.pt_groupBoxxxxx_01, color=1, click=self.ui.ptButtonClicked_03)
+
+        self.ui.pt_groupBoxxxxx_04 = QGroupBox('   패턴 학습 기간, 인식 구간, 조건 구간, 인식 조건 선택', self.ui.dialog_pattern)
+        text = ' 패턴 학습 기간 설정 :   시작일자                                               종료일자'
+        self.ui.pt_labellllllll_00 = QLabel(text, self.ui.pt_groupBoxxxxx_04)
+        if self.ui.dict_set['백테날짜고정']:
+            self.ui.pt_dateEdittttt_01 = self.wc.setDateEdit(self.ui.pt_groupBoxxxxx_04, qday=QDate.fromString(self.ui.dict_set['백테날짜'], 'yyyyMMdd'))
+        else:
+            self.ui.pt_dateEdittttt_01 = self.wc.setDateEdit(self.ui.pt_groupBoxxxxx_04, addday=-int(self.ui.dict_set['백테날짜']))
+        self.ui.pt_dateEdittttt_02 = self.wc.setDateEdit(self.ui.pt_groupBoxxxxx_04)
+        text = ' 패턴 인식 구간의 틱수                                               패턴 조건 구간의 틱수'
+        self.ui.pt_labellllllll_02 = QLabel(text, self.ui.pt_groupBoxxxxx_04)
+        item = ['30', '60', '120',  '180', '300', '600']
+        self.ui.pt_comboBoxxxxx_14 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_04, items=item)
+        item = ['300', '600', '900', '1200', '1800']
+        self.ui.pt_comboBoxxxxx_15 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_04, items=item)
+        self.ui.pt_checkBoxxxxx_14 = self.wc.setCheckBox('매수 - 현재가 대비 조건구간 고가의 등락율 >= (+)                       %', self.ui.pt_groupBoxxxxx_04, style=style_ck_bx)
+        self.ui.pt_lineEdittttt_01 = self.wc.setLineedit(self.ui.pt_groupBoxxxxx_04, ltext='5', style=style_bc_dk)
+        self.ui.pt_checkBoxxxxx_15 = self.wc.setCheckBox('매수 - 현재가 <= 조건구간 저가', self.ui.pt_groupBoxxxxx_04, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_34 = self.wc.setCheckBox('매도 - 현재가 대비 조건구간 저가의 등락율 <= (-)                       %', self.ui.pt_groupBoxxxxx_04, style=style_ck_bx)
+        self.ui.pt_lineEdittttt_02 = self.wc.setLineedit(self.ui.pt_groupBoxxxxx_04, ltext='5', style=style_bc_dk)
+        self.ui.pt_checkBoxxxxx_35 = self.wc.setCheckBox('매도 - 현재가 >= 조건구간 고가', self.ui.pt_groupBoxxxxx_04, style=style_ck_bx)
+
+        self.ui.pt_groupBoxxxxx_02 = QGroupBox('   패턴 인식 매수 팩터 및 계수 선택', self.ui.dialog_pattern)
+        self.ui.pt_checkBoxxxxx_01 = self.wc.setCheckBox('등락율', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_02 = self.wc.setCheckBox('당일거래대금', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_03 = self.wc.setCheckBox('체결강도', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_04 = self.wc.setCheckBox('초당매수금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_05 = self.wc.setCheckBox('초당매도금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_06 = self.wc.setCheckBox('순매수금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_07 = self.wc.setCheckBox('초당거래대금', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_08 = self.wc.setCheckBox('고저평균대비등락율', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_09 = self.wc.setCheckBox('매도1잔량금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_10 = self.wc.setCheckBox('매수1잔량금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_11 = self.wc.setCheckBox('매도총잔량금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_12 = self.wc.setCheckBox('매수총잔량금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_13 = self.wc.setCheckBox('매도수5호가총금액', self.ui.pt_groupBoxxxxx_02, style=style_ck_bx)
+        item = ['1000', '100', '10',  '1', '0.1', '0.01', '0.001', '0.0001', '0.00001', '0.000001', '0.0000001', '0.00000001']
+        self.ui.pt_comboBoxxxxx_01 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_02 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_03 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_04 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_05 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_06 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_07 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_08 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_09 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_10 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_11 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_12 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+        self.ui.pt_comboBoxxxxx_13 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_02, items=item)
+
+        self.ui.pt_groupBoxxxxx_03 = QGroupBox('   패턴 인식 매도 팩터 및 계수 선택', self.ui.dialog_pattern)
+        self.ui.pt_checkBoxxxxx_21 = self.wc.setCheckBox('등락율', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_22 = self.wc.setCheckBox('당일거래대금', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_23 = self.wc.setCheckBox('체결강도', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_24 = self.wc.setCheckBox('초당매수금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_25 = self.wc.setCheckBox('초당매도금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_26 = self.wc.setCheckBox('순매수금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_27 = self.wc.setCheckBox('초당거래대금', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_28 = self.wc.setCheckBox('고저평균대비등락율', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_29 = self.wc.setCheckBox('매도1잔량금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_30 = self.wc.setCheckBox('매수1잔량금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_31 = self.wc.setCheckBox('매도총잔량금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_32 = self.wc.setCheckBox('매수총잔량금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_checkBoxxxxx_33 = self.wc.setCheckBox('매도수5호가총금액', self.ui.pt_groupBoxxxxx_03, style=style_ck_bx)
+        self.ui.pt_comboBoxxxxx_21 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_22 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_23 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_24 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_25 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_26 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_27 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_28 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_29 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_30 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_31 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_32 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+        self.ui.pt_comboBoxxxxx_33 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_03, items=item)
+
+        self.ui.dialog_optuna = self.wc.setDialog('STOM OPTUNA')
         self.ui.dialog_optuna.geometry().center()
         self.ui.op_groupBoxxxx_01 = QGroupBox(' ', self.ui.dialog_optuna)
         text = '''
@@ -542,6 +645,89 @@ class SetDialogEtc:
         self.ui.od_pushButtonnn_06.setGeometry(115, 220, 100, 30)
         self.ui.od_pushButtonnn_07.setGeometry(10, 255, 100, 30)
         self.ui.od_pushButtonnn_08.setGeometry(115, 255, 100, 30)
+
+        self.ui.dialog_pattern.setFixedSize(495, 765)
+        if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
+            try:
+                self.ui.dialog_order.move(self.ui.dict_set['창위치'][26], self.ui.dict_set['창위치'][27])
+            except:
+                pass
+        self.ui.pt_groupBoxxxxx_01.setGeometry(5, 10, 485, 240)
+        self.ui.pt_labellllllll_01.setGeometry(-15, 13, 490, 200)
+        self.ui.pt_comboBoxxxxx_00.setGeometry(5, 210, 130, 25)
+        self.ui.pt_pushButtonnn_01.setGeometry(140, 210, 110, 25)
+        self.ui.pt_pushButtonnn_02.setGeometry(255, 210, 110, 25)
+        self.ui.pt_pushButtonnn_03.setGeometry(370, 210, 110, 25)
+
+        self.ui.pt_groupBoxxxxx_04.setGeometry(5, 255, 485, 150)
+        self.ui.pt_labellllllll_00.setGeometry(5, 25, 475, 20)
+        self.ui.pt_dateEdittttt_01.setGeometry(170, 25, 120, 20)
+        self.ui.pt_dateEdittttt_02.setGeometry(360, 25, 120, 20)
+        self.ui.pt_labellllllll_02.setGeometry(5, 50, 475, 20)
+        self.ui.pt_comboBoxxxxx_14.setGeometry(135, 50, 100, 20)
+        self.ui.pt_comboBoxxxxx_15.setGeometry(380, 50, 100, 20)
+        self.ui.pt_checkBoxxxxx_14.setGeometry(5, 75, 400, 20)
+        self.ui.pt_lineEdittttt_01.setGeometry(285, 75, 50, 20)
+        self.ui.pt_checkBoxxxxx_34.setGeometry(5, 100, 400, 20)
+        self.ui.pt_lineEdittttt_02.setGeometry(285, 100, 50, 20)
+        self.ui.pt_checkBoxxxxx_15.setGeometry(5, 125, 235, 20)
+        self.ui.pt_checkBoxxxxx_35.setGeometry(245, 125, 235, 20)
+
+        self.ui.pt_groupBoxxxxx_02.setGeometry(5, 410, 240, 350)
+        self.ui.pt_checkBoxxxxx_01.setGeometry(5, 25, 120, 20)
+        self.ui.pt_checkBoxxxxx_02.setGeometry(5, 50, 120, 20)
+        self.ui.pt_checkBoxxxxx_03.setGeometry(5, 75, 120, 20)
+        self.ui.pt_checkBoxxxxx_04.setGeometry(5, 100, 120, 20)
+        self.ui.pt_checkBoxxxxx_05.setGeometry(5, 125, 120, 20)
+        self.ui.pt_checkBoxxxxx_06.setGeometry(5, 150, 120, 20)
+        self.ui.pt_checkBoxxxxx_07.setGeometry(5, 175, 120, 20)
+        self.ui.pt_checkBoxxxxx_08.setGeometry(5, 200, 120, 20)
+        self.ui.pt_checkBoxxxxx_09.setGeometry(5, 225, 120, 20)
+        self.ui.pt_checkBoxxxxx_10.setGeometry(5, 250, 120, 20)
+        self.ui.pt_checkBoxxxxx_11.setGeometry(5, 275, 120, 20)
+        self.ui.pt_checkBoxxxxx_12.setGeometry(5, 300, 120, 20)
+        self.ui.pt_checkBoxxxxx_13.setGeometry(5, 325, 120, 20)
+        self.ui.pt_comboBoxxxxx_01.setGeometry(135, 25, 100, 20)
+        self.ui.pt_comboBoxxxxx_02.setGeometry(135, 50, 100, 20)
+        self.ui.pt_comboBoxxxxx_03.setGeometry(135, 75, 100, 20)
+        self.ui.pt_comboBoxxxxx_04.setGeometry(135, 100, 100, 20)
+        self.ui.pt_comboBoxxxxx_05.setGeometry(135, 125, 100, 20)
+        self.ui.pt_comboBoxxxxx_06.setGeometry(135, 150, 100, 20)
+        self.ui.pt_comboBoxxxxx_07.setGeometry(135, 175, 100, 20)
+        self.ui.pt_comboBoxxxxx_08.setGeometry(135, 200, 100, 20)
+        self.ui.pt_comboBoxxxxx_09.setGeometry(135, 225, 100, 20)
+        self.ui.pt_comboBoxxxxx_10.setGeometry(135, 250, 100, 20)
+        self.ui.pt_comboBoxxxxx_11.setGeometry(135, 275, 100, 20)
+        self.ui.pt_comboBoxxxxx_12.setGeometry(135, 300, 100, 20)
+        self.ui.pt_comboBoxxxxx_13.setGeometry(135, 325, 100, 20)
+
+        self.ui.pt_groupBoxxxxx_03.setGeometry(250, 410, 240, 350)
+        self.ui.pt_checkBoxxxxx_21.setGeometry(5, 25, 120, 20)
+        self.ui.pt_checkBoxxxxx_22.setGeometry(5, 50, 120, 20)
+        self.ui.pt_checkBoxxxxx_23.setGeometry(5, 75, 120, 20)
+        self.ui.pt_checkBoxxxxx_24.setGeometry(5, 100, 120, 20)
+        self.ui.pt_checkBoxxxxx_25.setGeometry(5, 125, 120, 20)
+        self.ui.pt_checkBoxxxxx_26.setGeometry(5, 150, 120, 20)
+        self.ui.pt_checkBoxxxxx_27.setGeometry(5, 175, 120, 20)
+        self.ui.pt_checkBoxxxxx_28.setGeometry(5, 200, 120, 20)
+        self.ui.pt_checkBoxxxxx_29.setGeometry(5, 225, 120, 20)
+        self.ui.pt_checkBoxxxxx_30.setGeometry(5, 250, 120, 20)
+        self.ui.pt_checkBoxxxxx_31.setGeometry(5, 275, 120, 20)
+        self.ui.pt_checkBoxxxxx_32.setGeometry(5, 300, 120, 20)
+        self.ui.pt_checkBoxxxxx_33.setGeometry(5, 325, 120, 20)
+        self.ui.pt_comboBoxxxxx_21.setGeometry(135, 25, 100, 20)
+        self.ui.pt_comboBoxxxxx_22.setGeometry(135, 50, 100, 20)
+        self.ui.pt_comboBoxxxxx_23.setGeometry(135, 75, 100, 20)
+        self.ui.pt_comboBoxxxxx_24.setGeometry(135, 100, 100, 20)
+        self.ui.pt_comboBoxxxxx_25.setGeometry(135, 125, 100, 20)
+        self.ui.pt_comboBoxxxxx_26.setGeometry(135, 150, 100, 20)
+        self.ui.pt_comboBoxxxxx_27.setGeometry(135, 175, 100, 20)
+        self.ui.pt_comboBoxxxxx_28.setGeometry(135, 200, 100, 20)
+        self.ui.pt_comboBoxxxxx_29.setGeometry(135, 225, 100, 20)
+        self.ui.pt_comboBoxxxxx_30.setGeometry(135, 250, 100, 20)
+        self.ui.pt_comboBoxxxxx_31.setGeometry(135, 275, 100, 20)
+        self.ui.pt_comboBoxxxxx_32.setGeometry(135, 300, 100, 20)
+        self.ui.pt_comboBoxxxxx_33.setGeometry(135, 325, 100, 20)
 
         self.ui.dialog_optuna.setFixedSize(220, 670)
         self.ui.op_groupBoxxxx_01.setGeometry(5, -10, 210, 675)

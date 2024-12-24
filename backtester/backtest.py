@@ -256,6 +256,7 @@ class BackTest:
         self.backname = backname
         self.ui_gubun = ui_gubun
         self.dict_set = DICT_SET
+        self.pattern  = False
         self.gubun    = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.Start()
 
@@ -279,7 +280,7 @@ class BackTest:
         df_kp         = data[12]
         df_kq         = data[13]
         back_club     = data[14]
-        pattern       = data[15]
+        self.pattern  = data[15]
         if buystg_name == '벤치전략':
             betting   = 20000000
             avgtime   = 30
@@ -325,7 +326,7 @@ class BackTest:
 
         self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
                      dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
-        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, pattern)
+        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.pattern)
         for q in self.stq_list:
             q.put('백테시작')
         for q in self.pq_list:
@@ -359,6 +360,9 @@ class BackTest:
         elif bench:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '벤치테스트 완료'))
         else:
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
+            if self.pattern:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 테스트 완료'))
+            else:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
         time.sleep(1)
         sys.exit()

@@ -1,4 +1,5 @@
 import math
+import os.path
 import time
 # noinspection PyUnresolvedReferences
 import talib
@@ -6,9 +7,11 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK
+from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK, \
+    PATTERN_PATH
 # noinspection PyUnresolvedReferences
-from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, GetHogaunit
+from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, \
+    GetHogaunit, GetPatternSetup, pickle_read
 
 
 class StrategyKiwoom:
@@ -47,6 +50,8 @@ class StrategyKiwoom:
         self.tuple_kosd = ()
         self.tuple_gsjm = ()
 
+        self.indexn     = 0
+        self.jgrv_count = 0
         self.int_tujagm = 0
         self.stg_change = False
         self.chart_code = None
@@ -59,7 +64,17 @@ class StrategyKiwoom:
         self.shogainfo = {}
         self.dict_hilo = {}
 
-        self.jg_receiv_count = 0
+        self.pattern_buy1       = None
+        self.pattern_sell1      = None
+        self.dict_pattern1      = {}
+        self.dict_pattern_buy1  = {}
+        self.dict_pattern_sell1 = {}
+
+        self.pattern_buy2       = None
+        self.pattern_sell2      = None
+        self.dict_pattern2      = {}
+        self.dict_pattern_buy2  = {}
+        self.dict_pattern_sell2 = {}
 
         self.Start()
 
@@ -69,6 +84,7 @@ class StrategyKiwoom:
         dfs  = pd.read_sql('SELECT * FROM stocksell', con).set_index('index')
         dfob = pd.read_sql('SELECT * FROM stockoptibuy', con).set_index('index')
         dfos = pd.read_sql('SELECT * FROM stockoptisell', con).set_index('index')
+        dfp  = pd.read_sql('SELECT * FROM stockpattern', con).set_index('index')
         con.close()
 
         if self.dict_set['주식장초매수전략'] == '':
@@ -100,6 +116,22 @@ class StrategyKiwoom:
             self.sellstrategy2 = compile(dfs['전략코드'][self.dict_set['주식장중매도전략']], '<string>', 'exec')
         elif self.dict_set['주식장중매도전략'] in dfos.index:
             self.sellstrategy2 = compile(dfos['전략코드'][self.dict_set['주식장중매도전략']], '<string>', 'exec')
+
+        if self.dict_set['주식장초매수전략'] in dfp.index:
+            self.dict_pattern1, self.dict_pattern_buy1, self.dict_pattern_sell1 = GetPatternSetup(dfp['패턴설정'][self.dict_set['주식장초매수전략']])
+            file_name = f"{PATTERN_PATH}/pattern_stock_{self.dict_set['주식장초매수전략']}"
+            if os.path.isfile(f'{file_name}_buy.pkl'):
+                self.pattern_buy1  = pickle_read(f'{file_name}_buy')
+            if os.path.isfile(f'{file_name}_sell.pkl'):
+                self.pattern_sell1 = pickle_read(f'{file_name}_sell')
+
+        if self.dict_set['주식장중매수전략'] in dfp.index:
+            self.dict_pattern2, self.dict_pattern_buy2, self.dict_pattern_sell2 = GetPatternSetup(dfp['패턴설정'][self.dict_set['주식장중매수전략']])
+            file_name = f"{PATTERN_PATH}/pattern_stock_{self.dict_set['주식장중매수전략']}"
+            if os.path.isfile(f'{file_name}_buy.pkl'):
+                self.pattern_buy2  = pickle_read(f'{file_name}_buy')
+            if os.path.isfile(f'{file_name}_sell.pkl'):
+                self.pattern_sell2 = pickle_read(f'{file_name}_sell')
 
     def Start(self):
         if self.gubun == 7:
@@ -148,9 +180,9 @@ class StrategyKiwoom:
                 self.list_sell.append(data)
         elif gubun == '잔고목록':
             self.df_jg = data
-            self.jg_receiv_count += 1
-            if self.jg_receiv_count == 2:
-                self.jg_receiv_count = 0
+            self.jgrv_count += 1
+            if self.jgrv_count == 2:
+                self.jgrv_count = 0
                 self.PutGsjmAndDeleteHilo()
         elif gubun == '매수전략':
             if int_hms() < self.dict_set['주식장초전략종료시간']:
@@ -204,7 +236,7 @@ class StrategyKiwoom:
             매도수5호가잔량합, 종목코드, 종목명, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
-            pindex = (index - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
             return self.dict_tik_ar[종목코드][pindex, aindex]
 
         def 현재가N(pre):
@@ -337,16 +369,16 @@ class StrategyKiwoom:
             elif tick == 1200:
                 return Parameter_Previous(47, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 3)
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 if gubun_ == 'max':
                     return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -390,8 +422,8 @@ class StrategyKiwoom:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (index + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (index + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
                 dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -469,7 +501,7 @@ class StrategyKiwoom:
             self.dict_tik_ar[종목코드] = np.r_[self.dict_tik_ar[종목코드], np.array([new_data_tick])]
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
-        index = 데이터길이 - 1
+        self.indexn = 데이터길이 - 1
 
         if 데이터길이 > 1800 and (self.dict_set['리시버공유'] == 2 or not self.dict_set['주식틱데이터저장']):
             self.dict_tik_ar[종목코드] = np.delete(self.dict_tik_ar[종목코드], 0, 0)
@@ -604,6 +636,15 @@ class StrategyKiwoom:
             self.kwzservQ.put(('window', (ui_num['S단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.')))
 
     def Buy(self, 종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이):
+        if self.dict_set['주식장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None:
+            pattern = self.GetPattern(종목코드, '매수')
+            if pattern not in self.pattern_buy1:
+                return
+        elif self.dict_set['주식장중패턴인식'] and self.stg_change and self.pattern_buy2 is not None:
+            pattern = self.GetPattern(종목코드, '매수')
+            if pattern not in self.pattern_buy2:
+                return
+
         if '지정가' in self.dict_set['주식매수주문구분']:
             기준가격 = 현재가
             if self.dict_set['주식매수지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
@@ -629,6 +670,15 @@ class StrategyKiwoom:
                 self.straderQ.put(('매수', 종목코드, 종목명, 예상체결가, 매수수량, now(), False))
 
     def Sell(self, 종목코드, 종목명, 매도수량, 현재가, 매도호가1, 매수호가1, 강제청산):
+        if self.dict_set['주식장초패턴인식'] and not self.stg_change and self.pattern_sell1 is not None:
+            pattern = self.GetPattern(종목코드, '매도')
+            if pattern not in self.pattern_sell1:
+                return
+        elif self.dict_set['주식장중패턴인식'] and self.stg_change and self.pattern_sell2 is not None:
+            pattern = self.GetPattern(종목코드, '매도')
+            if pattern not in self.pattern_sell2:
+                return
+
         if '지정가' in self.dict_set['주식매도주문구분'] and not 강제청산:
             기준가격 = 현재가
             if self.dict_set['주식매도지정가기준가격'] == '매도1호가': 기준가격 = 매도호가1
@@ -658,6 +708,68 @@ class StrategyKiwoom:
             for code in list(self.dict_hilo.keys()):
                 if code not in self.df_jg.index:
                     del self.dict_hilo[code]
+
+    def GetPattern(self, code, gubun):
+        if not self.stg_change:
+            arry_tick    = self.dict_tik_ar[code][self.indexn + 1 - self.dict_pattern1['인식구간']:self.indexn + 1, :]
+            dict_pattern = self.dict_pattern_buy1 if gubun == '매수' else self.dict_pattern_sell1
+        else:
+            arry_tick    = self.dict_tik_ar[code][self.indexn + 1 - self.dict_pattern2['인식구간']:self.indexn + 1, :]
+            dict_pattern = self.dict_pattern_buy2 if gubun == '매수' else self.dict_pattern_sell2
+
+        pattern = None
+        for factor, unit in dict_pattern.items():
+            pattern_ = None
+            if factor == '등락율':
+                pattern_ = arry_tick[:, 5]
+            elif factor == '당일거래대금':
+                pattern_ = arry_tick[:, 6]
+            elif factor == '체결강도':
+                pattern_ = arry_tick[:, 7]
+            elif factor == '초당매수금액':
+                bids     = arry_tick[:, 14]
+                price    = arry_tick[:, 1]
+                pattern_ = bids * price
+            elif factor == '초당매도금액':
+                asks     = arry_tick[:, 15]
+                price    = arry_tick[:, 1]
+                pattern_ = asks * price
+            elif factor == '순매수금액':
+                bids     = arry_tick[:, 14]
+                asks     = arry_tick[:, 15]
+                price    = arry_tick[:, 1]
+                pattern_ = (bids - asks) * price
+            elif factor == '초당거래대금':
+                pattern_ = arry_tick[:, 19]
+            elif factor == '고저평균대비등락율':
+                pattern_ = arry_tick[:, 20]
+            elif factor == '매도1잔량금액':
+                asks1    = arry_tick[:, 37]
+                price    = arry_tick[:, 27]
+                pattern_ = asks1 * price
+            elif factor == '매수1잔량금액':
+                bids1    = arry_tick[:, 38]
+                price    = arry_tick[:, 28]
+                pattern_ = bids1 * price
+            elif factor == '매도총잔량금액':
+                tasks    = arry_tick[:, 21]
+                price    = arry_tick[:, 1]
+                pattern_ = tasks * price
+            elif factor == '매수총잔량금액':
+                tbids    = arry_tick[:, 22]
+                price    = arry_tick[:, 1]
+                pattern_ = tbids * price
+            elif factor == '매도수5호가총금액':
+                t5ab     = arry_tick[:, 43]
+                price    = arry_tick[:, 1]
+                pattern_ = t5ab * price
+            pattern_ = pattern_ * unit
+            pattern_ = pattern_.astype(int)
+            if pattern is None:
+                pattern = pattern_
+            else:
+                pattern = np.r_[pattern, pattern_]
+        return pattern.tolist()
 
     def SaveTickData(self, codes):
         for code in list(self.dict_tik_ar.keys()):

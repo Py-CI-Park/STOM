@@ -931,7 +931,7 @@ class Window(QMainWindow):
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
                                '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
                                '전진분석BR 완료', '전진분석BRV 완료', '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
+                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
                     if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료'):
                         self.sActivated_04()
                     if data[1] in ('최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료'):
@@ -960,7 +960,7 @@ class Window(QMainWindow):
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
                                '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
                                '전진분석BR 완료', '전진분석BRV 완료', '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
+                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
                     if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료'):
                         self.cActivated_04()
                     if data[1] in ('최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료'):
@@ -4378,6 +4378,291 @@ class Window(QMainWindow):
 
     # =================================================================================================================
 
+    def pActivated_01(self):
+        name = self.pt_comboBoxxxxx_00.currentText()
+        con = sqlite3.connect(DB_STRATEGY)
+        if self.main_btn == 2:
+            df = pd.read_sql(f'SELECT * FROM stockpattern WHERE `index`= "{name}"', con)
+        else:
+            df = pd.read_sql(f'SELECT * FROM coinpattern WHERE `index`= "{name}"', con)
+        con.close()
+        if len(df) > 0:
+            pattern = df['패턴설정'][0]
+            pattern = pattern.split('^')
+            self.pt_comboBoxxxxx_14.setCurrentText(pattern[0])
+            self.pt_comboBoxxxxx_15.setCurrentText(pattern[1])
+            self.pt_checkBoxxxxx_14.setChecked(True if pattern[2] == '1' else False)
+            self.pt_lineEdittttt_01.setText(pattern[3])
+            self.pt_checkBoxxxxx_15.setChecked(True if pattern[4] == '1' else False)
+            self.pt_checkBoxxxxx_34.setChecked(True if pattern[5] == '1' else False)
+            self.pt_lineEdittttt_02.setText(pattern[6])
+            self.pt_checkBoxxxxx_35.setChecked(True if pattern[7] == '1' else False)
+            self.pt_checkBoxxxxx_01.setChecked(True if pattern[8] == '1' else False)
+            self.pt_checkBoxxxxx_02.setChecked(True if pattern[9] == '1' else False)
+            self.pt_checkBoxxxxx_03.setChecked(True if pattern[10] == '1' else False)
+            self.pt_checkBoxxxxx_04.setChecked(True if pattern[11] == '1' else False)
+            self.pt_checkBoxxxxx_05.setChecked(True if pattern[12] == '1' else False)
+            self.pt_checkBoxxxxx_06.setChecked(True if pattern[13] == '1' else False)
+            self.pt_checkBoxxxxx_07.setChecked(True if pattern[14] == '1' else False)
+            self.pt_checkBoxxxxx_08.setChecked(True if pattern[15] == '1' else False)
+            self.pt_checkBoxxxxx_09.setChecked(True if pattern[16] == '1' else False)
+            self.pt_checkBoxxxxx_10.setChecked(True if pattern[17] == '1' else False)
+            self.pt_checkBoxxxxx_11.setChecked(True if pattern[18] == '1' else False)
+            self.pt_checkBoxxxxx_12.setChecked(True if pattern[19] == '1' else False)
+            self.pt_checkBoxxxxx_13.setChecked(True if pattern[20] == '1' else False)
+            self.pt_comboBoxxxxx_01.setCurrentText(pattern[21])
+            self.pt_comboBoxxxxx_02.setCurrentText(pattern[22])
+            self.pt_comboBoxxxxx_03.setCurrentText(pattern[23])
+            self.pt_comboBoxxxxx_04.setCurrentText(pattern[24])
+            self.pt_comboBoxxxxx_05.setCurrentText(pattern[25])
+            self.pt_comboBoxxxxx_06.setCurrentText(pattern[26])
+            self.pt_comboBoxxxxx_07.setCurrentText(pattern[27])
+            self.pt_comboBoxxxxx_08.setCurrentText(pattern[28])
+            self.pt_comboBoxxxxx_09.setCurrentText(pattern[29])
+            self.pt_comboBoxxxxx_10.setCurrentText(pattern[30])
+            self.pt_comboBoxxxxx_11.setCurrentText(pattern[31])
+            self.pt_comboBoxxxxx_12.setCurrentText(pattern[32])
+            self.pt_comboBoxxxxx_13.setCurrentText(pattern[33])
+            self.pt_checkBoxxxxx_21.setChecked(True if pattern[34] == '1' else False)
+            self.pt_checkBoxxxxx_22.setChecked(True if pattern[35] == '1' else False)
+            self.pt_checkBoxxxxx_23.setChecked(True if pattern[36] == '1' else False)
+            self.pt_checkBoxxxxx_24.setChecked(True if pattern[37] == '1' else False)
+            self.pt_checkBoxxxxx_25.setChecked(True if pattern[38] == '1' else False)
+            self.pt_checkBoxxxxx_26.setChecked(True if pattern[39] == '1' else False)
+            self.pt_checkBoxxxxx_27.setChecked(True if pattern[40] == '1' else False)
+            self.pt_checkBoxxxxx_28.setChecked(True if pattern[41] == '1' else False)
+            self.pt_checkBoxxxxx_29.setChecked(True if pattern[42] == '1' else False)
+            self.pt_checkBoxxxxx_30.setChecked(True if pattern[43] == '1' else False)
+            self.pt_checkBoxxxxx_31.setChecked(True if pattern[44] == '1' else False)
+            self.pt_checkBoxxxxx_32.setChecked(True if pattern[45] == '1' else False)
+            self.pt_checkBoxxxxx_33.setChecked(True if pattern[46] == '1' else False)
+            self.pt_comboBoxxxxx_21.setCurrentText(pattern[47])
+            self.pt_comboBoxxxxx_22.setCurrentText(pattern[48])
+            self.pt_comboBoxxxxx_23.setCurrentText(pattern[49])
+            self.pt_comboBoxxxxx_24.setCurrentText(pattern[50])
+            self.pt_comboBoxxxxx_25.setCurrentText(pattern[51])
+            self.pt_comboBoxxxxx_26.setCurrentText(pattern[52])
+            self.pt_comboBoxxxxx_27.setCurrentText(pattern[53])
+            self.pt_comboBoxxxxx_28.setCurrentText(pattern[54])
+            self.pt_comboBoxxxxx_29.setCurrentText(pattern[55])
+            self.pt_comboBoxxxxx_30.setCurrentText(pattern[56])
+            self.pt_comboBoxxxxx_31.setCurrentText(pattern[57])
+            self.pt_comboBoxxxxx_32.setCurrentText(pattern[58])
+            self.pt_comboBoxxxxx_33.setCurrentText(pattern[59])
+
+    def ptButtonClicked_01(self):
+        con = sqlite3.connect(DB_STRATEGY)
+        if self.main_btn == 2:
+            df = pd.read_sql('SELECT * FROM stockpattern', con).set_index('index')
+        else:
+            df = pd.read_sql('SELECT * FROM coinpattern', con).set_index('index')
+        con.close()
+        if len(df) > 0:
+            self.pt_comboBoxxxxx_00.clear()
+            for pattern_name in df.index:
+                self.pt_comboBoxxxxx_00.addItem(pattern_name)
+
+    def ptButtonClicked_02(self):
+        if self.main_btn == 2:
+            name = self.svjb_comboBoxx_01.currentText()
+        else:
+            name = self.cvjb_comboBoxx_01.currentText()
+
+        if name == '':
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '패턴의 이름은 전략의 이름이 포함되어 저장됩니다.\n전략을 로딩하고 선택하십시오.')
+            return
+        if not self.pt_checkBoxxxxx_14.isChecked() and not self.pt_checkBoxxxxx_15.isChecked():
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '매수 패턴 인식 조건을 선택하십시오.\n')
+            return
+        if self.pt_checkBoxxxxx_14.isChecked() and self.pt_checkBoxxxxx_15.isChecked():
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '매수 패턴 인식 조건은 하나만 선택할 수 있습니다.\n')
+            return
+        if not self.pt_checkBoxxxxx_34.isChecked() and not self.pt_checkBoxxxxx_35.isChecked():
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '매도 패턴 인식 조건을 선택하십시오.\n')
+            return
+        if self.pt_checkBoxxxxx_34.isChecked() and self.pt_checkBoxxxxx_35.isChecked():
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '매도 패턴 인식 조건은 하나만 선택할 수 있습니다.\n')
+            return
+        if self.pt_checkBoxxxxx_14.isChecked() and self.pt_lineEdittttt_01.text() == '':
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '매수 패턴 인식 조건 등락율 수치를 입력하십시오.\n')
+            return
+        if self.pt_checkBoxxxxx_34.isChecked() and self.pt_lineEdittttt_02.text() == '':
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '매도 패턴 인식 조건 등락율 수치를 입력하십시오.\n')
+            return
+        if self.pt_lineEdittttt_01.text() == '' or self.pt_lineEdittttt_02.text() == '':
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '등락율 수치가 입력되지 않았습니다.\n사용하지 않더라도 입력되어야 합니다.')
+            return
+
+        pattern = [
+            self.pt_comboBoxxxxx_14.currentText(),
+            self.pt_comboBoxxxxx_15.currentText(),
+            '1' if self.pt_checkBoxxxxx_14.isChecked() else '0',
+            self.pt_lineEdittttt_01.text(),
+            '1' if self.pt_checkBoxxxxx_15.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_34.isChecked() else '0',
+            self.pt_lineEdittttt_02.text(),
+            '1' if self.pt_checkBoxxxxx_35.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_01.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_02.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_03.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_04.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_05.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_06.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_07.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_08.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_09.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_10.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_11.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_12.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_13.isChecked() else '0',
+            self.pt_comboBoxxxxx_01.currentText(),
+            self.pt_comboBoxxxxx_02.currentText(),
+            self.pt_comboBoxxxxx_03.currentText(),
+            self.pt_comboBoxxxxx_04.currentText(),
+            self.pt_comboBoxxxxx_05.currentText(),
+            self.pt_comboBoxxxxx_06.currentText(),
+            self.pt_comboBoxxxxx_07.currentText(),
+            self.pt_comboBoxxxxx_08.currentText(),
+            self.pt_comboBoxxxxx_09.currentText(),
+            self.pt_comboBoxxxxx_10.currentText(),
+            self.pt_comboBoxxxxx_11.currentText(),
+            self.pt_comboBoxxxxx_12.currentText(),
+            self.pt_comboBoxxxxx_13.currentText(),
+            '1' if self.pt_checkBoxxxxx_21.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_22.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_23.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_24.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_25.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_26.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_27.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_28.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_29.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_30.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_31.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_32.isChecked() else '0',
+            '1' if self.pt_checkBoxxxxx_33.isChecked() else '0',
+            self.pt_comboBoxxxxx_21.currentText(),
+            self.pt_comboBoxxxxx_22.currentText(),
+            self.pt_comboBoxxxxx_23.currentText(),
+            self.pt_comboBoxxxxx_24.currentText(),
+            self.pt_comboBoxxxxx_25.currentText(),
+            self.pt_comboBoxxxxx_26.currentText(),
+            self.pt_comboBoxxxxx_27.currentText(),
+            self.pt_comboBoxxxxx_28.currentText(),
+            self.pt_comboBoxxxxx_29.currentText(),
+            self.pt_comboBoxxxxx_30.currentText(),
+            self.pt_comboBoxxxxx_31.currentText(),
+            self.pt_comboBoxxxxx_32.currentText(),
+            self.pt_comboBoxxxxx_33.currentText()
+        ]
+        pattern = '^'.join(pattern)
+        df = pd.DataFrame({'패턴설정': [pattern]}, index=[name])
+        if self.main_btn == 2:
+            queryQ.put(('전략디비', f"DELETE FROM stockpattern WHERE `index` = '{name}'"))
+            queryQ.put(('전략디비', df, 'stockpattern', 'append'))
+        else:
+            queryQ.put(('전략디비', f"DELETE FROM coinpattern WHERE `index` = '{name}'"))
+            queryQ.put(('전략디비', df, 'coinpattern', 'append'))
+        QMessageBox.information(self.dialog_pattern, '저장 완료', random.choice(famous_saying))
+
+    def ptButtonClicked_03(self):
+        if self.main_btn == 2:
+            middle_name = 'stock'
+        else:
+            middle_name = 'coin'
+        last_name = self.pt_comboBoxxxxx_00.currentText()
+        if last_name != '':
+            pattern_buy_name  = f'{PATTERN_PATH}/pattern_{middle_name}_{last_name}_buy'
+            pattern_sell_name = f'{PATTERN_PATH}/pattern_{middle_name}_{last_name}_sell'
+            if os.path.isfile(f'{pattern_buy_name}.pkl') and os.path.isfile(f'{pattern_sell_name}.pkl'):
+                if self.backtest_engine:
+                    for q in self.back_pques:
+                        q.put(('백테유형', '백테스트'))
+                    dict_pattern, dict_pattern_buy, dict_pattern_sell = self.GetPatternSetup()
+                    for q in self.back_pques:
+                        q.put(('패턴정보', dict_pattern, dict_pattern_buy, dict_pattern_sell))
+                    pattern_buy  = pickle_read(pattern_buy_name)
+                    pattern_sell = pickle_read(pattern_sell_name)
+                    for q in self.back_pques:
+                        q.put(('모델정보', pattern_buy, pattern_sell))
+                    QMessageBox.information(self.dialog_pattern, '전송 완료', random.choice(famous_saying))
+                else:
+                    QMessageBox.critical(self.dialog_pattern, '오류 알림', '백테엔진이 미실행중입니다.\n먼저 백테엔진을 구동하십시오.\n')
+            else:
+                QMessageBox.critical(self.dialog_pattern, '오류 알림', '학습 데이터 파일이 존재하지 않습니다.\n')
+        else:
+            QMessageBox.critical(self.dialog_pattern, '오류 알림', '전송할 패턴 데이터의 이름을 콤보박스에서 선택하십시오.\n')
+
+    def GetPatternSetup(self):
+        dict_pattern = {
+            '패턴이름': self.pt_comboBoxxxxx_00.currentText(),
+            '인식구간': int(self.pt_comboBoxxxxx_14.currentText()),
+            '조건구간': int(self.pt_comboBoxxxxx_15.currentText()),
+            '매수조건1': 1 if self.pt_checkBoxxxxx_14.isChecked() else 0,
+            '매수조건2': float(self.pt_lineEdittttt_01.text()),
+            '매수조건3': 1 if self.pt_checkBoxxxxx_15.isChecked() else 0,
+            '매도조건1': 1 if self.pt_checkBoxxxxx_34.isChecked() else 0,
+            '매도조건2': float(self.pt_lineEdittttt_02.text()),
+            '매도조건3': 1 if self.pt_checkBoxxxxx_35.isChecked() else 0
+        }
+        dict_pattern_buy = {}
+        if self.pt_checkBoxxxxx_01.isChecked():
+            dict_pattern_buy['등락율'] = float(self.pt_comboBoxxxxx_01.currentText())
+        if self.pt_checkBoxxxxx_02.isChecked():
+            dict_pattern_buy['당일거래대금'] = float(self.pt_comboBoxxxxx_02.currentText())
+        if self.pt_checkBoxxxxx_03.isChecked():
+            dict_pattern_buy['체결강도'] = float(self.pt_comboBoxxxxx_03.currentText())
+        if self.pt_checkBoxxxxx_04.isChecked():
+            dict_pattern_buy['초당매수금액'] = float(self.pt_comboBoxxxxx_04.currentText())
+        if self.pt_checkBoxxxxx_05.isChecked():
+            dict_pattern_buy['초당매도금액'] = float(self.pt_comboBoxxxxx_05.currentText())
+        if self.pt_checkBoxxxxx_06.isChecked():
+            dict_pattern_buy['순매수금액'] = float(self.pt_comboBoxxxxx_06.currentText())
+        if self.pt_checkBoxxxxx_07.isChecked():
+            dict_pattern_buy['초당거래대금'] = float(self.pt_comboBoxxxxx_07.currentText())
+        if self.pt_checkBoxxxxx_08.isChecked():
+            dict_pattern_buy['고저평균대비등락율'] = float(self.pt_comboBoxxxxx_08.currentText())
+        if self.pt_checkBoxxxxx_09.isChecked():
+            dict_pattern_buy['매도1잔량금액'] = float(self.pt_comboBoxxxxx_09.currentText())
+        if self.pt_checkBoxxxxx_10.isChecked():
+            dict_pattern_buy['매수1잔량금액'] = float(self.pt_comboBoxxxxx_10.currentText())
+        if self.pt_checkBoxxxxx_11.isChecked():
+            dict_pattern_buy['매도총잔량금액'] = float(self.pt_comboBoxxxxx_11.currentText())
+        if self.pt_checkBoxxxxx_12.isChecked():
+            dict_pattern_buy['매수총잔량금액'] = float(self.pt_comboBoxxxxx_12.currentText())
+        if self.pt_checkBoxxxxx_13.isChecked():
+            dict_pattern_buy['매도수5호가총금액'] = float(self.pt_comboBoxxxxx_13.currentText())
+        dict_pattern_sell = {}
+        if self.pt_checkBoxxxxx_21.isChecked():
+            dict_pattern_sell['등락율'] = float(self.pt_comboBoxxxxx_21.currentText())
+        if self.pt_checkBoxxxxx_22.isChecked():
+            dict_pattern_sell['당일거래대금'] = float(self.pt_comboBoxxxxx_22.currentText())
+        if self.pt_checkBoxxxxx_23.isChecked():
+            dict_pattern_sell['체결강도'] = float(self.pt_comboBoxxxxx_23.currentText())
+        if self.pt_checkBoxxxxx_24.isChecked():
+            dict_pattern_sell['초당매수금액'] = float(self.pt_comboBoxxxxx_24.currentText())
+        if self.pt_checkBoxxxxx_25.isChecked():
+            dict_pattern_sell['초당매도금액'] = float(self.pt_comboBoxxxxx_25.currentText())
+        if self.pt_checkBoxxxxx_26.isChecked():
+            dict_pattern_sell['순매수금액'] = float(self.pt_comboBoxxxxx_26.currentText())
+        if self.pt_checkBoxxxxx_27.isChecked():
+            dict_pattern_sell['초당거래대금'] = float(self.pt_comboBoxxxxx_27.currentText())
+        if self.pt_checkBoxxxxx_28.isChecked():
+            dict_pattern_sell['고저평균대비등락율'] = float(self.pt_comboBoxxxxx_28.currentText())
+        if self.pt_checkBoxxxxx_29.isChecked():
+            dict_pattern_sell['매도1잔량금액'] = float(self.pt_comboBoxxxxx_29.currentText())
+        if self.pt_checkBoxxxxx_30.isChecked():
+            dict_pattern_sell['매수1잔량금액'] = float(self.pt_comboBoxxxxx_30.currentText())
+        if self.pt_checkBoxxxxx_31.isChecked():
+            dict_pattern_sell['매도총잔량금액'] = float(self.pt_comboBoxxxxx_31.currentText())
+        if self.pt_checkBoxxxxx_32.isChecked():
+            dict_pattern_sell['매수총잔량금액'] = float(self.pt_comboBoxxxxx_32.currentText())
+        if self.pt_checkBoxxxxx_33.isChecked():
+            dict_pattern_sell['매도수5호가총금액'] = float(self.pt_comboBoxxxxx_33.currentText())
+        return dict_pattern, dict_pattern_buy, dict_pattern_sell
+
+    # =================================================================================================================
+
     def odButtonClicked_01(self):
         name      = self.od_comboBoxxxxx_01.currentText()
         ordertype = self.od_comboBoxxxxx_02.currentText()
@@ -7621,19 +7906,33 @@ class Window(QMainWindow):
             if not self.back_condition:
                 QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
+            if self.pt_comboBoxxxxx_00.currentText() == '':
+                QMessageBox.critical(self, '오류 알림', '학습할 패턴설정이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
+                return
+            if self.svjb_comboBoxx_01.currentText() == '':
+                QMessageBox.critical(self, '오류 알림', '학습할 매수전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
+                return
+            if self.svjs_comboBoxx_01.currentText() == '':
+                QMessageBox.critical(self, '오류 알림', '학습할 매도전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
+                return
 
-            startday  = self.svjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday    = self.svjb_dateEditt_02.date().toString('yyyyMMdd')
+            betting   = self.svjb_lineEditt_04.text()
+            avgtime   = self.svjb_lineEditt_05.text()
+            startday  = self.pt_dateEdittttt_01.date().toString('yyyyMMdd')
+            endday    = self.pt_dateEdittttt_02.date().toString('yyyyMMdd')
             starttime = self.svjb_lineEditt_02.text()
             endtime   = self.svjb_lineEditt_03.text()
+            buystg    = self.svjb_comboBoxx_01.currentText()
+            sellstg   = self.svjs_comboBoxx_01.currentText()
             multi     = int(self.be_lineEdittttt_04.text())
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
                 bpq.put(('백테유형', '백테스트'))
 
-            backQ.put((startday, endday, starttime, endtime))
-            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', multi))
+            dict_pattern, dict_pattern_buy, dict_pattern_sell = self.GetPatternSetup()
+            backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern, dict_pattern_buy, dict_pattern_sell))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', self.back_count, multi))
             self.proc_backtester_bp.start()
             self.svjButtonClicked_07()
             self.ss_progressBar_01.setValue(0)
@@ -7688,7 +7987,10 @@ class Window(QMainWindow):
             self.ssicon_alert = True
 
     def svjButtonClicked_36(self):
-        pass
+        if not self.dialog_pattern.isVisible():
+            self.dialog_pattern.show()
+        else:
+            self.dialog_pattern.close()
 
     def svjsButtonClicked_01(self):
         if self.ss_textEditttt_02.isVisible():
@@ -9300,19 +9602,33 @@ class Window(QMainWindow):
             if not self.back_condition:
                 QMessageBox.critical(self, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
+            if self.pt_comboBoxxxxx_00.currentText() == '':
+                QMessageBox.critical(self, '오류 알림', '학습할 패턴설정이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
+                return
+            if self.cvjb_comboBoxx_01.currentText() == '':
+                QMessageBox.critical(self, '오류 알림', '학습할 매수전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
+                return
+            if self.cvjs_comboBoxx_01.currentText() == '':
+                QMessageBox.critical(self, '오류 알림', '학습할 매도전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
+                return
 
-            startday  = self.cvjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday    = self.cvjb_dateEditt_02.date().toString('yyyyMMdd')
+            betting   = self.cvjb_lineEditt_04.text()
+            avgtime   = self.cvjb_lineEditt_05.text()
+            startday  = self.pt_dateEdittttt_01.date().toString('yyyyMMdd')
+            endday    = self.pt_dateEdittttt_02.date().toString('yyyyMMdd')
             starttime = self.cvjb_lineEditt_02.text()
             endtime   = self.cvjb_lineEditt_03.text()
+            buystg    = self.cvjb_comboBoxx_01.currentText()
+            sellstg   = self.cvjs_comboBoxx_01.currentText()
             multi     = int(self.be_lineEdittttt_04.text())
 
             self.ClearBacktestQ()
             for bpq in self.back_pques:
                 bpq.put(('백테유형', '백테스트'))
 
-            backQ.put((startday, endday, starttime, endtime))
-            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', multi))
+            dict_pattern, dict_pattern_buy, dict_pattern_sell = self.GetPatternSetup()
+            backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern, dict_pattern_buy, dict_pattern_sell))
+            self.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, self.bact_pques, self.back_pques, 'S', self.back_count, multi))
             self.proc_backtester_bp.start()
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
@@ -9365,6 +9681,12 @@ class Window(QMainWindow):
             self.cvjButtonClicked_07()
             self.cs_progressBar_01.setValue(0)
             self.csicon_alert = True
+
+    def cvjButtonClicked_36(self):
+        if not self.dialog_pattern.isVisible():
+            self.dialog_pattern.show()
+        else:
+            self.dialog_pattern.close()
 
     def cvjsButtonClicked_01(self):
         if self.cs_textEditttt_02.isVisible():
@@ -10438,6 +10760,8 @@ class Window(QMainWindow):
             self.sj_stock_ckBox_09.setChecked(True) if df['주식투자금고정'][0] else self.sj_stock_ckBox_09.setChecked(False)
             self.sj_stock_ckBox_10.setChecked(True) if df['주식손실중지'][0] else self.sj_stock_ckBox_10.setChecked(False)
             self.sj_stock_ckBox_11.setChecked(True) if df['주식수익중지'][0] else self.sj_stock_ckBox_11.setChecked(False)
+            self.sj_stock_ckBox_12.setChecked(True) if df['주식장초패턴인식'][0] else self.sj_stock_ckBox_12.setChecked(False)
+            self.sj_stock_ckBox_13.setChecked(True) if df['주식장중패턴인식'][0] else self.sj_stock_ckBox_13.setChecked(False)
             self.sj_stock_lEdit_01.setText(str(df['주식장초평균값계산틱수'][0]))
             self.sj_stock_lEdit_02.setText(str(df['주식장초최대매수종목수'][0]))
             self.sj_stock_lEdit_03.setText(str(df['주식장초전략종료시간'][0]))
@@ -10516,6 +10840,8 @@ class Window(QMainWindow):
             self.sj_coin_cheBox_09.setChecked(True) if df['코인투자금고정'][0] else self.sj_coin_cheBox_09.setChecked(False)
             self.sj_coin_cheBox_10.setChecked(True) if df['코인손실중지'][0] else self.sj_coin_cheBox_10.setChecked(False)
             self.sj_coin_cheBox_11.setChecked(True) if df['코인수익중지'][0] else self.sj_coin_cheBox_11.setChecked(False)
+            self.sj_coin_cheBox_12.setChecked(True) if df['코인장초패턴인식'][0] else self.sj_coin_cheBox_12.setChecked(False)
+            self.sj_coin_cheBox_13.setChecked(True) if df['코인장중패턴인식'][0] else self.sj_coin_cheBox_13.setChecked(False)
             self.sj_coin_liEdit_01.setText(str(df['코인장초평균값계산틱수'][0]))
             self.sj_coin_liEdit_02.setText(str(df['코인장초최대매수종목수'][0]))
             self.sj_coin_liEdit_03.setText(str(df['코인장초전략종료시간'][0]))
@@ -10809,6 +11135,8 @@ class Window(QMainWindow):
         ts  = 1 if self.sj_stock_ckBox_09.isChecked() else 0
         cm  = 1 if self.sj_stock_ckBox_10.isChecked() else 0
         cp  = 1 if self.sj_stock_ckBox_11.isChecked() else 0
+        p1  = 1 if self.sj_stock_ckBox_12.isChecked() else 0
+        p2  = 1 if self.sj_stock_ckBox_13.isChecked() else 0
         by1 = self.sj_stock_cbBox_01.currentText()
         sl1 = self.sj_stock_cbBox_02.currentText()
         by2 = self.sj_stock_cbBox_03.currentText()
@@ -10846,7 +11174,8 @@ class Window(QMainWindow):
                         f"주식장초프로세스종료 = {pc1}, 주식장초컴퓨터종료 = {ce1}, 주식장중매수전략 = '{by2}', 주식장중매도전략 = '{sl2}', " \
                         f"주식장중평균값계산틱수 = {at2}, 주식장중최대매수종목수 = {bc2}, 주식장중전략종료시간 = {se2}, 주식장중잔고청산 = {cs2}, " \
                         f"주식장중프로세스종료 = {pc2}, 주식장중컴퓨터종료 = {ce2}, 주식투자금고정 = {ts}, 주식장초투자금 = {sc}, " \
-                        f"주식장중투자금 = {sj}, 주식손실중지 = {cm}, 주식손실중지수익률 = {cmp}, 주식수익중지 = {cp}, 주식수익중지수익률 = {cpp}"
+                        f"주식장중투자금 = {sj}, 주식손실중지 = {cm}, 주식손실중지수익률 = {cmp}, 주식수익중지 = {cp}, 주식수익중지수익률 = {cpp}, " \
+                        f"주식장초패턴인식 = {p1}, 주식장중패턴인식 = {p2}"
                 queryQ.put(('설정디비', query))
             QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
@@ -10875,6 +11204,8 @@ class Window(QMainWindow):
             self.dict_set['주식손실중지수익률']    = cmp
             self.dict_set['주식수익중지']         = cp
             self.dict_set['주식수익중지수익률']    = cpp
+            self.dict_set['주식장초패턴인식']      = p1
+            self.dict_set['주식장중패턴인식']      = p2
             self.UpdateDictSet()
 
     def sjButtonClicked_14(self):
@@ -10889,6 +11220,8 @@ class Window(QMainWindow):
         tc  = 1 if self.sj_coin_cheBox_09.isChecked() else 0
         cm  = 1 if self.sj_coin_cheBox_10.isChecked() else 0
         cp  = 1 if self.sj_coin_cheBox_11.isChecked() else 0
+        p1  = 1 if self.sj_coin_cheBox_12.isChecked() else 0
+        p2  = 1 if self.sj_coin_cheBox_13.isChecked() else 0
         by1 = self.sj_coin_comBox_01.currentText()
         sl1 = self.sj_coin_comBox_02.currentText()
         by2 = self.sj_coin_comBox_03.currentText()
@@ -10932,7 +11265,8 @@ class Window(QMainWindow):
                             f"코인장초프로세스종료 = {pc1}, 코인장초컴퓨터종료 = {ce1}, 코인장중매수전략 = '{by2}', 코인장중매도전략 = '{sl2}', " \
                             f"코인장중평균값계산틱수 = {at2}, 코인장중최대매수종목수 = {bc2}, 코인장중전략종료시간 = {se2}, 코인장중잔고청산 = {cs2}, " \
                             f"코인장중프로세스종료 = {pc2}, 코인장중컴퓨터종료 = {ce2}, 코인투자금고정 = {tc}, 코인장초투자금 = {sc}, " \
-                            f"코인장중투자금 = {sj}, 코인손실중지 = {cm}, 코인손실중지수익률 = {cmp}, 코인수익중지 = {cp}, 코인수익중지수익률 = {cpp}"
+                            f"코인장중투자금 = {sj}, 코인손실중지 = {cm}, 코인손실중지수익률 = {cmp}, 코인수익중지 = {cp}, 코인수익중지수익률 = {cpp}, " \
+                            f"코인장초패턴인식 = {p1}, 코인장중패턴인식 = {p2}"
                     queryQ.put(('설정디비', query))
                 QMessageBox.information(self, '저장 완료', random.choice(famous_saying))
 
@@ -10961,6 +11295,8 @@ class Window(QMainWindow):
                 self.dict_set['코인손실중지수익률']    = cmp
                 self.dict_set['코인수익중지']         = cp
                 self.dict_set['코인수익중지수익률']    = cpp
+                self.dict_set['코인장초패턴인식']      = p1
+                self.dict_set['코인장중패턴인식']      = p2
                 self.UpdateDictSet()
 
     def sjButtonClicked_15(self):
@@ -12556,6 +12892,7 @@ class Window(QMainWindow):
             geometry += f"{self.dialog_hoga.x()};{self.dialog_hoga.y() - 31 if geo_len > 21 and self.dict_set['창위치'][21] + 31 == self.dialog_hoga.y() else self.dialog_hoga.y()};"
             geometry += f"{self.dialog_backengine.x()};{self.dialog_backengine.y() - 31 if geo_len > 23 and self.dict_set['창위치'][23] + 31 == self.dialog_backengine.y() else self.dialog_backengine.y()};"
             geometry += f"{self.dialog_order.x()};{self.dialog_order.y() - 31 if geo_len > 25 and self.dict_set['창위치'][25] + 31 == self.dialog_order.y() else self.dialog_order.y()}"
+            geometry += f"{self.dialog_pattern.x()};{self.dialog_pattern.y() - 31 if geo_len > 27 and self.dict_set['창위치'][27] + 31 == self.dialog_pattern.y() else self.dialog_pattern.y()}"
             query = f"UPDATE etc SET 창위치 = '{geometry}'"
             queryQ.put(('설정디비', query))
 
