@@ -100,7 +100,7 @@ class Total:
                             for stq in self.stq_list:
                                 stq.put(('백테완료', '미분리집계'))
                     else:
-                        if self.vars_turn != -1:
+                        if self.vars_turn >= 0:
                             for vars_key in range(len(self.vars_list[self.vars_turn][0])):
                                 self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
                         else:
@@ -383,18 +383,7 @@ class Optimize:
         backengin_sday  = data[17]
         backengin_eday  = data[18]
         optuna_sampler  = data[19]
-        if optuna_sampler == 'BruteForceSampler':
-            sampler = optuna.samplers.BruteForceSampler()
-        elif optuna_sampler == 'CmaEsSampler':
-            sampler = optuna.samplers.CmaEsSampler()
-        elif optuna_sampler == 'QMCSampler':
-            sampler = optuna.samplers.QMCSampler()
-        elif optuna_sampler == 'RandomSampler':
-            sampler = optuna.samplers.RandomSampler()
-        elif optuna_sampler == 'TPESampler':
-            sampler = optuna.samplers.TPESampler()
-        else:
-            sampler = None
+
         optuna_fixvars = []
         if data[20] != '':
             try:
@@ -532,7 +521,8 @@ class Optimize:
                                                     only_sell, buy_first, buy_num, sell_num)
         else:
             vars_, total_change = self.OptimizeOptuna(mq, optuna_count, back_count, len_vars, optuna_fixvars,
-                                                      optuna_autostep, buystg_name, sampler, vars_)
+                                                      optuna_autostep, buystg_name, optuna_sampler, vars_, only_buy,
+                                                      only_sell, buy_first, buy_num, sell_num)
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '최적값 백테스트 시작'))
         self.tq.put(('변수정보', vars_, -2))
@@ -774,7 +764,8 @@ class Optimize:
 
         return vars_, total_change
 
-    def OptimizeOptuna(self, mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name, sampler, vars_):
+    def OptimizeOptuna(self, mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name,
+                       optuna_sampler, vars_, only_buy, only_sell, buy_first, buy_num, sell_num):
         if optuna_count == 0:
             total_count = back_count * (len_vars + 1)
         else:
@@ -792,8 +783,10 @@ class Optimize:
                 else:
                     trial_name = f'{j}'
 
+                fixed = ((only_buy and ((buy_first and i >= sell_num) or (not buy_first and i < buy_num))) or
+                         (only_sell and ((buy_first and i < sell_num) or (not buy_first and i >= buy_num))))
                 varsint = type(var_[0][2]) == int
-                if not (var_[0][2] == 0 or j in optuna_fixvars):
+                if not (var_[0][2] == 0 or j in optuna_fixvars or fixed):
                     if optuna_autostep:
                         if varsint:
                             if var_[0][0] < var_[0][1]:
@@ -845,10 +838,19 @@ class Optimize:
 
         study_name = f'{self.backname}_{buystg_name}_{strf_time("%Y%m%d%H%M%S")}'
         optuna.logging.disable_default_handler()
-        if sampler is None:
-            self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize')
+
+        if optuna_sampler == 'TPESampler':
+            sampler = optuna.samplers.TPESampler()
+        elif optuna_sampler == 'BruteForceSampler':
+            sampler = optuna.samplers.BruteForceSampler()
+        elif optuna_sampler == 'CmaEsSampler':
+            sampler = optuna.samplers.CmaEsSampler()
+        elif optuna_sampler == 'QMCSampler':
+            sampler = optuna.samplers.QMCSampler()
         else:
-            self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize', sampler=sampler)
+            sampler = optuna.samplers.RandomSampler()
+
+        self.study = optuna.create_study(storage=DB_OPTUNA, study_name=study_name, direction='maximize', sampler=sampler)
         self.study.optimize(objective, n_trials=10000, callbacks=[StopWhenNotUpdateBestCallBack(self.wq, self.tq, back_count, optuna_count, self.ui_gubun, len(self.vars))])
         for i, var in enumerate(list(self.study.best_params.values())):
             vars_[i][1] = var

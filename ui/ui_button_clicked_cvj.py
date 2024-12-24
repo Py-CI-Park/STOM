@@ -72,6 +72,8 @@ def cvj_button_clicked_01(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_09.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_02(ui):
@@ -133,6 +135,8 @@ def cvj_button_clicked_02(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_07.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_03(ui):
@@ -198,6 +202,8 @@ def cvj_button_clicked_03(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_08.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_04(ui):
@@ -277,6 +283,8 @@ def cvj_button_clicked_04(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_12.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_05(ui):
@@ -337,6 +345,8 @@ def cvj_button_clicked_05(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_11.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_06(ui):
@@ -407,6 +417,8 @@ def cvj_button_clicked_06(ui):
     ui.cvc_pushButton_24.setVisible(True)
     ui.cvc_pushButton_25.setVisible(True)
     ui.cvc_pushButton_26.setVisible(True)
+
+    ui.cvj_pushButton_16.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_07(ui):
@@ -453,6 +465,8 @@ def cvj_button_clicked_08(ui):
         item.setVisible(False)
     for item in ui.coin_detail_list:
         item.setVisible(True)
+
+    ui.cvj_pushButton_14.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_09(ui):
@@ -511,6 +525,8 @@ def cvj_button_clicked_09(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_15.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_10(ui):
@@ -574,6 +590,8 @@ def cvj_button_clicked_10(ui):
     ui.cvc_pushButton_24.setVisible(False)
     ui.cvc_pushButton_25.setVisible(False)
     ui.cvc_pushButton_26.setVisible(False)
+
+    ui.cvj_pushButton_10.setFocus()
     cChangeSvjButtonColor(ui)
 
 def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):

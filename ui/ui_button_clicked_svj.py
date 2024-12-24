@@ -71,6 +71,8 @@ def svj_button_clicked_01(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_09.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_02(ui):
@@ -132,6 +134,8 @@ def svj_button_clicked_02(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_07.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_03(ui):
@@ -197,6 +201,8 @@ def svj_button_clicked_03(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_08.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_04(ui):
@@ -276,6 +282,8 @@ def svj_button_clicked_04(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_12.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_05(ui):
@@ -336,6 +344,8 @@ def svj_button_clicked_05(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_11.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_06(ui):
@@ -406,6 +416,8 @@ def svj_button_clicked_06(ui):
     ui.svc_pushButton_24.setVisible(True)
     ui.svc_pushButton_25.setVisible(True)
     ui.svc_pushButton_26.setVisible(True)
+
+    ui.svj_pushButton_16.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_07(ui):
@@ -429,6 +441,8 @@ def svj_button_clicked_07(ui):
     for item in ui.stock_baklog_list:
         item.setVisible(True)
     ui.ss_pushButtonn_08.setStyleSheet(style_bc_by)
+
+    ui.svj_pushButton_13.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_08(ui):
@@ -452,6 +466,8 @@ def svj_button_clicked_08(ui):
         item.setVisible(False)
     for item in ui.stock_detail_list:
         item.setVisible(True)
+
+    ui.svj_pushButton_14.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_09(ui):
@@ -510,6 +526,8 @@ def svj_button_clicked_09(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_15.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_10(ui):
@@ -573,6 +591,8 @@ def svj_button_clicked_10(ui):
     ui.svc_pushButton_24.setVisible(False)
     ui.svc_pushButton_25.setVisible(False)
     ui.svc_pushButton_26.setVisible(False)
+
+    ui.svj_pushButton_10.setFocus()
     sChangeSvjButtonColor(ui)
 
 def svj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):

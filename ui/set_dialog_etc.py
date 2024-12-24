@@ -261,7 +261,7 @@ class SetDialogEtc:
         self.ui.pt_labellllllll_02 = QLabel(text, self.ui.pt_groupBoxxxxx_04)
         item = ['30', '60', '120',  '180', '300', '600']
         self.ui.pt_comboBoxxxxx_14 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_04, items=item)
-        item = ['300', '600', '900', '1200', '1800']
+        item = ['180', '300', '600', '900', '1200', '1800']
         self.ui.pt_comboBoxxxxx_15 = self.wc.setCombobox(self.ui.pt_groupBoxxxxx_04, items=item)
         self.ui.pt_checkBoxxxxx_14 = self.wc.setCheckBox('매수 - 현재가 대비 조건구간 고가의 등락율 >= (+)                       %', self.ui.pt_groupBoxxxxx_04, style=style_ck_bx)
         self.ui.pt_lineEdittttt_01 = self.wc.setLineedit(self.ui.pt_groupBoxxxxx_04, ltext='5', style=style_bc_dk)
@@ -355,13 +355,13 @@ class SetDialogEtc:
         self.ui.op_checkBoxxxx_01 = self.wc.setCheckBox('범위간격 자동탐색 사용하기', self.ui.op_groupBoxxxx_01, checked=False, style=style_ck_bx)
         text = '''
         "optuna의 기본 최적화 알고리즘은
-        베이지안서치(BaseSampler)입니다.
+        베이지안서치(TPESampler)입니다.
         아래 콤보박스에서 다른 최적화
         알고리즘을 선택할 수 있습니다."
         '''
         self.ui.op_labelllllll_03 = QLabel(text, self.ui.op_groupBoxxxx_01)
         self.ui.op_labelllllll_03.setAlignment(Qt.AlignCenter)
-        item_list = ['BaseSampler', 'BruteForceSampler', 'CmaEsSampler', 'QMCSampler', 'RandomSampler', 'TPESampler']
+        item_list = ['TPESampler', 'BruteForceSampler', 'CmaEsSampler', 'QMCSampler', 'RandomSampler']
         self.ui.op_comboBoxxxx_01 = self.wc.setCombobox(self.ui.op_groupBoxxxx_01, items=item_list)
         text = '''
         "optuna의 실행 횟수는 변수의

@@ -746,7 +746,7 @@ class SubTotal:
         self.gubun      = gubun
         self.dict_tsg   = {}
         self.dict_bct   = {}
-        self.list_tsg   =  None
+        self.list_tsg   = None
         self.arry_bct   = None
         self.arry_bct_  = None
         self.betting    = None

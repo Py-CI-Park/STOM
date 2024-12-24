@@ -102,7 +102,7 @@ class Total:
                             for stq in self.stq_list:
                                 stq.put(('백테완료', '미분리집계'))
                     else:
-                        if self.vars_turn != -1:
+                        if self.vars_turn >= 0:
                             for vars_key in range(len(self.vars_list[self.vars_turn][0])):
                                 self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
                         else:

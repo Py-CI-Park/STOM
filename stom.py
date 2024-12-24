@@ -33,7 +33,7 @@ from ui.ui_update_progressbar import update_progressbar
 
 from ui.ui_etc import *
 from ui.ui_pattern import *
-from ui.event_filter import *
+from ui.ui_event_filter import *
 from ui.ui_activated_b import *
 from ui.ui_activated_c import *
 from ui.ui_activated_s import *

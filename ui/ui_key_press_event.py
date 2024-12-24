@@ -127,17 +127,17 @@ def key_press_event(ui, event):
                 elif event.key() == Qt.Key_2:
                     ui.svjButtonClicked_05()
                 elif event.key() == Qt.Key_3:
-                    ui.svjButtonClicked_03()
-                elif event.key() == Qt.Key_4:
                     ui.svjButtonClicked_01()
-                elif event.key() == Qt.Key_5:
+                elif event.key() == Qt.Key_4:
                     ui.svjButtonClicked_02()
+                elif event.key() == Qt.Key_5:
+                    ui.svjButtonClicked_03()
                 elif event.key() == Qt.Key_6:
-                    ui.svjButtonClicked_04()
-                elif event.key() == Qt.Key_7:
-                    ui.svjButtonClicked_06()
-                elif event.key() == Qt.Key_8:
                     ui.svjButtonClicked_10()
+                elif event.key() == Qt.Key_7:
+                    ui.svjButtonClicked_04()
+                elif event.key() == Qt.Key_8:
+                    ui.svjButtonClicked_06()
                 elif event.key() == Qt.Key_9:
                     ui.svjButtonClicked_07()
                 elif event.key() == Qt.Key_0:
@@ -148,17 +148,17 @@ def key_press_event(ui, event):
                 elif event.key() == Qt.Key_2:
                     ui.cvjButtonClicked_05()
                 elif event.key() == Qt.Key_3:
-                    ui.cvjButtonClicked_03()
-                elif event.key() == Qt.Key_4:
                     ui.cvjButtonClicked_01()
-                elif event.key() == Qt.Key_5:
+                elif event.key() == Qt.Key_4:
                     ui.cvjButtonClicked_02()
+                elif event.key() == Qt.Key_5:
+                    ui.cvjButtonClicked_03()
                 elif event.key() == Qt.Key_6:
-                    ui.cvjButtonClicked_04()
-                elif event.key() == Qt.Key_7:
-                    ui.cvjButtonClicked_06()
-                elif event.key() == Qt.Key_8:
                     ui.cvjButtonClicked_10()
+                elif event.key() == Qt.Key_7:
+                    ui.cvjButtonClicked_04()
+                elif event.key() == Qt.Key_8:
+                    ui.cvjButtonClicked_06()
                 elif event.key() == Qt.Key_9:
                     ui.cvjButtonClicked_07()
                 elif event.key() == Qt.Key_0:
