@@ -258,15 +258,15 @@ class SetOrderTap:
 
         # =============================================================================================================
 
-        self.ui.sj_load_Button_09 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_01, click=self.ui.sjButtonClicked_20)
-        self.ui.sj_load_Button_10 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_02, click=self.ui.sjButtonClicked_21)
-        self.ui.sj_load_Button_11 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_03, click=self.ui.sjButtonClicked_22)
-        self.ui.sj_load_Button_12 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_04, click=self.ui.sjButtonClicked_23)
+        self.ui.sj_load_Button_09 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_01, click=self.ui.sjButtonClicked_19)
+        self.ui.sj_load_Button_10 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_02, click=self.ui.sjButtonClicked_20)
+        self.ui.sj_load_Button_11 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_03, click=self.ui.sjButtonClicked_21)
+        self.ui.sj_load_Button_12 = self.wc.setPushbutton('불러오기', box=self.ui.sj_od_groupBoxxx_04, click=self.ui.sjButtonClicked_22)
 
-        self.ui.sj_save_Button_09 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_01, click=self.ui.sjButtonClicked_24)
-        self.ui.sj_save_Button_10 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_02, click=self.ui.sjButtonClicked_25)
-        self.ui.sj_save_Button_11 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_03, click=self.ui.sjButtonClicked_26)
-        self.ui.sj_save_Button_12 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_04, click=self.ui.sjButtonClicked_27)
+        self.ui.sj_save_Button_09 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_01, click=self.ui.sjButtonClicked_23)
+        self.ui.sj_save_Button_10 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_02, click=self.ui.sjButtonClicked_24)
+        self.ui.sj_save_Button_11 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_03, click=self.ui.sjButtonClicked_25)
+        self.ui.sj_save_Button_12 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_04, click=self.ui.sjButtonClicked_26)
 
         self.ui.sj_od_groupBoxxx_01.setGeometry(5, 5, 1326, 155)
         self.ui.sj_od_groupBoxxx_02.setGeometry(5, 170, 1326, 155)

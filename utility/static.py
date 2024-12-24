@@ -37,6 +37,7 @@ def opstarter_kill():
 
 def array_to_bytes(x: np.ndarray) -> bytes:
     np_bytes = BytesIO()
+    # noinspection PyTypeChecker
     np.save(np_bytes, x, allow_pickle=True)
     return np_bytes.getvalue()
 

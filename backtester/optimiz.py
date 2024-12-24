@@ -190,6 +190,7 @@ class Total:
                 self.vars_list = data[1]
                 self.vars_turn = data[2]
                 self.vars      = [var[1] for var in self.vars_list]
+                if self.vars_turn == -2: tbc = self.total_count - self.back_count
             elif data[0] == '재최적화':
                 self.start = now()
                 tbc = 0
@@ -660,8 +661,8 @@ class Optimize:
                 if len_vars_ > 0:
                     start = now()
                     print('========================================================================')
-                    print(f'opt_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}')
-                    print(f'opt_vars_hstd : {hstd}, last_update_turn : [{last_update_turn}]')
+                    print(f'opt_vars_turn : {k}-{i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}')
+                    print(f'opt_vars_hstd : {hstd:,.2f}, update_count : {change_var_count}, last_update_turn : {last_update_turn}')
                     print(f'opt_vars_list : {vars_[i][0]}')
                     self.tq.put(('변수정보', vars_, i))
                     for q in self.stq_list:
@@ -681,10 +682,8 @@ class Optimize:
                             curr_typ = vars_type[i]
                             curr_var = vars_[i][0][vars_key]
                             preh_var = vars_[i][1]
-                            print('{:>16} = {:>6}, {:>9} : {:>15,.2f}'.format(f'self.vars[{i}]', curr_var, 'std_point',
-                                                                              std))
-                            if std > hstd or (std == hstd and (
-                                    (curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
+                            print('{:>16} = {:>6}, {:>9} : {:>15,.2f}'.format(f'self.vars[{i}]', curr_var, 'std_point', std))
+                            if std > hstd or (std == hstd and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
                                 print('{:>16} : {:>50}'.format('update_std', f'{preh_var} -> {curr_var}'))
                                 hstd = std
                                 vars_[i][1] = curr_var
@@ -696,8 +695,6 @@ class Optimize:
                                 turn_stdk[curr_var] = std
                             elif std == -2_147_483_648:
                                 del_list.append(curr_var)
-
-                    print('{:>16} : {:>55}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
 
                     if self.dict_set['범위자동관리'] and hstd > 0:
                         set_std = len(set(list(turn_stdk.values())))
@@ -711,6 +708,8 @@ class Optimize:
                             if del_list:
                                 del_list.sort()
                                 print('{:>16} : {}'.format('delete_list', del_list))
+
+                    print('{:>16} : {:>53}'.format('time_left', f'{(now() - start).total_seconds()} seconds'))
 
                 del_vars_list.append(del_list)
                 if self.dict_set['범위자동관리']:

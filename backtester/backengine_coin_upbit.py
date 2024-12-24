@@ -209,6 +209,35 @@ class CoinUpbitBackEngine:
                             start = datetime.datetime.now()
                             self.BackTest()
                             self.total_secds = (datetime.datetime.now() - start).total_seconds()
+                    elif data[0] == '학습정보':
+                        self.betting    = data[1]
+                        self.avgtime    = data[2]
+                        self.startday   = data[3]
+                        self.endday     = data[4]
+                        self.starttime  = data[5]
+                        self.endtime    = data[6]
+                        self.buystg     = GetBuyStg(data[7], self.gubun)
+                        self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
+                        self.dict_pattern      = data[9]
+                        self.dict_pattern_buy  = data[10]
+                        self.dict_pattern_sell = data[11]
+                        self.pattern_buy  = []
+                        self.pattern_sell = []
+                        self.vars_count   = 1
+                        self.pattern      = True
+                        self.InitDivid()
+                        self.InitTradeInfo()
+                        if self.buystg is None or self.sellstg is None:
+                            self.BackStop(1)
+                        else:
+                            self.BackTest()
+                    elif data[0] == '모델정보':
+                        self.pattern_buy  = data[1]
+                        self.pattern_sell = data[2]
+                    elif data[0] == '패턴정보':
+                        self.dict_pattern      = data[1]
+                        self.dict_pattern_buy  = data[2]
+                        self.dict_pattern_sell = data[3]
                 elif self.back_type == '백파인더':
                     if data[0] == '백테정보':
                         self.avgtime    = data[1]

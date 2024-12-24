@@ -78,10 +78,10 @@ class SetStockBack:
 
         self.ui.svj_pushButton_01 = self.wc.setPushbutton('백테스트', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_11, color=2, tip='(Alt+Enter) 기본전략을 백테스팅한다.\nCtrl키와 함께 누르면 백테스트 엔진을 재시작할 수 있습니다.\nCtrl + Alt 키와 함계 누르면 백테 완료 후 변수목록이 포함된 그래프가 저장됩니다.')
         self.ui.svj_pushButton_02 = self.wc.setPushbutton('백파인더', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_12, color=2, tip='구간등락율을 기준으로 변수를 탐색한다.')
-        self.ui.svj_pushButton_03 = self.wc.setPushbutton('패턴 테스트', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_35, color=2, tip='선택한 전략과 패턴을 테스트한다.\n패턴 학습한 일자 외의 기간을 테스트해야합니다.')
-        self.ui.svj_pushButton_04 = self.wc.setPushbutton('패턴 학습', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_34, color=2, tip='선택한 일자에서 패턴을 학습시킨다.\n패턴 테스트할 일자와 중복되지 않게 일자를 선택해야합니다.')
+        self.ui.svj_pushButton_03 = self.wc.setPushbutton('패턴 테스트', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_24, color=2, tip='선택한 전략과 패턴을 테스트한다.\n패턴 학습한 일자 외의 기간을 테스트해야합니다.')
+        self.ui.svj_pushButton_04 = self.wc.setPushbutton('패턴 학습', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_23, color=2, tip='선택한 일자에서 패턴을 학습시킨다.\n패턴 테스트할 일자와 중복되지 않게 일자를 선택해야합니다.')
         self.ui.svj_pushButton_05 = self.wc.setPushbutton('백파인더 예제', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_13, color=3)
-        self.ui.svj_pushButton_06 = self.wc.setPushbutton('패턴 설정', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_36, color=3)
+        self.ui.svj_pushButton_06 = self.wc.setPushbutton('패턴 설정', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_25, color=3)
 
         self.ui.svjs_comboBoxx_01 = self.wc.setCombobox(self.ui.ss_tab, font=qfont14, activated=self.ui.sActivated_02)
         self.ui.svjs_lineEditt_01 = self.wc.setLineedit(self.ui.ss_tab, font=qfont14, aleft=True, ltext='F6, F7', style=style_bc_dk)
@@ -168,8 +168,8 @@ class SetStockBack:
         self.ui.svc_labellllll_03 = QLabel('최적화 실행횟수                   기준값', self.ui.ss_tab)
         self.ui.svc_comboBoxxx_06 = self.wc.setCombobox(self.ui.ss_tab, items=optimized_count, tip='최적화 횟수를 선택하십시오. 0선택 시 최적값이 변하지 않을 때까지 반복됩니다.')
         self.ui.svc_comboBoxxx_07 = self.wc.setCombobox(self.ui.ss_tab, items=opti_standard, tip=optistandard)
-        self.ui.svc_pushButton_05 = self.wc.setPushbutton('기준값', color=2, box=self.ui.ss_tab, click=self.ui.svcButtonClicked_11, tip='백테 결과값 중 특정 수치를 만족하지 못하면\n기준값을 0으로 도출하도록 설정한다.')
-        self.ui.svc_pushButton_36 = self.wc.setPushbutton('optuna', color=3, box=self.ui.ss_tab, click=self.ui.svcButtonClicked_12, tip='옵튜나의 샘플러를 선택하거나 대시보드를 열람한다')
+        self.ui.svc_pushButton_05 = self.wc.setPushbutton('기준값', color=2, box=self.ui.ss_tab, click=self.ui.svcButtonClicked_10, tip='백테 결과값 중 특정 수치를 만족하지 못하면\n기준값을 0으로 도출하도록 설정한다.')
+        self.ui.svc_pushButton_36 = self.wc.setPushbutton('optuna', color=3, box=self.ui.ss_tab, click=self.ui.svcButtonClicked_11, tip='옵튜나의 샘플러를 선택하거나 대시보드를 열람한다')
 
         self.ui.stock_period_list = [
             self.ui.svc_labellllll_01, self.ui.svc_labellllll_02, self.ui.svc_comboBoxxx_03, self.ui.svc_comboBoxxx_04,
@@ -200,9 +200,9 @@ class SetStockBack:
         self.ui.svc_pushButton_11 = self.wc.setPushbutton('예제', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_07, color=3)
 
         self.ui.svc_lineEdittt_04 = self.wc.setLineedit(self.ui.ss_tab, font=qfont14, aleft=True, visible=False, style=style_bc_dk)
-        self.ui.svc_pushButton_13 = self.wc.setPushbutton('매수전략으로 저장', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_09, color=1, visible=False, tip='최적값으로 백테용 매수전략으로 저장한다.')
+        self.ui.svc_pushButton_13 = self.wc.setPushbutton('매수전략으로 저장', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_08, color=1, visible=False, tip='최적값으로 백테용 매수전략으로 저장한다.')
         self.ui.svc_lineEdittt_05 = self.wc.setLineedit(self.ui.ss_tab, font=qfont14, aleft=True, visible=False, style=style_bc_dk)
-        self.ui.svc_pushButton_14 = self.wc.setPushbutton('매도전략으로 저장', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_10, color=1, visible=False, tip='최적값으로 백테용 매도전략으로 저장한다.')
+        self.ui.svc_pushButton_14 = self.wc.setPushbutton('매도전략으로 저장', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_09, color=1, visible=False, tip='최적값으로 백테용 매도전략으로 저장한다.')
 
         self.ui.stock_optimz_list = [
             self.ui.svc_comboBoxxx_01, self.ui.svc_comboBoxxx_02, self.ui.svc_comboBoxxx_03, self.ui.svc_comboBoxxx_08,
@@ -276,15 +276,15 @@ class SetStockBack:
 
     # =================================================================================================================
 
-        self.ui.svc_pushButton_21 = self.wc.setPushbutton('최적화 > GA 범위 변환', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_26, color=2, visible=False, tip='최적화용 범위코드를 GA용으로 변환한다.')
-        self.ui.svc_pushButton_22 = self.wc.setPushbutton('GA > 최적화 범위 변환', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_27, color=2, visible=False, tip='GA용 범위코드를 최적화용으로 변환한다.')
-        self.ui.svc_pushButton_23 = self.wc.setPushbutton('변수 키값 재정렬', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_32, color=2, visible=False, tip='범위 변수 self.vars의 키값을 재정렬한다.')
+        self.ui.svc_pushButton_21 = self.wc.setPushbutton('최적화 > GA 범위 변환', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_18, color=2, visible=False, tip='최적화용 범위코드를 GA용으로 변환한다.')
+        self.ui.svc_pushButton_22 = self.wc.setPushbutton('GA > 최적화 범위 변환', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_19, color=2, visible=False, tip='GA용 범위코드를 최적화용으로 변환한다.')
+        self.ui.svc_pushButton_23 = self.wc.setPushbutton('변수 키값 재정렬', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_21, color=2, visible=False, tip='범위 변수 self.vars의 키값을 재정렬한다.')
 
     # =================================================================================================================
 
-        self.ui.svc_pushButton_24 = self.wc.setPushbutton('최적화 변수 변환(매수우선)', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_28, color=2, visible=False, tip='일반 전략의 각종 변수를 매수우선 최적화용 변수로 변환한다.')
-        self.ui.svc_pushButton_25 = self.wc.setPushbutton('최적화 변수 변환(매도우선)', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_28, color=2, visible=False, tip='일반 전략의 각종 변수를 매도우선 최적화용 변수로 변환한다.')
-        self.ui.svc_pushButton_26 = self.wc.setPushbutton('변수 키값 재정렬', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_33, color=2, visible=False, tip='변수 self.vars의 키값을 재정렬한다.\n매수, 매도 self.vars의 첫번째 키값을 비교해서\n매수가 빠르면 매수우선, 매도가 빠르면 매도우선으로 재정렬된다.')
+        self.ui.svc_pushButton_24 = self.wc.setPushbutton('최적화 변수 변환(매수우선)', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_20, color=2, visible=False, tip='일반 전략의 각종 변수를 매수우선 최적화용 변수로 변환한다.')
+        self.ui.svc_pushButton_25 = self.wc.setPushbutton('최적화 변수 변환(매도우선)', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_20, color=2, visible=False, tip='일반 전략의 각종 변수를 매도우선 최적화용 변수로 변환한다.')
+        self.ui.svc_pushButton_26 = self.wc.setPushbutton('변수 키값 재정렬', box=self.ui.ss_tab, click=self.ui.svjButtonClicked_22, color=2, visible=False, tip='변수 self.vars의 키값을 재정렬한다.\n매수, 매도 self.vars의 첫번째 키값을 비교해서\n매수가 빠르면 매수우선, 매도가 빠르면 매도우선으로 재정렬된다.')
         self.ui.svc_labellllll_05 = QLabel('', self.ui.ss_tab)
         self.ui.svc_labellllll_05.setVisible(False)
 

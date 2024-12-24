@@ -100,7 +100,8 @@ class ReceiverUpbit:
 
             if not self.creceivQ.empty():
                 data = self.creceivQ.get()
-                self.UpdateTuple(data)
+                if type(data) == tuple:
+                    self.UpdateTuple(data)
                 if data == '프로세스종료':
                     self.ctraderQ.put('프로세스종료')
                     self.cstgQ.put('프로세스종료')
@@ -242,6 +243,8 @@ class ReceiverUpbit:
             self.hoga_code = data
         elif gubun == '설정변경':
             self.dict_set = data
+            if not self.dict_set['코인리시버'] and not self.dict_set['코인트레이더']:
+                self.creceivQ.put('프로세스종료')
 
     def UpdateTickData(self, code, c, o, h, low, per, dm, tbids, tasks, dt):
         if dt != self.int_jcct and dt > self.int_jcct:
@@ -339,15 +342,15 @@ class ReceiverUpbit:
             if self.dict_set['리시버공유'] == 1:
                 self.zq.put(('tickdata', data))
 
-            self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
-            self.dict_tick[code][7:9] = [0, 0]
-
             if self.hoga_code == code:
                 c, o, h, low, per, _, ch, bids, asks, _, _ = self.dict_tick[code]
                 self.hogaQ.put((code, c, per, 0, 0, o, h, low))
-                self.hogaQ.put(('hoga', (-asks, ch)))
-                self.hogaQ.put(('hoga', (bids, ch)))
+                self.hogaQ.put((-asks, ch))
+                self.hogaQ.put((bids, ch))
                 self.hogaQ.put((code,) + hoga_tamount + hoga_seprice[-5:] + hoga_buprice[:5] + hoga_samount[-5:] + hoga_bamount[:5])
+
+            self.dict_hgdt[code] = [dt, self.dict_tick[code][5]]
+            self.dict_tick[code][7:9] = [0, 0]
 
         if self.int_logt < int_logt:
             gap = (now() - receivetime).total_seconds()
