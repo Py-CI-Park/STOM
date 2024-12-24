@@ -45,6 +45,7 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
         geometry += f"{ui.dialog_pattern.x()};{ui.dialog_pattern.y() - 31 if geo_len > 27 and ui.dict_set['창위치'][27] + 31 == ui.dialog_pattern.y() else ui.dialog_pattern.y()}"
         query = f"UPDATE etc SET 창위치 = '{geometry}'"
         queryQ.put(('설정디비', query))
+    queryQ.put('프로세스종료')
 
     if ui.writer.isRunning(): ui.writer.terminate()
     if ui.qtimer1.isActive(): ui.qtimer1.stop()

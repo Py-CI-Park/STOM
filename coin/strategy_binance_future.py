@@ -45,12 +45,11 @@ class StrategyBinanceFuture:
         self.dict_sgn_tik  = {}
         self.dict_buy_tik  = {}
 
-        self.tuple_gsjm1    = []
-        self.tuple_gsjm2    = []
-
+        self.tuple_gsjm    = ()
         self.dict_info     = {}
         self.dict_hilo     = {}
         self.dict_signal   = {'BUY_LONG': [], 'SELL_SHORT': [], 'SELL_LONG': [], 'BUY_SHORT': []}
+
         self.bhogainfo     = {}
         self.shogainfo     = {}
         self.dict_sgn_tik  = {}
@@ -155,7 +154,11 @@ class StrategyBinanceFuture:
 
     def UpdateTuple(self, data):
         gubun, data = data
-        if '_COMPLETE' in gubun:
+        if gubun == '관심목록':
+            self.tuple_gsjm = data
+            drop_index_list = list(set(list(self.df_gj.index)) - set(self.tuple_gsjm))
+            if drop_index_list: self.df_gj.drop(index=drop_index_list, inplace=True)
+        elif '_COMPLETE' in gubun:
             gubun = gubun.replace('_COMPLETE', '')
             if data in self.dict_signal[gubun]:
                 self.dict_signal[gubun].remove(data)
@@ -210,11 +213,7 @@ class StrategyBinanceFuture:
 
     def UpdateTriple(self, data):
         gubun, data1, data2 = data
-        if gubun == '관심목록':
-            self.tuple_gsjm1, self.tuple_gsjm2 = data1, data2
-            drop_index_list = list(set(list(self.df_gj.index)) - set(self.tuple_gsjm2))
-            self.df_gj.drop(index=drop_index_list, inplace=True)
-        elif gubun == '분봉재로딩':
+        if gubun == '분봉재로딩':
             con = sqlite3.connect(DB_COIN_MIN)
             df = pd.read_sql(f"SELECT * FROM '{data1}' WHERE 체결시간 < {data2} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}", con)
             columns = ['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
@@ -285,7 +284,7 @@ class StrategyBinanceFuture:
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량, \
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
-            매도수5호가잔량합, 종목코드, 틱수신시간 = data
+            매도수5호가잔량합, 관심종목, 종목코드, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
             pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
@@ -393,15 +392,18 @@ class StrategyBinanceFuture:
         def 매도수5호가잔량합N(pre):
             return Parameter_Previous(34, pre)
 
+        def 관심종목N(pre):
+            return Parameter_Previous(35, pre)
+
         def 이동평균(tick, pre=0):
             if tick == 60:
-                return Parameter_Previous(35, pre)
-            elif tick == 300:
                 return Parameter_Previous(36, pre)
-            elif tick == 600:
+            elif tick == 300:
                 return Parameter_Previous(37, pre)
-            elif tick == 1200:
+            elif tick == 600:
                 return Parameter_Previous(38, pre)
+            elif tick == 1200:
+                return Parameter_Previous(39, pre)
             else:
                 sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
                 eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
@@ -423,34 +425,34 @@ class StrategyBinanceFuture:
                     return self.dict_tik_ar[종목코드][sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
-            return Parameter_Area(39, 1, tick, pre, 'max')
+            return Parameter_Area(40, 1, tick, pre, 'max')
 
         def 최저현재가(tick, pre=0):
-            return Parameter_Area(40, 1, tick, pre, 'min')
+            return Parameter_Area(41, 1, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
-            return Parameter_Area(41, 7, tick, pre, 'mean')
+            return Parameter_Area(42, 7, tick, pre, 'mean')
 
         def 최고체결강도(tick, pre=0):
-            return Parameter_Area(42, 7, tick, pre, 'max')
+            return Parameter_Area(43, 7, tick, pre, 'max')
 
         def 최저체결강도(tick, pre=0):
-            return Parameter_Area(43, 7, tick, pre, 'min')
+            return Parameter_Area(44, 7, tick, pre, 'min')
 
         def 최고초당매수수량(tick, pre=0):
-            return Parameter_Area(44, 14, tick, pre, 'max')
+            return Parameter_Area(45, 14, tick, pre, 'max')
 
         def 최고초당매도수량(tick, pre=0):
-            return Parameter_Area(45, 15, tick, pre, 'max')
+            return Parameter_Area(46, 15, tick, pre, 'max')
 
         def 누적초당매수수량(tick, pre=0):
-            return Parameter_Area(46, 14, tick, pre, 'sum')
+            return Parameter_Area(47, 14, tick, pre, 'sum')
 
         def 누적초당매도수량(tick, pre=0):
-            return Parameter_Area(47, 15, tick, pre, 'sum')
+            return Parameter_Area(48, 15, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return Parameter_Area(48, 19, tick, pre, 'mean')
+            return Parameter_Area(49, 19, tick, pre, 'mean')
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick == 평균값계산틱수:
@@ -462,10 +464,10 @@ class StrategyBinanceFuture:
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
-            return Parameter_Dgree(49, 5, tick, pre, 10)
+            return Parameter_Dgree(50, 5, tick, pre, 10)
 
         def 당일거래대금각도(tick, pre=0):
-            return Parameter_Dgree(50, 6, tick, pre, 0.00000001)
+            return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
         분봉체결시간 = int(str(체결시간)[:10] + dict_min[self.dict_set['코인분봉기간']][str(체결시간)[10:12]] + '00')
         if self.dict_set['코인분봉데이터']:
@@ -625,21 +627,21 @@ class StrategyBinanceFuture:
             if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 - 1:
                 최고현재가_      = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 1].max(), 현재가)
                 최저현재가_      = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 1].min(), 현재가)
-                체결강도평균_    =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수
+                체결강도평균_    = round((self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수, 3)
                 최고체결강도_    = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].max(), 체결강도)
                 최저체결강도_    = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
                 최고초당매수수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 8].max(), 초당매수수량)
                 최고초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].min(), 초당매도수량)
                 누적초당매수수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 8].sum() + 초당매수수량
                 누적초당매도수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].sum() + 초당매도수량
-                초당거래대금평균_ =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 10].sum() + 초당거래대금) / 평균값계산틱수
+                초당거래대금평균_ = int((self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 10].sum() + 초당거래대금) / 평균값계산틱수)
                 등락율각도_      = round(math.atan2((등락율 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 5]) * 10, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 당일거래대금각도_ = round(math.atan2((당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6]) / 100_000_000, 평균값계산틱수) / (2 * math.pi) * 360, 2)
 
         new_data_tick = [
             체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
             매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
             이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
             최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
         ]
@@ -649,12 +651,12 @@ class StrategyBinanceFuture:
            0      1     2    3     4     5        6         7         8           9          10            11
         매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
            12        13        14       15       16        17       18        19       20       21        22       23
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
-           24        25       26       27        28       29        30       31       32        33         34
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
+           24        25       26       27        28       29        30       31       32        33         34           35
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
-            35         36           37           38          39         40         41           42          43
+            36         37           38          39          40         51          42           43          44
         최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
-               44            45              46              47              48           49           50
+               45            46              47              48              49           50           51
         """
 
         if 종목코드 not in self.dict_tik_ar.keys():
@@ -729,7 +731,9 @@ class StrategyBinanceFuture:
 
         if 체결강도평균_ != 0:
             if 종목코드 in self.df_jg.index:
-                매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else 0
+                if 종목코드 not in self.dict_buy_tik.keys():
+                    self.dict_buy_tik[종목코드] = len(self.dict_tik_ar[종목코드]) - 1
+                매수틱번호 = self.dict_buy_tik[종목코드]
                 포지션 = self.df_jg['포지션'][종목코드]
                 매입가 = self.df_jg['매입가'][종목코드]
                 보유수량 = self.df_jg['보유수량'][종목코드]
@@ -757,13 +761,12 @@ class StrategyBinanceFuture:
             BBT  = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분초 < self.dict_set['코인매수금지종료시간'])
             BLK  = not self.dict_set['코인매수금지블랙리스트'] or 종목코드 not in self.dict_set['코인블랙리스트']
             C20  = not self.dict_set['코인매수금지200원이하'] or 현재가 > 200
-            ING  = 종목코드 in self.tuple_gsjm1
             NIBL = 종목코드 not in self.dict_signal['BUY_LONG']
             NISS = 종목코드 not in self.dict_signal['SELL_SHORT']
             NISL = 종목코드 not in self.dict_signal['SELL_LONG']
             NIBS = 종목코드 not in self.dict_signal['BUY_SHORT']
-            A    = ING and NIBL and 포지션 is None
-            B    = ING and NISS and 포지션 is None
+            A    = 관심종목 and NIBL and 포지션 is None
+            B    = 관심종목 and NISS and 포지션 is None
             C    = self.dict_set['코인매수분할시그널']
             D    = NIBL and 포지션 == 'LONG' and 분할매수횟수 < self.dict_set['코인매수분할횟수']
             E    = NISS and 포지션 == 'SHORT' and 분할매수횟수 < self.dict_set['코인매수분할횟수']
@@ -877,17 +880,17 @@ class StrategyBinanceFuture:
                     if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):
                         self.Sell(종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
 
-        if 종목코드 in self.tuple_gsjm2:
+        if 종목코드 in self.tuple_gsjm:
             self.df_gj.loc[종목코드] = 종목코드, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:
             self.windowQ.put((ui_num['실시간차트'], 종목코드, self.dict_tik_ar[종목코드]))
 
-        if self.dict_set['코인틱데이터저장'] and 종목코드 in self.tuple_gsjm2:
+        if self.dict_set['코인틱데이터저장'] and 종목코드 in self.tuple_gsjm:
             if 종목코드 not in self.dict_tik_ar2.keys():
-                self.dict_tik_ar2[종목코드] = np.array([new_data_tick[:35]])
+                self.dict_tik_ar2[종목코드] = np.array([new_data_tick[:36]])
             else:
-                self.dict_tik_ar2[종목코드] = np.r_[self.dict_tik_ar2[종목코드], np.array([new_data_tick[:35]])]
+                self.dict_tik_ar2[종목코드] = np.r_[self.dict_tik_ar2[종목코드], np.array([new_data_tick[:36]])]
 
         if self.dict_set['코인분봉데이터']:
             if new_dbdata_min is None:

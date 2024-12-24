@@ -285,6 +285,9 @@ class StockBackEngine4(StockBackEngine2):
         if self.profile:
             self.pr.print_stats(sort='cumulative')
 
+        while not self.pq.empty():
+            self.pq.get()
+
     def UpdateCurrentMin(self, i):
         현재가 = self.array_tick[i, 1]
         초당거래대금 = self.array_tick[i, 19]
@@ -425,15 +428,18 @@ class StockBackEngine4(StockBackEngine2):
         def 매도수5호가잔량합N(pre):
             return Parameter_Previous(43, pre)
 
+        def 관심종목N(pre):
+            return Parameter_Previous(44, pre)
+
         def 이동평균(tick, pre=0):
             if tick == 60:
-                return Parameter_Previous(44, pre)
-            elif tick == 300:
                 return Parameter_Previous(45, pre)
-            elif tick == 600:
+            elif tick == 300:
                 return Parameter_Previous(46, pre)
-            elif tick == 1200:
+            elif tick == 600:
                 return Parameter_Previous(47, pre)
+            elif tick == 1200:
+                return Parameter_Previous(48, pre)
             else:
                 sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
                 eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
@@ -458,34 +464,34 @@ class StockBackEngine4(StockBackEngine2):
                     return self.array_tick[sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
-            return Parameter_Area(48, 1, tick, pre, 'max')
+            return Parameter_Area(49, 1, tick, pre, 'max')
 
         def 최저현재가(tick, pre=0):
-            return Parameter_Area(49, 1, tick, pre, 'min')
+            return Parameter_Area(50, 1, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
-            return Parameter_Area(50, 7, tick, pre, 'mean')
+            return Parameter_Area(51, 7, tick, pre, 'mean')
 
         def 최고체결강도(tick, pre=0):
-            return Parameter_Area(51, 7, tick, pre, 'max')
+            return Parameter_Area(52, 7, tick, pre, 'max')
 
         def 최저체결강도(tick, pre=0):
-            return Parameter_Area(52, 7, tick, pre, 'min')
+            return Parameter_Area(53, 7, tick, pre, 'min')
 
         def 최고초당매수수량(tick, pre=0):
-            return Parameter_Area(53, 14, tick, pre, 'max')
+            return Parameter_Area(54, 14, tick, pre, 'max')
 
         def 최고초당매도수량(tick, pre=0):
-            return Parameter_Area(54, 15, tick, pre, 'max')
+            return Parameter_Area(55, 15, tick, pre, 'max')
 
         def 누적초당매수수량(tick, pre=0):
-            return Parameter_Area(55, 14, tick, pre, 'sum')
+            return Parameter_Area(56, 14, tick, pre, 'sum')
 
         def 누적초당매도수량(tick, pre=0):
-            return Parameter_Area(56, 15, tick, pre, 'sum')
+            return Parameter_Area(57, 15, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return Parameter_Area(57, 19, tick, pre, 'mean')
+            return Parameter_Area(58, 19, tick, pre, 'mean')
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick in self.avg_list:
@@ -497,13 +503,13 @@ class StockBackEngine4(StockBackEngine2):
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
-            return Parameter_Dgree(58, 5, tick, pre, 5)
+            return Parameter_Dgree(59, 5, tick, pre, 5)
 
         def 당일거래대금각도(tick, pre=0):
-            return Parameter_Dgree(59, 6, tick, pre, 0.01)
+            return Parameter_Dgree(60, 6, tick, pre, 0.01)
 
         def 전일비각도(tick, pre=0):
-            return Parameter_Dgree(60, 9, tick, pre, 1)
+            return Parameter_Dgree(61, 9, tick, pre, 1)
 
         if self.dict_set['주식분봉데이터']:
             def 분봉시가N(pre):
@@ -539,41 +545,6 @@ class StockBackEngine4(StockBackEngine2):
             def 분봉이평240N(pre):
                 return self.dict_min_ar[self.code][self.mindex - pre, 11]
 
-            """ 보조지표 사용예
-            def M_BBU_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 43]
-
-            def M_BBM_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 44]
-
-            def M_BBL_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 45]
-
-            def M_RSI_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 46]
-
-            def M_CCI_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 47]
-
-            def M_MACD_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 48]
-
-            def M_MACDS_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 49]
-
-            def M_MACDH_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 50]
-
-            def M_STOCK_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 51]
-
-            def M_STOCD_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 52]
-
-            def M_ATR_N(pre):
-                return self.dict_min_ar[self.code][self.mindex - pre, 53]
-            """
-
         if self.dict_set['주식일봉데이터']:
             def 일봉시가N(pre):
                 return self.dict_day_ar[self.code][self.dindex - pre, 1]
@@ -608,47 +579,12 @@ class StockBackEngine4(StockBackEngine2):
             def 일봉이평240N(pre):
                 return self.dict_day_ar[self.code][self.dindex - pre, 11]
 
-            """ 보조지표 사용예
-            def D_BBU_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 43]
-
-            def D_BBM_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 44]
-
-            def D_BBL_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 45]
-
-            def D_RSI_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 46]
-
-            def D_CCI_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 47]
-
-            def D_MACD_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 48]
-
-            def D_MACDS_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 49]
-
-            def D_MACDH_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 50]
-
-            def D_STOCK_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 51]
-
-            def D_STOCD_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 52]
-
-            def D_ATR_N(pre):
-                return self.dict_day_ar[self.code][self.dindex - pre, 53]
-            """
-
         종목명, 종목코드, 데이터길이, 시분초 = self.name, self.code, self.tick_count, int(str(self.index)[8:])
         현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내, \
             초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량, \
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
-            매도수5호가잔량합 = self.array_tick[self.indexn, 1:44]
+            매도수5호가잔량합, 관심종목 = self.array_tick[self.indexn, 1:45]
         호가단위 = GetHogaunit(self.dict_kd[종목코드] if 종목코드 in self.dict_kd.keys() else True, 현재가, self.index)
         VI해제시간, VI아래5호가 = strp_time('%Y%m%d%H%M%S', str(int(VI해제시간))), GetUvilower5(VI가격, VI호가단위, self.index)
 
@@ -670,18 +606,6 @@ class StockBackEngine4(StockBackEngine2):
             else:
                 분봉최고거래대금대비 = 0.
 
-            """ 보조지표 사용예
-            M_BBU, M_BBM, M_BBL = talib.BBANDS(np.r_[self.dict_min_ar[종목코드][:self.mindex, 4], np.array([현재가])], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
-            M_BBU, M_BBM, M_BBL = M_BBU[-1], M_BBM[-1], M_BBL[-1]
-            M_RSI = talib.RSI(np.r_[self.dict_min_ar[종목코드][:self.mindex, 4], np.array([현재가])], timeperiod=14)[-1]
-            M_CCI = talib.CCI(np.r_[self.dict_min_ar[종목코드][:self.mindex, 2], np.array([분봉고가])], np.r_[self.dict_min_ar[종목코드][:self.mindex, 3], np.array([분봉저가])], np.r_[self.dict_min_ar[종목코드][:self.mindex, 4], np.array([현재가])], timeperiod=14)[-1]
-            M_MACD, M_MACDS, M_MACDH = talib.MACD(np.r_[self.dict_min_ar[종목코드][:self.mindex, 4], np.array([현재가])], fastperiod=12, slowperiod=26, signalperiod=9)
-            M_MACD, M_MACDS, M_MACDH = M_MACD[-1], M_MACDS[-1], M_MACDH[-1]
-            M_STOCK, M_STOCD = talib.STOCH(np.r_[self.dict_min_ar[종목코드][:self.mindex, 2], np.array([분봉고가])], np.r_[self.dict_min_ar[종목코드][:self.mindex, 3], np.array([분봉저가])], np.r_[self.dict_min_ar[종목코드][:self.mindex, 4], np.array([현재가])], fastk_period=5, slowk_period=3, slowk_matype=0, slowM_period=3, slowM_matype=0)
-            M_STOCK, M_STOCD = M_STOCK[-1], M_STOCD[-1]
-            M_ATR = talib.ATR(np.r_[self.dict_min_ar[종목코드][:self.mindex, 2], np.array([분봉고가])], np.r_[self.dict_min_ar[종목코드][:self.mindex, 3], np.array([분봉저가])], np.r_[self.dict_min_ar[종목코드][:self.mindex, 4], np.array([현재가])], timeperiod=14)[-1]
-            """
-
         if self.dict_set['주식일봉데이터']:
             일봉최고종가5, 일봉최고고가5, 일봉최고종가10, 일봉최고고가10, 일봉최고종가20, 일봉최고고가20, 일봉최고종가60, 일봉최고고가60, \
                 일봉최고종가120, 일봉최고고가120, 일봉최고종가240, 일봉최고고가240, 일봉최저종가5, 일봉최저저가5, 일봉최저종가10, \
@@ -701,18 +625,6 @@ class StockBackEngine4(StockBackEngine2):
             else:
                 일봉최고거래대금대비 = 0.
 
-            """ 보조지표 사용예
-            D_BBU, D_BBM, D_BBL = talib.BBANDS(np.r_[self.dict_day_ar[종목코드][:self.dindex, 4], np.array([현재가])], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
-            D_BBU, D_BBM, D_BBL = D_BBU[-1], D_BBM[-1], D_BBL[-1]
-            D_RSI = talib.RSI(np.r_[self.dict_day_ar[종목코드][:self.dindex, 4], np.array([현재가])], timeperiod=14)[-1]
-            D_CCI = talib.CCI(np.r_[self.dict_day_ar[종목코드][:self.dindex, 2], np.array([고가])], np.r_[self.dict_day_ar[종목코드][:self.dindex, 3], np.array([저가])], np.r_[self.dict_day_ar[종목코드][:self.dindex, 4], np.array([현재가])], timeperiod=14)[-1]
-            D_MACD, D_MACDS, D_MACDH = talib.MACD(np.r_[self.dict_day_ar[종목코드][:self.dindex, 4], np.array([현재가])], fastperiod=12, slowperiod=26, signalperiod=9)
-            D_MACD, D_MACDS, D_MACDH = D_MACD[-1], D_MACDS[-1], D_MACDH[-1]
-            D_STOCK, D_STOCD = talib.STOCH(np.r_[self.dict_day_ar[종목코드][:self.dindex, 2], np.array([고가])], np.r_[self.dict_day_ar[종목코드][:self.dindex, 3], np.array([저가])], np.r_[self.dict_day_ar[종목코드][:self.dindex, 4], np.array([현재가])], fastk_period=5, slowk_period=3, slowk_matype=0, slowd_period=3, slowd_matype=0)
-            D_STOCK, D_STOCD = D_STOCK[-1], D_STOCD[-1]
-            D_ATR = talib.ATR(np.r_[self.dict_day_ar[종목코드][:self.dindex, 2], np.array([고가])], np.r_[self.dict_day_ar[종목코드][:self.dindex, 3], np.array([저가])], np.r_[self.dict_day_ar[종목코드][:self.dindex, 4], np.array([현재가])], timeperiod=14)[-1]
-            """
-
         if self.back_type == '백파인더':
             if self.tick_count < self.avgtime:
                 return
@@ -721,7 +633,7 @@ class StockBackEngine4(StockBackEngine2):
             try:
                 exec(self.buystg, None, locals())
             except:
-                if self.gubun == 0: print_exc()
+                print_exc()
                 self.BackStop(1)
         else:
             bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
@@ -775,35 +687,34 @@ class StockBackEngine4(StockBackEngine2):
                         if self.trade_info[j]['매수호가'] == 0:
                             gubun = '매수'
                         else:
-                            self.CheckBuy()
+                            관심이탈 = not 관심종목 and 관심종목N(1)
+                            self.CheckBuy(현재가, 관심이탈)
                             continue
                     elif self.trade_info[j]['매수분할횟수'] < self.dict_set['주식매수분할횟수']:
                         if self.trade_info[j]['매수호가'] == 0:
                             gubun = '매수'
                         else:
-                            self.CheckBuy()
+                            관심이탈 = not 관심종목 and 관심종목N(1)
+                            self.CheckBuy(현재가, 관심이탈)
                             continue
                         if self.trade_info[j]['매수호가'] == 0:
                             if self.trade_info[j]['매도호가'] == 0:
                                 gubun = '매도'
                             else:
-                                self.CheckSell()
+                                관심진입 = 관심종목 and not 관심종목N(1)
+                                self.CheckSell(현재가, 관심진입)
                                 continue
                     else:
                         if self.trade_info[j]['매도호가'] == 0:
                             gubun = '매도'
                         else:
-                            self.CheckSell()
+                            관심진입 = 관심종목 and not 관심종목N(1)
+                            self.CheckSell(현재가, 관심진입)
                             continue
 
                 try:
                     if gubun == '매수':
-                        try:
-                            if self.code not in self.dict_mt[self.index]:
-                                continue
-                        except:
-                            continue
-
+                        if not 관심종목: continue
                         cancel = False
                         if self.dict_set['주식매수금지거래횟수'] and self.dict_set['주식매수금지거래횟수값'] <= self.day_info[j]['거래횟수']:
                             cancel = True
@@ -898,6 +809,6 @@ class StockBackEngine4(StockBackEngine2):
                                 else:
                                     exec(self.dict_sellstg[j], None, locals())
                 except:
-                    if self.gubun == 0: print_exc()
+                    print_exc()
                     self.BackStop(1)
                     break

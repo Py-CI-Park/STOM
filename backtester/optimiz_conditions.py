@@ -69,7 +69,7 @@ class Total:
                         for stq in self.stq_list:
                             stq.put(('백테완료', '미분리집계'))
                     else:
-                        for vars_key in range(10):
+                        for vars_key in range(20):
                             self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
 
             elif data[0] == '백테결과':
@@ -97,8 +97,8 @@ class Total:
                             self.stq_list[k % 20].put(data_)
                             k += 1
 
-                    if len(dict_tsg) < 10:
-                        zero_key_list = [x for x in range(10) if x not in dict_tsg.keys()]
+                    if len(dict_tsg) < 20:
+                        zero_key_list = [x for x in range(20) if x not in dict_tsg.keys()]
                         for vars_key in zero_key_list:
                             self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
                     dict_tsg = {}
@@ -299,7 +299,7 @@ class OptimizeConditions:
         total_count = int(bc * sc)
         if total_count < rcount:
             rcount = total_count
-        rcount = int(rcount / 10)
+        rcount = int(rcount / 20)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 전체 경우의 수 계산 완료 [{total_count:,.0f}]'))
 
         mq = Queue()
@@ -321,13 +321,14 @@ class OptimizeConditions:
             buy_conds, sell_conds = self.GetCondlist()
             for q in self.stq_list:
                 q.put('백테시작')
+            if is_long is None:
+                data = ('조건정보', buy_conds, sell_conds)
+            else:
+                data = ('조건정보', is_long, buy_conds, sell_conds)
             for q in self.pq_list:
-                if is_long is None:
-                    q.put(('조건정보', buy_conds, sell_conds))
-                else:
-                    q.put(('조건정보', is_long, buy_conds, sell_conds))
+                q.put(data)
 
-            for _ in range(10):
+            for _ in range(20):
                 data = mq.get()
                 if type(data) == str:
                     if len(self.result) > 0:
@@ -355,7 +356,7 @@ class OptimizeConditions:
         opti_list = []
         buyconds  = []
         sellconds = []
-        for _ in range(10):
+        for _ in range(20):
             while opti_list == [] or opti_list in self.opti_list:
                 random.shuffle(self.buyconds)
                 random.shuffle(self.sellconds)

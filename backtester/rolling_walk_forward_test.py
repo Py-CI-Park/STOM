@@ -96,11 +96,11 @@ class Total:
                         tc = 0
                         len_vars_turn = len(self.vars_list[self.vars_turn][0])
                         if self.vars_turn < 0 or len_vars_turn < 5:
-                            for stq in self.stq_list:
-                                stq.put(('백테완료', '분리집계'))
+                            for q in self.stq_list:
+                                q.put(('백테완료', '분리집계'))
                         else:
-                            for stq in self.stq_list:
-                                stq.put(('백테완료', '미분리집계'))
+                            for q in self.stq_list:
+                                q.put(('백테완료', '미분리집계'))
                     else:
                         if self.vars_turn >= 0:
                             for vars_key in range(len(self.vars_list[self.vars_turn][0])):
@@ -112,15 +112,15 @@ class Total:
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과분리')
+                    for q in self.stq_list:
+                        q.put('결과분리')
 
             elif data == '분리완료':
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과전송')
+                    for q in self.stq_list:
+                        q.put('결과전송')
 
             elif data[0] == '백테결과':
                 _, vars_key, list_tsg, arry_bct = data
@@ -526,8 +526,9 @@ class RollingWalkForwardTest:
             self.tq.put(('변수정보', hvar_list[i], -2))
             for q in self.stq_list:
                 q.put('백테시작')
+            data = ('변수정보', hvar_list[i], -2, startday, endday)
             for q in self.pq_list:
-                q.put(('변수정보', hvar_list[i], -2, startday, endday))
+                q.put(data)
             _ = mq.get()
 
         mq.close()
@@ -629,12 +630,14 @@ class RollingWalkForwardTest:
 
     def OptimizeGrid(self, mq, total_count, back_count, len_vars, ccount, vars_type, vars_, startday, endday, t):
         self.tq.put(('경우의수', total_count, back_count, startday, endday, t))
-        self.tq.put(('변수정보', vars_, -1))
-        for q in self.stq_list:
-            q.put('백테시작')
-        for q in self.pq_list:
-            q.put(('변수정보', vars_, -1, startday, endday))
-        self.htsd, _ = mq.get()
+        self.PutData(('변수정보', vars_, -1, startday, endday))
+
+        self.htsd = 0
+        data = mq.get()
+        if type(data) == str:
+            self.SysExit(True)
+        else:
+            self.htsd = data[0]
 
         k = 1
         change_var_count = None
@@ -656,14 +659,10 @@ class RollingWalkForwardTest:
                 if len_vars_ > 0:
                     start = now()
                     print('========================================================================')
-                    print(
-                        f'rwf_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}, high_std : {self.htsd}')
+                    print(f'rwf_vars_turn : {i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}, high_std : {self.htsd}')
                     print(f'rwf_vars_list : {vars_[i][0]}')
-                    self.tq.put(('변수정보', vars_, i))
-                    for q in self.stq_list:
-                        q.put('백테시작')
-                    for q in self.pq_list:
-                        q.put(('변수정보', vars_, i, startday, endday))
+
+                    self.PutData(('변수정보', vars_, i, startday, endday))
 
                     for _ in range(len_vars_):
                         data = mq.get()
@@ -743,11 +742,7 @@ class RollingWalkForwardTest:
 
             str_simple_vars = str(simple_vars)
             if str_simple_vars not in self.dict_simple_vars.keys():
-                self.tq.put(('변수정보', optuna_vars, -1))
-                for stq in self.stq_list:
-                    stq.put('백테시작')
-                for pq in self.pq_list:
-                    pq.put(('변수정보', optuna_vars, -1, startday, endday))
+                self.PutData(('변수정보', optuna_vars, -1, startday, endday))
                 data_ = mq.get()
                 if type(data_) == str:
                     ostd = 0
@@ -771,6 +766,13 @@ class RollingWalkForwardTest:
             vars_[i][1] = var
 
         return vars_
+
+    def PutData(self, data):
+        self.tq.put(data[:3])
+        for q in self.stq_list:
+            q.put('백테시작')
+        for q in self.pq_list:
+            q.put(data)
 
     def SysExit(self, cancel):
         if cancel:

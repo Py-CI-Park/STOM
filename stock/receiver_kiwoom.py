@@ -752,7 +752,8 @@ class ReceiverKiwoom:
             hlp   = round((c / ((self.dict_tick[code][2] + self.dict_tick[code][3]) / 2) - 1) * 100, 2)
             hgjrt = sum(hoga_samount + hoga_bamount)
             logt  = now() if self.int_logt < int_logt else 0
-            data  = (dt,) + tuple(self.dict_tick[code]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, code, name, logt)
+            gsjm  = 1 if code in self.list_gsjm else 0
+            data  = (dt,) + tuple(self.dict_tick[code]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, name, logt)
 
             self.sstgQs[self.dict_sgbn[code]].put(data)
             if code in self.tuple_janng or code in self.tuple_order:

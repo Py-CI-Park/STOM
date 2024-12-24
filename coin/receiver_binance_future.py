@@ -241,10 +241,10 @@ class ReceiverBinanceFuture:
                 self.InsertGsjmlist(code)
             self.list_gsjm1 = self.list_prmt[:-3]
             self.list_gsjm2 = self.list_prmt
-            data1, data2 = tuple(self.list_gsjm1), tuple(self.list_gsjm2)
-            self.cstgQ.put(('관심목록', data1, data2))
+            data = tuple(self.list_gsjm2)
+            self.cstgQ.put(('관심목록', data))
             if self.dict_set['리시버공유'] == 1:
-                self.zq.put(('focuscodes', ('관심목록', data1, data2)))
+                self.zq.put(('focuscodes', ('관심목록', data)))
 
         return list(self.dict_tick.keys())
 
@@ -369,7 +369,8 @@ class ReceiverBinanceFuture:
             hlp   = round((c / ((self.dict_tick[code][2] + self.dict_tick[code][3]) / 2) - 1) * 100, 2)
             hgjrt = sum(hoga_samount + hoga_bamount)
             logt  = now() if self.int_logt < int_logt else 0
-            data  = (dt,) + tuple(self.dict_tick[code][:9]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, code, logt)
+            gsjm  = 1 if code in self.list_gsjm1 else 0
+            data  = (dt,) + tuple(self.dict_tick[code][:9]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, logt)
 
             self.cstgQ.put(data)
             if code in self.tuple_order or code in self.tuple_jang:
@@ -393,10 +394,10 @@ class ReceiverBinanceFuture:
             self.int_logt = int_logt
 
     def UpdateMoneyTop(self):
-        data1, data2 = tuple(self.list_gsjm1), tuple(self.list_gsjm2)
-        self.cstgQ.put(('관심목록', data1, data2))
+        data = tuple(self.list_gsjm2)
+        self.cstgQ.put(('관심목록', data))
         if self.dict_set['리시버공유'] == 1:
-            self.zq.put(('focuscodes', ('관심목록', data1, data2)))
+            self.zq.put(('focuscodes', ('관심목록', data)))
 
         text_gsjm = ';'.join(self.list_gsjm1)
         curr_strtime = str(self.int_jcct)
@@ -456,7 +457,7 @@ class ReceiverBinanceFuture:
 
             dict_min_ar = {}
             for i, code in enumerate(self.codes):
-                time.sleep(0.1)
+                time.sleep(0.3)
                 try:
                     klines = self.binance.get_historical_klines(code, f'{self.dict_set["코인분봉기간"]}m', klines_type=HistoricalKlinesType.FUTURES)
                 except Exception as e:
@@ -538,7 +539,7 @@ class ReceiverBinanceFuture:
 
             dict_day_ar = {}
             for i, code in enumerate(self.codes):
-                time.sleep(0.1)
+                time.sleep(0.3)
                 try:
                     klines = self.binance.get_historical_klines(code, '1d', klines_type=HistoricalKlinesType.FUTURES)
                 except Exception as e:

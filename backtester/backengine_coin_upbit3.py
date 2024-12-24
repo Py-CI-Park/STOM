@@ -281,6 +281,9 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
         if self.profile:
             self.pr.print_stats(sort='cumulative')
 
+        while not self.pq.empty():
+            self.pq.get()
+
     def UpdateCurrentMin(self, i):
         현재가 = self.array_tick[i, 1]
         초당거래대금 = self.array_tick[i, 10]
@@ -403,15 +406,18 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
         def 매도수5호가잔량합N(pre):
             return Parameter_Previous(34, pre)
 
+        def 관심종목N(pre):
+            return Parameter_Previous(35, pre)
+
         def 이동평균(tick, pre=0):
             if tick == 60:
-                return Parameter_Previous(35, pre)
-            elif tick == 300:
                 return Parameter_Previous(36, pre)
-            elif tick == 600:
+            elif tick == 300:
                 return Parameter_Previous(37, pre)
-            elif tick == 1200:
+            elif tick == 600:
                 return Parameter_Previous(38, pre)
+            elif tick == 1200:
+                return Parameter_Previous(39, pre)
             else:
                 sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
                 eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
@@ -436,34 +442,34 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                     return self.array_tick[sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
-            return Parameter_Area(39, 1, tick, pre, 'max')
+            return Parameter_Area(40, 1, tick, pre, 'max')
 
         def 최저현재가(tick, pre=0):
-            return Parameter_Area(40, 1, tick, pre, 'min')
+            return Parameter_Area(41, 1, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
-            return Parameter_Area(41, 7, tick, pre, 'mean')
+            return Parameter_Area(42, 7, tick, pre, 'mean')
 
         def 최고체결강도(tick, pre=0):
-            return Parameter_Area(42, 7, tick, pre, 'max')
+            return Parameter_Area(43, 7, tick, pre, 'max')
 
         def 최저체결강도(tick, pre=0):
-            return Parameter_Area(43, 7, tick, pre, 'min')
+            return Parameter_Area(44, 7, tick, pre, 'min')
 
         def 최고초당매수수량(tick, pre=0):
-            return Parameter_Area(44, 14, tick, pre, 'max')
+            return Parameter_Area(45, 14, tick, pre, 'max')
 
         def 누적초당매수수량(tick, pre=0):
-            return Parameter_Area(45, 14, tick, pre, 'sum')
+            return Parameter_Area(46, 14, tick, pre, 'sum')
 
         def 최고초당매도수량(tick, pre=0):
-            return Parameter_Area(46, 15, tick, pre, 'max')
+            return Parameter_Area(47, 15, tick, pre, 'max')
 
         def 누적초당매도수량(tick, pre=0):
-            return Parameter_Area(47, 15, tick, pre, 'sum')
+            return Parameter_Area(48, 15, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return Parameter_Area(48, 19, tick, pre, 'mean')
+            return Parameter_Area(49, 19, tick, pre, 'mean')
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick in self.avg_list:
@@ -475,10 +481,10 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
-            return Parameter_Dgree(49, 5, tick, pre, 10)
+            return Parameter_Dgree(50, 5, tick, pre, 10)
 
         def 당일거래대금각도(tick, pre=0):
-            return Parameter_Dgree(50, 6, tick, pre, 0.00000001)
+            return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
         if self.dict_set['코인분봉데이터']:
             def 분봉시가N(pre):
@@ -550,7 +556,8 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
 
         현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율, 매도총잔량, \
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합 = self.array_tick[self.indexn, 1:35]
+            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, \
+            관심종목 = self.array_tick[self.indexn, 1:36]
         종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), GetUpbitHogaunit(현재가)
 
         if self.dict_set['코인분봉데이터']:
@@ -596,7 +603,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
             try:
                 exec(self.buystg, None, locals())
             except:
-                if self.gubun == 0: print_exc()
+                print_exc()
                 self.BackStop(1)
         else:
             bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
@@ -627,12 +634,7 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
 
                 try:
                     if not self.trade_info[j]['보유중']:
-                        try:
-                            if self.code not in self.dict_mt[self.index]:
-                                continue
-                        except:
-                            continue
-
+                        if not 관심종목: continue
                         self.trade_info[j]['주문수량'] = int(self.betting / 현재가)
                         매수 = True
                         if self.back_type != '조건최적화':
@@ -657,6 +659,6 @@ class CoinUpbitBackEngine3(CoinUpbitBackEngine):
                         else:
                             exec(self.dict_sellstg[j], None, locals())
                 except:
-                    if self.gubun == 0: print_exc()
+                    print_exc()
                     self.BackStop(1)
                     break

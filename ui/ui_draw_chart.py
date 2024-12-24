@@ -26,37 +26,37 @@ class DrawChart:
             14         15          16      17       18         19            20            21        22
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
            23       24       25        26       27        28       29        30       31        32
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
-           33       34       35        36       37        38       39        40       41       42          43
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목
+           33       34       35        36       37        38       39        40       41       42          43           44
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
-            44         45          46           47           48         49         50           51           52
+            45         46          47           48           49         50         51           52           53
         최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-              53            54               55              56              57           58           59           60
-        거래대금순위, 매수가, 매도가
-            61       62     63
+              54            55               56              57              58             59         60            61
+        매수가, 매도가
+          62    63
         """
         dict_stock = {
-            1: 44, 2: 45, 3: 46, 4: 47, 5: 1, 6: 50, 7: 51, 8: 52, 9: 7, 10: 19, 11: 57, 12: 14, 13: 15, 14: 5, 15: 20,
-            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 55, 23: 56, 24: 58, 25: 59, 26: 60, 27: 8, 28: 9, 29: 10,
-            30: 11, 40: 61, 41: 62, 42: 63
+            1: 45, 2: 46, 3: 47, 4: 48, 5: 1, 6: 51, 7: 52, 8: 53, 9: 7, 10: 19, 11: 58, 12: 14, 13: 15, 14: 5, 15: 20,
+            16: 22, 17: 21, 18: 38, 19: 37, 20: 43, 21: 6, 22: 56, 23: 57, 24: 59, 25: 60, 26: 61, 27: 8, 28: 9, 29: 10,
+            30: 11, 40: 44, 41: 62, 42: 63
         }
         """ 코인
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
            0      1     2    3     4     5        6         7         8           9          10            11
         매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
            12        13        14       15       16        17       18        19       20       21        22       23
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
-           24        25       26       27        28       29        30       31       32        33         34
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
+           24        25       26       27        28       29        30       31       32        33         34           35
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
-            35         36           37           38          39         40         41           42          43
+            36         37           38          39          40         51          42           43          44
         최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
-               44            45              46              47              48           49            50
-        거래대금순위, 매수가, 매도가, 매수가2, 매도가2
-            51       52     53     54      55
+               45            46              47              48              49           50           51
+        매수가, 매도가, 매수가2, 매도가2
+          52    53     54      55
         """
         dict_coin = {
-            1: 35, 2: 36, 3: 37, 4: 38, 5: 1, 6: 41, 7: 42, 8: 43, 9: 7, 10: 10, 11: 48, 12: 8, 13: 9, 14: 5, 15: 11,
-            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 46, 23: 47, 24: 49, 25: 50, 40: 51, 41: 52, 42: 53,
+            1: 36, 2: 37, 3: 38, 4: 39, 5: 1, 6: 42, 7: 43, 8: 44, 9: 7, 10: 10, 11: 49, 12: 8, 13: 9, 14: 5, 15: 11,
+            16: 13, 17: 12, 18: 29, 19: 28, 20: 34, 21: 6, 22: 47, 23: 48, 24: 50, 25: 51, 40: 35, 41: 52, 42: 53,
             43: 54, 44: 55
         }
 
@@ -83,6 +83,8 @@ class DrawChart:
 
         self.ui.ctpg_tik_factors = []
         if self.ui.ct_checkBoxxxxx_01.isChecked():     self.ui.ctpg_tik_factors.append('현재가')
+        # self.ui.ctpg_tik_factors.append('MACD')
+        # self.ui.ctpg_tik_factors.append('RSI')
         if self.ui.ct_checkBoxxxxx_02.isChecked():     self.ui.ctpg_tik_factors.append('체결강도')
         if self.ui.ct_checkBoxxxxx_03.isChecked():     self.ui.ctpg_tik_factors.append('초당거래대금')
         if self.ui.ct_checkBoxxxxx_04.isChecked():     self.ui.ctpg_tik_factors.append('초당체결수량')
@@ -103,6 +105,7 @@ class DrawChart:
             if self.ui.ct_checkBoxxxxx_18.isChecked(): self.ui.ctpg_tik_factors.append('전일비각도')
 
         for j in range(len(self.ui.ctpg_tik_arry[0, :])):
+            # if j in (cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25), 64, 65, 66, 67, 68, 69):
             if j in (cindex(1), cindex(2), cindex(3), cindex(4), cindex(6), cindex(7), cindex(8), cindex(25)):
                 self.ui.ctpg_tik_data[j] = [x for x in self.ui.ctpg_tik_arry[:, j] if x != 0]
             else:
@@ -118,6 +121,12 @@ class DrawChart:
         len6 = len(self.ui.ctpg_tik_data[cindex(7)])
         len7 = len(self.ui.ctpg_tik_data[cindex(8)])
         len8 = len(self.ui.ctpg_tik_data[cindex(25)])
+        # len9 = len(self.ui.ctpg_tik_data[64])
+        # len10 = len(self.ui.ctpg_tik_data[65])
+        # len11 = len(self.ui.ctpg_tik_data[66])
+        # len12 = len(self.ui.ctpg_tik_data[67])
+        # len13 = len(self.ui.ctpg_tik_data[68])
+        # len14 = len(self.ui.ctpg_tik_data[69])
         chuse_exist = True if len(self.ui.ctpg_tik_arry[self.ui.ctpg_tik_arry[:, cindex(40)] > 0]) > 0 else False
 
         for i, factor in enumerate(self.ui.ctpg_tik_factors):
@@ -127,6 +136,8 @@ class DrawChart:
                 list_ = self.ui.ctpg_tik_data[cindex(1)] + self.ui.ctpg_tik_data[cindex(2)] + self.ui.ctpg_tik_data[cindex(3)] + self.ui.ctpg_tik_data[cindex(4)] + list(self.ui.ctpg_tik_data[cindex(5)])
                 ymax, ymin = max(list_), min(list_)
                 if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
+                # self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len9:], y=self.ui.ctpg_tik_data[64], pen=(100, 180, 100))
+                # self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len10:], y=self.ui.ctpg_tik_data[65], pen=(100, 100, 180))
                 self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len1:], y=self.ui.ctpg_tik_data[cindex(1)], pen=(140, 140, 145))
                 self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len2:], y=self.ui.ctpg_tik_data[cindex(2)], pen=(120, 120, 125))
                 self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len3:], y=self.ui.ctpg_tik_data[cindex(3)], pen=(100, 100, 105))
@@ -153,6 +164,17 @@ class DrawChart:
                             arrow = pg.ArrowItem(angle=0, tipAngle=60, headLen=10, pen='w', brush='b')
                             arrow.setPos(self.ui.ctpg_tik_xticks[j], price)
                             self.ui.ctpg[i].addItem(arrow)
+            # elif factor == 'MACD':
+            #     list_ = self.ui.ctpg_tik_data[66] + self.ui.ctpg_tik_data[67] + self.ui.ctpg_tik_data[68]
+            #     ymax, ymin = max(list_), min(list_)
+            #     if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
+            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len11:], y=self.ui.ctpg_tik_data[66], pen=(100, 250, 100))
+            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len12:], y=self.ui.ctpg_tik_data[67], pen=(250, 100, 100))
+            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len13:], y=self.ui.ctpg_tik_data[68], pen=(100, 100, 250))
+            # elif factor == 'RSI':
+            #     ymax, ymin = max(self.ui.ctpg_tik_data[69]), min(self.ui.ctpg_tik_data[69])
+            #     if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))
+            #     self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[tlen - len14:], y=self.ui.ctpg_tik_data[69], pen=(250, 100, 100))
             elif factor == '체결강도':
                 ymax, ymin = max(self.ui.ctpg_tik_data[cindex(7)]), min(self.ui.ctpg_tik_data[cindex(8)])
                 if chuse_exist: self.ui.ctpg[i].addItem(ChuseItem(self.ui.ctpg_tik_arry[:, cindex(40)], ymin, ymax, self.ui.ctpg_tik_xticks))

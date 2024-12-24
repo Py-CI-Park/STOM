@@ -4,7 +4,7 @@ import sqlite3
 import binance
 import operator
 import pandas as pd
-from multiprocessing import Queue, Process
+from multiprocessing import Process, Queue
 from backtester.back_code_test import BackCodeTest
 from backtester.back_static import SubTotal, GetMoneytopQuery
 from backtester.backengine_coin_future import CoinFutureBackEngine
@@ -212,9 +212,9 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
 
     for i in range(multi):
         if gubun == '주식':
-            ui.back_pques[i].put(('종목명거래대금순위', ui.dict_cn, ui.dict_mt, dict_kd))
-        else:
-            ui.back_pques[i].put(('종목명거래대금순위', ui.dict_mt, dict_kd))
+            ui.back_pques[i].put(('종목명', ui.dict_cn, dict_kd))
+        elif ui.dict_set['거래소'] == '바이낸스선물':
+            ui.back_pques[i].put(('호가단위', dict_kd))
     windowQ.put((ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'))
 
     if divid_mode == '종목코드별 분류':

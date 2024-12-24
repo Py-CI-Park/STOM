@@ -10,7 +10,7 @@ from coin.receiver_upbit import ReceiverUpbit
 from coin.strategy_upbit import StrategyUpbit
 from coin.receiver_upbit_client import ReceiverUpbitClient
 from ui.set_logfile import SetLogFile
-from utility.setting import columns_tdf, columns_jgf
+from utility.setting import columns_tdf, columns_jgf, ui_num
 from utility.static import int_hms, int_hms_utc, now, strf_time
 from utility.stomlive import StomLiveClient
 
@@ -40,7 +40,7 @@ def process_starter(ui, qlist):
         if ui.dict_set['코인리시버']:
             CoinReceiverStart(ui, qlist)
         if ui.dict_set['코인트레이더']:
-            CoinTraderStart(ui, qlist)
+            CoinTraderStart(ui, qlist, windowQ)
 
     if ui.dict_set['코인트레이더'] and A and D and not ui.time_sync:
         subprocess.Popen('python64 ./utility/timesync.py')
@@ -72,12 +72,12 @@ def CoinReceiverStart(ui, qlist):
             ui.proc_receiver_coin = Process(target=ReceiverUpbitClient if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFutureClient, args=(qlist,))
         ui.proc_receiver_coin.start()
 
-def CoinTraderStart(ui, qlist):
-    if ui.dict_set['거래소'] == '업비트' and (ui.dict_set['Access_key1'] is None or ui.dict_set['Access_key1'] is None):
-        QMessageBox.critical(ui.ui, '오류 알림', '업비트 계정이 설정되지 않아\n트레이더를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
+def CoinTraderStart(ui, qlist, windowQ):
+    if ui.dict_set['거래소'] == '업비트' and (ui.dict_set['Access_key1'] is None or ui.dict_set['Secret_key1'] is None):
+        windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 업비트 계정이 설정되지 않아 트레이더를 시작할 수 없습니다. 계정 설정 후 다시 시작하십시오.'))
         return
-    elif ui.dict_set['거래소'] == '바이낸스선물' and (ui.dict_set['Access_key2'] is None or ui.dict_set['Access_key2'] is None):
-        QMessageBox.critical(ui.ui, '오류 알림', '바이낸스선물 계정이 설정되지 않아\n트레이더를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
+    elif ui.dict_set['거래소'] == '바이낸스선물' and (ui.dict_set['Access_key2'] is None or ui.dict_set['Secret_key2'] is None):
+        windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 바이낸스선물 계정이 설정되지 않아 트레이더를 시작할 수 없습니다. 계정 설정 후 다시 시작하십시오.'))
         return
 
     if not ui.CoinStrategyProcessAlive():
@@ -129,11 +129,12 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
     elif ui.dict_set['주식트레이더']:
         text = f'{text} | 키움증권'
     if ui.showQsize:
+        bkqsize = sum((stq.qsize() for stq in ui.back_pques)) if ui.back_pques else 0
         stqsize = sum((stq.qsize() for stq in ui.bact_pques)) if ui.bact_pques else 0
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
                f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
-               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backstQ[{stqsize}]'
+               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backegQ[{bkqsize}] | backstQ[{stqsize}]'
     else:
         if ui.dict_set['코인트레이더']:
             text = f'{text} | 모의' if ui.dict_set['코인모의투자'] else f'{text} | 실전'

@@ -94,11 +94,11 @@ class Total:
                         tc = 0
                         len_vars_turn = len(self.vars_list[self.vars_turn][0])
                         if self.vars_turn < 0 or len_vars_turn < 5:
-                            for stq in self.stq_list:
-                                stq.put(('백테완료', '분리집계'))
+                            for q in self.stq_list:
+                                q.put(('백테완료', '분리집계'))
                         else:
-                            for stq in self.stq_list:
-                                stq.put(('백테완료', '미분리집계'))
+                            for q in self.stq_list:
+                                q.put(('백테완료', '미분리집계'))
                     else:
                         if self.vars_turn >= 0:
                             for vars_key in range(len(self.vars_list[self.vars_turn][0])):
@@ -110,23 +110,23 @@ class Total:
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과분리')
+                    for q in self.stq_list:
+                        q.put('결과분리')
 
             elif data == '분리완료':
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과전송')
+                    for q in self.stq_list:
+                        q.put('결과전송')
 
             elif data[0] == '백테결과':
+                sc += 1
                 _, vars_key, list_tsg, arry_bct = data
                 if list_tsg is not None:
                     dict_tsg[vars_key] = list_tsg
                     dict_bct[vars_key] = arry_bct
 
-                sc += 1
                 if sc == 20:
                     sc = 0
                     columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
@@ -492,8 +492,7 @@ class Optimize:
         mq = Queue()
         tdq_list = self.stq_list[:10]
         vdq_list = self.stq_list[10:]
-        args_ = (self.wq, self.sq, self.tq, mq, self.lq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)
-        Process(target=Total, args=args_).start()
+        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, tdq_list, vdq_list, self.stq_list, self.backname, self.ui_gubun, self.gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,
@@ -525,15 +524,9 @@ class Optimize:
                                                       only_sell, buy_first, buy_num, sell_num)
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '최적값 백테스트 시작'))
-        self.tq.put(('변수정보', vars_, -2))
-        for q in self.stq_list:
-            q.put('백테시작')
-        for q in self.pq_list:
-            q.put(('변수정보', vars_, -2))
+        self.PutData(('변수정보', vars_, -2))
         _ = mq.get()
-
         self.SaveOptiVars(total_change, optivars, optivars_, vars_, optivars_name, only_buy, only_sell, buy_first, buy_num, sell_num)
-
         mq.close()
         if self.dict_set['스톰라이브']: self.lq.put(self.backname.replace('O', '').replace('B', ''))
         self.SysExit(False)
@@ -632,11 +625,7 @@ class Optimize:
     def OptimizeGrid(self, mq, total_count, back_count, len_vars, ccount, random_optivars, optivars, optivars_,
                      optivars_name, vars_type, vars_, only_buy, only_sell, buy_first, buy_num, sell_num):
         self.tq.put(('경우의수', total_count, back_count))
-        self.tq.put(('변수정보', vars_, -1))
-        for q in self.stq_list:
-            q.put('백테시작')
-        for q in self.pq_list:
-            q.put(('변수정보', vars_, -1))
+        self.PutData(('변수정보', vars_, -1))
 
         hstd = 0
         data = mq.get()
@@ -673,11 +662,8 @@ class Optimize:
                     print(f'opt_vars_turn : {k}-{i}, len_vars : {len_vars_ + 1}, high_vars : {vars_[i][1]}')
                     print(f'opt_vars_hstd : {hstd:,.2f}, update_count : {change_var_count}, last_update_turn : {last_update_turn}')
                     print(f'opt_vars_list : {vars_[i][0]}')
-                    self.tq.put(('변수정보', vars_, i))
-                    for q in self.stq_list:
-                        q.put('백테시작')
-                    for q in self.pq_list:
-                        q.put(('변수정보', vars_, i))
+
+                    self.PutData(('변수정보', vars_, i))
 
                     turn_stdk = {}
                     for _ in range(len_vars_):
@@ -820,11 +806,7 @@ class Optimize:
 
             str_simple_vars = str(simple_vars)
             if str_simple_vars not in self.dict_simple_vars.keys():
-                self.tq.put(('변수정보', optuna_vars, -1))
-                for stq in self.stq_list:
-                    stq.put('백테시작')
-                for pq in self.pq_list:
-                    pq.put(('변수정보', optuna_vars, -1))
+                self.PutData(('변수정보', optuna_vars, -1))
                 data_ = mq.get()
                 if type(data_) == str:
                     ostd = 0
@@ -885,6 +867,13 @@ class Optimize:
                 con.commit()
                 con.close()
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} {optivars_name}의 최적값 갱신 완료'))
+
+    def PutData(self, data):
+        self.tq.put(data)
+        for q in self.stq_list:
+            q.put('백테시작')
+        for q in self.pq_list:
+            q.put(data)
 
     def SysExit(self, cancel):
         if cancel:

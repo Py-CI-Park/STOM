@@ -631,8 +631,8 @@ def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '백테스트'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '백테스트'))
 
         backQ.put((
             betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, ui.back_count,
@@ -680,8 +680,8 @@ def cvj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '백파인더'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '백파인더'))
 
         backQ.put((avgtime, startday, endday, starttime, endtime, buystg, ui.back_count))
         ui.proc_backtester_bf = Process(
@@ -713,9 +713,9 @@ def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        randomopti  = True if not (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
-        onlybuy     = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.ShiftModifier) and 'B' not in back_name else False
-        onlysell    = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
+        randomopti  = True if not (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) else False
+        onlybuy     = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.ShiftModifier) else False
+        onlysell    = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) else False
         starttime   = ui.cvjb_lineEditt_02.text()
         endtime     = ui.cvjb_lineEditt_03.text()
         betting     = ui.cvjb_lineEditt_04.text()
@@ -748,8 +748,8 @@ def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '최적화'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '최적화'))
 
         backQ.put((
             betting, starttime, endtime, buystg, sellstg, optivars, None, ccount, ui.dict_set['최적화기준값제한'],
@@ -889,8 +889,8 @@ def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '전진분석'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '전진분석'))
 
         backQ.put((
             betting, startday, endday, starttime, endtime, buystg, sellstg, optivars, None, ccount,
@@ -982,8 +982,8 @@ def cvj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', 'GA최적화'))
+        for q in ui.back_pques:
+            q.put(('백테유형', 'GA최적화'))
 
         backQ.put((
             betting, starttime, endtime, buystg, sellstg, optivars, None, ui.dict_set['최적화기준값제한'], optistd,
@@ -1055,8 +1055,8 @@ def cvj_button_clicked_17(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '조건최적화'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '조건최적화'))
 
         backQ.put((
             betting, avgtime, starttime, endtime, buystg, sellstg, ui.dict_set['최적화기준값제한'], optistd, bcount,
@@ -1163,8 +1163,8 @@ def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
         multi     = int(ui.be_lineEdittttt_04.text())
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '백테스트'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '백테스트'))
 
         dict_pattern, dict_pattern_buy, dict_pattern_sell = get_pattern_setup(get_pattern_text(ui))
         backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
@@ -1207,8 +1207,8 @@ def cvj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             return
 
         ui.ClearBacktestQ()
-        for bpq in ui.back_pques:
-            bpq.put(('백테유형', '백테스트'))
+        for q in ui.back_pques:
+            q.put(('백테유형', '백테스트'))
 
         backQ.put((
             betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, ui.dict_cn, ui.back_count,

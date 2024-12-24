@@ -69,7 +69,7 @@ class ReceiverUpbit:
         self.tuple_jang  = ()
         self.tuple_order = ()
 
-        self.int_logt         = int(strf_time('%Y%m%d%H%M'))
+        self.int_logt         = int(strf_time('%Y%m%d%H%M', timedelta_sec(-32400)))
         self.int_jcct         = int(strf_time('%Y%m%d%H%M%S', timedelta_sec(-32400)))
         self.dt_mtct          = None
         self.hoga_code        = None
@@ -220,7 +220,7 @@ class ReceiverUpbit:
                 time.sleep(0.05)
                 df = pyupbit.get_ohlcv(ticker=code, interval='minutes5')
                 if df is not None:
-                    self.dict_tm5m[code] = df['value'][-1]
+                    self.dict_tm5m[code] = df['value'].iloc[-1]
                 print(f'분봉 데이터 조회 중 ... [{i+1}/{last}][{code}]')
 
         self.list_prmt = [x for x, y in sorted(self.dict_tm5m.items(), key=operator.itemgetter(1), reverse=True)[:self.dict_set['코인순위선정']]]
@@ -228,10 +228,10 @@ class ReceiverUpbit:
             self.InsertGsjmlist(code)
         self.list_gsjm1 = self.list_prmt[:-3]
         self.list_gsjm2 = self.list_prmt
-        data1, data2 = tuple(self.list_gsjm1), tuple(self.list_gsjm2)
-        self.cstgQ.put(('관심목록', data1, data2))
+        data = tuple(self.list_gsjm2)
+        self.cstgQ.put(('관심목록', data))
         if self.dict_set['리시버공유'] == 1:
-            self.zq.put(('focuscodes', ('관심목록', data1, data2)))
+            self.zq.put(('focuscodes', ('관심목록', data)))
 
     def UpdateTuple(self, data):
         gubun, data = data
@@ -334,7 +334,8 @@ class ReceiverUpbit:
             hlp   = round((c / ((self.dict_tick[code][2] + self.dict_tick[code][3]) / 2) - 1) * 100, 2)
             hgjrt = sum(hoga_samount + hoga_bamount)
             logt  = now() if self.int_logt < int_logt else 0
-            data  = (dt,) + tuple(self.dict_tick[code][:9]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, code, logt)
+            gsjm  = 1 if code in self.list_gsjm1 else 0
+            data  = (dt,) + tuple(self.dict_tick[code][:9]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, logt)
 
             self.cstgQ.put(data)
             if code in self.tuple_order or code in self.tuple_jang:
@@ -358,10 +359,10 @@ class ReceiverUpbit:
             self.int_logt = int_logt
 
     def UpdateMoneyTop(self):
-        data1, data2 = tuple(self.list_gsjm1), tuple(self.list_gsjm2)
-        self.cstgQ.put(('관심목록', data1, data2))
+        data = tuple(self.list_gsjm2)
+        self.cstgQ.put(('관심목록', data))
         if self.dict_set['리시버공유'] == 1:
-            self.zq.put(('focuscodes', ('관심목록', data1, data2)))
+            self.zq.put(('focuscodes', ('관심목록', data)))
 
         text_gsjm = ';'.join(self.list_gsjm1)
         curr_strtime = str(self.int_jcct)
@@ -421,7 +422,7 @@ class ReceiverUpbit:
 
             dict_min_ar = {}
             for i, code in enumerate(self.codes):
-                time.sleep(0.01)
+                time.sleep(0.1)
                 count = 1600 if len(dfm) > 0 else 17400
                 df = pyupbit.get_ohlcv(ticker=code, interval=f'minutes{self.dict_set["코인분봉기간"]}', count=count)
                 if df is not None:
@@ -503,7 +504,7 @@ class ReceiverUpbit:
 
             dict_day_ar = {}
             for i, code in enumerate(self.codes):
-                time.sleep(0.01)
+                time.sleep(0.1)
                 df = pyupbit.get_ohlcv(ticker=code, count=400)
                 if df is not None:
                     df['일자'] = df.index

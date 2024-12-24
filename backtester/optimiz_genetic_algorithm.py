@@ -69,10 +69,10 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for stq in self.stq_list:
-                            stq.put(('백테완료', '미분리집계'))
+                        for q in self.stq_list:
+                            q.put(('백테완료', '미분리집계'))
                     else:
-                        for vars_key in range(10):
+                        for vars_key in range(20):
                             self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
 
             elif data[0] == '백테결과':
@@ -100,8 +100,8 @@ class Total:
                             self.stq_list[k % 20].put(data_)
                             k += 1
 
-                    if len(dict_tsg) < 10:
-                        zero_key_list = [x for x in range(10) if x not in dict_tsg.keys()]
+                    if len(dict_tsg) < 20:
+                        zero_key_list = [x for x in range(20) if x not in dict_tsg.keys()]
                         for vars_key in zero_key_list:
                             self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
                     dict_tsg = {}
@@ -322,19 +322,21 @@ class OptimizeGeneticAlgorithm:
         goal = 2 ** int(round(vc / 2))
         self.vars_list = []
         while self.total_count > goal:
+            if k > 1: self.SaveVarslist(100, optistandard, buystg, sellstg)
             self.tq.put(('시작시간', now()))
             self.tq.put(('경우의수', vc * back_count, back_count))
 
             for _ in range(vc):
                 vars_lists = self.GetVarslist()
                 if vars_lists:
-                    self.tq.put(('변수정보', vars_lists))
+                    data = ('변수정보', vars_lists)
+                    self.tq.put(data)
                     for q in self.stq_list:
                         q.put('백테시작')
                     for q in self.pq_list:
-                        q.put(('변수정보', vars_lists))
+                        q.put(data)
 
-                    for _ in range(10):
+                    for _ in range(20):
                         data = mq.get()
                         if type(data) == str:
                             if len(self.result) > 0:
@@ -381,7 +383,7 @@ class OptimizeGeneticAlgorithm:
     def GetVarslist(self):
         vars_lists = []
         limit_time = timedelta_sec(30)
-        for _ in range(10):
+        for _ in range(20):
             vars_list  = []
             while vars_list == [] or (vars_list in self.vars_list and now() < limit_time):
                 vars_list = []

@@ -21,7 +21,6 @@ def RunOptunaServer():
     except:
         pass
 
-
 def GetTradeInfo(gubun):
     if gubun == 1:
         v = {
@@ -70,7 +69,6 @@ def GetTradeInfo(gubun):
         }
     return v
 
-
 def GetBackloadCodeQuery(code, days, starttime, endtime):
     last      = len(days) - 1
     like_text = '( '
@@ -84,14 +82,12 @@ def GetBackloadCodeQuery(code, days, starttime, endtime):
             f"`index` % 1000000 <= {endtime}"
     return query
 
-
 def GetBackloadDayQuery(day, code, starttime, endtime):
     query = f"SELECT * FROM '{code}' WHERE " \
             f"`index` LIKE '{day}%' and " \
             f"`index` % 1000000 >= {starttime} and " \
             f"`index` % 1000000 <= {endtime}"
     return query
-
 
 def GetMoneytopQuery(gubun, startday, endday, starttime, endtime):
     if gubun == 'S' and starttime < 90030:
@@ -108,7 +104,6 @@ def GetMoneytopQuery(gubun, startday, endday, starttime, endtime):
                 f"`index` % 1000000 <= {endtime}"
     return query
 
-
 def AddAvgData(df, r, avg_list):
     df['이평60'] = df['현재가'].rolling(window=60).mean().round(r)
     df['이평300'] = df['현재가'].rolling(window=300).mean().round(r)
@@ -117,14 +112,14 @@ def AddAvgData(df, r, avg_list):
     for avg in avg_list:
         df[f'최고현재가{avg}'] = df['현재가'].rolling(window=avg).max()
         df[f'최저현재가{avg}'] = df['현재가'].rolling(window=avg).min()
-        df[f'체결강도평균{avg}'] = df['체결강도'].rolling(window=avg).mean()
+        df[f'체결강도평균{avg}'] = df['체결강도'].rolling(window=avg).mean().round(3)
         df[f'최고체결강도{avg}'] = df['체결강도'].rolling(window=avg).max()
         df[f'최저체결강도{avg}'] = df['체결강도'].rolling(window=avg).min()
         df[f'최고초당매수수량{avg}'] = df['초당매수수량'].rolling(window=avg).max()
         df[f'최고초당매도수량{avg}'] = df['초당매도수량'].rolling(window=avg).max()
         df[f'누적초당매수수량{avg}'] = df['초당매수수량'].rolling(window=avg).sum()
         df[f'누적초당매도수량{avg}'] = df['초당매도수량'].rolling(window=avg).sum()
-        df[f'초당거래대금평균{avg}'] = df['초당거래대금'].rolling(window=avg).mean()
+        df[f'초당거래대금평균{avg}'] = df['초당거래대금'].rolling(window=avg).mean().round(0)
         if r == 3:
             df2 = df[['등락율', '당일거래대금', '전일비']].copy()
             df2[f'등락율N{avg}'] = df2['등락율'].shift(avg - 1)
@@ -146,7 +141,6 @@ def AddAvgData(df, r, avg_list):
             df['당일거래대금각도'] = df2['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100_000_000, avg) / (2 * math.pi) * 360, 2))
     return df
 
-
 def LoadOrderSetting(gubun):
     con = sqlite3.connect(DB_SETTING)
     if 'S' in gubun:
@@ -160,7 +154,6 @@ def LoadOrderSetting(gubun):
     sell_setting = str(list(df2.iloc[0]))
     return buy_setting, sell_setting
 
-
 def GetBuyStg(buystg, gubun):
     buystg = buystg.split('if 매수:')[0] + 'if 매수:\n    self.Buy()'
     try:
@@ -169,7 +162,6 @@ def GetBuyStg(buystg, gubun):
         buystg = None
         if gubun == 0: print_exc()
     return buystg
-
 
 def GetSellStg(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split('if 매도:')[0] + 'if 매도:\n    self.Sell(sell_cond)'
@@ -181,7 +173,6 @@ def GetSellStg(sellstg, gubun):
         if gubun == 0: print_exc()
     return sellstg, dict_cond
 
-
 def GetBuyConds(buy_conds, gubun):
     buy_conds = 'if ' + ':\n    매수 = False\nelif '.join(buy_conds) + ':\n    매수 = False\nif 매수:\n    self.Buy()'
     try:
@@ -190,7 +181,6 @@ def GetBuyConds(buy_conds, gubun):
         buy_conds = None
         if gubun == 0: print_exc()
     return buy_conds
-
 
 def GetSellConds(sell_conds, gubun):
     sell_conds = 'sell_cond = 0\nif ' + ':\n    매도 = True\nelif '.join(sell_conds) + ':\n    매도 = True\nif 매도:\n    self.Sell(sell_cond)'
@@ -201,7 +191,6 @@ def GetSellConds(sell_conds, gubun):
         sell_conds = None
         if gubun == 0: print_exc()
     return sell_conds, dict_cond
-
 
 def SetSellCond(selllist):
     count     = 1
@@ -216,7 +205,6 @@ def SetSellCond(selllist):
             sellstg = f"{sellstg}{text}\n"
     return sellstg, dict_cond
 
-
 def GetBuyStgFuture(buystg, gubun):
     buystg = buystg.split('if BUY_LONG or SELL_SHORT:')[0] + 'if BUY_LONG:\n    self.Buy("BUY_LONG")\nelif SELL_SHORT:\n    self.Buy("SELL_SHORT")'
     try:
@@ -225,7 +213,6 @@ def GetBuyStgFuture(buystg, gubun):
         buystg = None
         if gubun == 0: print_exc()
     return buystg
-
 
 def GetSellStgFuture(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split("if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):")[0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell('SELL_LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell('BUY_SHORT', sell_cond)"
@@ -236,7 +223,6 @@ def GetSellStgFuture(sellstg, gubun):
         sellstg = None
         if gubun == 0: print_exc()
     return sellstg, dict_cond
-
 
 def GetBuyCondsFuture(is_long, buy_conds, gubun):
     if is_long:
@@ -250,7 +236,6 @@ def GetBuyCondsFuture(is_long, buy_conds, gubun):
         if gubun == 0: print_exc()
     return buy_conds
 
-
 def GetSellCondsFuture(is_long, sell_conds, gubun):
     if is_long:
         sell_conds = 'sell_cond = 0\nif ' + ':\n    SELL_LONG = True\nelif '.join(sell_conds) + ':\n    SELL_LONG = True\nif SELL_LONG:\n    self.Sell("SELL_LONG", sell_cond)'
@@ -263,7 +248,6 @@ def GetSellCondsFuture(is_long, sell_conds, gubun):
         sell_conds = None
         if gubun == 0: print_exc()
     return sell_conds, dict_cond
-
 
 def SetSellCondFuture(selllist):
     count     = 1
@@ -282,7 +266,6 @@ def SetSellCondFuture(selllist):
         if text != '':
             sellstg = f"{sellstg}{text}\n"
     return sellstg, dict_cond
-
 
 def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, exponential=False):
     gubun, ui_gubun, wq, mq, stdp, optistd, vars_turn, vars_key, vars_list, startday, endday = back_list
@@ -339,7 +322,6 @@ def SendTextAndStd(back_list, std_list, betting, dict_train, dict_valid=None, ex
         mq.put((std, vars_key))
     return stdp_
 
-
 def GetText1(vars_turn, vars_list):
     prev_vars, curr_vars, next_vars = '', '', ''
     if vars_turn < 0:
@@ -353,7 +335,6 @@ def GetText1(vars_turn, vars_list):
         next_vars = f'<font color=white>{next_vars} </font>'
     return f'{prev_vars}{curr_vars}{next_vars}'
 
-
 def GetText2(gubun, optistd, std_list, betting, result):
     tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
     if tsp < 0 < tsg: tsg = -2147483648
@@ -363,14 +344,12 @@ def GetText2(gubun, optistd, std_list, betting, result):
     text = f'<font color=white>{text}</font>' if tsg >= 0 else f'<font color=#96969b>{text}</font>'
     return text, std
 
-
 def GetText3(gubun, std, stdp):
     text = f'<font color=#f78645>MERGE[{std:,.2f}]</font>' if gubun else ''
     if std >= stdp:
         text = f'{text}<font color=#6eff6e>[기준값갱신]</font>' if std > stdp else f'{text}<font color=white>[기준값동일]</font>'
         stdp = std
     return text, stdp
-
 
 def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
     std = 0
@@ -401,7 +380,6 @@ def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
     elif optistd == 'GAM': std = round(std / count, 2)
     elif optistd == 'GWM': std = round(std / count, 2)
     return std
-
 
 def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     mdd_low, mdd_high, mhct_low, mhct_high, wr_low, wr_high, ap_low, ap_high, atc_low, atc_high, cagr_low, cagr_high, tpi_low, tpi_high = std_list
@@ -470,7 +448,6 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     elif optistd == 'GWM': text = f'{pre_text} GWM[{gwm:.2f}]'
     return std, text
 
-
 def GetBackResult(df_tsg, df_bct, betting, day_count):
     tc  = len(df_tsg)
     if tc > 0:
@@ -519,7 +496,6 @@ def GetBackResult(df_tsg, df_bct, betting, day_count):
         tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
     return df_tsg, df_bct, [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_]
-
 
 def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
             backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None):

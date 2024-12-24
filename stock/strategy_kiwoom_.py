@@ -134,7 +134,7 @@ class StrategyKiwoom2(StrategyKiwoom):
             라운드피겨위5호가이내, 초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량, \
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
-            매도수5호가잔량합, 종목코드, 종목명, 틱수신시간 = data
+            매도수5호가잔량합, 관심종목, 종목코드, 종목명, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
             pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
@@ -260,15 +260,18 @@ class StrategyKiwoom2(StrategyKiwoom):
         def 매도수5호가잔량합N(pre):
             return Parameter_Previous(43, pre)
 
+        def 관심종목N(pre):
+            return Parameter_Previous(44, pre)
+
         def 이동평균(tick, pre=0):
             if tick == 60:
-                return Parameter_Previous(44, pre)
-            elif tick == 300:
                 return Parameter_Previous(45, pre)
-            elif tick == 600:
+            elif tick == 300:
                 return Parameter_Previous(46, pre)
-            elif tick == 1200:
+            elif tick == 600:
                 return Parameter_Previous(47, pre)
+            elif tick == 1200:
+                return Parameter_Previous(48, pre)
             else:
                 sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
                 eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
@@ -290,34 +293,34 @@ class StrategyKiwoom2(StrategyKiwoom):
                     return self.dict_tik_ar[종목코드][sindex:eindex, vindex].mean()
 
         def 최고현재가(tick, pre=0):
-            return Parameter_Area(48, 1, tick, pre, 'max')
+            return Parameter_Area(49, 1, tick, pre, 'max')
 
         def 최저현재가(tick, pre=0):
-            return Parameter_Area(49, 1, tick, pre, 'min')
+            return Parameter_Area(50, 1, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
-            return Parameter_Area(50, 7, tick, pre, 'mean')
+            return Parameter_Area(51, 7, tick, pre, 'mean')
 
         def 최고체결강도(tick, pre=0):
-            return Parameter_Area(51, 7, tick, pre, 'max')
+            return Parameter_Area(52, 7, tick, pre, 'max')
 
         def 최저체결강도(tick, pre=0):
-            return Parameter_Area(52, 7, tick, pre, 'min')
+            return Parameter_Area(53, 7, tick, pre, 'min')
 
         def 최고초당매수수량(tick, pre=0):
-            return Parameter_Area(53, 14, tick, pre, 'max')
+            return Parameter_Area(54, 14, tick, pre, 'max')
 
         def 최고초당매도수량(tick, pre=0):
-            return Parameter_Area(54, 15, tick, pre, 'max')
+            return Parameter_Area(55, 15, tick, pre, 'max')
 
         def 누적초당매수수량(tick, pre=0):
-            return Parameter_Area(55, 14, tick, pre, 'sum')
+            return Parameter_Area(56, 14, tick, pre, 'sum')
 
         def 누적초당매도수량(tick, pre=0):
-            return Parameter_Area(56, 15, tick, pre, 'sum')
+            return Parameter_Area(57, 15, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return Parameter_Area(57, 19, tick, pre, 'mean')
+            return Parameter_Area(58, 19, tick, pre, 'mean')
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick == 평균값계산틱수:
@@ -329,13 +332,13 @@ class StrategyKiwoom2(StrategyKiwoom):
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
         def 등락율각도(tick, pre=0):
-            return Parameter_Dgree(58, 5, tick, pre, 5)
+            return Parameter_Dgree(59, 5, tick, pre, 5)
 
         def 당일거래대금각도(tick, pre=0):
-            return Parameter_Dgree(59, 6, tick, pre, 0.01)
+            return Parameter_Dgree(60, 6, tick, pre, 0.01)
 
         def 전일비각도(tick, pre=0):
-            return Parameter_Dgree(60, 9, tick, pre, 1)
+            return Parameter_Dgree(61, 9, tick, pre, 1)
 
         분봉체결시간 = int(str(체결시간)[:10] + dict_min[self.dict_set['주식분봉기간']][str(체결시간)[10:12]] + '00')
         if self.dict_set['주식분봉데이터']:
@@ -486,14 +489,14 @@ class StrategyKiwoom2(StrategyKiwoom):
             if len_array >= 평균값계산틱수 - 1:
                 최고현재가_      = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 1].max(), 현재가)
                 최저현재가_      = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 1].min(), 현재가)
-                체결강도평균_    =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수
+                체결강도평균_    = round((self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수, 3)
                 최고체결강도_    = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].max(), 체결강도)
                 최저체결강도_    = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
                 최고초당매수수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].max(), 초당매수수량)
                 최고초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].min(), 초당매도수량)
                 누적초당매수수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 14].sum() + 초당매수수량
                 누적초당매도수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 15].sum() + 초당매도수량
-                초당거래대금평균_ =    (self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 19].sum() + 초당거래대금) / 평균값계산틱수
+                초당거래대금평균_ = int((self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 19].sum() + 초당거래대금) / 평균값계산틱수)
                 등락율각도_      = round(math.atan2((등락율 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 5]) * 5, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 당일거래대금각도_ = round(math.atan2((당일거래대금 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 6]) / 100, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 전일비각도_      = round(math.atan2(전일비 - self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1), 9], 평균값계산틱수) / (2 * math.pi) * 360, 2)
@@ -502,25 +505,10 @@ class StrategyKiwoom2(StrategyKiwoom):
             체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
             초당매수수량, 초당매도수량, VI해제시간_, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
+            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
             이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
             최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
         ]
-
-        """
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
-           0      1     2    3    4     5         6         7         8        9      10       11        12           13
-        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
-            14         15          16      17       18         19            20            21        22
-        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           23       24       25        26       27        28       29        30       31        32
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
-           33       34       35        36       37        38       39        40       41       42          43
-        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
-            44         45          46           47           48         49         50           51           52
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-              53            54               55              56              57             58         59            60
-        """
 
         if 종목코드 not in self.dict_tik_ar.keys():
             self.dict_tik_ar[종목코드] = np.array([new_data_tick])
@@ -621,7 +609,9 @@ class StrategyKiwoom2(StrategyKiwoom):
 
         if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0):
             if 종목코드 in self.df_jg.index:
-                매수틱번호 = self.dict_buy_tik[종목코드] if 종목코드 in self.dict_buy_tik.keys() else len(self.dict_tik_ar[종목코드]) - 1
+                if 종목코드 not in self.dict_buy_tik.keys():
+                    self.dict_buy_tik[종목코드] = len(self.dict_tik_ar[종목코드]) - 1
+                매수틱번호 = self.dict_buy_tik[종목코드]
                 매입가 = self.df_jg['매입가'][종목코드]
                 보유수량 = self.df_jg['보유수량'][종목코드]
                 매입금액 = self.df_jg['매입금액'][종목코드]
@@ -643,11 +633,10 @@ class StrategyKiwoom2(StrategyKiwoom):
 
             BBT = not self.dict_set['주식매수금지시간'] or not (self.dict_set['주식매수금지시작시간'] < 시분초 < self.dict_set['주식매수금지종료시간'])
             BLK = not self.dict_set['주식매수금지블랙리스트'] or 종목코드 not in self.dict_set['주식블랙리스트']
-            ING = 종목코드 in self.tuple_gsjm
             NIB = 종목코드 not in self.list_buy
             NIS = 종목코드 not in self.list_sell
 
-            A = ING and NIB and 매입가 == 0
+            A = 관심종목 and NIB and 매입가 == 0
             B = self.dict_set['주식매수분할시그널']
             C = NIB and 매입가 != 0 and 분할매수횟수 < self.dict_set['주식매수분할횟수']
             D = NIB and self.dict_set['주식매도취소매수시그널'] and not NIS
@@ -763,7 +752,7 @@ class StrategyKiwoom2(StrategyKiwoom):
             if self.chart_code == 종목코드:
                 self.kwzservQ.put(('window', (ui_num['일봉차트'], 종목명, self.dict_day_ar[종목코드][-120:])))
 
-        if 종목코드 in self.tuple_gsjm:
+        if 관심종목:
             self.df_gj.loc[종목코드] = 종목명, 등락율, 고저평균대비등락율, 초당거래대금, 초당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:

@@ -1,5 +1,6 @@
 import os
 import math
+import talib
 import sqlite3
 import numpy as np
 import pandas as pd
@@ -111,15 +112,12 @@ class Chart:
         query2 = f"SELECT * FROM '{code}' WHERE `index` LIKE '{searchdate}%'"
 
         df = None
-        db = ''
         try:
             if os.path.isfile(db_name1):
-                db = '개별디비'
                 con = sqlite3.connect(db_name1)
                 df = pd.read_sql(query1 if starttime != '' and endtime != '' else query2, con).set_index('index')
                 con.close()
             elif os.path.isfile(db_name2):
-                db = '백테디비'
                 con = sqlite3.connect(db_name2)
                 df = pd.read_sql(query1 if starttime != '' and endtime != '' else query2, con).set_index('index')
                 con.close()
@@ -161,18 +159,18 @@ class Chart:
             """
 
             if tickcount != 30:
-                df['초당거래대금평균'] = df['초당거래대금'].rolling(window=tickcount).mean()
-                df['체결강도평균']    = df['체결강도'].rolling(window=tickcount).mean()
+                df['초당거래대금평균'] = df['초당거래대금'].rolling(window=tickcount).mean().round(0)
+                df['체결강도평균']    = df['체결강도'].rolling(window=tickcount).mean().round(3)
                 df['최고체결강도']    = df['체결강도'].rolling(window=tickcount).max()
                 df['최저체결강도']    = df['체결강도'].rolling(window=tickcount).min()
             else:
-                df['장초초당거래대금평균'] = df['초당거래대금'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean()
-                df['장초체결강도평균']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean()
+                df['장초초당거래대금평균'] = df['초당거래대금'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean().round(0)
+                df['장초체결강도평균']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).mean().round(3)
                 df['장초최고체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).max()
                 df['장초최저체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장초평균값계산틱수']).min()
 
-                df['장중초당거래대금평균'] = df['초당거래대금'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean()
-                df['장중체결강도평균']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean()
+                df['장중초당거래대금평균'] = df['초당거래대금'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean().round(0)
+                df['장중체결강도평균']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).mean().round(3)
                 df['장중최고체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).max()
                 df['장중최저체결강도']    = df['체결강도'].rolling(window=self.dict_set[f'{gubun}장중평균값계산틱수']).min()
 
@@ -202,20 +200,6 @@ class Chart:
                 df[f'전일비N{tickcount}'] = df['전일비'].shift(tickcount - 1)
                 df['전일비차이'] = df['전일비'] - df[f'전일비N{tickcount}']
                 df['전일비각도'] = df['전일비차이'].apply(lambda x: round(math.atan2(x, tickcount) / (2 * math.pi) * 360, 2))
-
-            df['거래대금순위'] = 0
-            if db == '개별디비':
-                con = sqlite3.connect(db_name1)
-            else:
-                con = sqlite3.connect(db_name2)
-            df_mt = pd.read_sql(f'SELECT * FROM moneytop WHERE `index` LIKE "{searchdate}%"', con)
-            con.close()
-
-            df_mt.set_index('index', inplace=True)
-            dict_mt = df_mt['거래대금순위'].to_dict()
-            for key, value in dict_mt.items():
-                if code in value and key in df.index:
-                    df.loc[key, '거래대금순위'] = 1
 
             buy_index  = []
             sell_index = []
@@ -295,7 +279,7 @@ class Chart:
                     '전일동시간비', '시가총액', '라운드피겨위5호가이내', '초당매수수량', '초당매도수량', 'VI해제시간', 'VI가격', 'VI호가단위',
                     '초당거래대금', '고저평균대비등락율', '매도총잔량', '매수총잔량', '매도호가5', '매도호가4', '매도호가3', '매도호가2',
                     '매도호가1', '매수호가1', '매수호가2', '매수호가3', '매수호가4', '매수호가5', '매도잔량5', '매도잔량4', '매도잔량3',
-                    '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합',
+                    '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합', '관심종목',
                     '이동평균60', '이동평균300', '이동평균600', '이동평균1200', '최고현재가', '최저현재가', '체결강도평균', '최고체결강도',
                     '최저체결강도', '최고초당매수수량', '최고초당매도수량', '누적초당매수수량', '누적초당매도수량', '초당거래대금평균',
                     '등락율각도', '당일거래대금각도', '전일비각도'
@@ -305,18 +289,32 @@ class Chart:
                     '체결시간', '현재가', '시가', '고가', '저가', '등락율', '당일거래대금', '체결강도', '초당매수수량', '초당매도수량',
                     '초당거래대금', '고저평균대비등락율', '매도총잔량', '매수총잔량', '매도호가5', '매도호가4', '매도호가3', '매도호가2',
                     '매도호가1', '매수호가1', '매수호가2', '매수호가3', '매수호가4', '매수호가5', '매도잔량5', '매도잔량4', '매도잔량3',
-                    '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합',
+                    '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합', '관심종목',
                     '이동평균60', '이동평균300', '이동평균600', '이동평균1200', '최고현재가', '최저현재가', '체결강도평균', '최고체결강도',
                     '최저체결강도', '최고초당매수수량', '최고초당매도수량', '누적초당매수수량', '누적초당매도수량', '초당거래대금평균',
                     '등락율각도', '당일거래대금각도'
                 ]
 
-            columns += ['거래대금순위', '매수가', '매도가']
+            columns += ['매수가', '매도가']
             if 'USDT' in code:
                 columns += ['매수가2', '매도가2']
             df = df[columns]
             df.fillna(0, inplace=True)
             arry = np.array(df)
+            # T_BBU, _, T_BBL = talib.BBANDS(arry[:, 1], timeperiod=30, nbdevup=2, nbdevdn=2, matype=0)
+            # T_MACD, T_MACDS, T_MACDH = talib.MACD(arry[:, 1], fastperiod=30, slowperiod=60, signalperiod=15)
+            # T_RSI = talib.RSI(arry[:, 1], timeperiod=120)
+            # arry = np.r_[
+            #     '1',
+            #     arry,
+            #     np.reshape(T_BBU, (-1, 1)),
+            #     np.reshape(T_BBL, (-1, 1)),
+            #     np.reshape(T_MACD, (-1, 1)),
+            #     np.reshape(T_MACDS, (-1, 1)),
+            #     np.reshape(T_MACDH, (-1, 1)),
+            #     np.reshape(T_RSI, (-1, 1))
+            # ]
+            # arry = np.nan_to_num(arry)
             xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
             self.windowQ.put((ui_num['차트'], coin, xticks, arry, buy_index, sell_index))
 

@@ -78,8 +78,8 @@ class Total:
                     bc = 0
                     if tc > 0:
                         tc = 0
-                        for stq in self.stq_list:
-                            stq.put(('백테완료', '분리집계'))
+                        for q in self.stq_list:
+                            q.put(('백테완료', '분리집계'))
                     else:
                         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'))
                         self.mq.put('백테스트 완료')
@@ -88,15 +88,15 @@ class Total:
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과분리')
+                    for q in self.stq_list:
+                        q.put('결과분리')
 
             elif data == '분리완료':
                 sc += 1
                 if sc == 20:
                     sc = 0
-                    for stq in self.stq_list:
-                        stq.put('결과전송')
+                    for q in self.stq_list:
+                        q.put('결과전송')
 
             elif data[0] == '백테결과':
                 _, vars_key, list_tsg, arry_bct = data
@@ -336,8 +336,8 @@ class BackTest:
         if buystg_name == '벤치전략':
             bench_point = 0
             total_ticks = 0
-            for pq in self.pq_list:
-                pq.put(('벤치점수요청',))
+            for q in self.pq_list:
+                q.put('벤치점수요청')
             for i, _ in enumerate(self.pq_list):
                 tc, ts, bp = self.bq.get()
                 total_ticks += tc

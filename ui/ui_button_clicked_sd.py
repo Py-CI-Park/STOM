@@ -97,8 +97,8 @@ def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 return
 
             ui.ClearBacktestQ()
-            for bpq in ui.back_pques:
-                bpq.put(('백테유형', '백테스트'))
+            for q in ui.back_pques:
+                q.put(('백테유형', '백테스트'))
 
             backQ.put((betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', ui.dict_cn, ui.back_count, bl, False, ui.df_kp, ui.df_kd, False, False))
             ui.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_pques, ui.bact_pques, '백테스트', 'S'))
@@ -156,8 +156,8 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                     QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
                     return
 
-                for bpq in ui.back_pques:
-                    bpq.put(('백테유형', '백테스트'))
+                for q in ui.back_pques:
+                    q.put(('백테유형', '백테스트'))
 
                 if bt_gubun == '주식':
                     backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, ui.dict_cn, ui.back_count, bl, True, ui.df_kp, ui.df_kd, False, False))
@@ -195,8 +195,8 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
                 bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
-                for bpq in ui.back_pques:
-                    bpq.put(('백테유형', '조건최적화'))
+                for q in ui.back_pques:
+                    q.put(('백테유형', '조건최적화'))
 
                 backQ.put((
                     betting, avgtime, starttime, endtime, buystg, sellstg, ui.dict_set['최적화기준값제한'], optistd,
@@ -251,8 +251,8 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
                 bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
-                for bpq in ui.back_pques:
-                    bpq.put(('백테유형', 'GA최적화'))
+                for q in ui.back_pques:
+                    q.put(('백테유형', 'GA최적화'))
 
                 if bt_gubun == '주식':
                     backQ.put((
@@ -316,8 +316,8 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 optunacount = ui.op_lineEditttt_02.text()
                 optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
-                for bpq in ui.back_pques:
-                    bpq.put(('백테유형', '전진분석'))
+                for q in ui.back_pques:
+                    q.put(('백테유형', '전진분석'))
 
                 if bt_gubun == '주식':
                     backQ.put((
@@ -401,8 +401,8 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 optunacount = ui.op_lineEditttt_02.text()
                 optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
-                for bpq in ui.back_pques:
-                    bpq.put(('백테유형', '최적화'))
+                for q in ui.back_pques:
+                    q.put(('백테유형', '최적화'))
 
                 if bt_gubun == '주식':
                     backQ.put((

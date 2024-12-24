@@ -797,7 +797,7 @@ if __name__ == '__main__':
     proc_tele  = Process(target=TelegramMsg, args=(qlist,), daemon=True)
     proc_webc  = Process(target=WebCrawling, args=(qlist,), daemon=True)
     proc_sound = Process(target=Sound, args=(qlist,), daemon=True)
-    proc_query = Process(target=Query, args=(qlist,), daemon=True)
+    proc_query = Process(target=Query, args=(qlist,))
     proc_chart = Process(target=Chart, args=(qlist,), daemon=True)
     proc_hoga  = Process(target=Hoga, args=(qlist,), daemon=True)
 
