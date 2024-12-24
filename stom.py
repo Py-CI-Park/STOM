@@ -1,7 +1,10 @@
 import ctypes
+import subprocess
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QCompleter
+from matplotlib import font_manager
+from matplotlib import pyplot as plt
 
 from ui.set_style import *
 from ui.set_icon import SetIcon
@@ -27,7 +30,6 @@ from ui.ui_draw_realchart import DrawRealChart
 from ui.ui_update_textedit import UpdateTextedit
 from ui.ui_process_starter import process_starter
 from ui.ui_draw_jisuchart import DrawRealJisuChart
-from ui.ui_draw_chart_daymin import DrawChartDayMin
 from ui.ui_update_tablewidget import UpdateTablewidget
 from ui.ui_update_progressbar import update_progressbar
 
@@ -78,9 +80,6 @@ from utility.query import Query
 from utility.chart_items import *
 from utility.webcrawling import WebCrawling
 from utility.telegram_msg import TelegramMsg
-
-from matplotlib import font_manager
-from matplotlib import pyplot as plt
 
 
 class Window(QMainWindow):
@@ -229,28 +228,6 @@ class Window(QMainWindow):
         self.ctpg_tik_factors      = []
         self.ctpg_tik_labels       = []
 
-        self.ctpg_day_name         = None
-        self.ctpg_day_index        = None
-        self.ctpg_day_lastmoveavg  = None
-        self.ctpg_day_lastcandle   = None
-        self.ctpg_day_infiniteline = None
-        self.ctpg_day_lastmoneybar = None
-        self.ctpg_day_legend1      = None
-        self.ctpg_day_legend2      = None
-        self.ctpg_day_ymin         = 0
-        self.ctpg_day_ymax         = 0
-
-        self.ctpg_min_name         = None
-        self.ctpg_min_index        = None
-        self.ctpg_min_lastmoveavg  = None
-        self.ctpg_min_lastcandle   = None
-        self.ctpg_min_infiniteline = None
-        self.ctpg_min_lastmoneybar = None
-        self.ctpg_min_legend1      = None
-        self.ctpg_min_legend2      = None
-        self.ctpg_min_ymin         = 0
-        self.ctpg_min_ymax         = 0
-
         self.srqsize = 0
         self.stqsize = 0
         self.ssqsize = 0
@@ -267,9 +244,9 @@ class Window(QMainWindow):
         self.tm_mc1  = 0
         self.tm_mc2  = 0
 
-        subprocess.Popen('python kiwoom_manager.py')
+        subprocess.Popen('python ./stock/kiwoom_manager.py')
 
-        port_num = GetPortNumber()
+        port_num = get_port_number()
         self.zmqserv = ZmqServ(wdzservQ, port_num)
         self.zmqserv.start()
 
@@ -300,7 +277,6 @@ class Window(QMainWindow):
         self.draw_realchart     = DrawRealChart(self)
         self.draw_realjisuchart = DrawRealJisuChart(self)
         self.draw_treemap       = DrawTremap(self, qlist)
-        self.draw_chart_daymin  = DrawChartDayMin(self)
 
         self.writer = Writer(windowQ)
         # noinspection PyUnresolvedReferences
@@ -316,11 +292,9 @@ class Window(QMainWindow):
         # noinspection PyUnresolvedReferences
         self.writer.signal6.connect(self.draw_treemap.draw_treemap)
         # noinspection PyUnresolvedReferences
-        self.writer.signal7.connect(self.draw_chart_daymin.draw_chart_daymin)
+        self.writer.signal7.connect(self.ImageUpdate)
         # noinspection PyUnresolvedReferences
-        self.writer.signal8.connect(self.ImageUpdate)
-        # noinspection PyUnresolvedReferences
-        self.writer.signal9.connect(self.UpdateSQsize)
+        self.writer.signal8.connect(self.UpdateSQsize)
         self.writer.start()
 
         font_name = 'C:/Windows/Fonts/malgun.ttf'
@@ -426,8 +400,6 @@ class Window(QMainWindow):
     def ShowJisu(self):                show_jisu(self)
     def ShowDB(self):                  show_db(self)
     def ShowBackScheduler(self):       show_backscheduler(self)
-    def ShowChartDay(self):            show_chart_day(self)
-    def ShowChartMin(self):            show_chart_min(self)
     def ShowKimp(self):                show_kimp(self, qlist)
     def ShowOrder(self):               show_order(self)
     def ShowVideo(self):               show_video(self)
@@ -479,7 +451,7 @@ class Window(QMainWindow):
     def ChangeBackeDate(self):         change_back_edate(self)
     # =================================================================================================================
     def beButtonClicked_01(self):      bebutton_clicked_01(self)
-    def BacktestEngineVarsReset(self): backtest_engine_vars_reset(self)
+    def BacktestEngineKill(self):      backtest_engine_kill(self, windowQ)
     def BackBench(self):               back_bench(self, windowQ, backQ, soundQ, totalQ, liveQ)
     def sdButtonClicked_01(self):      sdbutton_clicked_01(self)
     def sdButtonClicked_02(self):      sdbutton_clicked_02(self, windowQ, backQ, soundQ, totalQ, liveQ)
@@ -548,8 +520,10 @@ class Window(QMainWindow):
     def bActivated_03(self): bactivated_03(self)
     # =================================================================================================================
     def GetFixStrategy(self, strategy, gubun):     return get_fix_strategy(self, strategy, gubun)
-    def GetOptivarsToGavars(self, opti_vars_text): return get_optivars_to_gavars(self, opti_vars_text)
-    def GetGavarsToOptivars(self, ga_vars_text):   return get_gavars_to_optivars(self, ga_vars_text)
+    @staticmethod
+    def GetOptivarsToGavars(opti_vars_text):       return get_optivars_to_gavars(opti_vars_text)
+    @staticmethod
+    def GetGavarsToOptivars(ga_vars_text):         return get_gavars_to_optivars(ga_vars_text)
     def GetStgtxtToVarstxt(self, buystg, sellstg): return get_stgtxt_to_varstxt(self, buystg, sellstg)
     @staticmethod
     def GetStgtxtSort(buystg, sellstg):            return get_stgtxt_sort(buystg, sellstg)
@@ -718,7 +692,7 @@ class Window(QMainWindow):
     def BackCodeTest3(gubun, conds_code):   return back_code_test3(gubun, conds_code, testQ)
     @staticmethod
     def ClearBacktestQ():                   clear_backtestQ(backQ, totalQ)
-    def BacktestProcessKill(self):          backtest_process_kill(self, totalQ)
+    def BacktestProcessKill(self, gubun):   backtest_process_kill(self, gubun, totalQ)
     # =================================================================================================================
     def lvButtonClicked_01(self):       lvbutton_clicked_01(self)
     def lvButtonClicked_02(self):       lvbutton_clicked_02(self)
@@ -753,7 +727,6 @@ class Window(QMainWindow):
     def sjButtonClicked_15(self): sj_button_cicked_15(self, proc_query, queryQ)
     def sjButtonClicked_16(self): sj_button_cicked_16(self, proc_query, queryQ)
     def sjButtonClicked_17(self): sj_button_cicked_17(self)
-    def sjButtonClicked_18(self): sj_button_cicked_18(self)
     def sjButtonClicked_19(self): sj_button_cicked_19(self)
     def sjButtonClicked_20(self): sj_button_cicked_20(self)
     def sjButtonClicked_21(self): sj_button_cicked_21(self)

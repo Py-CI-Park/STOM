@@ -1,12 +1,10 @@
 import os
-import sys
 import psutil
 import sqlite3
 import pandas as pd
 from multiprocessing import Process
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from utility.static import now
-from utility.setting import DB_PATH
+
+DB_PATH = '../_database'
 
 
 def Updater(gubun, file_list_):
@@ -15,7 +13,7 @@ def Updater(gubun, file_list_):
             return 1
         return 0
 
-    print(f'[{now()}][{gubun}] 데이터베이스 관심종목 칼럼 업데이트 시작')
+    print(f'[{gubun}] 데이터베이스 관심종목 칼럼 업데이트 시작')
 
     last = len(file_list_)
     for k, db_name in enumerate(file_list_):
@@ -28,10 +26,10 @@ def Updater(gubun, file_list_):
             df = pd.read_sql(f"SELECT * FROM '{code}'", con)
             df['관심종목'] = df['index'].apply(lambda x: convert(x))
             df.to_sql(code, con, index=False, if_exists='replace', chunksize=1000)
-        print(f'[{now()}][{gubun}] 데이터베이스 관심종목 칼럼 업데이트 중 ... [{k + 1}/{last}]')
+        print(f'[{gubun}] 데이터베이스 관심종목 칼럼 업데이트 중 ... [{k + 1}/{last}]')
         con.close()
 
-    print(f'[{now()}][{gubun}] 데이터베이스 관심종목 칼럼 업데이트 완료')
+    print(f'[{gubun}] 데이터베이스 관심종목 칼럼 업데이트 완료')
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import sqlite3
 import pandas as pd
 from utility.static import now
 from utility.setting import ui_num, DB_TRADELIST, DB_SETTING, DB_STRATEGY, DB_COIN_TICK, DB_PATH, DB_STOCK_BACK, \
-    DB_COIN_BACK, DB_STOCK_TICK, DB_COIN_DAY, DB_COIN_MIN, DB_BACKTEST
+    DB_COIN_BACK, DB_STOCK_TICK, DB_BACKTEST
 
 class Query:
     def __init__(self, qlist):
@@ -25,8 +25,6 @@ class Query:
         self.cur3    = self.con3.cursor()
         self.con4    = sqlite3.connect(DB_COIN_TICK)
         self.cur4    = self.con4.cursor()
-        self.con5    = sqlite3.connect(DB_COIN_DAY)
-        self.con6    = sqlite3.connect(DB_COIN_MIN)
         self.list_coin_table = []
         self.remove_trigger()
         self.create_trigger()
@@ -37,20 +35,12 @@ class Query:
         self.con2.close()
         self.con3.close()
         self.con4.close()
-        self.con5.close()
-        self.con6.close()
 
     def Start(self):
         columns_tc = [
             'index', '현재가', '시가', '고가', '저가', '등락율', '당일거래대금', '체결강도', '초당매수수량', '초당매도수량', '초당거래대금', '고저평균대비등락율', '매도총잔량', '매수총잔량',
             '매도호가5', '매도호가4', '매도호가3', '매도호가2', '매도호가1', '매수호가1', '매수호가2', '매수호가3', '매수호가4', '매수호가5',
             '매도잔량5', '매도잔량4', '매도잔량3', '매도잔량2', '매도잔량1', '매수잔량1', '매수잔량2', '매수잔량3', '매수잔량4', '매수잔량5', '매도수5호가잔량합', '관심종목'
-        ]
-        columns_dm = [
-            '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240',
-            '최고종가5', '최고고가5', '최고종가10', '최고고가10', '최고종가20', '최고고가20', '최고종가60', '최고고가60', '최고종가120', '최고고가120', '최고종가240', '최고고가240',
-            '최저종가5', '최저저가5', '최저종가10', '최저저가10', '최저종가20', '최저저가20', '최저종가60', '최저저가60', '최저종가120', '최저저가120', '최저종가240', '최저저가240',
-            '종가합계4', '종가합계9', '종가합계19', '종가합계59', '종가합계119', '종가합계239', '최고거래대금'
         ]
         while True:
             query = self.queryQ.get()
@@ -102,32 +92,6 @@ class Query:
                     con.close()
                 except Exception as e:
                     self.windowQ.put((ui_num['S로그텍스트'], f'시스템 명령 오류 알림 - Query 백테디비 {e}'))
-            elif query[0] == '코인일봉':
-                try:
-                    if len(query) == 4:
-                        if type(query[1]) == pd.DataFrame:
-                            query[1].to_sql(query[2], self.con5, if_exists=query[3], chunksize=1000)
-                        else:
-                            query_del = f"DELETE FROM '{query[2]}' WHERE 일자 = {query[1][0]}"
-                            self.con5.execute(query_del)
-                            self.con5.commit()
-                            df = pd.DataFrame([query[1]], columns=['일자'] + columns_dm)
-                            df.to_sql(query[2], self.con5, index=False, if_exists=query[3], chunksize=1000)
-                except Exception as e:
-                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - Query 코인일봉 {e}'))
-            elif query[0] == '코인분봉':
-                try:
-                    if len(query) == 4:
-                        if type(query[1]) == pd.DataFrame:
-                            query[1].to_sql(query[2], self.con6, if_exists=query[3], chunksize=1000)
-                        else:
-                            query_del = f"DELETE FROM '{query[2]}' WHERE 체결시간 = {query[1][0]}"
-                            self.con6.execute(query_del)
-                            self.con6.commit()
-                            df = pd.DataFrame([query[1]], columns=['체결시간'] + columns_dm)
-                            df.to_sql(query[2], self.con6, index=False, if_exists=query[3], chunksize=1000)
-                except Exception as e:
-                    self.windowQ.put((ui_num['C로그텍스트'], f'시스템 명령 오류 알림 - Query 코인분봉 {e}'))
             elif query[0] == '코인디비':
                 try:
                     if len(query) == 2:

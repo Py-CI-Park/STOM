@@ -1,8 +1,8 @@
 from PyQt5.QtCore import QDate
 from PyQt5.QtWidgets import QLabel
-from utility.setting import columns_bt
 from ui.set_style import qfont12, qfont13, qfont14, style_pgbar, style_bc_dk
 from ui.set_text import optistandard, optitext, train_period, valid_period, test_period, optimized_count, opti_standard
+from utility.setting import columns_bt
 
 
 class SetCoinBack:

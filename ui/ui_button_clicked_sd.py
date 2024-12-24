@@ -11,7 +11,7 @@ from backtester.optimiz_conditions import OptimizeConditions
 from backtester.optimiz_genetic_algorithm import OptimizeGeneticAlgorithm
 from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from ui.set_text import famous_saying
-from utility.setting import DB_STRATEGY
+from utility.setting import DB_STRATEGY, ui_num
 from utility.static import qtest_qwait
 
 
@@ -25,12 +25,7 @@ def bebutton_clicked_01(ui):
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if buttonReply == QMessageBox.Yes:
-                ui.backtest_engine = False
-                for proc in ui.back_procs:
-                    proc.kill()
-                for proc in ui.bact_procs:
-                    proc.kill()
-                ui.BacktestEngineVarsReset()
+                ui.BacktestEngineKill()
                 qtest_qwait(3)
                 ui.StartBacktestEngine('주식')
     elif ui.main_btn == 3 or (ui.dialog_scheduler.isVisible() and ui.sd_pushButtonnn_01.text() == '코인'):
@@ -42,17 +37,18 @@ def bebutton_clicked_01(ui):
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No
             )
             if buttonReply == QMessageBox.Yes:
-                ui.backtest_engine = False
-                for proc in ui.back_procs:
-                    proc.kill()
-                for proc in ui.bact_procs:
-                    proc.kill()
-                ui.BacktestEngineVarsReset()
+                ui.BacktestEngineKill()
                 qtest_qwait(3)
                 ui.StartBacktestEngine('코인')
 
-def backtest_engine_vars_reset(ui):
+def backtest_engine_kill(ui, windowQ):
     ui.ClearBacktestQ()
+    for p in ui.bact_procs:
+        p.kill()
+    for p in ui.back_procs:
+        p.kill()
+    for q in ui.back_pques:
+        q.close()
     ui.back_procs = []
     ui.bact_procs = []
     ui.back_pques = []
@@ -64,6 +60,8 @@ def backtest_engine_vars_reset(ui):
     ui.endday     = 0
     ui.starttime  = 0
     ui.endtime    = 0
+    ui.backtest_engine = False
+    windowQ.put((ui_num['백테엔진'], '<font color=#45cdf7>모든 백테엔진 프로세스가 종료되었습니다.</font>'))
 
 def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     buttonReply = QMessageBox.question(
@@ -72,7 +70,7 @@ def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     )
     if buttonReply == QMessageBox.Yes:
         if ui.BacktestProcessAlive():
-            QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+            QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
         else:
             if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
                 ui.BackTestengineShow('주식')
@@ -116,7 +114,7 @@ def sdbutton_clicked_01(ui):
 
 def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
         bt_gubun = ui.sd_pushButtonnn_01.text()
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):

@@ -490,7 +490,7 @@ class SetDialogEtc:
         self.ui.dialog_hoga.setFixedSize(572, 355)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
             try:
-                self.ui.dialog_hoga.move(self.ui.dict_set['창위치'][20], self.ui.dict_set['창위치'][21])
+                self.ui.dialog_hoga.move(self.ui.dict_set['창위치'][16], self.ui.dict_set['창위치'][17])
             except:
                 pass
         self.ui.hj_tableWidgett_01.setGeometry(5, 5, 562, 42)
@@ -625,7 +625,7 @@ class SetDialogEtc:
         self.ui.dialog_order.setFixedSize(232, 303)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
             try:
-                self.ui.dialog_order.move(self.ui.dict_set['창위치'][24], self.ui.dict_set['창위치'][25])
+                self.ui.dialog_order.move(self.ui.dict_set['창위치'][20], self.ui.dict_set['창위치'][21])
             except:
                 pass
         self.ui.od_groupBoxxxxx_01.setGeometry(5, 5, 222, 293)
@@ -649,7 +649,7 @@ class SetDialogEtc:
         self.ui.dialog_pattern.setFixedSize(495, 765)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
             try:
-                self.ui.dialog_pattern.move(self.ui.dict_set['창위치'][26], self.ui.dict_set['창위치'][27])
+                self.ui.dialog_pattern.move(self.ui.dict_set['창위치'][22], self.ui.dict_set['창위치'][23])
             except:
                 pass
         self.ui.pt_groupBoxxxxx_01.setGeometry(5, 10, 485, 240)
@@ -755,7 +755,7 @@ class SetDialogEtc:
         self.ui.dialog_kimp.setFixedSize(535, 763)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
             try:
-                self.ui.dialog_kimp.move(self.ui.dict_set['창위치'][18], self.ui.dict_set['창위치'][19])
+                self.ui.dialog_kimp.move(self.ui.dict_set['창위치'][14], self.ui.dict_set['창위치'][15])
             except:
                 pass
         self.ui.kp_tableWidget_01.setGeometry(5, 5, 525, 753)

@@ -22,9 +22,7 @@ class Total:
         self.ui_gubun     = ui_gubun
         self.dict_set     = DICT_SET
 
-        self.start        = now()
         self.back_count   = None
-
         self.dict_cn      = None
         self.buystg       = None
         self.sellstg      = None
@@ -46,95 +44,112 @@ class Total:
         self.stdp         = -2_147_483_648
         self.sub_total    = 0
         self.total_count  = 0
+        self.total_count2 = 0
 
         self.Start()
 
     def Start(self):
-        st  = {}
-        tc  = 0
-        bc  = 0
-        tbc = 0
-        sc  = 0
-        dict_tsg = {}
-        dict_bct = {}
+        tt = 0
+        sc = 0
+        bc = 0
+        st = {}
+        start = now()
+        dict_dict_tsg = {}
+        dict_dict_bct = {}
         while True:
             data = self.tq.get()
             if data[0] == '백테완료':
                 bc  += 1
-                tbc += 1
-                if data[1]: tc += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, self.start))
-
                 if bc == self.back_count:
                     bc = 0
-                    if tc > 0:
-                        tc = 0
-                        for q in self.stq_list:
-                            q.put(('백테완료', '미분리집계'))
-                    else:
-                        for vars_key in range(20):
-                            self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
+                    for q in self.stq_list:
+                        q.put(('백테완료', '미분리집계'))
 
             elif data[0] == '백테결과':
-                _, vars_key, list_tsg, arry_bct = data
-                if list_tsg is not None:
-                    dict_tsg[vars_key] = list_tsg
-                    dict_bct[vars_key] = arry_bct
-
                 sc += 1
+                _, vars_key, _dict_dict_tsg, _dict_dict_bct = data
+                if _dict_dict_tsg:
+                    for vars_turn, _dict_tsg in _dict_dict_tsg.items():
+                        if vars_turn not in dict_dict_tsg.keys():
+                            dict_dict_tsg[vars_turn] = {}
+                            dict_dict_bct[vars_turn] = {}
+                        dict_dict_tsg[vars_turn][vars_key] = _dict_tsg[vars_key]
+                        dict_dict_bct[vars_turn][vars_key] = _dict_dict_bct[vars_turn][vars_key]
+
                 if sc == 20:
                     sc = 0
                     columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
                                '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    k  = 0
-                    for vars_key, list_tsg in dict_tsg.items():
-                        data = ('결과집계', columns, list_tsg, dict_bct[vars_key])
-                        if self.valid_days is not None:
-                            for i, vdays in enumerate(self.valid_days):
-                                data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_key)
-                                self.tdq_list[k % 10].put(data_)
-                                self.vdq_list[k % 10].put(data_)
+                    k = 0
+                    for vars_turn, _dict_tsg in dict_dict_tsg.items():
+                        for vars_key, list_tsg in _dict_tsg.items():
+                            arry_bct = dict_dict_bct[vars_turn][vars_key]
+                            data = ('결과집계', columns, list_tsg, arry_bct)
+                            if self.valid_days is not None:
+                                for i, vdays in enumerate(self.valid_days):
+                                    data_ = data + (vdays[0], vdays[1], vdays[2], vdays[3], i, vars_turn, vars_key)
+                                    self.tdq_list[k % 10].put(data_)
+                                    self.vdq_list[k % 10].put(data_)
+                                    k += 1
+                            else:
+                                data_ = data + (self.day_count, vars_turn, vars_key)
+                                self.stq_list[k % 20].put(data_)
                                 k += 1
-                        else:
-                            data_ = data + (self.day_count, vars_key)
-                            self.stq_list[k % 20].put(data_)
-                            k += 1
 
-                    if len(dict_tsg) < 20:
-                        zero_key_list = [x for x in range(20) if x not in dict_tsg.keys()]
-                        for vars_key in zero_key_list:
-                            self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, None)
-                    dict_tsg = {}
-                    dict_bct = {}
+                    for vars_turn in range(50):
+                        if vars_turn not in dict_dict_tsg.keys():
+                            for vars_key in range(20):
+                                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), None)
+                        else:
+                            for vars_key in range(20):
+                                if vars_key not in dict_dict_tsg[vars_turn].keys():
+                                    self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), None)
+                    dict_dict_tsg = {}
+                    dict_dict_bct = {}
 
             elif data[0] in ('TRAIN', 'VALID'):
-                gubun, num, data, vars_key = data
-                if vars_key not in self.dict_t.keys(): self.dict_t[vars_key] = {}
-                if vars_key not in self.dict_v.keys(): self.dict_v[vars_key] = {}
-                if vars_key not in st.keys(): st[vars_key] = 0
+                gubun, num, data, vars_turn, vars_key = data
+                if vars_turn not in self.dict_t.keys():
+                    self.dict_t[vars_turn] = {}
+                if vars_key not in self.dict_t[vars_turn].keys():
+                    self.dict_t[vars_turn][vars_key] = {}
+                if vars_turn not in self.dict_v.keys():
+                    self.dict_v[vars_turn] = {}
+                if vars_key not in self.dict_v[vars_turn].keys():
+                    self.dict_v[vars_turn][vars_key] = {}
+                if vars_turn not in st.keys():
+                    st[vars_turn] = {}
+                if vars_key not in st[vars_turn].keys():
+                    st[vars_turn][vars_key] = 0
+
                 if gubun == 'TRAIN':
-                    self.dict_t[vars_key][num] = data
+                    self.dict_t[vars_turn][vars_key][num] = data
                 else:
-                    self.dict_v[vars_key][num] = data
-                st[vars_key] += 1
-                if st[vars_key] == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, self.dict_t[vars_key], self.dict_v[vars_key], self.dict_set['교차검증가중치'])
-                    st[vars_key] = 0
+                    self.dict_v[vars_turn][vars_key][num] = data
+
+                st[vars_turn][vars_key] += 1
+                if st[vars_turn][vars_key] == self.sub_total:
+                    self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), self.dict_t[vars_turn][vars_key], self.dict_v[vars_turn][vars_key], self.dict_set['교차검증가중치'])
+                    st[vars_turn][vars_key] = 0
 
             elif data[0] == 'ALL':
-                _, _, data, vars_key = data
-                self.stdp = SendTextAndStd(self.GetSendData(vars_key), self.std_list, self.betting, data)
+                _, _, data, vars_turn, vars_key = data
+                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), data)
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
             elif data[0] == '변수정보':
                 self.vars_lists = data[1]
-            elif data[0] == '시작시간':
-                self.start = data[1]
-                tbc = 0
+                start = now()
+                tt = 0
             elif data[0] == '경우의수':
                 self.total_count = data[1]
                 self.back_count  = data[2]
+            elif data[0] == '전체틱수':
+                self.total_count2 += data[1]
+            elif data == '탐색완료':
+                tt += 1
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2, start))
             elif data == '백테중지':
                 self.mq.put('백테중지')
                 break
@@ -160,8 +175,9 @@ class Total:
         else:
             self.sub_total = 2
 
-    def GetSendData(self, vars_key=0):
-        return ['GA최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vars_key, self.vars_lists[vars_key], self.startday, self.endday]
+    def GetSendData(self, vars_turn, vars_key):
+        index = vars_turn * 20 + vars_key
+        return ['GA최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vars_turn, vars_key, self.vars_lists[index], self.startday, self.endday, self.std_list, self.betting]
 
 
 class OptimizeGeneticAlgorithm:
@@ -175,9 +191,9 @@ class OptimizeGeneticAlgorithm:
         self.stq_list    = stq_list
         self.backname    = backname
         self.ui_gubun    = ui_gubun
-        self.fixed_list  = []
-        self.opti_list   = []
+        self.high_list  = []
         self.vars_list   = []
+        self.opti_lists  = []
         self.high_vars   = []
         self.result      = {}
         self.vars        = {}
@@ -188,6 +204,8 @@ class OptimizeGeneticAlgorithm:
         self.Start()
 
     def Start(self):
+        self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
+        start_time = now()
         data = self.bq.get()
         if self.ui_gubun != 'CF':
             betting = float(data[0]) * 1000000
@@ -249,7 +267,7 @@ class OptimizeGeneticAlgorithm:
         con.close()
 
         if len(df_mt) == 0 or back_count == 0:
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.'))
             self.SysExit(True)
 
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
@@ -291,7 +309,7 @@ class OptimizeGeneticAlgorithm:
 
         optivars_ = compile(df['전략코드'][optivars_name], '<string>', 'exec')
         try:
-            exec(optivars_, None, locals())
+            exec(optivars_)
         except Exception as e:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'시스템 명령 오류 알림 - {self.backname} 변수설정 {e}'))
             self.SysExit(True)
@@ -299,8 +317,8 @@ class OptimizeGeneticAlgorithm:
         self.total_count = 1
         for value in list(self.vars.values()):
             self.total_count *= len(value[0])
-            self.opti_list.append(value[0])
-            self.fixed_list.append(value[1])
+            self.vars_list.append(value[0])
+            self.high_list.append(value[1])
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
 
         mq = Queue()
@@ -314,21 +332,21 @@ class OptimizeGeneticAlgorithm:
         for q in self.pq_list:
             q.put(data)
 
-        start = now()
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스터 시작'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 시작'))
 
         k    = 1
-        vc   = len(self.opti_list)
+        vc   = len(self.vars_list)
+        hstd = -2_147_483_648
         goal = 2 ** int(round(vc / 2))
-        self.vars_list = []
+        self.opti_lists = []
         while self.total_count > goal:
             if k > 1: self.SaveVarslist(100, optistandard, buystg, sellstg)
-            self.tq.put(('시작시간', now()))
             self.tq.put(('경우의수', vc * back_count, back_count))
 
-            for _ in range(vc):
+            for i in range(vc):
                 vars_lists = self.GetVarslist()
-                if vars_lists:
+                if len(vars_lists) == 1000:
+                    self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 [{k}][{i+1}/{vc}]단계 시작, 최고 기준값[{hstd}]'))
                     data = ('변수정보', vars_lists)
                     self.tq.put(data)
                     for q in self.stq_list:
@@ -336,15 +354,17 @@ class OptimizeGeneticAlgorithm:
                     for q in self.pq_list:
                         q.put(data)
 
-                    for _ in range(20):
+                    for _ in range(1000):
                         data = mq.get()
                         if type(data) == str:
                             if len(self.result) > 0:
                                 self.SaveVarslist(100, optistandard, buystg, sellstg)
                             self.SysExit(True)
                         else:
-                            std, vars_key = data
-                            self.result[std] = vars_lists[vars_key]
+                            vars_turn, vars_key, std = data
+                            index = vars_turn * 20 + vars_key
+                            self.result[std] = vars_lists[index]
+                            if std > hstd: hstd = std
                 else:
                     self.total_count = 0
                     break
@@ -353,14 +373,13 @@ class OptimizeGeneticAlgorithm:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 모든 경우의 수 탐색 완료'))
                 break
 
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 {k}단계 완료'))
-            self.SetOptilist(k, int(vc / 4) if vc / 4 > 5 else 5, goal, optistandard)
+            if len(self.result) > 0: self.SetOptilist(k, int(vc / 4) if vc / 4 > 5 else 5, goal, optistandard)
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 현재 경우의수[{self.total_count:,.0f}] 목표 경우의수[{goal:,.0f}]'))
             k += 1
 
         self.SaveVarslist(100, optistandard, buystg, sellstg)
 
-        exec(optivars_, None, locals())
+        exec(optivars_)
         optivars = optivars.split('self.vars[0]')[0]
         for i in range(len(self.vars)):
             if self.vars[i][1] != self.high_vars[i]:
@@ -377,27 +396,25 @@ class OptimizeGeneticAlgorithm:
         mq.close()
         if self.dict_set['스톰라이브']: self.lq.put(f'{self.backname}')
         self.sq.put('지에이 최적화가 완료되었습니다.')
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - start}'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 소요시간 {now() - start_time}'))
         self.SysExit(False)
 
     def GetVarslist(self):
         vars_lists = []
         limit_time = timedelta_sec(30)
-        for _ in range(20):
-            vars_list  = []
-            while vars_list == [] or (vars_list in self.vars_list and now() < limit_time):
+        for _ in range(1000):
+            while now() < limit_time:
                 vars_list = []
-                for vars_ in self.opti_list:
+                for vars_ in self.vars_list:
                     vars_list.append(random.choice(vars_))
-            if now() >= limit_time:
-                vars_lists = []
-            else:
-                vars_lists.append(vars_list)
-                self.vars_list.append(vars_list)
+                if vars_list not in self.opti_lists:
+                    vars_lists.append(vars_list)
+                    self.opti_lists.append(vars_list)
+                    break
         return vars_lists
 
     def SetOptilist(self, count, rank, goal, optistandard):
-        self.opti_list = [[] for _ in self.opti_list]
+        self.vars_list = [[] for _ in self.vars_list]
         rs_list = sorted(self.result.items(), key=operator.itemgetter(0), reverse=True)
 
         text = f'{self.backname} 결과\n'
@@ -407,15 +424,15 @@ class OptimizeGeneticAlgorithm:
             else:
                 text += f' 기준값 [{std:.2f}] 변수 {vars_list}\n'
             for i, vars_ in enumerate(vars_list):
-                if vars_ not in self.opti_list[i]:
-                    self.opti_list[i].append(vars_)
+                if vars_ not in self.vars_list[i]:
+                    self.vars_list[i].append(vars_)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text[:-1]))
 
         self.total_count = 1
-        for i, vars_ in enumerate(self.opti_list):
-            if count < 2 and self.fixed_list[i] not in vars_:
-                self.opti_list[i].append(self.fixed_list[i])
-            self.opti_list[i].sort()
+        for i, vars_ in enumerate(self.vars_list):
+            if count < 2 and self.high_list[i] not in vars_:
+                self.vars_list[i].append(self.high_list[i])
+            self.vars_list[i].sort()
             self.total_count *= len(vars_)
 
         if self.total_count <= goal:

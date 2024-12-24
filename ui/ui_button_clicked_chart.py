@@ -1,6 +1,5 @@
 import sqlite3
 import pandas as pd
-from threading import Timer
 from multiprocessing import Process
 from PyQt5.QtWidgets import QMessageBox
 from coin.strategy_upbit import StrategyUpbit
@@ -8,7 +7,7 @@ from coin.simulator_upbit import ReceiverUpbit2, TraderUpbit2
 from coin.strategy_binance_future import StrategyBinanceFuture
 from coin.simulator_binance import ReceiverBinanceFuture2, TraderBinanceFuture2
 from utility.setting import DB_PATH
-from utility.static import qtest_qwait
+from utility.static import qtest_qwait, threading_timer
 
 
 def ct_button_clicked_01(ui, wdzservQ, qlist):
@@ -83,17 +82,6 @@ def ct_button_clicked_03(ui, windowQ, wdzservQ, cstgQ):
     date       = ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
     start_time = int(ui.tt_lineEdittttt_01.text())
     end_time   = int(ui.tt_lineEdittttt_02.text())
-
-    if gubun == '주식' and ui.dict_set['주식분봉데이터']:
-        wdzservQ.put(('simul_strategy', ('분봉재로딩', code, int(date + '090000'))))
-    elif gubun != '주식' and ui.dict_set['코인분봉데이터']:
-        cstgQ.put(('분봉재로딩', code, int(date + '000000')))
-    qtest_qwait(1)
-
-    if gubun == '주식' and ui.dict_set['주식일봉데이터']:
-        wdzservQ.put(('simul_strategy', ('일봉재로딩', code, int(date))))
-    elif gubun != '주식' and ui.dict_set['코인일봉데이터']:
-        wdzservQ.put(('simul_strategy', ('일봉재로딩', code, int(date + '000000'))))
     qtest_qwait(1)
 
     ui.ChartClear()
@@ -150,7 +138,8 @@ def tick_put(ui, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ):
         ui.ct_test += 1
         speed = int(ui.tt_comboBoxxxxx_01.currentText())
         if not ui.test_pause:
-            Timer(round(1 / speed, 2), tick_put, args=[ui, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ]).start()
+            data = [ui, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ]
+            threading_timer(round(1 / speed, 2), tick_put, data)
     except:
         if gubun == '주식':
             wdzservQ.put(('simul_strategy', ('관심목록', ())))

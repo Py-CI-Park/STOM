@@ -8,25 +8,9 @@ from utility.static import strf_time, timedelta_sec, comma2int, comma2float, now
 
 def cell_clicked_01(ui, row, col):
     stock = True
-    tableWidget = None
-    if ui.focusWidget() == ui.std_tableWidgettt:
-        tableWidget = ui.std_tableWidgettt
-    elif ui.focusWidget() == ui.sgj_tableWidgettt:
-        tableWidget = ui.sgj_tableWidgettt
-    elif ui.focusWidget() == ui.scj_tableWidgettt:
-        tableWidget = ui.scj_tableWidgettt
-    elif ui.focusWidget() == ui.ctd_tableWidgettt:
+    if ui.focusWidget() in (ui.ctd_tableWidgettt, ui.cgj_tableWidgettt, ui.ccj_tableWidgettt):
         stock = False
-        tableWidget = ui.ctd_tableWidgettt
-    elif ui.focusWidget() == ui.cgj_tableWidgettt:
-        stock = False
-        tableWidget = ui.cgj_tableWidgettt
-    elif ui.focusWidget() == ui.ccj_tableWidgettt:
-        stock = False
-        tableWidget = ui.ccj_tableWidgettt
-    if tableWidget is None:
-        return
-    item = tableWidget.item(row, 0)
+    item = ui.focusWidget().item(row, 0)
     if item is None:
         return
     name = item.text()
@@ -74,17 +58,12 @@ def cell_clicked_03(ui, row, ctraderQ):
                 ctraderQ.put((p, code, c, oc, now(), True))
 
 def cell_clicked_04(ui, row):
-    tableWidget = None
     searchdate = ''
     if ui.focusWidget() == ui.sds_tableWidgettt:
-        tableWidget = ui.sds_tableWidgettt
         searchdate = ui.s_calendarWidgett.selectedDate().toString('yyyyMMdd')
     elif ui.focusWidget() == ui.cds_tableWidgettt:
-        tableWidget = ui.cds_tableWidgettt
         searchdate = ui.c_calendarWidgett.selectedDate().toString('yyyyMMdd')
-    if tableWidget is None:
-        return
-    item = tableWidget.item(row, 1)
+    item = ui.focusWidget().item(row, 1)
     if item is None:
         return
     name = item.text()
@@ -97,16 +76,10 @@ def cell_clicked_04(ui, row):
     ui.ShowDialog(name, tickcount, searchdate, 4)
 
 def cell_clicked_05(ui, row):
-    tableWidget = None
     gubun = '주식'
-    if ui.focusWidget() == ui.sns_tableWidgettt:
-        tableWidget = ui.sns_tableWidgettt
-    elif ui.focusWidget() == ui.cns_tableWidgettt:
-        tableWidget = ui.cns_tableWidgettt
+    if ui.focusWidget() == ui.cns_tableWidgettt:
         gubun = '코인'
-    if tableWidget is None:
-        return
-    item = tableWidget.item(row, 0)
+    item = ui.focusWidget().item(row, 0)
     if item is None:
         return
     date = item.text()
@@ -131,9 +104,9 @@ def cell_clicked_05(ui, row):
 def cell_clicked_06(ui, row):
     tableWidget = None
     if ui.focusWidget() == ui.ss_tableWidget_01:
-        tableWidget = ui.ss_tableWidget_01
+        tableWidget  = ui.ss_tableWidget_01
     elif ui.focusWidget() == ui.cs_tableWidget_01:
-        tableWidget = ui.cs_tableWidget_01
+        tableWidget  = ui.cs_tableWidget_01
     if tableWidget is None:
         return
     item = tableWidget.item(row, 0)
@@ -173,14 +146,7 @@ def cell_clicked_07(ui, row, chartQ):
     chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text()))
 
 def cell_clicked_08(ui, row):
-    tableWidget = None
-    if ui.dialog_info.focusWidget() == ui.gs_tableWidgett_01:
-        tableWidget = ui.gs_tableWidgett_01
-    elif ui.dialog_info.focusWidget() == ui.ns_tableWidgett_01:
-        tableWidget = ui.ns_tableWidgett_01
-    if tableWidget is None:
-        return
-    item = tableWidget.item(row, 3)
+    item = ui.dialog_info.focusWidget().item(row, 3)
     if item is None:
         return
     if ui.dialog_web.isVisible():

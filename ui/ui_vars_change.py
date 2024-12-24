@@ -42,12 +42,12 @@ def get_fix_strategy(ui, strategy, gubun):
     return strategy
 
 
-def get_optivars_to_gavars(ui, opti_vars_text):
+def get_optivars_to_gavars(opti_vars_text):
     ga_vars_text = ''
     try:
         vars_ = {}
         opti_vars_text = opti_vars_text.replace('self.vars', 'vars_')
-        exec(compile(opti_vars_text, '<string>', 'exec'), None, locals())
+        exec(compile(opti_vars_text, '<string>', 'exec'))
         for i in range(len(vars_)):
             ga_vars_text = f'{ga_vars_text}self.vars[{i}] = [['
             vars_start, vars_last, vars_gap = vars_[i][0]
@@ -75,12 +75,12 @@ def get_optivars_to_gavars(ui, opti_vars_text):
     return ga_vars_text[:-1]
 
 
-def get_gavars_to_optivars(ui, ga_vars_text):
+def get_gavars_to_optivars(ga_vars_text):
     opti_vars_text = ''
     try:
         vars_ = {}
         ga_vars_text = ga_vars_text.replace('self.vars', 'vars_')
-        exec(compile(ga_vars_text, '<string>', 'exec'), None, locals())
+        exec(compile(ga_vars_text, '<string>', 'exec'))
         for i in range(len(vars_)):
             if len(vars_[i][0]) == 1:
                 vars_high  = vars_[i][1]

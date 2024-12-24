@@ -5,10 +5,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox, QApplication
 from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
-
 from ui.set_style import style_bc_st, style_bc_dk
-from ui.set_text import famous_saying, stock_buy_var, stock_buy_var_, stock_buy1, stock_buy2, stock_buy3, stock_buy4, \
-    stock_buy5, stock_buy6, stock_buy_signal
+from ui.set_text import famous_saying, stock_buy_var, stock_buy1, stock_buy2, stock_buy3, stock_buy4, stock_buy5, stock_buy6, stock_buy_signal
 
 def svjb_button_clicked_01(ui):
     if ui.ss_textEditttt_01.isVisible():
@@ -48,10 +46,7 @@ def svjb_button_clicked_02(ui, proc_query, queryQ):
 
 def svjb_button_clicked_03(ui):
     ui.ss_textEditttt_01.clear()
-    if not ui.dict_set['주식일봉데이터'] and not ui.dict_set['주식분봉데이터']:
-        ui.ss_textEditttt_01.append(stock_buy_var)
-    else:
-        ui.ss_textEditttt_01.append(stock_buy_var_)
+    ui.ss_textEditttt_01.append(stock_buy_var)
     ui.svjb_pushButon_04.setStyleSheet(style_bc_st)
 
 def svjb_button_clicked_04(ui, wdzservQ):

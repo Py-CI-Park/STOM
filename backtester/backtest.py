@@ -27,7 +27,6 @@ class Total:
         gubun_text        = f'{self.gubun}_future' if self.ui_gubun == 'CF' else self.gubun
         self.savename     = f'{gubun_text}_bt'
 
-        self.start        = now()
         self.back_count   = None
         self.dict_bkvc    = {}
         self.dict_bkvc_   = {}
@@ -65,14 +64,13 @@ class Total:
         tc = 0
         bc = 0
         sc = 0
-        dict_tsg = {}
-        dict_bct = {}
+        start = now()
         while True:
             data = self.tq.get()
             if data[0] == '백테완료':
                 bc += 1
-                if data[1]: tc += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start))
+                tc += data[1]
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
 
                 if bc == self.back_count:
                     bc = 0
@@ -99,19 +97,13 @@ class Total:
                         q.put('결과전송')
 
             elif data[0] == '백테결과':
-                _, vars_key, list_tsg, arry_bct = data
+                _, _, list_tsg, arry_bct = data
                 if list_tsg is not None:
-                    dict_tsg[vars_key] = list_tsg
-                    dict_bct[vars_key] = arry_bct
-
-                sc += 1
-                if sc == 20:
                     columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
                                '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    self.df_tsg = pd.DataFrame(dict(zip(columns, dict_tsg[0])))
+                    self.df_tsg = pd.DataFrame(dict(zip(columns, list_tsg)))
                     self.df_tsg.set_index('index', inplace=True)
                     self.df_tsg.sort_index(inplace=True)
-                    arry_bct = dict_bct[0]
                     arry_bct = arry_bct[arry_bct[:, 1] > 0]
                     self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
                     if self.blacklist: self.InsertBlacklist()
@@ -170,13 +162,11 @@ class Total:
                     f.write(''.join(coinreadlines))
 
     def Report(self):
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - self.start}'))
         if self.buystg_name == '벤치전략':
             self.mq.put('벤치테스트 완료')
         else:
             self.df_tsg, self.df_bct, result = GetBackResult(self.df_tsg, self.df_bct, self.betting, self.day_count)
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
-
             save_time = strf_time('%Y%m%d%H%M%S')
             startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
             startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
@@ -204,10 +194,9 @@ class Total:
             df.to_sql(self.savename, con, if_exists='append', chunksize=1000)
             self.df_tsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
             con.close()
-            self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록' if self.ui_gubun == 'CF' else f'{self.ui_gubun}상세기록'], self.df_tsg))
+            self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_tsg))
 
-            if self.blacklist:
-                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'블랙리스트 추가 {self.insertlist}'))
+            if self.blacklist: self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'블랙리스트 추가 {self.insertlist}'))
             self.sq.put(f'{self.backname}를 완료하였습니다.')
 
             if self.back_club:
@@ -261,6 +250,8 @@ class BackTest:
         self.Start()
 
     def Start(self):
+        self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
+        start_time = now()
         data = self.bq.get()
         if self.ui_gubun != 'CF':
             betting = float(data[0]) * 1000000
@@ -293,7 +284,7 @@ class BackTest:
         con.close()
 
         if len(df_mt) == 0 or back_count == 0:
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.\n'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.'))
             self.SysExit(True)
 
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
@@ -345,6 +336,7 @@ class BackTest:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'프로세스[{i + 1}] 틱수 [{tc:,.0f}] 초당연산틱수 [{bp:,.0f}]'))
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'벤치점수 집계 전체틱수 [{total_ticks:,.0f}] 초당연산틱수합계 [{bench_point:,.0f}]'))
 
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 소요시간 {now() - start_time}'))
         if self.dict_set['스톰라이브']: self.lq.put(self.backname)
         if data == f'{self.backname} 완료':
             if buystg_name == '벤치전략':

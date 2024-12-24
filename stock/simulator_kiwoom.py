@@ -1,5 +1,8 @@
+import os
+import sys
 import sqlite3
 import pandas as pd
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utility.setting import ui_num, columns_cj, columns_tj, columns_jg, columns_td, columns_tt, DICT_SET, DB_STOCK_BACK
 from utility.static import now, strf_time, strp_time, timedelta_sec, roundfigure_lower, roundfigure_upper, int_hms, GetKiwoomPgSgSp
 

@@ -9,18 +9,18 @@ from utility.setting import ui_num, DICT_SET, PATTERN_PATH, DB_STRATEGY
 
 class Total:
     def __init__(self, mq, wq, tq, ui_gubun, back_cnt, multi):
-        self.mq         = mq
-        self.wq         = wq
-        self.tq         = tq
-        self.ui_gubun   = ui_gubun
-        self.back_cnt   = back_cnt
-        self.multi      = multi
-        self.start      = now()
+        self.mq           = mq
+        self.wq           = wq
+        self.tq           = tq
+        self.ui_gubun     = ui_gubun
+        self.back_count   = back_cnt
+        self.multi        = multi
         self.pattern_buy  = None
         self.pattern_sell = None
         self.Start()
 
     def Start(self):
+        start = now()
         bc, tc, dbpc, dspc = 0, 0, 0, 0
         list_pattern_buy  = []
         list_pattern_sell = []
@@ -28,7 +28,7 @@ class Total:
             data = self.tq.get()
             if data[0] == '백테완료':
                 bc += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_cnt, self.start))
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
             elif data[0] == '학습결과':
                 tc += 1
                 _, pattern_buy, pattern_sell = data
@@ -77,6 +77,8 @@ class PatternModeling:
         self.Start()
 
     def Start(self):
+        self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
+        start_time = now()
         data = self.bq.get()
         if self.ui_gubun != 'CF':
             betting = float(data[0]) * 1000000
@@ -120,6 +122,7 @@ class PatternModeling:
             for q in self.pq_list:
                 q.put(pattern_data)
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 데이터 백테엔진으로 전송 완료'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 백테스트 소요시간 {now() - start_time}'))
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 완료'))
 
         time.sleep(3)

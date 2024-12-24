@@ -490,7 +490,7 @@ class SetDialogBack:
         self.ui.dialog_backengine.setFixedSize(480, 600)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
             try:
-                self.ui.dialog_backengine.move(self.ui.dict_set['창위치'][22], self.ui.dict_set['창위치'][23])
+                self.ui.dialog_backengine.move(self.ui.dict_set['창위치'][18], self.ui.dict_set['창위치'][19])
             except:
                 pass
         self.ui.be_groupBoxxxxx_01.setGeometry(5, 5, 470, 590)

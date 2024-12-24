@@ -16,6 +16,7 @@ class MainProcess:
         get_time = datetime.datetime.now() + datetime.timedelta(seconds=20)
         while True:
             if datetime.datetime.now() > get_time:
+                # noinspection PyUnusedLocal
                 data = self.q.get()
 
             p = psutil.Process(os.getpid())

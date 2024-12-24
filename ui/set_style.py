@@ -31,6 +31,7 @@ color_minus  = QColor(50, 50, 200)
 style_bc_by  = 'QPushButton{background-color: rgb(150, 100, 100);border-style: solid;border-width: 1px;border-color: rgb(150, 100, 100);} QPushButton:hover{background-color: rgb(170, 120, 120);}'
 style_bc_sl  = 'QPushButton{background-color: rgb(100, 100, 150);border-style: solid;border-width: 1px;border-color: rgb(100, 100, 150);} QPushButton:hover{background-color: rgb(120, 120, 170);}'
 style_bc_bs  = 'QPushButton{background-color: rgb(80, 130, 80);border-style: solid;border-width: 1px;border-color: rgb(80, 130, 80);} QPushButton:hover{background-color: rgb(100, 150, 100);}'
+style_bc_bd  = 'QPushButton{background-color: rgb(30, 80, 30);border-style: solid;border-width: 1px;border-color: rgb(30, 80, 30);} QPushButton:hover{background-color: rgb(50, 100, 50);}'
 style_ck_bx  = 'QCheckBox::indicator {width: 15px; height: 15px;}' \
                'QCheckBox::indicator::unchecked {image: url(icon/unchecked.png);}' \
                'QCheckBox::indicator::checked {image: url(icon/checked.png);}'

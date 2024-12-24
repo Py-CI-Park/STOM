@@ -1,20 +1,21 @@
+import os
+import sys
 import math
-import os.path
 import time
-# noinspection PyUnresolvedReferences
-import talib
 import sqlite3
 import numpy as np
 import pandas as pd
-from traceback import print_exc
-from ui.ui_pattern import get_pattern_setup
-from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK, \
-    PATTERN_PATH
 # noinspection PyUnresolvedReferences
-from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, \
-    GetHogaunit, pickle_read
+from talib import stream
+from traceback import print_exc
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from ui.ui_pattern import get_pattern_setup
+from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK, PATTERN_PATH
+# noinspection PyUnresolvedReferences
+from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, GetHogaunit, pickle_read
 
 
+# noinspection PyUnusedLocal
 class StrategyKiwoom:
     def __init__(self, gubun, qlist):
         self.gubun    = gubun
@@ -37,10 +38,6 @@ class StrategyKiwoom:
         self.vars          = {}
         self.vars2         = {}
         self.dict_tik_ar   = {}
-        self.dict_day_ar   = {}
-        self.dict_min_ar   = {}
-        self.dict_day_data = {}
-        self.dict_min_data = {}
         self.dict_sgn_tik  = {}
         self.dict_buy_tik  = {}
 
@@ -438,11 +435,6 @@ class StrategyKiwoom:
         def 전일비각도(tick, pre=0):
             return Parameter_Dgree(61, 9, tick, pre, 1)
 
-        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
-        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
-        self.bhogainfo = bhogainfo[:self.dict_set['주식매수시장가잔량범위']]
-        self.shogainfo = shogainfo[:self.dict_set['주식매도시장가잔량범위']]
-
         시분초 = int(str(체결시간)[8:])
         호가단위 = GetHogaunit(종목코드 in self.tuple_kosd, 현재가, 체결시간)
         VI아래5호가 = GetUvilower5(VI가격, VI호가단위, 체결시간)
@@ -451,6 +443,11 @@ class StrategyKiwoom:
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_ = 0., 0., 0., 0., 0, 0
         체결강도평균_, 최고체결강도_, 최저체결강도_, 최고초당매수수량_, 최고초당매도수량_ = 0., 0., 0., 0, 0
         누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_ = 0, 0, 0., 0., 0., 0.
+
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+        self.bhogainfo = bhogainfo[:self.dict_set['주식매수시장가잔량범위']]
+        self.shogainfo = shogainfo[:self.dict_set['주식매도시장가잔량범위']]
 
         if 종목코드 in self.dict_tik_ar.keys():
             len_array = len(self.dict_tik_ar[종목코드])
@@ -501,6 +498,18 @@ class StrategyKiwoom:
             self.dict_tik_ar[종목코드] = np.array([new_data_tick])
         else:
             self.dict_tik_ar[종목코드] = np.r_[self.dict_tik_ar[종목코드], np.array([new_data_tick])]
+
+        BBU, BBM, BBL = stream.BBANDS(self.dict_tik_ar[종목코드][:, 1], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
+        MACD, MACDS, MACDH = stream.MACD(self.dict_tik_ar[종목코드][:, 1], fastperiod=12, slowperiod=26, signalperiod=9)
+        HT_SINE, HT_LSINE = stream.HT_SINE(self.dict_tik_ar[종목코드][:, 1])
+        HT_PHASE, HT_QUDRA = stream.HT_PHASOR(self.dict_tik_ar[종목코드][:, 1])
+        KAMA = stream.KAMA(self.dict_tik_ar[종목코드][:, 1], timeperiod=30)
+        DEMA = stream.DEMA(self.dict_tik_ar[종목코드][:, 1], timeperiod=30)
+        MAMA, PAMA = stream.MAMA(self.dict_tik_ar[종목코드][:, 1], fastlimit=0.5, slowlimit=0.05)
+        RSI = stream.RSI(self.dict_tik_ar[종목코드][:, 1], timeperiod=14)
+        OBV = stream.OBV(self.dict_tik_ar[종목코드][:, 1], self.dict_tik_ar[종목코드][:, 10])
+        APO = stream.APO(self.dict_tik_ar[종목코드][:, 1], fastperiod=12, slowperiod=26, matype=0)
+        PPO = stream.PPO(self.dict_tik_ar[종목코드][:, 5], fastperiod=12, slowperiod=26, matype=0)
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
         self.indexn = 데이터길이 - 1
@@ -554,7 +563,7 @@ class StrategyKiwoom:
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
-                                exec(self.buystrategy1, None, locals())
+                                exec(self.buystrategy1)
                             except:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy1')))
@@ -564,7 +573,7 @@ class StrategyKiwoom:
                                 self.vars = self.vars2
                                 self.stg_change = True
                             try:
-                                exec(self.buystrategy2, None, locals())
+                                exec(self.buystrategy2)
                             except:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2')))
@@ -606,14 +615,14 @@ class StrategyKiwoom:
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
                         if self.sellstrategy1 is not None:
                             try:
-                                exec(self.sellstrategy1, None, locals())
+                                exec(self.sellstrategy1)
                             except:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy1')))
                     elif self.dict_set['주식장초전략종료시간'] <= 시분초 < self.dict_set['주식장중전략종료시간']:
                         if self.sellstrategy2 is not None:
                             try:
-                                exec(self.sellstrategy2, None, locals())
+                                exec(self.sellstrategy2)
                             except:
                                 print_exc()
                                 self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2')))

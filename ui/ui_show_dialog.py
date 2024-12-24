@@ -156,12 +156,6 @@ def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ,
             else:
                 chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes))
 
-            name = ui.dict_name[code] if code in ui.dict_name.keys() else code
-            if ui.dialog_chart_day.isVisible():
-                chartQ.put(('일봉차트', coin, code, name, searchdate))
-            if ui.dialog_chart_min.isVisible():
-                chartQ.put(('분봉차트', coin, code, name, searchdate))
-
 def show_dialog_chart2(ui):
     if ui.ct_pushButtonnn_06.text() == '확장':
         if ui.ct_pushButtonnn_04.text() == 'CHART 8':
@@ -356,12 +350,6 @@ def show_db(ui):
 
 def show_backscheduler(ui):
     ui.dialog_scheduler.show() if not ui.dialog_scheduler.isVisible() else ui.dialog_scheduler.close()
-
-def show_chart_day(ui):
-    ui.dialog_chart_day.show() if not ui.dialog_chart_day.isVisible() else ui.dialog_chart_day.close()
-
-def show_chart_min(ui):
-    ui.dialog_chart_min.show() if not ui.dialog_chart_min.isVisible() else ui.dialog_chart_min.close()
 
 def show_kimp(ui, qlist):
     if not ui.dialog_kimp.isVisible():

@@ -17,7 +17,6 @@ class Total:
         self.gubun        = gubun
         if self.ui_gubun == 'CF': self.gubun = 'coin_future'
 
-        self.start        = now()
         self.back_count   = None
         self.buystg_name  = None
         self.startday     = None
@@ -32,6 +31,7 @@ class Total:
     def Start(self):
         bc = 0
         index = 0
+        start = now()
         while True:
             data = self.tq.get()
             if data[0] == '백파결과':
@@ -41,7 +41,7 @@ class Total:
                 index += 1
             elif data[0] == '백테완료':
                 bc += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, self.start))
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
                 if bc == self.back_count:
                     break
             elif data[0] == '백테정보':
@@ -61,7 +61,6 @@ class Total:
                 time.sleep(1)
                 sys.exit()
 
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'백파인더 소요시간 {now() - self.start}'))
         if len(self.df_back) > 0:
             save_time = strf_time('%Y%m%d%H%M%S')
             con = sqlite3.connect(DB_BACKTEST)
@@ -93,6 +92,8 @@ class BackFinder:
         self.Start()
 
     def Start(self):
+        self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
+        start_time = now()
         data = self.bq.get()
         avgtime   = int(data[0])
         startday  = int(data[1])
@@ -124,6 +125,7 @@ class BackFinder:
             q.put(data)
 
         data = self.bq.get()
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'백파인더 소요시간 {now() - start_time}'))
         if self.dict_set['스톰라이브']: self.lq.put('백파인더')
         self.SysExit(False) if data == '백파인더 완료' else self.SysExit(True)
 

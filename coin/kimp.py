@@ -7,11 +7,10 @@ import pyupbit
 import requests
 import websockets
 import pandas as pd
-from threading import Timer
 from multiprocessing import Process, Queue
 from binance import AsyncClient, BinanceSocketManager
 from utility.setting import ui_num, columns_kp
-from utility.static import comma2float
+from utility.static import comma2float, threading_timer
 
 
 class Kimp:
@@ -34,7 +33,6 @@ class Kimp:
         self.codes = pyupbit.get_tickers(fiat="KRW")
         self.ConvertedCurrency()
         self.WebsSocketsStart(wsq)
-        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 김프 감시 시작'))
         while True:
             if not self.kimpQ.empty():
                 data = self.kimpQ.get()
@@ -70,7 +68,6 @@ class Kimp:
             if self.kimpQ.empty() and wsq.empty():
                 time.sleep(0.001)
 
-        self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 김프 프로세스 종료'))
         time.sleep(3)
 
     def ConvertedCurrency(self):
@@ -83,7 +80,7 @@ class Kimp:
             pass
 
         if self.threadrun:
-            Timer(5, self.ConvertedCurrency).start()
+            threading_timer(5, self.ConvertedCurrency)
 
     def WebsSocketsStart(self, wsq):
         self.proc_webs = Process(target=WebSocketManager, args=(self.codes, wsq), daemon=True)

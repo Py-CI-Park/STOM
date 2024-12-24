@@ -14,7 +14,7 @@ class BackCodeTest:
             self.vars = {i: 1 for i in range(200)}
         else:
             try:
-                exec(compile(var, '<string>', 'exec'), None, locals())
+                exec(compile(var, '<string>', 'exec'))
             except:
                 print_exc()
                 error = True
@@ -318,7 +318,7 @@ class BackCodeTest:
         매수, 매도, BUY_LONG, SELL_LONG, SELL_SHORT, BUY_SHORT, 강제청산 = False, False, False, False, False, False, False
 
         try:
-            exec(self.stg, None, locals())
+            exec(self.stg)
         except:
             print_exc()
         else:

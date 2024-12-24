@@ -4,8 +4,8 @@ from PyQt5.QtWidgets import QPushButton, QFrame, QTextEdit, QComboBox, QCheckBox
     QDialog, QTableWidget, QAbstractItemView
 from utility import syntax
 from utility.setting import columns_nt, columns_td, columns_jg, columns_cj, columns_hj, columns_hc, columns_ns, \
-    columns_gc, columns_hg, columns_jm1, columns_jm2, columns_bt, columns_nd, columns_stg1, columns_stg2, columns_sb, \
-    columns_kp, columns_sd, columns_hc2
+    columns_gc, columns_hg, columns_jm1, columns_jm2, columns_nd, columns_stg1, columns_stg2, columns_sb, \
+    columns_kp, columns_sd, columns_hc2, columns_bt
 from ui.set_style import qfont12, style_bc_bt, style_bc_st, style_bc_sl, style_bc_bs, style_bc_by, style_fc_dk, \
     style_bc_bb, style_bc_dk
 
@@ -256,7 +256,7 @@ class WidgetCreater:
         dialog.setFont(qfont12)
         return dialog
 
-    def setTablewidget(self, tab, columns, rowcount, vscroll=False, visible=True, clicked=None):
+    def setTablewidget(self, tab, columns, rowcount, vscroll=False, visible=True, clicked=None, valuechanged=None, sortchanged=None):
         tableWidget = QTableWidget(tab)
         tableWidget.verticalHeader().setDefaultSectionSize(23)
         tableWidget.verticalHeader().setVisible(False)
@@ -269,6 +269,12 @@ class WidgetCreater:
         tableWidget.setColumnCount(len(columns))
         tableWidget.setRowCount(rowcount)
         tableWidget.setHorizontalHeaderLabels(columns)
+        if valuechanged is not None:
+            # noinspection PyUnresolvedReferences
+            tableWidget.verticalScrollBar().valueChanged.connect(valuechanged)
+        if sortchanged is not None:
+            # noinspection PyUnresolvedReferences
+            tableWidget.horizontalHeader().sortIndicatorChanged.connect(valuechanged)
         if not visible:
             tableWidget.setVisible(False)
         if clicked is not None:
@@ -466,7 +472,7 @@ class WidgetCreater:
             tableWidget.setColumnWidth(10, 90)
             tableWidget.setColumnWidth(11, 90)
             tableWidget.setColumnWidth(12, 600)
-            tableWidget.setColumnWidth(13, 100)
+            tableWidget.setColumnWidth(13, 750)
         elif columns in (columns_stg1, columns_stg2):
             tableWidget.setColumnWidth(0, 125)
             tableWidget.setColumnWidth(1, 125)

@@ -1,3 +1,4 @@
+import os
 import sys
 import zmq
 import win32gui
@@ -5,15 +6,15 @@ import subprocess
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
 from multiprocessing import Process, Queue
-from stock.trader_kiwoom import TraderKiwoom
-from stock.receiver_kiwoom import ReceiverKiwoom
-from stock.strategy_kiwoom import StrategyKiwoom
-from stock.strategy_kiwoom_ import StrategyKiwoom2
-from stock.receiver_kiwoom_client import ReceiverKiwoomClient
-from stock.simulator_kiwoom import ReceiverKiwoom2, TraderKiwoom2
-from stock.login_kiwoom.manuallogin import find_window
+from trader_kiwoom import TraderKiwoom
+from receiver_kiwoom import ReceiverKiwoom
+from strategy_kiwoom import StrategyKiwoom
+from receiver_kiwoom_client import ReceiverKiwoomClient
+from simulator_kiwoom import ReceiverKiwoom2, TraderKiwoom2
+from login_kiwoom.manuallogin import find_window
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utility.setting import DICT_SET, LOGIN_PATH
-from utility.static import now, timedelta_sec, int_hms, qtest_qwait, opstarter_kill, GetPortNumber
+from utility.static import now, timedelta_sec, int_hms, qtest_qwait, opstarter_kill, get_port_number
 
 
 class ZmqRecv(QThread):
@@ -124,7 +125,7 @@ class KiwoomManager:
         self.proc_simulator_rv    = None
         self.proc_simulator_td    = None
 
-        port_num = GetPortNumber()
+        port_num = get_port_number()
         self.zmqserv = ZmqServ(self.qlist, port_num + 1)
         self.zmqserv.start()
 
@@ -191,7 +192,7 @@ class KiwoomManager:
             return
         self.proc_simulator_rv    = Process(target=ReceiverKiwoom2, args=(self.qlist,), daemon=True)
         self.proc_simulator_td    = Process(target=TraderKiwoom2, args=(self.qlist,), daemon=True)
-        self.proc_strategy_stock1 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(0, self.qlist,), daemon=True)
+        self.proc_strategy_stock1 = Process(target=StrategyKiwoom, args=(0, self.qlist,), daemon=True)
         self.proc_strategy_stock1.start()
         self.proc_simulator_td.start()
         self.proc_simulator_rv.start()
@@ -237,18 +238,7 @@ class KiwoomManager:
                 self.StockReceiverStart()
             if self.int_time < self.dict_set['트레이더실행시간'] <= inthms and self.dict_set['주식트레이더'] and self.StockReceiverProcessAlive() and not self.StockTraderProcessAlive():
                 self.StockTraderStart()
-            if  self.dict_set['주식일봉데이터다운'] and not self.daydata_download and self.int_time < self.dict_set['일봉다운실행시간'] <= inthms:
-                self.DataDownlod()
         self.int_time = inthms
-
-    def DataDownlod(self):
-        if self.StockReceiverProcessAlive() or self.StockTraderProcessAlive():
-            print('리시버 및 트레이더가 실행 중일 경우에는 실행할 수 없습니다.')
-        else:
-            self.daydata_download = True
-            if self.dict_set['주식알림소리']:
-                self.kwzservQ.put(('sound', '예약된 데이터 다운로드를 시작합니다.'))
-            subprocess.Popen('python download_kiwoom.py')
 
     @staticmethod
     def OpenapiLoginWait():
@@ -361,14 +351,14 @@ class KiwoomManager:
     def StockTraderStart(self):
         if self.dict_set['아이디1'] is not None:
             self.StockAutoLogin1()
-            self.proc_strategy_stock1 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(0, self.qlist), daemon=True)
-            self.proc_strategy_stock2 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(1, self.qlist), daemon=True)
-            self.proc_strategy_stock3 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(2, self.qlist), daemon=True)
-            self.proc_strategy_stock4 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(3, self.qlist), daemon=True)
-            self.proc_strategy_stock5 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(4, self.qlist), daemon=True)
-            self.proc_strategy_stock6 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(5, self.qlist), daemon=True)
-            self.proc_strategy_stock7 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(6, self.qlist), daemon=True)
-            self.proc_strategy_stock8 = Process(target=StrategyKiwoom2 if self.dict_set['주식일봉데이터'] or self.dict_set['주식분봉데이터'] else StrategyKiwoom, args=(7, self.qlist), daemon=True)
+            self.proc_strategy_stock1 = Process(target=StrategyKiwoom, args=(0, self.qlist), daemon=True)
+            self.proc_strategy_stock2 = Process(target=StrategyKiwoom, args=(1, self.qlist), daemon=True)
+            self.proc_strategy_stock3 = Process(target=StrategyKiwoom, args=(2, self.qlist), daemon=True)
+            self.proc_strategy_stock4 = Process(target=StrategyKiwoom, args=(3, self.qlist), daemon=True)
+            self.proc_strategy_stock5 = Process(target=StrategyKiwoom, args=(4, self.qlist), daemon=True)
+            self.proc_strategy_stock6 = Process(target=StrategyKiwoom, args=(5, self.qlist), daemon=True)
+            self.proc_strategy_stock7 = Process(target=StrategyKiwoom, args=(6, self.qlist), daemon=True)
+            self.proc_strategy_stock8 = Process(target=StrategyKiwoom, args=(7, self.qlist), daemon=True)
             self.proc_strategy_stock1.start()
             self.proc_strategy_stock2.start()
             self.proc_strategy_stock3.start()

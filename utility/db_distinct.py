@@ -1,10 +1,9 @@
 import os
-import sys
 import sqlite3
 import pandas as pd
 from multiprocessing import Process
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from utility.setting import DB_PATH
+
+DB_PATH = '../_database'
 
 
 def Updater(gubun, file_list_):

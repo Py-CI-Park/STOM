@@ -1,13 +1,16 @@
 import os
 import math
+# noinspection PyUnresolvedReferences
 import talib
 import sqlite3
 import numpy as np
 import pandas as pd
 from matplotlib import font_manager
 from matplotlib import pyplot as plt
+# noinspection PyUnresolvedReferences
+from backtester.back_static import AddTalib
 from utility.static import strp_time, timedelta_sec, strf_time
-from utility.setting import ui_num, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH, DB_STOCK_BACK, DB_COIN_BACK, DB_BACKTEST, DB_STOCK_MIN, DB_STOCK_DAY, DB_COIN_MIN, DB_COIN_DAY
+from utility.setting import ui_num, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH, DB_STOCK_BACK, DB_COIN_BACK, DB_BACKTEST
 
 
 class Chart:
@@ -48,8 +51,6 @@ class Chart:
                 self.GraphComparison(data[1])
             elif len(data) == 3:
                 self.UpdateRealJisu(data)
-            elif len(data) == 5:
-                self.UpdateChartDayMin(data)
             elif len(data) >= 6:
                 self.UpdateChart(data)
 
@@ -99,11 +100,11 @@ class Chart:
             coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes = data
 
         if coin:
-            db_name1 = f'{DB_PATH}/coin_tick_{searchdate}.db'
-            db_name2 = DB_COIN_BACK
+            db_name1 = DB_COIN_BACK
+            db_name2 = f'{DB_PATH}/coin_tick_{searchdate}.db'
         else:
-            db_name1 = f'{DB_PATH}/stock_tick_{searchdate}.db'
-            db_name2 = DB_STOCK_BACK
+            db_name1 = DB_STOCK_BACK
+            db_name2 = f'{DB_PATH}/stock_tick_{searchdate}.db'
 
         query1 = f"SELECT * FROM '{code}' WHERE `index` LIKE '{searchdate}%' and " \
                  f"`index` % 1000000 >= {starttime} and " \
@@ -146,17 +147,6 @@ class Chart:
             df['최저현재가'] = 0
             df['최고초당매수수량'] = 0
             df['최고초당매도수량'] = 0
-
-            """ 체결강도를 최근 5분간의 매도수수량으로 계산하여 표시한다.
-            df2 = df[['체결강도', '초당매수수량', '초당매도수량']].copy()
-            df2['5분누적매수량'] = df2['초당매수수량'].rolling(window=300).sum()
-            df2['5분누적매도량'] = df2['초당매도수량'].rolling(window=300).sum()
-            df2.fillna(method='bfill', inplace=True)
-            df2['체결강도'] = df2['5분누적매수량'] / df2['5분누적매도량'] * 100
-            df2['체결강도'] = df2['체결강도'].round(2)
-            df2['체결강도'] = df2['체결강도'].apply(lambda x: 500. if x > 500 else x)
-            df['체결강도'] = df['체결강도'][:299].to_list() + df2['체결강도'][299:].to_list()
-            """
 
             if tickcount != 30:
                 df['초당거래대금평균'] = df['초당거래대금'].rolling(window=tickcount).mean().round(0)
@@ -300,53 +290,8 @@ class Chart:
                 columns += ['매수가2', '매도가2']
             df = df[columns]
             df.fillna(0, inplace=True)
-            arry = np.array(df)
-            # T_BBU, _, T_BBL = talib.BBANDS(arry[:, 1], timeperiod=30, nbdevup=2, nbdevdn=2, matype=0)
-            # T_MACD, T_MACDS, T_MACDH = talib.MACD(arry[:, 1], fastperiod=30, slowperiod=60, signalperiod=15)
-            # T_RSI = talib.RSI(arry[:, 1], timeperiod=120)
-            # arry = np.r_[
-            #     '1',
-            #     arry,
-            #     np.reshape(T_BBU, (-1, 1)),
-            #     np.reshape(T_BBL, (-1, 1)),
-            #     np.reshape(T_MACD, (-1, 1)),
-            #     np.reshape(T_MACDS, (-1, 1)),
-            #     np.reshape(T_MACDH, (-1, 1)),
-            #     np.reshape(T_RSI, (-1, 1))
-            # ]
-            # arry = np.nan_to_num(arry)
+            arry_tick = np.array(df)
+            if self.dict_set['보조지표사용']:
+                arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
             xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
-            self.windowQ.put((ui_num['차트'], coin, xticks, arry, buy_index, sell_index))
-
-    def UpdateChartDayMin(self, data):
-        gubun, coin, code, name, searchdate = data
-        searchdate = int(searchdate)
-        if gubun == '일봉차트':
-            if coin:
-                db_name = DB_COIN_DAY
-            else:
-                db_name = DB_STOCK_DAY
-
-            query = f"SELECT * FROM '{code}' WHERE 일자 <= {searchdate} ORDER BY 일자 DESC LIMIT 120"
-            con = sqlite3.connect(db_name)
-            df = pd.read_sql(query, con)
-            con.close()
-            if len(df) > 0:
-                df = df[['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']].copy()
-                df = df[::-1]
-                self.windowQ.put((ui_num['일봉차트'], name, np.array(df)))
-        else:
-            if coin:
-                db_name = DB_COIN_MIN
-                query = f"SELECT * FROM '{code}' WHERE 체결시간 / 1000000 <= {searchdate} ORDER BY 체결시간 DESC LIMIT {int(self.dict_set['코인분봉개수'] / 5)}"
-            else:
-                db_name = DB_STOCK_MIN
-                query = f"SELECT * FROM '{code}' WHERE 체결시간 / 1000000 <= {searchdate} ORDER BY 체결시간 DESC LIMIT {int(self.dict_set['주식분봉개수'] / 5)}"
-
-            con = sqlite3.connect(db_name)
-            df = pd.read_sql(query, con)
-            con.close()
-            if len(df) > 0:
-                df = df[['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']].copy()
-                df = df[::-1]
-                self.windowQ.put((ui_num['분봉차트'], name, np.array(df)))
+            self.windowQ.put((ui_num['차트'], coin, xticks, arry_tick, buy_index, sell_index))

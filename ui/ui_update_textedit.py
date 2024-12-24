@@ -51,7 +51,8 @@ class UpdateTextedit:
                 self.ui.crc_textEditttt_01.append(text)
                 self.ui.log5.info(text)
             elif data[0] == ui_num['S백테스트']:
-                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or '벤치점수' in data[1]:
+                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or \
+                        '벤치점수' in data[1] or '백테스트 시작' in data[1] or ']단계' in data[1]:
                     color = color_fg_rt
                 elif ('AP' in data[1] and '-' in data[1].split('AP')[1]) or \
                         ('수익률' in data[1] and '-' in data[1].split('수익률')[1]):
@@ -61,7 +62,7 @@ class UpdateTextedit:
                 self.ui.ss_textEditttt_09.setTextColor(color)
                 self.ui.ss_textEditttt_09.append(text)
                 self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
-                if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill()
+                if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill(0)
                 if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
                                '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
@@ -73,14 +74,15 @@ class UpdateTextedit:
                         self.ui.sActivated_06()
                     if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
                         self.ui.svjButtonClicked_08()
-                    self.ui.BacktestProcessKill()
+                    self.ui.BacktestProcessKill(0)
                     self.ui.ssicon_alert = False
                     self.ui.main_btn_list[2].setIcon(self.ui.icon_stocks)
                     if self.ui.back_schedul:
                         qtest_qwait(3)
                         self.ui.sdButtonClicked_02()
             elif data[0] in (ui_num['C백테스트'], ui_num['CF백테스트']):
-                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1]:
+                if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or \
+                        '벤치점수' in data[1] or '백테스트 시작' in data[1] or ']단계' in data[1]:
                     color = color_fg_rt
                 elif ('AP' in data[1] and '-' in data[1].split('AP')[1]) or \
                         ('수익률' in data[1] and '-' in data[1].split('수익률')[1].split('KRW')[0]):
@@ -90,7 +92,7 @@ class UpdateTextedit:
                 self.ui.cs_textEditttt_09.setTextColor(color)
                 self.ui.cs_textEditttt_09.append(text)
                 self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
-                if data[1] == '전략 코드 오류로 백테스트를 중지합니다.' and self.ui.back_condition: self.ui.BacktestProcessKill()
+                if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill(0)
                 if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
                                '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
                                '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
@@ -102,7 +104,7 @@ class UpdateTextedit:
                         self.ui.cActivated_06()
                     if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
                         self.ui.cvjButtonClicked_08()
-                    self.ui.BacktestProcessKill()
+                    self.ui.BacktestProcessKill(0)
                     self.ui.csicon_alert = False
                     self.ui.main_btn_list[3].setIcon(self.ui.icon_coins)
                     if self.ui.back_schedul:
@@ -152,8 +154,13 @@ class UpdateTextedit:
             if data[1] <= data[2]:
                 curr_time = now()
                 try:
-                    rmained_backtime = timedelta_sec(
-                        (curr_time - data[3]).total_seconds() / data[1] * (data[2] - data[1])) - curr_time
+                    if data[3] != 0:
+                        left_backtime  = curr_time - data[3]
+                        left_total_sec = left_backtime.total_seconds()
+                    else:
+                        left_backtime  = curr_time - curr_time
+                        left_total_sec = 0
+                    remain_backtime = timedelta_sec(left_total_sec / data[1] * (data[2] - data[1])) - curr_time
                 except:
                     pass
                 else:
@@ -162,11 +169,11 @@ class UpdateTextedit:
                         self.ui.list_progressBarrr[self.ui.back_scount].setValue(data[1])
                         self.ui.list_progressBarrr[self.ui.back_scount].setRange(0, data[2])
                     if data[0] == ui_num['S백테바']:
-                        self.ui.ss_progressBar_01.setFormat(f'%p% | 남은 시간 {rmained_backtime}')
+                        self.ui.ss_progressBar_01.setFormat(f'%p% | 경과 시간 {left_backtime} | 남은 시간 {remain_backtime}')
                         self.ui.ss_progressBar_01.setValue(data[1])
                         self.ui.ss_progressBar_01.setRange(0, data[2])
                     elif data[0] in (ui_num['C백테바'], ui_num['CF백테바']):
-                        self.ui.cs_progressBar_01.setFormat(f'%p% | 남은 시간 {rmained_backtime}')
+                        self.ui.cs_progressBar_01.setFormat(f'%p% | 경과 시간 {left_backtime} | 남은 시간 {remain_backtime}')
                         self.ui.cs_progressBar_01.setValue(data[1])
                         self.ui.cs_progressBar_01.setRange(0, data[2])
 

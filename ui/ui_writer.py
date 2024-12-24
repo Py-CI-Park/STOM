@@ -12,7 +12,6 @@ class Writer(QThread):
     signal6 = pyqtSignal(tuple)
     signal7 = pyqtSignal(tuple)
     signal8 = pyqtSignal(tuple)
-    signal9 = pyqtSignal(tuple)
 
     def __init__(self, windowQ):
         super().__init__()
@@ -28,7 +27,7 @@ class Writer(QThread):
                 data = self.windowQ.get()
                 if data[0] == 'qsize':
                     # noinspection PyUnresolvedReferences
-                    self.signal9.emit(data[1])
+                    self.signal8.emit(data[1])
                 elif data[0] <= ui_num['DB관리'] or data[0] == ui_num['기업개요']:
                     # noinspection PyUnresolvedReferences
                     self.signal1.emit(data)
@@ -58,9 +57,6 @@ class Writer(QThread):
                     # noinspection PyUnresolvedReferences
                     self.signal4.emit(data)
                 elif data[0] == ui_num['풍경사진']:
-                    # noinspection PyUnresolvedReferences
-                    self.signal8.emit(data)
-                elif data[0] in (ui_num['일봉차트'], ui_num['분봉차트']):
                     # noinspection PyUnresolvedReferences
                     self.signal7.emit(data)
                 elif data[0] in (ui_num['코스피'], ui_num['코스닥']):

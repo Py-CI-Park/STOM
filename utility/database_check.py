@@ -15,40 +15,46 @@ except:
     write_key()
     print('시스템 명령 실행 알림 - 암호화키 생성 완료')
 
-delete_file = './licence.txt'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_backscheduler.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stock/collector_kiwoom.py'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './coin/collector_coin.py'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './utility/static_numba.py'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './utility/db_update_20220529.py'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './utility/db_update_20220713.py'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './utility/db_update_20230126.py'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './db_update_20220529.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './db_update_20220713.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './db_update_20230126.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_32.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_32.bat.lnk'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_32_stocklogin.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_64.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_64.bat.lnk'
-if os.path.isfile(delete_file): os.remove(delete_file)
-delete_file = './stom_64_backscheduler.bat'
-if os.path.isfile(delete_file): os.remove(delete_file)
+delete_file_list = [
+    './update.txt',
+    './licence.txt',
+    './license.txt',
+    './stom_32.bat',
+    './stom_32.bat.lnk',
+    './stom_32_stocklogin.bat',
+    './stom_64.bat',
+    './stom_64.bat.lnk',
+    './stom_64_backscheduler.bat',
+    './stom_backscheduler.bat',
+    './stock/collector_kiwoom.py',
+    './coin/collector_coin.py',
+    './utility/static_numba.py',
+    './utility/db_update_20220529.py',
+    './utility/db_update_20220713.py',
+    './utility/db_update_20230126.py',
+    './db_update_20220529.bat',
+    './db_update_20220713.bat',
+    './db_update_20230126.bat',
+    './db_update_20240503.bat',
+    './backtester/backengine_coin_future3.py',
+    './backtester/backengine_coin_future4.py',
+    './backtester/backengine_coin_upbit3.py',
+    './backtester/backengine_coin_upbit4.py',
+    './backtester/backengine_stock3.py',
+    './backtester/backengine_stock4.py',
+    './download_kiwoom.py',
+    './stock/strategy_kiwoom_.py',
+    './ui/ui_draw_chart_daymin.py',
+    './ui/event_filter.py',
+    './kiwoom_manager.py',
+    './db_update_day_20240504.bat',
+    './db_update_back_20240504.bat',
+    './db_distinct.bat'
+]
+
+for file in delete_file_list:
+    if os.path.isfile(file):
+        os.remove(file)
 
 con = sqlite3.connect(DB_SETTING)
 df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
@@ -67,8 +73,7 @@ if 'main' not in table_list:
 else:
     df = pd.read_sql('SELECT * FROM main', con).set_index('index')
     if '주식틱데이터저장' not in df.columns:
-        df.drop(columns=['주식콜렉터'], inplace=True)
-        df.drop(columns=['코인콜렉터'], inplace=True)
+        df.drop(columns=['주식콜렉터', '코인콜렉터'], inplace=True)
         df['주식틱데이터저장'] = 0
         df['코인틱데이터저장'] = 0
         df['버전업'] = 1
@@ -135,14 +140,15 @@ else:
 
 if 'back' not in table_list:
     columns = [
-        "index", "블랙리스트추가", "백테주문관리적용", "백테매수시간기준", "백테일괄로딩", "주식일봉데이터", "주식분봉데이터", "주식분봉기간",
-        "주식일봉데이터다운", "주식일봉다운컴종료", "일봉다운실행시간", "코인일봉데이터", "코인분봉데이터", "코인분봉기간",
-        "코인일봉데이터다운", "그래프저장하지않기", "그래프띄우지않기", "디비자동관리", "교차검증가중치", "백테스케쥴실행", "백테스케쥴요일",
-        "백테스케쥴시간", "백테스케쥴구분", "백테스케쥴명", "백테날짜고정", "백테날짜", "최적화기준값제한", "백테엔진분류방법",
-        "옵튜나샘플러", "옵튜나고정변수", "옵튜나실행횟수", "옵튜나자동스탭", "범위자동관리"
+        "index", "블랙리스트추가", "백테주문관리적용", "백테매수시간기준", "백테일괄로딩", "그래프저장하지않기", "그래프띄우지않기",
+        "디비자동관리", "교차검증가중치", "백테스케쥴실행", "백테스케쥴요일", "백테스케쥴시간", "백테스케쥴구분", "백테스케쥴명",
+        "백테날짜고정", "백테날짜", "최적화기준값제한", "백테엔진분류방법", "옵튜나샘플러", "옵튜나고정변수", "옵튜나실행횟수",
+        "옵튜나자동스탭", "범위자동관리", "보조지표사용", "보조지표설정"
     ]
-    data = [0, 0, 0, 0, 1, 0, 0, 5, 0, 0, 154000, 0, 0, 5, 0, 0, 0, 1, 1, 0, 4, 160000, '', '', 1, '20220323',
-            '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;-10000.0;10000.0;0.0;10.0', '종목코드별 분류', 'BaseSampler', '', 0, 0, 0]
+    data = [0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 4, 160000, '', '', 1, '20220323',
+            '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;-10000.0;10000.0;0.0;10.0',
+            '종목코드별 분류', 'TPESampler', '', 0, 0, 0, 0,
+            '5;2;2;0;12;26;9;30;30;0.5;0.05;14;12;26;0;12;26;0']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('back', con)
 else:
@@ -158,6 +164,13 @@ else:
         df['옵튜나자동스탭'] = 0
     if '범위자동관리' not in df.columns:
         df['범위자동관리'] = 0
+    if '주식일봉데이터' in df.columns:
+        columns = ["주식일봉데이터", "주식분봉데이터", "주식분봉기간", "주식일봉데이터다운", "주식일봉다운컴종료", "일봉다운실행시간",
+                   "코인일봉데이터", "코인분봉데이터", "코인분봉기간", "코인일봉데이터다운"]
+        df.drop(columns=columns, inplace=True)
+    if '보조지표사용' not in df.columns:
+        df['보조지표사용'] = 0
+        df['보조지표설정'] = '5;2;2;0;12;26;9;30;30;0.5;0.05;14;12;26;0;12;26;0'
     df.to_sql('back', con, if_exists='replace')
 
 if 'etc' not in table_list:

@@ -2,8 +2,7 @@ import time
 import pyupbit
 import sqlite3
 import pandas as pd
-from threading import Timer
-from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetUpbitHogaunit, GetUpbitPgSgSp
+from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetUpbitHogaunit, GetUpbitPgSgSp, threading_timer
 from utility.setting import columns_cj, columns_tj, columns_jg, columns_td, columns_tt, ui_num, DB_TRADELIST, DICT_SET
 
 
@@ -181,7 +180,7 @@ class TraderUpbit:
 
     def TradeProcKill(self):
         self.dict_bool['프로세스종료'] = True
-        Timer(180, self.ctraderQ.put, args=['프로세스종료']).start()
+        threading_timer(180, self.ctraderQ.put, '프로세스종료')
 
     def UpdateTuple(self, data):
         if len(data) in (6, 7):
@@ -331,7 +330,7 @@ class TraderUpbit:
         if curr_time < self.dict_time['주문시간']:
             next_time = (self.dict_time['주문시간'] - curr_time).total_seconds()
             data = [og, code, op, oc, on, signal_time, manual, fixc, ordertype]
-            Timer(next_time, self.ctraderQ.put, args=[data]).start()
+            threading_timer(next_time, self.ctraderQ.put, data)
             return
 
         self.OrderTimeLog(signal_time)

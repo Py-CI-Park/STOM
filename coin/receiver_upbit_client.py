@@ -1,7 +1,7 @@
 import zmq
 import time
-from threading import Thread, Timer
-from utility.static import int_hms_utc
+from threading import Thread
+from utility.static import int_hms_utc, threading_timer
 from utility.setting import ui_num, DICT_SET
 
 
@@ -108,4 +108,4 @@ class ReceiverUpbitClient:
 
     def ReceiverProcKill(self):
         self.dict_bool['프로세스종료'] = True
-        Timer(180, self.creceivQ.put, args=['프로세스종료']).start()
+        threading_timer(180, self.creceivQ.put, '프로세스종료')

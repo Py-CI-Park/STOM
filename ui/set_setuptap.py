@@ -105,7 +105,7 @@ class SetSetupTap:
         self.ui.sj_stock_label_01 = QLabel(text, self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_cbBox_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, activated=self.ui.sActivated_09, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_stock_cbBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
-        self.ui.sj_stock_ckBox_12 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_05)
+        self.ui.sj_stock_ckBox_12 = self.wc.setCheckBox('패턴인식    |', self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_01 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
@@ -118,7 +118,7 @@ class SetSetupTap:
         self.ui.sj_stock_label_02 = QLabel(text, self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_cbBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, activated=self.ui.sActivated_10, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_stock_cbBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_05, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
-        self.ui.sj_stock_ckBox_13 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_05)
+        self.ui.sj_stock_ckBox_13 = self.wc.setCheckBox('패턴인식    |', self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_04 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
         self.ui.sj_stock_lEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_05)
@@ -146,7 +146,7 @@ class SetSetupTap:
         self.ui.sj_coin_labell_01 = QLabel(text, self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_comBox_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, activated=self.ui.cActivated_09, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_coin_comBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
-        self.ui.sj_coin_cheBox_12 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_06)
+        self.ui.sj_coin_cheBox_12 = self.wc.setCheckBox('패턴인식    |', self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_01 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_03 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
@@ -159,7 +159,7 @@ class SetSetupTap:
         self.ui.sj_coin_labell_02 = QLabel(text, self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_comBox_03 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, activated=self.ui.cActivated_10, tip='매수전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
         self.ui.sj_coin_comBox_04 = self.wc.setCombobox(self.ui.sj_bs_groupBox_06, tip='매도전략을 선택하십시오.\n저장한 전략이 보이지 않을 경우 우측 불러오기를 누르십시오.')
-        self.ui.sj_coin_cheBox_13 = self.wc.setCheckBox('패턴인식,', self.ui.sj_bs_groupBox_06)
+        self.ui.sj_coin_cheBox_13 = self.wc.setCheckBox('패턴인식    |', self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_04 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_05 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
         self.ui.sj_coin_liEdit_06 = self.wc.setLineedit(self.ui.sj_bs_groupBox_06)
@@ -183,24 +183,12 @@ class SetSetupTap:
         self.ui.sj_back_cheBox_02 = self.wc.setCheckBox('백테스트에 주문관리 설정 적용하기(최유리 및 IOC 주문 제외)', self.ui.sj_bs_groupBox_07, tip='설정 변경 시 백테엔진을 재로딩해야 합니다. 체크해제 시 시장가 호가범위선택 및 매수금지 블랙리스트는 적용됨')
         self.ui.sj_back_cheBox_03 = self.wc.setCheckBox('백테스트 그래프 매수시간 기준으로 표시하기', self.ui.sj_bs_groupBox_07, tip='체크해제 시 매도시간 기준으로 표시됩니다.')
 
-        self.ui.sj_back_cheBox_04 = self.wc.setCheckBox('일괄 로딩(속도↑, 램↑)', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_13, tip='설정 변경 시 백테엔진을 재로딩해야 합니다.')
-        self.ui.sj_back_cheBox_05 = self.wc.setCheckBox('분할 로딩(속도↓, 램↓)', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_13, tip='설정 변경 시 백테엔진을 재로딩해야 합니다.')
+        self.ui.sj_back_cheBox_04 = self.wc.setCheckBox('일괄 로딩(모든 종목의 데이터를 램에 올려두고 백테스트합니다. 백테속도↑, 램사용량↑)', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_13)
+        self.ui.sj_back_cheBox_05 = self.wc.setCheckBox('분할 로딩(피클덤프한 다음 한종목씩 램에 올려 백테스트합니다. 백테속도↓, 램사용량↓)', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_13)
 
-        self.ui.sj_back_labell_01 = QLabel('▣ 주식 전략 및 백테에서                                                  사용하기', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_06 = self.wc.setCheckBox('일봉', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_07 = self.wc.setCheckBox('               분봉', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_comBox_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_07, tip='사용할 분봉을 선택하십시오.', items=['1', '3', '5', '15', '30'])
-        self.ui.sj_back_cheBox_08 = self.wc.setCheckBox('주식 일봉, 분봉 자동다운로드  |  실행시간', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_liEdit_01 = self.wc.setLineedit(self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_09 = self.wc.setCheckBox('컴퓨터 종료', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_11, tip='일봉, 분봉데이터 다운로드 후 컴퓨터를 종료한다.')
-
-        self.ui.sj_back_labell_02 = QLabel('▣ 코인 전략 및 백테에서                                                  사용하기', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_10 = self.wc.setCheckBox('일봉', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_11 = self.wc.setCheckBox('               분봉', self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_comBox_02 = self.wc.setCombobox(self.ui.sj_bs_groupBox_07, tip='사용할 분봉을 선택하십시오.', items=['1', '3', '5', '15', '30'])
-        self.ui.sj_back_cheBox_12 = self.wc.setCheckBox('코인 일봉, 분봉 자동다운로드  |  다운로드 선택시 리시버가 구동될 때 자동 실행됨', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_16)
         self.ui.sj_back_cheBox_13 = self.wc.setCheckBox('일반 백테스트 시 그래프 저장하지 않기', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_14)
         self.ui.sj_back_cheBox_14 = self.wc.setCheckBox('일반 백테스트 시 그래프 띄우지 않기', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_15)
+        self.ui.sj_back_cheBox_12 = self.wc.setCheckBox('백테 및 전략연산에 보조지표 사용하기', self.ui.sj_bs_groupBox_07, tip='차트창(Alt+C) 팩터설정에서 보조지표의 세부설정이 가능합니다.')
 
         self.ui.sj_back_cheBox_15 = self.wc.setCheckBox('주식 DB 자동관리(일자DB분리, 백테DB추가)', self.ui.sj_bs_groupBox_07, tip='틱데이터 저장 후 일자별분리 및 백테디비추가가 자동실행됨')
         self.ui.sj_back_cheBox_16 = self.wc.setCheckBox('교차검증 최적화에 가중치 적용하기', self.ui.sj_bs_groupBox_07, tip='교차검증 최적화 시 최근데이터일수록 가중치를 줘서 기준값을 계산한다.')
@@ -213,13 +201,12 @@ class SetSetupTap:
         self.ui.sj_back_liEdit_02 = self.wc.setLineedit(self.ui.sj_bs_groupBox_07)
         self.ui.sj_back_cheBox_18 = self.wc.setCheckBox('                                        고정', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_19)
         self.ui.sj_back_daEdit_01 = self.wc.setDateEdit(self.ui.sj_bs_groupBox_07)
-        self.ui.sj_back_cheBox_20 = self.wc.setCheckBox('그리드 범위 자동 관리', self.ui.sj_bs_groupBox_07, tip='그리드 최적화 시에 범위에서 불필요한 값을 제거하고\n최소최대가 최적값일 경우 자동으로 범위를 추가한다.')
+        self.ui.sj_back_cheBox_20 = self.wc.setCheckBox('그리드 최적화 범위 자동 관리(고정, 추가, 삭제)', self.ui.sj_bs_groupBox_07, tip='그리드 최적화 시에 범위에서 불필요한 값을 제거하고\n최소최대가 최적값일 경우 자동으로 범위를 추가하며\n범위의 기준값이 같을 경우 최적값으로 고정합니다.')
 
         self.ui.sj_ilbunback_listtt = [self.ui.sj_back_cheBox_04, self.ui.sj_back_cheBox_05]
 
         self.ui.com_exit_list = [
-            self.ui.sj_stock_ckBox_05, self.ui.sj_stock_ckBox_08, self.ui.sj_coin_cheBox_05,
-            self.ui.sj_coin_cheBox_08, self.ui.sj_back_cheBox_09
+            self.ui.sj_stock_ckBox_05, self.ui.sj_stock_ckBox_08, self.ui.sj_coin_cheBox_05, self.ui.sj_coin_cheBox_08
         ]
 
         self.ui.sj_etc_labelll_01 = QLabel('▣  UI 테마 선택                                (재구동 후 적용)', self.ui.sj_bs_groupBox_08)
@@ -251,7 +238,6 @@ class SetSetupTap:
         self.ui.sj_save_Button_08 = self.wc.setPushbutton('저장하기', box=self.ui.sj_bs_groupBox_08, click=self.ui.sjButtonClicked_16)
 
         self.ui.sj_etc_pButton_01 = self.wc.setPushbutton('계정 텍스트 보기', box=self.ui.sj_bs_groupBox_02, click=self.ui.sjButtonClicked_17)
-        self.ui.sj_etc_pButton_02 = self.wc.setPushbutton('주식일봉분봉 수동다운로드', box=self.ui.sj_bs_groupBox_07, click=self.ui.sjButtonClicked_18)
 
         self.ui.set_tapWidgett_01.setGeometry(7, 10, 1341, 740)
         self.ui.sj_set_labelll_01.setGeometry(847, 10, 50, 20)
@@ -395,29 +381,17 @@ class SetSetupTap:
 
         self.ui.sj_back_cheBox_01.setGeometry(10, 25, 500, 20)
         self.ui.sj_back_cheBox_02.setGeometry(500, 25, 700, 20)
-        self.ui.sj_back_cheBox_03.setGeometry(930, 25, 400, 20)
+        self.ui.sj_back_cheBox_03.setGeometry(500, 50, 400, 20)
 
-        self.ui.sj_back_cheBox_04.setGeometry(10, 50, 130, 20)
-        self.ui.sj_back_cheBox_05.setGeometry(10, 75, 130, 20)
+        self.ui.sj_back_cheBox_04.setGeometry(10, 50, 500, 20)
+        self.ui.sj_back_cheBox_05.setGeometry(10, 75, 500, 20)
 
-        self.ui.sj_back_labell_01.setGeometry(145, 50, 350, 20)
-        self.ui.sj_back_cheBox_06.setGeometry(275, 50, 80, 20)
-        self.ui.sj_back_cheBox_07.setGeometry(325, 50, 100, 20)
-        self.ui.sj_back_comBox_01.setGeometry(343, 50, 40, 20)
-        self.ui.sj_back_cheBox_08.setGeometry(500, 50, 500, 20)
-        self.ui.sj_back_liEdit_01.setGeometry(730, 50, 70, 20)
-        self.ui.sj_back_cheBox_09.setGeometry(815, 50, 100, 20)
-
-        self.ui.sj_back_labell_02.setGeometry(145, 75, 350, 20)
-        self.ui.sj_back_cheBox_10.setGeometry(275, 75, 80, 20)
-        self.ui.sj_back_cheBox_11.setGeometry(325, 75, 100, 20)
-        self.ui.sj_back_comBox_02.setGeometry(343, 75, 40, 20)
-        self.ui.sj_back_cheBox_12.setGeometry(500, 75, 700, 20)
-        self.ui.sj_back_cheBox_13.setGeometry(930, 50, 400, 20)
-        self.ui.sj_back_cheBox_14.setGeometry(930, 75, 400, 20)
+        self.ui.sj_back_cheBox_13.setGeometry(835, 50, 400, 20)
+        self.ui.sj_back_cheBox_14.setGeometry(835, 75, 400, 20)
+        self.ui.sj_back_cheBox_12.setGeometry(1060, 75, 300, 20)
 
         self.ui.sj_back_cheBox_15.setGeometry(10, 100, 250, 20)
-        self.ui.sj_back_cheBox_16.setGeometry(275, 100, 250, 20)
+        self.ui.sj_back_cheBox_16.setGeometry(835, 25, 250, 20)
         self.ui.sj_back_cheBox_19.setGeometry(500, 100, 800, 20)
         self.ui.sj_back_comBox_05.setGeometry(645, 100, 40, 20)
         self.ui.sj_back_liEdit_03.setGeometry(720, 100, 70, 20)
@@ -427,7 +401,7 @@ class SetSetupTap:
         self.ui.sj_back_liEdit_02.setGeometry(1060, 100, 50, 20)
         self.ui.sj_back_cheBox_18.setGeometry(1150, 100, 220, 20)
         self.ui.sj_back_daEdit_01.setGeometry(1170, 100, 110, 20)
-        self.ui.sj_back_cheBox_20.setGeometry(1175, 75, 145, 20)
+        self.ui.sj_back_cheBox_20.setGeometry(500, 75, 300, 20)
 
         self.ui.sj_etc_labelll_01.setGeometry(10, 25, 300, 20)
         self.ui.sj_etc_comBoxx_01.setGeometry(100, 25, 85, 20)
@@ -458,4 +432,3 @@ class SetSetupTap:
         self.ui.sj_save_Button_08.setGeometry(1250, 25, 70, 20)
 
         self.ui.sj_etc_pButton_01.setGeometry(1175, 50, 145, 20)
-        self.ui.sj_etc_pButton_02.setGeometry(1175, 50, 145, 20)

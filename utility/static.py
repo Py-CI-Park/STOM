@@ -6,13 +6,21 @@ import datetime
 import numpy as np
 import winreg as reg
 from io import BytesIO
-from threading import Thread
+from threading import Thread, Timer
 from PyQt5.QtTest import QTest
 from traceback import print_exc
 from cryptography.fernet import Fernet
 
 
-def GetPortNumber():
+def threading_timer(sec, func, args=None):
+    if args is None:
+        Timer(int(sec), func).start()
+    elif type(args) == list:
+        Timer(int(sec), func, args=args).start()
+    else:
+        Timer(int(sec), func, args=[args]).start()
+
+def get_port_number():
     port_number = 5500
     run_count   = 0
     for proc in psutil.process_iter():

@@ -2,17 +2,16 @@ import zmq
 import time
 import json
 import uuid
-import sqlite3
 import pyupbit
 import asyncio
 import operator
 import websockets
 import numpy as np
 import pandas as pd
-from threading import Thread, Timer
+from threading import Thread
 from multiprocessing import Process, Queue
-from utility.setting import ui_num, DICT_SET, DB_COIN_DAY, DB_COIN_MIN
-from utility.static import now, strf_time, strp_time, timedelta_sec, from_timestamp, int_hms_utc
+from utility.setting import ui_num, DICT_SET
+from utility.static import now, strf_time, strp_time, timedelta_sec, from_timestamp, int_hms_utc, threading_timer
 
 
 class ZmqServ(Thread):
@@ -197,7 +196,7 @@ class ReceiverUpbit:
 
     def ReceiverProcKill(self):
         self.dict_bool['프로세스종료'] = True
-        Timer(180, self.creceivQ.put, args=['프로세스종료']).start()
+        threading_timer(180, self.creceivQ.put, '프로세스종료')
 
     def WebSocketsStart(self, wsq):
         self.proc_webs = Process(target=WebSocketManager, args=(self.codes, wsq), daemon=True)
@@ -212,16 +211,13 @@ class ReceiverUpbit:
         for i, code in enumerate(self.codes):
             self.dict_hgbs[code] = [0, 0]
 
-        if self.dict_set['코인일봉데이터다운']:
-            self.DaydataDownload()
-        else:
-            last = len(self.codes)
-            for i, code in enumerate(self.codes):
-                time.sleep(0.05)
-                df = pyupbit.get_ohlcv(ticker=code, interval='minutes5')
-                if df is not None:
-                    self.dict_tm5m[code] = df['value'].iloc[-1]
-                print(f'분봉 데이터 조회 중 ... [{i+1}/{last}][{code}]')
+        last = len(self.codes)
+        for i, code in enumerate(self.codes):
+            time.sleep(0.05)
+            df = pyupbit.get_ohlcv(ticker=code, interval='minutes5')
+            if df is not None:
+                self.dict_tm5m[code] = df['value'].iloc[-1]
+            print(f'분봉 데이터 조회 중 ... [{i+1}/{last}][{code}]')
 
         self.list_prmt = [x for x, y in sorted(self.dict_tm5m.items(), key=operator.itemgetter(1), reverse=True)[:self.dict_set['코인순위선정']]]
         for code in self.list_prmt:
@@ -407,170 +403,6 @@ class ReceiverUpbit:
             self.list_gsjm2.remove(code)
             if self.dict_set['코인매수취소관심이탈']:
                 self.ctraderQ.put(('관심이탈', code))
-
-    def DaydataDownload(self):
-        last = len(self.codes)
-
-        if self.dict_set['코인분봉데이터']:
-            dict_lastmin = {}
-            con = sqlite3.connect(DB_COIN_MIN)
-            dfm = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
-            if len(dfm) > 0:
-                for code in dfm['name'].to_list():
-                    df = pd.read_sql(f"SELECT * FROM '{code}' ORDER BY 체결시간 DESC LIMIT 1", con)
-                    dict_lastmin[code] = df['체결시간'].iloc[0]
-
-            dict_min_ar = {}
-            for i, code in enumerate(self.codes):
-                time.sleep(0.1)
-                count = 1600 if len(dfm) > 0 else 17400
-                df = pyupbit.get_ohlcv(ticker=code, interval=f'minutes{self.dict_set["코인분봉기간"]}', count=count)
-                if df is not None:
-                    df['체결시간'] = df.index
-                    df['체결시간'] = df['체결시간'].apply(lambda x: int(strf_time('%Y%m%d%H%M%S', timedelta_sec(-32400, x))))
-                    df.rename(columns={'open': '시가', 'high': '고가', 'low': '저가', 'close': '종가', 'value': '거래대금'}, inplace=True)
-                    df[['거래대금']] = df[['거래대금']].astype('int64')
-                    df = df[['체결시간', '시가', '고가', '저가', '종가', '거래대금']]
-
-                    self.dict_tm5m[code] = df['거래대금'][-1]
-
-                    df['이평5']   = df['종가'].rolling(window=5).mean().round(8)
-                    df['이평10']  = df['종가'].rolling(window=10).mean().round(8)
-                    df['이평20']  = df['종가'].rolling(window=20).mean().round(8)
-                    df['이평60']  = df['종가'].rolling(window=60).mean().round(8)
-                    df['이평120'] = df['종가'].rolling(window=120).mean().round(8)
-                    df['이평240'] = df['종가'].rolling(window=240).mean().round(8)
-
-                    df['최고종가5']   = df['종가'].rolling(window=5).max().shift(1)
-                    df['최고고가5']   = df['고가'].rolling(window=5).max().shift(1)
-                    df['최고종가10']  = df['종가'].rolling(window=10).max().shift(1)
-                    df['최고고가10']  = df['고가'].rolling(window=10).max().shift(1)
-                    df['최고종가20']  = df['종가'].rolling(window=20).max().shift(1)
-                    df['최고고가20']  = df['고가'].rolling(window=20).max().shift(1)
-                    df['최고종가60']  = df['종가'].rolling(window=60).max().shift(1)
-                    df['최고고가60']  = df['고가'].rolling(window=60).max().shift(1)
-                    df['최고종가120'] = df['종가'].rolling(window=120).max().shift(1)
-                    df['최고고가120'] = df['고가'].rolling(window=120).max().shift(1)
-                    df['최고종가240'] = df['종가'].rolling(window=240).max().shift(1)
-                    df['최고고가240'] = df['고가'].rolling(window=240).max().shift(1)
-
-                    df['최저종가5']   = df['종가'].rolling(window=5).min().shift(1)
-                    df['최저저가5']   = df['저가'].rolling(window=5).min().shift(1)
-                    df['최저종가10']  = df['종가'].rolling(window=10).min().shift(1)
-                    df['최저저가10']  = df['저가'].rolling(window=10).min().shift(1)
-                    df['최저종가20']  = df['종가'].rolling(window=20).min().shift(1)
-                    df['최저저가20']  = df['저가'].rolling(window=20).min().shift(1)
-                    df['최저종가60']  = df['종가'].rolling(window=60).min().shift(1)
-                    df['최저저가60']  = df['저가'].rolling(window=60).min().shift(1)
-                    df['최저종가120'] = df['종가'].rolling(window=120).min().shift(1)
-                    df['최저저가120'] = df['저가'].rolling(window=120).min().shift(1)
-                    df['최저종가240'] = df['종가'].rolling(window=240).min().shift(1)
-                    df['최저저가240'] = df['저가'].rolling(window=240).min().shift(1)
-
-                    df['종가합계4']   = df['종가'].rolling(window=4).sum().shift(1)
-                    df['종가합계9']   = df['종가'].rolling(window=9).sum().shift(1)
-                    df['종가합계19']  = df['종가'].rolling(window=19).sum().shift(1)
-                    df['종가합계59']  = df['종가'].rolling(window=59).sum().shift(1)
-                    df['종가합계119'] = df['종가'].rolling(window=119).sum().shift(1)
-                    df['종가합계239'] = df['종가'].rolling(window=239).sum().shift(1)
-                    df['최고거래대금'] = df['거래대금'].rolling(window=self.dict_set['코인분봉개수']).max().shift(1)
-                    df.fillna(0, inplace=True)
-
-                    columns = ['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
-                    df2 = df[columns][-self.dict_set['코인분봉개수']:]
-                    dict_min_ar[code] = np.array(df2)
-
-                    if code in dict_lastmin.keys():
-                        df = df[df['체결시간'] > dict_lastmin[code]]
-                    df = df.set_index('체결시간')
-                    if len(df) > 0:
-                        self.queryQ.put(('코인분봉', df, code, 'append'))
-                print(f'코인 분봉데이터 다운로드 중 ... [{i + 1}/{last}]')
-
-            print('코인 분봉데이터 다운로드 완료')
-            self.cstgQ.put(('분봉데이터', dict_min_ar))
-            if self.dict_set['리시버공유'] == 1:
-                self.zq.put(('mindata', ('분봉데이터', dict_min_ar)))
-            con.close()
-
-        if self.dict_set['코인일봉데이터']:
-            dict_lastday = {}
-            con = sqlite3.connect(DB_COIN_DAY)
-            dfd = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
-            if len(dfd) > 0:
-                for code in dfd['name'].to_list():
-                    df = pd.read_sql(f"SELECT * FROM '{code}' ORDER BY 일자 DESC LIMIT 1", con)
-                    dict_lastday[code] = df['일자'].iloc[0]
-
-            dict_day_ar = {}
-            for i, code in enumerate(self.codes):
-                time.sleep(0.1)
-                df = pyupbit.get_ohlcv(ticker=code, count=400)
-                if df is not None:
-                    df['일자'] = df.index
-                    df['일자'] = df['일자'].apply(lambda x: int(strf_time('%Y%m%d', x)))
-                    df.rename(columns={'open': '시가', 'high': '고가', 'low': '저가', 'close': '종가', 'value': '거래대금'}, inplace=True)
-                    df[['거래대금']] = df[['거래대금']].astype('int64')
-                    df = df[['일자', '시가', '고가', '저가', '종가', '거래대금']]
-
-                    df['이평5']   = df['종가'].rolling(window=5).mean().round(8)
-                    df['이평10']  = df['종가'].rolling(window=10).mean().round(8)
-                    df['이평20']  = df['종가'].rolling(window=20).mean().round(8)
-                    df['이평60']  = df['종가'].rolling(window=60).mean().round(8)
-                    df['이평120'] = df['종가'].rolling(window=120).mean().round(8)
-                    df['이평240'] = df['종가'].rolling(window=240).mean().round(8)
-
-                    df['최고종가5']   = df['종가'].rolling(window=5).max().shift(1)
-                    df['최고고가5']   = df['고가'].rolling(window=5).max().shift(1)
-                    df['최고종가10']  = df['종가'].rolling(window=10).max().shift(1)
-                    df['최고고가10']  = df['고가'].rolling(window=10).max().shift(1)
-                    df['최고종가20']  = df['종가'].rolling(window=20).max().shift(1)
-                    df['최고고가20']  = df['고가'].rolling(window=20).max().shift(1)
-                    df['최고종가60']  = df['종가'].rolling(window=60).max().shift(1)
-                    df['최고고가60']  = df['고가'].rolling(window=60).max().shift(1)
-                    df['최고종가120'] = df['종가'].rolling(window=120).max().shift(1)
-                    df['최고고가120'] = df['고가'].rolling(window=120).max().shift(1)
-                    df['최고종가240'] = df['종가'].rolling(window=240).max().shift(1)
-                    df['최고고가240'] = df['고가'].rolling(window=240).max().shift(1)
-
-                    df['최저종가5']   = df['종가'].rolling(window=5).min().shift(1)
-                    df['최저저가5']   = df['저가'].rolling(window=5).min().shift(1)
-                    df['최저종가10']  = df['종가'].rolling(window=10).min().shift(1)
-                    df['최저저가10']  = df['저가'].rolling(window=10).min().shift(1)
-                    df['최저종가20']  = df['종가'].rolling(window=20).min().shift(1)
-                    df['최저저가20']  = df['저가'].rolling(window=20).min().shift(1)
-                    df['최저종가60']  = df['종가'].rolling(window=60).min().shift(1)
-                    df['최저저가60']  = df['저가'].rolling(window=60).min().shift(1)
-                    df['최저종가120'] = df['종가'].rolling(window=120).min().shift(1)
-                    df['최저저가120'] = df['저가'].rolling(window=120).min().shift(1)
-                    df['최저종가240'] = df['종가'].rolling(window=240).min().shift(1)
-                    df['최저저가240'] = df['저가'].rolling(window=240).min().shift(1)
-
-                    df['종가합계4']   = df['종가'].rolling(window=4).sum().shift(1)
-                    df['종가합계9']   = df['종가'].rolling(window=9).sum().shift(1)
-                    df['종가합계19']  = df['종가'].rolling(window=19).sum().shift(1)
-                    df['종가합계59']  = df['종가'].rolling(window=59).sum().shift(1)
-                    df['종가합계119'] = df['종가'].rolling(window=119).sum().shift(1)
-                    df['종가합계239'] = df['종가'].rolling(window=239).sum().shift(1)
-                    df['최고거래대금'] = df['거래대금'].rolling(window=250).max().shift(1)
-                    df.fillna(0, inplace=True)
-
-                    columns = ['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
-                    df2 = df[columns][-250:]
-                    dict_day_ar[code] = np.array(df2)
-
-                    if code in dict_lastday.keys():
-                        df = df[df['일자'] > dict_lastday[code]]
-                    df = df.set_index('일자')
-                    if len(df) > 0:
-                        self.queryQ.put(('코인일봉', df, code, 'append'))
-                print(f'코인 일봉데이터 다운로드 중 ... [{i + 1}/{last}]')
-
-            print('코인 일봉데이터 다운로드 완료')
-            self.cstgQ.put(('일봉데이터', dict_day_ar))
-            if self.dict_set['리시버공유'] == 1:
-                self.zq.put(('daydata', ('일봉데이터', dict_day_ar)))
-            con.close()
 
 
 class WebSocketManager:

@@ -9,12 +9,11 @@ import pandas as pd
 from traceback import print_exc
 from ui.ui_pattern import get_pattern_setup
 # noinspection PyUnresolvedReferences
-from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetBinanceShortPgSgSp, \
-    GetBinanceLongPgSgSp, pickle_read
-from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jgf, columns_gj, dict_min, dict_order_ratio, \
-    DB_COIN_MIN, DB_COIN_DAY, PATTERN_PATH
+from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetBinanceShortPgSgSp, GetBinanceLongPgSgSp, pickle_read
+from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jgf, columns_gj, dict_order_ratio, PATTERN_PATH
 
 
+# noinspection PyUnusedLocal
 class StrategyBinanceFuture:
     def __init__(self, qlist):
         """
@@ -37,10 +36,6 @@ class StrategyBinanceFuture:
         self.vars2         = {}
         self.dict_tik_ar   = {}
         self.dict_tik_ar2  = {}
-        self.dict_day_ar   = {}
-        self.dict_min_ar   = {}
-        self.dict_day_data = {}
-        self.dict_min_data = {}
         self.dict_buyinfo  = {}
         self.dict_sgn_tik  = {}
         self.dict_buy_tik  = {}
@@ -142,8 +137,6 @@ class StrategyBinanceFuture:
                     self.Strategy(data)
                 elif len(data) == 2:
                     self.UpdateTuple(data)
-                elif len(data) == 3:
-                    self.UpdateTriple(data)
             elif type(data) == str:
                 self.UpdateString(data)
                 if data == '프로세스종료':
@@ -198,37 +191,6 @@ class StrategyBinanceFuture:
         elif gubun == '설정변경':
             self.dict_set = data
             self.UpdateStringategy()
-        elif gubun == '일봉데이터':
-            self.dict_day_ar = data
-            for data in self.dict_day_ar.keys():
-                self.dict_day_data[data] = self.GetNewLineData(self.dict_day_ar[data], 250)
-            self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 일봉데이터 로딩 완료'))
-        elif gubun == '분봉데이터':
-            self.dict_min_ar = data
-            for data in self.dict_min_ar.keys():
-                self.dict_min_data[data] = self.GetNewLineData(self.dict_min_ar[data], self.dict_set['코인분봉개수'])
-            self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 분봉데이터 로딩 완료'))
-        elif gubun == '바낸선물단위정보':
-            self.dict_info = data
-
-    def UpdateTriple(self, data):
-        gubun, data1, data2 = data
-        if gubun == '분봉재로딩':
-            con = sqlite3.connect(DB_COIN_MIN)
-            df = pd.read_sql(f"SELECT * FROM '{data1}' WHERE 체결시간 < {data2} ORDER BY 체결시간 DESC LIMIT {self.dict_set['코인분봉개수']}", con)
-            columns = ['체결시간', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
-            df = df[columns][::-1]
-            self.dict_min_ar[data1] = np.array(df)
-            self.dict_min_data[data1] = self.GetNewLineData(self.dict_min_ar[data1], self.dict_set['코인분봉개수'])
-            con.close()
-        elif gubun == '일봉재로딩':
-            con = sqlite3.connect(DB_COIN_DAY)
-            df = pd.read_sql(f"SELECT * FROM '{data1}' WHERE 일자 < {data2} ORDER BY 일자 DESC LIMIT 250", con)
-            columns = ['일자', '시가', '고가', '저가', '종가', '거래대금', '이평5', '이평10', '이평20', '이평60', '이평120', '이평240']
-            df = df[columns][::-1]
-            self.dict_day_ar[data1] = np.array(df)
-            self.dict_day_data[data1] = self.GetNewLineData(self.dict_day_ar[data1], 250)
-            con.close()
 
     def UpdateString(self, data):
         if data == '매수전략중지':
@@ -239,46 +201,6 @@ class StrategyBinanceFuture:
             self.sellstrategy2 = None
         elif data == '복기모드종료':
             self.dict_tik_ar = {}
-
-    @staticmethod
-    def GetNewLineData(ar, hmcount):
-        최고종가5   = ar[-5:,   4].max()
-        최고고가5   = ar[-5:,   2].max()
-        최고종가10  = ar[-10:,  4].max()
-        최고고가10  = ar[-10:,  2].max()
-        최고종가20  = ar[-20:,  4].max()
-        최고고가20  = ar[-20:,  2].max()
-        최고종가60  = ar[-60:,  4].max()
-        최고고가60  = ar[-60:,  2].max()
-        최고종가120 = ar[-120:, 4].max()
-        최고고가120 = ar[-120:, 2].max()
-        최고종가240 = ar[-240:, 4].max()
-        최고고가240 = ar[-240:, 2].max()
-        최저종가5   = ar[-5:,   4].min()
-        최저저가5   = ar[-5:,   3].min()
-        최저종가10  = ar[-10:,  4].min()
-        최저저가10  = ar[-10:,  3].min()
-        최저종가20  = ar[-20:,  4].min()
-        최저저가20  = ar[-20:,  3].min()
-        최저종가60  = ar[-60:,  4].min()
-        최저저가60  = ar[-60:,  3].min()
-        최저종가120 = ar[-120:, 4].min()
-        최저저가120 = ar[-120:, 3].min()
-        최저종가240 = ar[-240:, 4].min()
-        최저저가240 = ar[-240:, 3].min()
-        종가합계4   = ar[-4:,   4].sum()
-        종가합계9   = ar[-9:,   4].sum()
-        종가합계19  = ar[-19:,  4].sum()
-        종가합계59  = ar[-59:,  4].sum()
-        종가합계119 = ar[-119:, 4].sum()
-        종가합계239 = ar[-239:, 4].sum()
-        최고거래대금 = ar[-hmcount:, 5].max()
-        new_data = [
-            최고종가5, 최고고가5, 최고종가10, 최고고가10, 최고종가20, 최고고가20, 최고종가60, 최고고가60, 최고종가120, 최고고가120, 최고종가240, 최고고가240,
-            최저종가5, 최저저가5, 최저종가10, 최저저가10, 최저종가20, 최저저가20, 최저종가60, 최저저가60, 최저종가120, 최저저가120, 최저종가240, 최저저가240,
-            종가합계4, 종가합계9, 종가합계19, 종가합계59, 종가합계119, 종가합계239, 최고거래대금
-        ]
-        return new_data
 
     def Strategy(self, data):
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량, \
@@ -469,155 +391,17 @@ class StrategyBinanceFuture:
         def 당일거래대금각도(tick, pre=0):
             return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
-        분봉체결시간 = int(str(체결시간)[:10] + dict_min[self.dict_set['코인분봉기간']][str(체결시간)[10:12]] + '00')
-        if self.dict_set['코인분봉데이터']:
-            def 분봉시가N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 1]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 1]
-
-            def 분봉고가N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 2]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 2]
-
-            def 분봉저가N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 3]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 3]
-
-            def 분봉현재가N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 4]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 4]
-
-            def 분봉거래대금N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 5]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 5]
-
-            def 분봉이평5N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 6]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 6]
-
-            def 분봉이평10N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 7]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 7]
-
-            def 분봉이평20N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 8]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 8]
-
-            def 분봉이평60N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 9]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 9]
-
-            def 분봉이평120N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 10]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 10]
-
-            def 분봉이평240N(pre):
-                if 분봉체결시간 != self.dict_min_ar[종목코드][-1, 0]:
-                    return self.dict_min_ar[종목코드][-pre, 11]
-                else:
-                    return self.dict_min_ar[종목코드][-(pre + 1), 11]
-
-        일봉일자 = int(str(체결시간)[:8])
-        if self.dict_set['코인일봉데이터']:
-            def 일봉시가N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 1]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 1]
-
-            def 일봉고가N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 2]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 2]
-
-            def 일봉저가N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 3]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 3]
-
-            def 일봉현재가N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 4]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 4]
-
-            def 일봉거래대금N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 5]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 5]
-
-            def 일봉이평5N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 6]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 6]
-
-            def 일봉이평10N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 7]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 7]
-
-            def 일봉이평20N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 8]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 8]
-
-            def 일봉이평60N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 9]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 9]
-
-            def 일봉이평120N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 10]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 10]
-
-            def 일봉이평240N(pre):
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    return self.dict_day_ar[종목코드][-pre, 11]
-                else:
-                    return self.dict_day_ar[종목코드][-(pre + 1), 11]
-
-        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
-        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
-        self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
-        self.shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
-
         시분초, 호가단위 = int(str(체결시간)[8:]), self.dict_info[종목코드]['호가단위']
         데이터길이 = len(self.dict_tik_ar[종목코드]) + 1 if 종목코드 in self.dict_tik_ar.keys() else 1
         평균값계산틱수 = self.dict_set['코인장초평균값계산틱수'] if 시분초 < self.dict_set['코인장초전략종료시간'] else self.dict_set['코인장중평균값계산틱수']
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_ = 0., 0., 0., 0., 0, 0
         체결강도평균_, 최고체결강도_, 최저체결강도_, 최고초당매수수량_, 최고초당매도수량_ = 0., 0., 0., 0, 0
         누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_ = 0, 0, 0., 0., 0., 0.
-        분봉시가, 분봉고가, 분봉저가, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240, 분봉거래대금 = 0, 0, 0, 0., 0., 0., 0., 0., 0., 0
-        일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240 = 0., 0., 0., 0., 0., 0.
+
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+        self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
+        self.shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
 
         if 종목코드 in self.dict_tik_ar.keys():
             if len(self.dict_tik_ar[종목코드]) >=   59: 이동평균60_   = round((self.dict_tik_ar[종목코드][  -59:, 1].sum() + 현재가) /   60, 8)
@@ -668,66 +452,6 @@ class StrategyBinanceFuture:
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
         self.indexn = 데이터길이 - 1
-
-        new_dbdata_min = None
-        new_dbdata_day = None
-
-        if self.dict_set['코인분봉데이터']:
-            if 종목코드 not in self.dict_min_data.keys():
-                return
-
-            try:
-                if 분봉체결시간 == self.dict_min_ar[종목코드][-1, 0]:
-                    분봉시가, 분봉고가, 분봉저가 = self.dict_min_ar[종목코드][-1, 1:4]
-                    분봉거래대금 = self.dict_min_ar[종목코드][-1, 5]
-                    분봉고가 = 현재가 if 현재가 > 분봉고가 else 분봉고가
-                    분봉저가 = 현재가 if 현재가 < 분봉저가 else 분봉저가
-                    분봉거래대금 += 초당거래대금
-                else:
-                    new_dbdata_min = list(self.dict_min_ar[종목코드][-1, :]) + self.dict_min_data[종목코드]
-                    self.dict_min_data[종목코드] = self.GetNewLineData(self.dict_min_ar[종목코드], self.dict_set['코인분봉개수'])
-                    분봉시가, 분봉고가, 분봉저가, 분봉거래대금 = 현재가, 현재가, 현재가, 초당거래대금
-
-                분봉최고종가5, 분봉최고고가5, 분봉최고종가10, 분봉최고고가10, 분봉최고종가20, 분봉최고고가20,  분봉최고종가60, \
-                    분봉최고고가60, 분봉최고종가120, 분봉최고고가120, 분봉최고종가240, 분봉최고고가240, 분봉최저종가5, 분봉최저저가5, \
-                    분봉최저종가10, 분봉최저저가10, 분봉최저종가20, 분봉최저저가20, 분봉최저종가60, 분봉최저저가60, 분봉최저종가120, \
-                    분봉최저저가120, 분봉최저종가240, 분봉최저저가240, 분봉종가합계4, 분봉종가합계9, 분봉종가합계19, 분봉종가합계59, \
-                    분봉종가합계119, 분봉종가합계239, 분봉최고거래대금 = self.dict_min_data[종목코드]
-                분봉이평5   = round((분봉종가합계4   + 현재가) /   5, 8)
-                분봉이평10  = round((분봉종가합계9   + 현재가) /  10, 8)
-                분봉이평20  = round((분봉종가합계19  + 현재가) /  20, 8)
-                분봉이평60  = round((분봉종가합계59  + 현재가) /  60, 8)
-                분봉이평120 = round((분봉종가합계119 + 현재가) / 120, 8)
-                분봉이평240 = round((분봉종가합계239 + 현재가) / 240, 8)
-                분봉최고거래대금대비 = round(분봉거래대금 / 분봉최고거래대금 * 100, 2) if 분봉최고거래대금 != 0 else 0.
-            except Exception as e:
-                self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 분봉데이터 {e}'))
-                return
-
-        if self.dict_set['코인일봉데이터']:
-            if 종목코드 not in self.dict_day_data.keys():
-                return
-
-            try:
-                if 일봉일자 != self.dict_day_ar[종목코드][-1, 0]:
-                    new_dbdata_day = list(self.dict_day_ar[종목코드][-1, :]) + self.dict_day_data[종목코드]
-                    self.dict_day_data[종목코드] = self.GetNewLineData(self.dict_day_ar[종목코드], 250)
-
-                일봉최고종가5, 일봉최고고가5, 일봉최고종가10, 일봉최고고가10, 일봉최고종가20, 일봉최고고가20, 일봉최고종가60, \
-                    일봉최고고가60, 일봉최고종가120, 일봉최고고가120, 일봉최고종가240, 일봉최고고가240, 일봉최저종가5, 일봉최저저가5, \
-                    일봉최저종가10, 일봉최저저가10, 일봉최저종가20, 일봉최저저가20, 일봉최저종가60, 일봉최저저가60, 일봉최저종가120, \
-                    일봉최저저가120, 일봉최저종가240, 일봉최저저가240, 일봉종가합계4, 일봉종가합계9, 일봉종가합계19, 일봉종가합계59, \
-                    일봉종가합계119, 일봉종가합계239, 일봉최고거래대금 = self.dict_day_data[종목코드]
-                일봉이평5   = round((일봉종가합계4   + 현재가) /   5, 8)
-                일봉이평10  = round((일봉종가합계9   + 현재가) /  10, 8)
-                일봉이평20  = round((일봉종가합계19  + 현재가) /  20, 8)
-                일봉이평60  = round((일봉종가합계59  + 현재가) /  60, 8)
-                일봉이평120 = round((일봉종가합계119 + 현재가) / 120, 8)
-                일봉이평240 = round((일봉종가합계239 + 현재가) / 240, 8)
-                일봉최고거래대금대비 = round(당일거래대금 / 일봉최고거래대금 * 100, 2) if 일봉최고거래대금 != 0 else 0.
-            except Exception as e:
-                self.windowQ.put((ui_num['C단순텍스트'], f'시스템 명령 오류 알림 - 일봉데이터 {e}'))
-                return
 
         if 체결강도평균_ != 0:
             if 종목코드 in self.df_jg.index:
@@ -784,7 +508,7 @@ class StrategyBinanceFuture:
                     if 시분초 < self.dict_set['코인장초전략종료시간']:
                         if self.buystrategy1 is not None:
                             try:
-                                exec(self.buystrategy1, None, locals())
+                                exec(self.buystrategy1)
                             except:
                                 print_exc()
                                 self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy1'))
@@ -794,7 +518,7 @@ class StrategyBinanceFuture:
                                 self.vars = self.vars2
                                 self.stg_change = True
                             try:
-                                exec(self.buystrategy2, None, locals())
+                                exec(self.buystrategy2)
                             except:
                                 print_exc()
                                 self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - BuyStrategy2'))
@@ -850,14 +574,14 @@ class StrategyBinanceFuture:
                     if 시분초 < self.dict_set['코인장초전략종료시간']:
                         if self.sellstrategy1 is not None:
                             try:
-                                exec(self.sellstrategy1, None, locals())
+                                exec(self.sellstrategy1)
                             except:
                                 print_exc()
                                 self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - SellStrategy1'))
                     elif self.dict_set['코인장초전략종료시간'] <= 시분초 < self.dict_set['코인장중전략종료시간']:
                         if self.sellstrategy2 is not None:
                             try:
-                                exec(self.sellstrategy2, None, locals())
+                                exec(self.sellstrategy2)
                             except:
                                 print_exc()
                                 self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - SellStrategy2'))
@@ -891,32 +615,6 @@ class StrategyBinanceFuture:
                 self.dict_tik_ar2[종목코드] = np.array([new_data_tick[:36]])
             else:
                 self.dict_tik_ar2[종목코드] = np.r_[self.dict_tik_ar2[종목코드], np.array([new_data_tick[:36]])]
-
-        if self.dict_set['코인분봉데이터']:
-            if new_dbdata_min is None:
-                self.dict_min_ar[종목코드][-1, :] = 분봉체결시간, 분봉시가, 분봉고가, 분봉저가, 현재가, 분봉거래대금, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240
-            else:
-                new_data = [분봉체결시간, 분봉시가, 분봉고가, 분봉저가, 현재가, 분봉거래대금, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240]
-                self.dict_min_ar[종목코드] = np.r_[self.dict_min_ar[종목코드], np.array([new_data])]
-                if len(self.dict_min_ar[종목코드]) > self.dict_set['코인분봉개수']:
-                    self.dict_min_ar[종목코드] = np.delete(self.dict_min_ar[종목코드], 0, 0)
-                self.queryQ.put(('코인분봉', new_dbdata_min, 종목코드, 'append'))
-
-            if self.chart_code == 종목코드:
-                self.windowQ.put((ui_num['분봉차트'], 종목코드, self.dict_min_ar[종목코드][-120:]))
-
-        if self.dict_set['코인일봉데이터']:
-            if new_dbdata_day is None:
-                self.dict_day_ar[종목코드][-1, :] = 일봉일자, 시가, 고가, 저가, 현재가, 당일거래대금, 일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240
-            else:
-                new_data = [일봉일자, 시가, 고가, 저가, 현재가, 당일거래대금, 일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240]
-                self.dict_day_ar[종목코드] = np.r_[self.dict_day_ar[종목코드], np.array([new_data])]
-                if len(self.dict_day_ar[종목코드]) > 250:
-                    self.dict_day_ar[종목코드] = np.delete(self.dict_day_ar[종목코드], 0, 0)
-                self.queryQ.put(('코인일봉', new_dbdata_day, 종목코드, 'append'))
-
-            if self.chart_code == 종목코드:
-                self.windowQ.put((ui_num['일봉차트'], 종목코드, self.dict_day_ar[종목코드][-120:]))
 
         if 틱수신시간 != 0:
             if self.dict_tik_ar2:

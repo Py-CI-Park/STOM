@@ -9,7 +9,7 @@ from backtester.optimiz_conditions import OptimizeConditions
 from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from backtester.optimiz_genetic_algorithm import OptimizeGeneticAlgorithm
 from ui.ui_pattern import get_pattern_text, get_pattern_setup
-from ui.set_style import style_bc_by, style_bc_dk, style_bc_bs
+from ui.set_style import style_bc_by, style_bc_dk, style_bc_bs, style_bc_bd
 from ui.set_text import testtext, rwfttext, gaoptext, vedittxt, optitext, condtext, cedittxt, example_finder, \
     example_finder_future
 
@@ -421,7 +421,26 @@ def cvj_button_clicked_06(ui):
     ui.cvj_pushButton_16.setFocus()
     cChangeSvjButtonColor(ui)
 
+def change_pre_button_edit(ui):
+    if ui.cvj_pushButton_01.isVisible():
+        ui.cvj_pushButton_15.setStyleSheet(style_bc_bd)
+    elif ui.cvc_pushButton_32.isVisible():
+        ui.cvj_pushButton_09.setStyleSheet(style_bc_bd)
+    elif ui.cvc_pushButton_35.isVisible():
+        ui.cvj_pushButton_07.setStyleSheet(style_bc_bd)
+    elif ui.cva_pushButton_03.isVisible():
+        ui.cvj_pushButton_08.setStyleSheet(style_bc_bd)
+    elif ui.cvo_pushButton_08.isVisible():
+        ui.cvj_pushButton_10.setStyleSheet(style_bc_bd)
+    elif ui.cvc_pushButton_23.isVisible():
+        ui.cvj_pushButton_12.setStyleSheet(style_bc_bd)
+    elif ui.cvc_pushButton_26.isVisible():
+        ui.cvj_pushButton_16.setStyleSheet(style_bc_bd)
+    elif ui.cvc_pushButton_29.isVisible():
+        ui.cvj_pushButton_11.setStyleSheet(style_bc_bd)
+
 def cvj_button_clicked_07(ui):
+    change_pre_button_edit(ui)
     ui.cs_textEditttt_01.setVisible(False)
     ui.cs_textEditttt_02.setVisible(False)
     ui.cs_textEditttt_03.setVisible(False)
@@ -441,10 +460,14 @@ def cvj_button_clicked_07(ui):
         item.setVisible(False)
     for item in ui.coin_baklog_list:
         item.setVisible(True)
+
     ui.cs_pushButtonn_08.setStyleSheet(style_bc_by)
-    cChangeSvjButtonColor(ui)
+    ui.cvj_pushButton_13.setFocus()
+    ui.cvj_pushButton_13.setStyleSheet(style_bc_dk)
+    ui.cvj_pushButton_14.setStyleSheet(style_bc_bs)
 
 def cvj_button_clicked_08(ui):
+    change_pre_button_edit(ui)
     ui.cs_textEditttt_01.setVisible(False)
     ui.cs_textEditttt_02.setVisible(False)
     ui.cs_textEditttt_03.setVisible(False)
@@ -467,7 +490,8 @@ def cvj_button_clicked_08(ui):
         item.setVisible(True)
 
     ui.cvj_pushButton_14.setFocus()
-    cChangeSvjButtonColor(ui)
+    ui.cvj_pushButton_14.setStyleSheet(style_bc_dk)
+    ui.cvj_pushButton_13.setStyleSheet(style_bc_bs)
 
 def cvj_button_clicked_09(ui):
     ui.cs_textEditttt_01.setGeometry(7, 10, 1000, 740 if ui.extend_window else 463)
@@ -596,8 +620,11 @@ def cvj_button_clicked_10(ui):
 
 def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         back_club = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (
                     QApplication.keyboardModifiers() & Qt.AltModifier) else False
         if back_club and not ui.backtest_engine:
@@ -650,8 +677,11 @@ def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
 
 def cvj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
@@ -702,8 +732,11 @@ def cvj_button_clicked_13(ui):
 
 def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (not (QApplication.keyboardModifiers() & Qt.ShiftModifier) and
                                       not (QApplication.keyboardModifiers() & Qt.AltModifier) and
                                       (QApplication.keyboardModifiers() & Qt.ControlModifier)):
@@ -846,8 +879,11 @@ def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
 
 def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
@@ -946,8 +982,11 @@ def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
 
 def cvj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
@@ -1016,8 +1055,11 @@ def cvj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
 
 def cvj_button_clicked_17(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
@@ -1134,8 +1176,11 @@ def cvj_button_clicked_22(ui):
 
 def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
@@ -1177,8 +1222,11 @@ def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
 
 def cvj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스터가 실행중입니다.\n중복 실행할 수 없습니다.\n')
+        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
+            return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('주식')
             return

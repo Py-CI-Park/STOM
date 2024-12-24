@@ -36,13 +36,11 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
         geometry += f"{ui.dialog_info.x()};{ui.dialog_info.y() - 31 if geo_len > 9 and ui.dict_set['창위치'][9] + 31 == ui.dialog_info.y() else ui.dialog_info.y()};"
         geometry += f"{ui.dialog_web.x()};{ui.dialog_web.y() - 31 if geo_len > 11 and ui.dict_set['창위치'][11] + 31 == ui.dialog_web.y() else ui.dialog_web.y()};"
         geometry += f"{ui.dialog_tree.x()};{ui.dialog_tree.y() - 31 if geo_len > 13 and ui.dict_set['창위치'][13] + 31 == ui.dialog_tree.y() else ui.dialog_tree.y()};"
-        geometry += f"{ui.dialog_chart_day.x()};{ui.dialog_chart_day.y() - 31 if geo_len > 15 and ui.dict_set['창위치'][15] + 31 == ui.dialog_chart_day.y() else ui.dialog_chart_day.y()};"
-        geometry += f"{ui.dialog_chart_min.x()};{ui.dialog_chart_min.y() - 31 if geo_len > 17 and ui.dict_set['창위치'][17] + 31 == ui.dialog_chart_min.y() else ui.dialog_chart_min.y()};"
-        geometry += f"{ui.dialog_kimp.x()};{ui.dialog_kimp.y() - 31 if geo_len > 19 and ui.dict_set['창위치'][19] + 31 == ui.dialog_kimp.y() else ui.dialog_kimp.y()};"
-        geometry += f"{ui.dialog_hoga.x()};{ui.dialog_hoga.y() - 31 if geo_len > 21 and ui.dict_set['창위치'][21] + 31 == ui.dialog_hoga.y() else ui.dialog_hoga.y()};"
-        geometry += f"{ui.dialog_backengine.x()};{ui.dialog_backengine.y() - 31 if geo_len > 23 and ui.dict_set['창위치'][23] + 31 == ui.dialog_backengine.y() else ui.dialog_backengine.y()};"
-        geometry += f"{ui.dialog_order.x()};{ui.dialog_order.y() - 31 if geo_len > 25 and ui.dict_set['창위치'][25] + 31 == ui.dialog_order.y() else ui.dialog_order.y()};"
-        geometry += f"{ui.dialog_pattern.x()};{ui.dialog_pattern.y() - 31 if geo_len > 27 and ui.dict_set['창위치'][27] + 31 == ui.dialog_pattern.y() else ui.dialog_pattern.y()}"
+        geometry += f"{ui.dialog_kimp.x()};{ui.dialog_kimp.y() - 31 if geo_len > 15 and ui.dict_set['창위치'][15] + 31 == ui.dialog_kimp.y() else ui.dialog_kimp.y()};"
+        geometry += f"{ui.dialog_hoga.x()};{ui.dialog_hoga.y() - 31 if geo_len > 17 and ui.dict_set['창위치'][17] + 31 == ui.dialog_hoga.y() else ui.dialog_hoga.y()};"
+        geometry += f"{ui.dialog_backengine.x()};{ui.dialog_backengine.y() - 31 if geo_len > 19 and ui.dict_set['창위치'][19] + 31 == ui.dialog_backengine.y() else ui.dialog_backengine.y()};"
+        geometry += f"{ui.dialog_order.x()};{ui.dialog_order.y() - 31 if geo_len > 21 and ui.dict_set['창위치'][21] + 31 == ui.dialog_order.y() else ui.dialog_order.y()};"
+        geometry += f"{ui.dialog_pattern.x()};{ui.dialog_pattern.y() - 31 if geo_len > 23 and ui.dict_set['창위치'][23] + 31 == ui.dialog_pattern.y() else ui.dialog_pattern.y()}"
         query = f"UPDATE etc SET 창위치 = '{geometry}'"
         queryQ.put(('설정디비', query))
     queryQ.put('프로세스종료')
@@ -58,8 +56,6 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
     if ui.dialog_info.isVisible():      ui.dialog_info.close()
     if ui.dialog_web.isVisible():       ui.dialog_web.close()
     if ui.dialog_tree.isVisible():      ui.dialog_tree.close()
-    if ui.dialog_chart_day.isVisible(): ui.dialog_chart_day.close()
-    if ui.dialog_chart_min.isVisible(): ui.dialog_chart_min.close()
     if ui.dialog_graph.isVisible():     ui.dialog_graph.close()
     if ui.dialog_kimp.isVisible():      ui.dialog_kimp.close()
     if ui.StomLiveProcessAlive():       ui.proc_stomlive.kill()
@@ -80,14 +76,7 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
         ui.proc_simulator_rv.kill()
         ui.proc_simulator_td.kill()
     if ui.BacktestProcessAlive():
-        ui.BacktestProcessKill()
-
-    if ui.bact_procs:
-        for proc in ui.bact_procs:
-            proc.kill()
-    if ui.back_procs:
-        for proc in ui.back_procs:
-            proc.kill()
+        ui.BacktestProcessKill(1)
 
     qtest_qwait(3)
     sys.exit()

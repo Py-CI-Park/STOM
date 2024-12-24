@@ -100,11 +100,11 @@ def ssbutton_clicked_05(ui):
 
 def ssbutton_clicked_06(ui):
     buttonReply = QMessageBox.question(
-        ui, '백테스트 중지', '백테스트를 중지합니다.\n계속하시겠습니까?\n',
+        ui, '백테스트 중지', '백테스트를 중지하면 백테엔진을 재시작해야합니다.\n계속하시겠습니까?\n',
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
     )
     if buttonReply == QMessageBox.Yes:
-        ui.BacktestProcessKill()
+        ui.BacktestProcessKill(1)
         ui.ss_progressBar_01.setValue(0)
         ui.ss_progressBar_01.setFormat('%p%')
         ui.back_scount = 0
@@ -206,11 +206,11 @@ def csbutton_clicked_05(ui):
 
 def csbutton_clicked_06(ui):
     buttonReply = QMessageBox.question(
-        ui, '백테스트 중지', '백테스트를 중지합니다.\n계속하시겠습니까?\n',
+        ui, '백테스트 중지', '백테스트를 중지하면 백테엔진을 재시작해야합니다.\n계속하시겠습니까?\n',
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
     )
     if buttonReply == QMessageBox.Yes:
-        ui.BacktestProcessKill()
+        ui.BacktestProcessKill(1)
         ui.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
         ui.cs_progressBar_01.setValue(0)
         ui.cs_progressBar_01.setFormat('%p%')

@@ -6,8 +6,6 @@ def update_progressbar(ui, soundQ, webcQ):
     ui.counter = 0 if ui.counter == 599 else ui.counter + 1
 
     ui.kp_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_kimp.isVisible() else style_bc_bt)
-    ui.mb_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_chart_min.isVisible() else style_bc_bt)
-    ui.ib_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_chart_day.isVisible() else style_bc_bt)
     ui.dd_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_db.isVisible() else style_bc_bt)
     ui.js_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_jisu.isVisible() else style_bc_bt)
     ui.uj_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_tree.isVisible() else style_bc_bt)
@@ -133,6 +131,8 @@ def update_progressbar(ui, soundQ, webcQ):
 
     style_ = style_bc_bb if ui.ct_test > 0 and ui.counter % 2 != 0 else style_bc_bt
     ui.tt_pushButtonnn_03.setStyleSheet(style_)
+
+    ui.be_pushButtonnn_01.setStyleSheet(style_bc_by if ui.backtest_engine else style_bc_bt)
 
     if ui.ssicon_alert:
         icon = ui.icon_stocks if ui.counter % 2 == 0 else ui.icon_stocks2

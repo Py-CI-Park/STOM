@@ -37,9 +37,8 @@ def auto_back_schedule(ui, gubun, soundQ, teleQ):
         if not ui.dialog_backengine.isVisible():
             ui.BackTestengineShow(ui.dict_set['백테스케쥴구분'])
         qtest_qwait(2)
-        ui.backtest_engine = False
-        ui.BacktestEngineVarsReset()
-        qtest_qwait(2)
+        ui.BacktestEngineKill()
+        qtest_qwait(3)
         ui.StartBacktestEngine(ui.dict_set['백테스케쥴구분'])
     elif gubun == 2:
         if not ui.dialog_scheduler.isVisible():

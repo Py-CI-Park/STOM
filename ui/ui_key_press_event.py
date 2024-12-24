@@ -25,24 +25,11 @@ def key_press_event(ui, event):
                         ui.cvjButtonClicked_11()
         elif ui.focusWidget() in (ui.std_tableWidgettt, ui.sgj_tableWidgettt, ui.scj_tableWidgettt, ui.ctd_tableWidgettt, ui.cgj_tableWidgettt, ui.ccj_tableWidgettt):
             stock = True
-            if ui.focusWidget() == ui.std_tableWidgettt:
-                tableWidget = ui.std_tableWidgettt
-            elif ui.focusWidget() == ui.sgj_tableWidgettt:
-                tableWidget = ui.sgj_tableWidgettt
-            elif ui.focusWidget() == ui.scj_tableWidgettt:
-                tableWidget = ui.scj_tableWidgettt
-            elif ui.focusWidget() == ui.ctd_tableWidgettt:
+            if ui.focusWidget() in (ui.ctd_tableWidgettt, ui.cgj_tableWidgettt, ui.ccj_tableWidgettt):
                 stock = False
-                tableWidget = ui.ctd_tableWidgettt
-            elif ui.focusWidget() == ui.cgj_tableWidgettt:
-                stock = False
-                tableWidget = ui.cgj_tableWidgettt
-            else:
-                stock = False
-                tableWidget = ui.ccj_tableWidgettt
-            row  = tableWidget.currentIndex().row()
-            col  = tableWidget.currentIndex().column()
-            item = tableWidget.item(row, 0)
+            row  = ui.focusWidget().currentIndex().row()
+            col  = ui.focusWidget().currentIndex().column()
+            item = ui.focusWidget().item(row, 0)
             if item is not None:
                 name       = item.text()
                 linetext   = ui.ct_lineEdittttt_03.text()
@@ -54,13 +41,11 @@ def key_press_event(ui, event):
                 ui.ShowDialog(name, tickcount, searchdate, col)
         elif ui.focusWidget() in (ui.sds_tableWidgettt, ui.cds_tableWidgettt):
             if ui.focusWidget() == ui.sds_tableWidgettt:
-                tableWidget = ui.sds_tableWidgettt
                 searchdate  = ui.s_calendarWidgett.selectedDate().toString('yyyyMMdd')
             else:
-                tableWidget = ui.cds_tableWidgettt
                 searchdate  = ui.c_calendarWidgett.selectedDate().toString('yyyyMMdd')
-            row  = tableWidget.currentIndex().row()
-            item = tableWidget.item(row, 1)
+            row  = ui.focusWidget().currentIndex().row()
+            item = ui.focusWidget().item(row, 1)
             if item is not None:
                 name      = item.text()
                 linetext  = ui.ct_lineEdittttt_03.text()
@@ -72,13 +57,11 @@ def key_press_event(ui, event):
                 ui.ShowDialog(name, tickcount, searchdate, 4)
         elif ui.focusWidget() in (ui.sns_tableWidgettt, ui.cns_tableWidgettt):
             if ui.focusWidget() == ui.sns_tableWidgettt:
-                tableWidget = ui.sns_tableWidgettt
                 gubun = '주식'
             else:
-                tableWidget = ui.cns_tableWidgettt
                 gubun = '코인'
-            row  = tableWidget.currentIndex().row()
-            item = tableWidget.item(row, 0)
+            row  = ui.focusWidget().currentIndex().row()
+            item = ui.focusWidget().item(row, 0)
             if item is not None:
                 date = item.text()
                 date = date.replace('.', '')
@@ -101,18 +84,18 @@ def key_press_event(ui, event):
                 df.set_index('index', inplace=True)
                 ui.ShowDialogGraph(df)
         elif ui.focusWidget() in (ui.ss_tableWidget_01, ui.cs_tableWidget_01):
-            tableWidget = ui.ss_tableWidget_01 if ui.focusWidget() == ui.ss_tableWidget_01 else ui.cs_tableWidget_01
+            tableWidget  = ui.ss_tableWidget_01 if ui.focusWidget() == ui.ss_tableWidget_01 else ui.cs_tableWidget_01
             row  = tableWidget.currentIndex().row()
             item = tableWidget.item(row, 0)
             if item is not None:
-                name       = item.text()
+                name = item.text()
                 searchdate = tableWidget.item(row, 2).text()[:8]
-                buytime    = comma2int(tableWidget.item(row, 2).text())
-                selltime   = comma2int(tableWidget.item(row, 3).text())
-                buyprice   = comma2float(tableWidget.item(row, 5).text())
-                sellprice  = comma2float(tableWidget.item(row, 6).text())
-                detail     = [buytime, buyprice, selltime, sellprice]
-                buytimes   = tableWidget.item(row, 13).text()
+                buytime = comma2int(tableWidget.item(row, 2).text())
+                selltime = comma2int(tableWidget.item(row, 3).text())
+                buyprice = comma2float(tableWidget.item(row, 5).text())
+                sellprice = comma2float(tableWidget.item(row, 6).text())
+                detail = [buytime, buyprice, selltime, sellprice]
+                buytimes = tableWidget.item(row, 13).text()
                 coin = True if 'KRW' in name or 'USDT' in name else False
                 code = ui.dict_code[name] if name in ui.dict_code.keys() else name
                 ui.ct_lineEdittttt_04.setText(code)

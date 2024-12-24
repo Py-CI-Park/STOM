@@ -10,9 +10,11 @@ from traceback import print_exc
 from utility.setting import DB_COIN_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
 from utility.static import strp_time, timedelta_sec, GetUpbitHogaunit, pickle_read, pickle_write, GetUpbitPgSgSp
-from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData, GetTradeInfo
+from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, \
+    GetBackloadDayQuery, AddAvgData, GetTradeInfo, AddTalib
 
 
+# noinspection PyUnusedLocal
 class CoinUpbitBackEngine:
     def __init__(self, gubun, wq, pq, tq, bq, stq_list, profile=False):
         gc.disable()
@@ -70,9 +72,7 @@ class CoinUpbitBackEngine:
         self.dict_sellstg = {}
         self.dict_sconds  = {}
         self.sell_cond    = 0
-        self.vars_turn    = 0
-        self.vars_count   = 0
-        self.vars_key     = 0
+        self.opti_turn    = 0
 
         self.code         = ''
         self.name         = ''
@@ -84,9 +84,9 @@ class CoinUpbitBackEngine:
         self.dindex       = 0
         self.mindex       = 0
         self.tick_count   = 0
-        self.divid        = 0
         self.last         = 0
 
+        self.tick_calcul  = False
         self.pattern      = False
         self.pattern_test = False
         self.pattern_buy  = []
@@ -94,10 +94,9 @@ class CoinUpbitBackEngine:
         self.dict_pattern = {}
         self.dict_pattern_buy  = {}
         self.dict_pattern_sell = {}
+        self.MainLoop()
 
-        self.Start()
-
-    def Start(self):
+    def MainLoop(self):
         while True:
             data = self.pq.get()
             if '정보' in data[0]:
@@ -116,10 +115,9 @@ class CoinUpbitBackEngine:
                             self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
-                        self.vars_turn  = data[2]
+                        self.opti_turn  = data[2]
                         self.vars       = [var[1] for var in self.vars_list]
-                        self.vars_count = len(self.vars_list[self.vars_turn][0]) if self.vars_turn >= 0 else 1
-                        self.InitDivid()
+                        self.InitDivid(0)
                         self.InitTradeInfo()
                         self.BackTest()
                 elif self.back_type == '전진분석':
@@ -135,12 +133,13 @@ class CoinUpbitBackEngine:
                             self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_list  = data[1]
-                        self.vars_turn  = data[2]
+                        self.opti_turn  = data[2]
                         self.vars       = [var[1] for var in self.vars_list]
-                        self.vars_count = len(self.vars_list[self.vars_turn][0]) if self.vars_turn >= 0 else 1
                         self.startday   = data[3]
                         self.endday     = data[4]
-                        self.InitDivid()
+                        if self.opti_turn == 1:
+                            self.tick_calcul = False
+                        self.InitDivid(0)
                         self.InitTradeInfo()
                         self.BackTest()
                 elif self.back_type == 'GA최적화':
@@ -158,8 +157,7 @@ class CoinUpbitBackEngine:
                             self.BackStop(1)
                     elif data[0] == '변수정보':
                         self.vars_lists = data[1]
-                        self.vars_count = 20
-                        self.InitDivid()
+                        self.InitDivid(0)
                         self.InitTradeInfo()
                         self.BackTest()
                 elif self.back_type == '조건최적화':
@@ -182,8 +180,7 @@ class CoinUpbitBackEngine:
                             self.dict_sellstg[i] = sellstg
                             self.dict_sconds[i]  = dict_cond
                             if buystg is None or sellstg is None: error = True
-                        self.vars_count = 20
-                        self.InitDivid()
+                        self.InitDivid(0)
                         self.InitTradeInfo()
                         if error:
                             self.BackStop(1)
@@ -199,11 +196,13 @@ class CoinUpbitBackEngine:
                         self.endtime    = data[6]
                         self.buystg     = GetBuyStg(data[7], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStg(data[8], self.gubun)
-                        self.vars_count = 1
-                        self.InitDivid()
+                        self.pattern_test = data[9]
+                        self.InitDivid(2)
                         self.InitTradeInfo()
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop(1)
+                        elif self.pattern_test and self.pattern_buy is None:
+                            self.BackStop(0)
                         else:
                             start = datetime.datetime.now()
                             self.BackTest()
@@ -222,9 +221,7 @@ class CoinUpbitBackEngine:
                         self.dict_pattern_sell = data[11]
                         self.pattern_buy  = []
                         self.pattern_sell = []
-                        self.vars_count   = 1
-                        self.pattern      = True
-                        self.InitDivid()
+                        self.InitDivid(1)
                         self.InitTradeInfo()
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop(1)
@@ -244,7 +241,8 @@ class CoinUpbitBackEngine:
                         self.endday     = data[3]
                         self.starttime  = data[4]
                         self.endtime    = data[5]
-                        self.InitDivid()
+                        self.InitDivid(0)
+                        self.InitTradeInfo()
                         try:
                             self.buystg = compile(data[6], '<string>', 'exec')
                         except:
@@ -254,6 +252,7 @@ class CoinUpbitBackEngine:
                             self.BackTest()
             elif data[0] == '백테유형':
                 self.back_type = data[1]
+                self.tick_calcul = False
             elif data[0] == '설정변경':
                 self.dict_set = data[1]
             elif data[0] in ('데이터크기', '데이터로딩'):
@@ -261,20 +260,28 @@ class CoinUpbitBackEngine:
             elif data == '벤치점수요청':
                 self.bq.put((self.total_ticks, self.total_secds, round(self.total_ticks / self.total_secds, 2)))
 
-    def InitDivid(self):
+    def InitDivid(self, pattern):
         self.sell_count = 0
-        if self.vars_count < 5:
-            self.divid = 5
+        if pattern == 0:
+            self.pattern, self.pattern_test = False, False
+        elif pattern == 1:
+            self.pattern, self.pattern_test = True, False
         else:
-            self.divid = 0
+            self.pattern = False
+        if self.back_type == '백테스트':
+            self.opti_turn = 0
+        elif self.back_type in ('GA최적화', '조건최적화'):
+            self.opti_turn = 3
 
     def InitTradeInfo(self):
         self.tick_count = 0
         v = GetTradeInfo(1)
-        if self.vars_count == 1:
-            self.trade_info = {0: v}
+        if self.opti_turn == 1:
+            self.trade_info = {vars_turn: {vars_key: v for vars_key in range(len(self.vars_list[vars_turn][0]))} for vars_turn in range(len(self.vars_list))}
+        elif self.opti_turn == 3:
+            self.trade_info = {vars_turn: {vars_key: v for vars_key in range(20)} for vars_turn in range(50 if self.back_type == 'GA최적화' else 1)}
         else:
-            self.trade_info = {k: v for k in range(self.vars_count)}
+            self.trade_info = {0: {0: v}}
 
     def DataLoad(self, data):
         bk = 0
@@ -296,6 +303,8 @@ class CoinUpbitBackEngine:
                 elif len_df_tick > 0:
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
+                    if self.dict_set['보조지표사용']:
+                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -332,6 +341,8 @@ class CoinUpbitBackEngine:
                     if len_df_tick > 0:
                         df_tick = AddAvgData(df_tick, 8, avg_list)
                         arry_tick = np.array(df_tick)
+                        if self.dict_set['보조지표사용']:
+                            arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
                         if self.dict_set['백테일괄로딩']:
                             self.dict_tik_ar[code] = arry_tick
                         else:
@@ -357,10 +368,11 @@ class CoinUpbitBackEngine:
                     len_df_tick = len(df_tick)
                 except:
                     pass
-
                 if len_df_tick > 0:
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
+                    if self.dict_set['보조지표사용']:
+                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -389,6 +401,21 @@ class CoinUpbitBackEngine:
             else:
                 self.wq.put((ui_num['C백테스트'], '학습된 패턴 데이터가 없어 백테스트를 중지합니다.'))
 
+    def SetArrayTick(self, code, same_days, same_time):
+        if same_days and same_time:
+            self.array_tick = self.dict_tik_ar[code]
+        elif same_time:
+            self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] >= self.startday * 1000000) &
+                                                     (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000)]
+        elif same_days:
+            self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] % 1000000 >= self.starttime) &
+                                                     (self.dict_tik_ar[code][:, 0] % 1000000 <= self.endtime)]
+        else:
+            self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] >= self.startday * 1000000) &
+                                                     (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000) &
+                                                     (self.dict_tik_ar[code][:, 0] % 1000000 >= self.starttime) &
+                                                     (self.dict_tik_ar[code][:, 0] % 1000000 <= self.endtime)]
+
     def BackTest(self):
         if self.profile:
             import cProfile
@@ -397,6 +424,15 @@ class CoinUpbitBackEngine:
 
         same_days = self.startday_ == self.startday and self.endday_ == self.endday
         same_time = self.starttime_ == self.starttime and self.endtime_ == self.endtime
+
+        if not self.tick_calcul and self.opti_turn in (1, 3):
+            total_ticks = 0
+            for code in self.code_list:
+                self.SetArrayTick(code, same_days, same_time)
+                total_ticks += len(self.array_tick)
+            self.tq.put(('전체틱수', total_ticks))
+            self.tick_calcul = True
+
         for code in self.code_list:
             self.code = self.name = code
             self.total_count = 0
@@ -404,45 +440,31 @@ class CoinUpbitBackEngine:
             if not self.dict_set['백테일괄로딩']:
                 self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
 
-            if same_days and same_time:
-                self.array_tick = self.dict_tik_ar[code]
-            elif same_time:
-                self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] >= self.startday * 1000000) &
-                                                         (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000)]
-            elif same_days:
-                self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] % 1000000 >= self.starttime) &
-                                                         (self.dict_tik_ar[code][:, 0] % 1000000 <= self.endtime)]
-            else:
-                self.array_tick = self.dict_tik_ar[code][(self.dict_tik_ar[code][:, 0] >= self.startday * 1000000) &
-                                                         (self.dict_tik_ar[code][:, 0] <= self.endday * 1000000 + 240000) &
-                                                         (self.dict_tik_ar[code][:, 0] % 1000000 >= self.starttime) &
-                                                         (self.dict_tik_ar[code][:, 0] % 1000000 <= self.endtime)]
+            self.SetArrayTick(code, same_days, same_time)
 
-            if len(self.array_tick) > 0:
-                self.last = len(self.array_tick) - 1
+            self.last = len(self.array_tick) - 1
+            if self.last > 0:
                 for i, index in enumerate(self.array_tick[:, 0]):
-                    if self.back_type is None: break
-                    next_day_change = i != self.last and str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
-                    self.tick_count += 1
                     self.index  = int(index)
                     self.indexn = i
-
-                    if i != self.last and not next_day_change:
-                        self.Strategy()
+                    self.tick_count += 1
+                    next_day_change = i == self.last or str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
+                    if not next_day_change:
+                        try:
+                            self.Strategy()
+                        except:
+                            print_exc()
+                            self.BackStop(1)
                     else:
                         self.LastSell()
                         self.InitTradeInfo()
+                    if self.back_type is None: break
+                    if self.opti_turn in (1, 3): self.tq.put('탐색완료')
 
-            self.tq.put(('백테완료', 1 if self.total_count > 0 else 0))
+            self.tq.put(('백테완료', self.total_count))
 
-        if self.pattern:
-            self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
-
-        if self.profile:
-            self.pr.print_stats(sort='cumulative')
-
-        while not self.pq.empty():
-            self.pq.get()
+        if self.pattern: self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
+        if self.profile: self.pr.print_stats(sort='cumulative')
 
     def Strategy(self):
         def now_utc():
@@ -639,85 +661,90 @@ class CoinUpbitBackEngine:
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, \
             관심종목 = self.array_tick[self.indexn, 1:36]
         종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), GetUpbitHogaunit(현재가)
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+        self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
+        self.shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
 
-        if self.back_type == '백파인더':
-            if self.tick_count < self.avgtime:
-                return
-
-            매수 = True
-            try:
-                exec(self.buystg, None, locals())
-            except:
-                print_exc()
-                self.BackStop(1)
+        if self.opti_turn == 1:
+            vars_turns = range(len(self.vars_list))
+        elif self.opti_turn == 3:
+            vars_turns = range(50 if self.back_type == 'GA최적화' else 1)
         else:
-            bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
-            shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
-            self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
-            self.shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
+            vars_turns = range(1)
 
-            for j in range(self.vars_count):
-                self.vars_key = j
-                if self.back_type in ('백테스트', '조건최적화'):
-                    if self.tick_count < self.avgtime:
-                        break
-                    if self.pattern_test and self.tick_count < self.dict_pattern['인식구간']:
-                        break
-                elif self.back_type == 'GA최적화':
-                    self.vars = self.vars_lists[j]
-                    if self.tick_count < self.vars[0]:
-                        continue
-                elif self.vars_turn >= 0:
-                    curr_var = self.vars_list[self.vars_turn][0][j]
-                    if curr_var == self.vars_list[self.vars_turn][1]:
-                        continue
-                    self.vars[self.vars_turn] = curr_var
-                    if self.tick_count < self.vars[0]:
-                        continue
-                elif self.tick_count < self.vars[0]:
+        for vars_turn in vars_turns:
+            if self.opti_turn == 1:
+                len_vars_list = len(self.vars_list[vars_turn][0])
+                if len_vars_list < 2:
                     continue
-
-                try:
-                    if not self.trade_info[j]['보유중']:
-                        if not 관심종목: continue
-                        self.trade_info[j]['주문수량'] = round(self.betting / 현재가, 8)
-                        매수 = True
-                        if self.back_type != '조건최적화':
-                            exec(self.buystg, None, locals())
-                        else:
-                            exec(self.dict_buystg[j], None, locals())
-                    else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[j].values()
-                        매수금액 = 보유수량 * 매수가
-                        평가금액 = 보유수량 * 현재가
-                        _, 수익금, 수익률 = GetUpbitPgSgSp(매수금액, 평가금액)
-                        if 수익률 > 최고수익률:
-                            self.trade_info[j]['최고수익률'] = 최고수익률 = 수익률
-                        elif 수익률 < 최저수익률:
-                            self.trade_info[j]['최저수익률'] = 최저수익률 = 수익률
-                        보유시간 = (now_utc() - 매수시간).total_seconds()
-
-                        self.trade_info[j]['주문수량'] = 보유수량
-                        매도 = False
-                        if self.back_type != '조건최적화':
-                            exec(self.sellstg, None, locals())
-                        else:
-                            exec(self.dict_sellstg[j], None, locals())
-                except:
-                    print_exc()
-                    self.BackStop(1)
+                self.vars = [var[1] for var in self.vars_list]
+                if vars_turn != 0 and self.tick_count < self.vars[0]:
                     break
+                vars_keys = range(len_vars_list)
+            elif self.opti_turn == 3:
+                vars_keys = range(20)
+            else:
+                vars_keys = range(1)
 
-    def Buy(self):
-        if self.pattern:
-            self.PatternModeling('매수')
-        if self.pattern_test:
-            pattern = self.GetPattern('매수')
-            if pattern not in self.pattern_buy:
-                return
+            for vars_key in vars_keys:
+                index = 0
+                if self.opti_turn == 1:
+                    self.vars[vars_turn] = self.vars_list[vars_turn][0][vars_key]
+                    if self.tick_count < self.vars[0]:
+                        continue
+                elif self.opti_turn == 3:
+                    index = vars_turn * 20 + vars_key
+                    if self.back_type != '조건최적화':
+                        self.vars = self.vars_lists[index]
+                        if self.tick_count < self.vars[0]:
+                            break
+                    elif self.tick_count < self.avgtime:
+                        break
+                else:
+                    if self.back_type in ('최적화', '전진분석'):
+                        if self.tick_count < self.vars[0]:
+                            return
+                    else:
+                        if self.tick_count < self.avgtime:
+                            return
+                        if (self.pattern or self.pattern_test) and self.tick_count < self.dict_pattern['인식구간']:
+                            return
+
+                매수, 매도 = True, False
+                if not self.trade_info[vars_turn][vars_key]['보유중']:
+                    if not 관심종목: continue
+                    self.trade_info[vars_turn][vars_key]['주문수량'] = round(self.betting / 현재가, 8)
+                    if self.back_type != '조건최적화':
+                        exec(self.buystg)
+                    else:
+                        exec(self.dict_buystg[index])
+                else:
+                    _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
+                        self.trade_info[vars_turn][vars_key].values()
+                    _, _, 수익률 = GetUpbitPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
+                    if 수익률 > 최고수익률:
+                        self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
+                    elif 수익률 < 최저수익률:
+                        self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
+                    보유시간 = (now_utc() - 매수시간).total_seconds()
+                    self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+                    if self.back_type != '조건최적화':
+                        exec(self.sellstg)
+                    else:
+                        exec(self.dict_sellstg[index])
+
+    def Buy(self, vars_turn, vars_key):
+        if self.back_type == '백테스트':
+            if self.pattern:
+                self.PatternModeling('매수')
+            elif self.pattern_test:
+                pattern = self.GetPattern('매수')
+                if pattern not in self.pattern_buy:
+                    return
 
         매수금액 = 0
-        주문수량 = 미체결수량 = self.trade_info[self.vars_key]['주문수량']
+        주문수량 = 미체결수량 = self.trade_info[vars_turn][vars_key]['주문수량']
         if 주문수량 > 0:
             for 매도호가, 매도잔량 in self.bhogainfo:
                 if 미체결수량 - 매도잔량 <= 0:
@@ -728,7 +755,7 @@ class CoinUpbitBackEngine:
                     매수금액 += 매도호가 * 매도잔량
                     미체결수량 -= 매도잔량
             if 미체결수량 <= 0:
-                self.trade_info[self.vars_key] = {
+                self.trade_info[vars_turn][vars_key] = {
                     '보유중': 1,
                     '매수가': round(매수금액 / 주문수량, 4),
                     '매도가': 0,
@@ -740,16 +767,17 @@ class CoinUpbitBackEngine:
                     '매수시간': strp_time('%Y%m%d%H%M%S', str(self.index))
                 }
 
-    def Sell(self, sell_cond):
-        if self.pattern:
-            self.PatternModeling('매도')
-        if self.pattern_test:
-            pattern = self.GetPattern('매도')
-            if pattern not in self.pattern_sell:
-                return
+    def Sell(self, vars_turn, vars_key, sell_cond):
+        if self.back_type == '백테스트':
+            if self.pattern:
+                self.PatternModeling('매도')
+            elif self.pattern_test:
+                pattern = self.GetPattern('매도')
+                if pattern not in self.pattern_sell:
+                    return
 
         매도금액 = 0
-        주문수량 = 미체결수량 = self.trade_info[self.vars_key]['주문수량']
+        주문수량 = 미체결수량 = self.trade_info[vars_turn][vars_key]['주문수량']
         for 매수호가, 매수잔량 in self.shogainfo:
             if 미체결수량 - 매수잔량 <= 0:
                 매도금액 += 매수호가 * 미체결수량
@@ -759,56 +787,58 @@ class CoinUpbitBackEngine:
                 매도금액 += 매수호가 * 매수잔량
                 미체결수량 -= 매수잔량
         if 미체결수량 <= 0:
-            self.trade_info[self.vars_key]['매도가'] = round(매도금액 / 주문수량, 4)
+            self.trade_info[vars_turn][vars_key]['매도가'] = round(매도금액 / 주문수량, 4)
             self.sell_cond = sell_cond
-            self.CalculationEyun()
+            self.CalculationEyun(vars_turn, vars_key)
 
     def LastSell(self):
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = self.array_tick[self.indexn, 14:34]
+            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5 = \
+            self.array_tick[self.indexn, 14:34]
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
 
-        for k in range(self.vars_count):
-            self.vars_key = k
-            if self.trade_info[k]['보유중']:
-                매도금액 = 0
-                보유수량 = 미체결수량 = self.trade_info[k]['보유수량']
-                for 매수호가, 매수잔량 in shogainfo:
-                    if 미체결수량 - 매수잔량 <= 0:
-                        매도금액 += 매수호가 * 미체결수량
-                        미체결수량 -= 매수잔량
-                        break
+        for vars_turn in list(self.trade_info.keys()):
+            for vars_key in list(self.trade_info[vars_turn].keys()):
+                if self.trade_info[vars_turn][vars_key]['보유중']:
+                    매도금액 = 0
+                    보유수량 = 미체결수량 = self.trade_info[vars_turn][vars_key]['보유수량']
+                    for 매수호가, 매수잔량 in shogainfo:
+                        if 미체결수량 - 매수잔량 <= 0:
+                            매도금액 += 매수호가 * 미체결수량
+                            미체결수량 -= 매수잔량
+                            break
+                        else:
+                            매도금액 += 매수호가 * 매수잔량
+                            미체결수량 -= 매수잔량
+                    if 미체결수량 <= 0:
+                        self.trade_info[vars_turn][vars_key]['매도가'] = round(매도금액 / 보유수량, 4)
+                    elif 매도금액 == 0:
+                        self.trade_info[vars_turn][vars_key]['매도가'] = self.array_tick[self.indexn, 1]
                     else:
-                        매도금액 += 매수호가 * 매수잔량
-                        미체결수량 -= 매수잔량
+                        self.trade_info[vars_turn][vars_key]['매도가'] = round(매도금액 / (보유수량 - 미체결수량), 4)
 
-                if 미체결수량 <= 0:
-                    self.trade_info[k]['매도가'] = round(매도금액 / 보유수량, 4)
-                elif 매도금액 == 0:
-                    self.trade_info[k]['매도가'] = self.array_tick[self.indexn, 1]
-                else:
-                    self.trade_info[k]['매도가'] = round(매도금액 / (보유수량 - 미체결수량), 4)
+                    self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+                    self.sell_cond = 0
+                    self.CalculationEyun(vars_turn, vars_key)
 
-                self.trade_info[k]['주문수량'] = 보유수량
-                self.sell_cond = 0
-                self.CalculationEyun()
-
-    def CalculationEyun(self):
+    def CalculationEyun(self, vars_turn, vars_key):
+        """
+        보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vars_turn][vars_key].values()
+        """
         if not self.pattern:
             self.total_count += 1
-            _, bp, sp, oc, bc, hp, lp, bi, _ = self.trade_info[self.vars_key].values()
+            _, bp, sp, oc, _, _, _, bi, bdt = self.trade_info[vars_turn][vars_key].values()
             sgtg = 0
-            ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - strp_time('%Y%m%d%H%M%S', str(int(self.array_tick[bi, 0])))).total_seconds())
+            ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - bdt).total_seconds())
             bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
             sg, pg, pp = GetUpbitPgSgSp(bg, oc * sp)
-            sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[self.vars_key][self.sell_cond]
+            sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[vars_key][self.sell_cond]
             abt, bcx = '', True
-            data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, self.vars_key)
-            self.stq_list[self.vars_key if self.divid == 0 else (self.sell_count % self.divid)].put(data)
+            data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_key)
+            self.stq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
             self.sell_count += 1
-
-        self.trade_info[self.vars_key] = GetTradeInfo(1)
+        self.trade_info[vars_turn][vars_key] = GetTradeInfo(1)
 
     def PatternModeling(self, gubun):
         if self.tick_count > self.dict_pattern['인식구간']:

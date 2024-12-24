@@ -1,6 +1,5 @@
 import subprocess
 from multiprocessing import Process
-from PyQt5.QtWidgets import QMessageBox
 from coin.trader_binance_future import TraderBinanceFuture
 from coin.receiver_binance_future import ReceiverBinanceFuture
 from coin.strategy_binance_future import StrategyBinanceFuture

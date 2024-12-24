@@ -154,9 +154,10 @@ class UpdateTablewidget:
             tableWidget.clearContents()
             return
 
-        if gubun in (ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'],
-                     ui_num['김프'], ui_num['S누적상세'], ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'],
-                     ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']):
+        if gubun in (ui_num['S상세기록'], ui_num['C상세기록'],
+                     ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'], ui_num['김프'], ui_num['S누적상세'],
+                     ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'], ui_num['스톰라이브3'],
+                     ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']):
             tableWidget.setSortingEnabled(False)
 
         tableWidget.setRowCount(len_df)
@@ -189,10 +190,10 @@ class UpdateTablewidget:
                         (gubun == ui_num['C호가종목'] and column in ('현재가', '시가', '고가', '저가')) or \
                         (gubun == ui_num['C호가잔량'] and column == '호가'):
                     item = QTableWidgetItem(change_format(arry[i, j], dotdown8=True))
-                elif gubun in (ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S상세기록'], ui_num['C상세기록'],
-                               ui_num['S당일상세'], ui_num['S누적상세'], ui_num['C당일상세'], ui_num['C누적상세'],
-                               ui_num['스톰라이브1'], ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'],
-                               ui_num['스톰라이브7'], ui_num['김프']):
+                elif gubun in (ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S상세기록'],
+                               ui_num['C상세기록'], ui_num['S당일상세'], ui_num['S누적상세'],
+                               ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'], ui_num['스톰라이브3'],
+                               ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7'], ui_num['김프']):
                     value = str(arry[i, j])
                     if column in ('수익률', '누적수익률', 'per', 'hlml_per', 'ch', 'ch_avg', 'ch_high', '대비(원)',
                                   '대비율(%)', 'aht', 'wr', 'asp', 'tsp', 'mdd', 'cagr'):
@@ -340,9 +341,10 @@ class UpdateTablewidget:
         elif len_df < 12 and gubun in (ui_num['C호가체결2'], ui_num['S호가체결2']):
             tableWidget.setRowCount(12)
 
-        if gubun in (ui_num['S상세기록'], ui_num['C상세기록'], ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'],
-                     ui_num['김프'], ui_num['S누적상세'], ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'],
-                     ui_num['스톰라이브3'], ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']):
+        if gubun in (ui_num['S상세기록'], ui_num['C상세기록'],
+                     ui_num['S관심종목'], ui_num['C관심종목'], ui_num['S당일상세'], ui_num['김프'], ui_num['S누적상세'],
+                     ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'], ui_num['스톰라이브3'],
+                     ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7']):
             tableWidget.setSortingEnabled(True)
 
     def UpdateHogainfoForChart(self, gubun, ymdhms):
@@ -414,31 +416,31 @@ class UpdateTablewidget:
             14         15          16      17       18         19            20            21        22
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
            23       24       25        26       27        28       29        30       31        32
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합,
-           33       34       35        36       37        38       39        40       41       42          43
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목
+           33       34       35        36       37        38       39        40       41       42          43           44
         이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
-            44         45          46           47           48         49         50           51           52
+            45         46          47           48           49         50         51           52           53
         최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-              53            54               55              56              57           58           59           60
-        거래대금순위, 매수가, 매도가
-            61       62     63
+              54            55               56              57              58             59         60            61
+        매수가, 매도가
+          62    63
         """
 
         xpoint = self.ui.ctpg_tik_xticks.index(x)
         info = ['이평60', '이평300', '이평600', '이평1200', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도', '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량']
         if gubun == ui_num['S호가종목']:
             data = [
-                self.ui.ctpg_tik_arry[xpoint, 44], self.ui.ctpg_tik_arry[xpoint, 45], self.ui.ctpg_tik_arry[xpoint, 46],
-                self.ui.ctpg_tik_arry[xpoint, 47], self.ui.ctpg_tik_arry[xpoint, 7], self.ui.ctpg_tik_arry[xpoint, 50],
-                self.ui.ctpg_tik_arry[xpoint, 51], self.ui.ctpg_tik_arry[xpoint, 52], self.ui.ctpg_tik_arry[xpoint, 19],
-                self.ui.ctpg_tik_arry[xpoint, 57], self.ui.ctpg_tik_arry[xpoint, 14], self.ui.ctpg_tik_arry[xpoint, 15]
+                self.ui.ctpg_tik_arry[xpoint, 45], self.ui.ctpg_tik_arry[xpoint, 46], self.ui.ctpg_tik_arry[xpoint, 47],
+                self.ui.ctpg_tik_arry[xpoint, 48], self.ui.ctpg_tik_arry[xpoint, 7], self.ui.ctpg_tik_arry[xpoint, 51],
+                self.ui.ctpg_tik_arry[xpoint, 52], self.ui.ctpg_tik_arry[xpoint, 53], self.ui.ctpg_tik_arry[xpoint, 19],
+                self.ui.ctpg_tik_arry[xpoint, 58], self.ui.ctpg_tik_arry[xpoint, 14], self.ui.ctpg_tik_arry[xpoint, 15]
             ]
             df1  = pd.DataFrame({'체결수량': info, '체결강도': data})
             info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '등락율각도', '당일거래대금각도', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비']
             data = [
                 self.ui.ctpg_tik_arry[xpoint, 20], self.ui.ctpg_tik_arry[xpoint, 43], self.ui.ctpg_tik_arry[xpoint, 6],
-                self.ui.ctpg_tik_arry[xpoint, 55], self.ui.ctpg_tik_arry[xpoint, 56], self.ui.ctpg_tik_arry[xpoint, 58],
-                self.ui.ctpg_tik_arry[xpoint, 59], self.ui.ctpg_tik_arry[xpoint, 60], self.ui.ctpg_tik_arry[xpoint, 8],
+                self.ui.ctpg_tik_arry[xpoint, 56], self.ui.ctpg_tik_arry[xpoint, 57], self.ui.ctpg_tik_arry[xpoint, 59],
+                self.ui.ctpg_tik_arry[xpoint, 60], self.ui.ctpg_tik_arry[xpoint, 61], self.ui.ctpg_tik_arry[xpoint, 8],
                 self.ui.ctpg_tik_arry[xpoint, 9], self.ui.ctpg_tik_arry[xpoint, 10], self.ui.ctpg_tik_arry[xpoint, 11]
             ]
             df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
@@ -447,22 +449,37 @@ class UpdateTablewidget:
             self.windowQ.put((ui_num['S호가체결2'], df2))
         else:
             data = [
-                self.ui.ctpg_tik_arry[xpoint, 35], self.ui.ctpg_tik_arry[xpoint, 36], self.ui.ctpg_tik_arry[xpoint, 37],
-                self.ui.ctpg_tik_arry[xpoint, 38], self.ui.ctpg_tik_arry[xpoint, 7], self.ui.ctpg_tik_arry[xpoint, 41],
-                self.ui.ctpg_tik_arry[xpoint, 42], self.ui.ctpg_tik_arry[xpoint, 43], self.ui.ctpg_tik_arry[xpoint, 10],
-                self.ui.ctpg_tik_arry[xpoint, 48], self.ui.ctpg_tik_arry[xpoint, 8], self.ui.ctpg_tik_arry[xpoint, 9]
+                self.ui.ctpg_tik_arry[xpoint, 36], self.ui.ctpg_tik_arry[xpoint, 37], self.ui.ctpg_tik_arry[xpoint, 38],
+                self.ui.ctpg_tik_arry[xpoint, 39], self.ui.ctpg_tik_arry[xpoint, 7], self.ui.ctpg_tik_arry[xpoint, 42],
+                self.ui.ctpg_tik_arry[xpoint, 43], self.ui.ctpg_tik_arry[xpoint, 44], self.ui.ctpg_tik_arry[xpoint, 10],
+                self.ui.ctpg_tik_arry[xpoint, 49], self.ui.ctpg_tik_arry[xpoint, 8], self.ui.ctpg_tik_arry[xpoint, 9]
             ]
             df1  = pd.DataFrame({'체결수량': info, '체결강도': data})
             info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '등락율각도', '당일거래대금각도']
             data = [
                 self.ui.ctpg_tik_arry[xpoint, 11], self.ui.ctpg_tik_arry[xpoint, 34], self.ui.ctpg_tik_arry[xpoint, 6],
-                self.ui.ctpg_tik_arry[xpoint, 46], self.ui.ctpg_tik_arry[xpoint, 47], self.ui.ctpg_tik_arry[xpoint, 49],
-                self.ui.ctpg_tik_arry[xpoint, 50]
+                self.ui.ctpg_tik_arry[xpoint, 47], self.ui.ctpg_tik_arry[xpoint, 48], self.ui.ctpg_tik_arry[xpoint, 50],
+                self.ui.ctpg_tik_arry[xpoint, 51]
             ]
             df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
             coin = True
             self.windowQ.put((ui_num['C호가체결'], df1))
             self.windowQ.put((ui_num['C호가체결2'], df2))
+
+        """ 코인
+        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
+           0      1     2    3     4     5        6         7         8           9          10            11
+        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
+           12        13        14       15       16        17       18        19       20       21        22       23
+        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
+           24        25       26       27        28       29        30       31       32        33         34           35
+        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
+            36         37           38          39          40         51          42           43          44
+        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
+               45            46              47              48              49           50           51
+        매수가, 매도가, 매수가2, 매도가2
+          52    53     54      55
+        """
 
         for i in range(len(self.ui.ctpg_tik_legend)):
             self.ui.ctpg_tik_legend[i].setText(get_label_text(coin, self.ui.ctpg_tik_arry, xpoint, self.ui.ctpg_tik_factors[i], f'{hms[:2]}:{hms[2:4]}:{hms[4:]}'))

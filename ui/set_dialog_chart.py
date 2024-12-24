@@ -73,36 +73,6 @@ class SetDialogChart:
         self.ui.ctpg_vboxLayout.setContentsMargins(3, 6, 3, 3)
         self.ui.ctpg_vboxLayout.addWidget(self.ui.ctpg_layout)
 
-        self.ui.ctpg_day = {}
-        self.ui.dialog_chart_day = self.wc.setDialog('STOM CHART DAY')
-        self.ui.dialog_chart_day.geometry().center()
-        self.ui.ct_groupBoxxxxx_03 = QGroupBox(' ', self.ui.dialog_chart_day)
-        ctpg_layout = pg.GraphicsLayoutWidget()
-        self.ui.ctpg_day[1], self.ui.ctpg_cvb[16] = self.wc.setaddPlot(ctpg_layout, 0, 0, dateaxis=False)
-        self.ui.ctpg_day[2], _ = self.wc.setaddPlot(ctpg_layout, 1, 0, dateaxis=False)
-        self.ui.ctpg_day[2].setXLink(self.ui.ctpg_day[1])
-        qGraphicsGridLayout = ctpg_layout.ci.layout
-        qGraphicsGridLayout.setRowStretchFactor(0, 2)
-        qGraphicsGridLayout.setRowStretchFactor(1, 1)
-        ctpg_vboxLayout = QVBoxLayout(self.ui.ct_groupBoxxxxx_03)
-        ctpg_vboxLayout.setContentsMargins(3, 6, 3, 3)
-        ctpg_vboxLayout.addWidget(ctpg_layout)
-
-        self.ui.ctpg_min = {}
-        self.ui.dialog_chart_min = self.wc.setDialog('STOM CHART MIN')
-        self.ui.dialog_chart_min.geometry().center()
-        self.ui.ct_groupBoxxxxx_04 = QGroupBox(' ', self.ui.dialog_chart_min)
-        ctpg_layout = pg.GraphicsLayoutWidget()
-        self.ui.ctpg_min[1], self.ui.ctpg_cvb[17] = self.wc.setaddPlot(ctpg_layout, 0, 0, dateaxis=False)
-        self.ui.ctpg_min[2], _ = self.wc.setaddPlot(ctpg_layout, 1, 0, dateaxis=False)
-        self.ui.ctpg_min[2].setXLink(self.ui.ctpg_min[1])
-        qGraphicsGridLayout = ctpg_layout.ci.layout
-        qGraphicsGridLayout.setRowStretchFactor(0, 2)
-        qGraphicsGridLayout.setRowStretchFactor(1, 1)
-        ctpg_vboxLayout = QVBoxLayout(self.ui.ct_groupBoxxxxx_04)
-        ctpg_vboxLayout.setContentsMargins(3, 6, 3, 3)
-        ctpg_vboxLayout.addWidget(ctpg_layout)
-
         self.ui.dialog_jisu = self.wc.setDialog('STOM JISU')
         self.ui.dialog_jisu.geometry().center()
         self.ui.js_groupBox_01 = QGroupBox(' ', self.ui.dialog_jisu)
@@ -148,22 +118,6 @@ class SetDialogChart:
 
         self.ui.ct_dateEdittttt_02.setGeometry(1403, 15, 120, 30)
         self.ui.ct_tableWidgett_01.setGeometry(1403, 55, 120, 1310 if not DICT_SET['저해상도'] else 950)
-
-        self.ui.dialog_chart_day.setFixedSize(1000, 668)
-        if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
-            try:
-                self.ui.dialog_chart_day.move(self.ui.dict_set['창위치'][14], self.ui.dict_set['창위치'][15])
-            except:
-                pass
-        self.ui.ct_groupBoxxxxx_03.setGeometry(5, -10, 990, 670)
-
-        self.ui.dialog_chart_min.setFixedSize(1000, 668)
-        if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:
-            try:
-                self.ui.dialog_chart_min.move(self.ui.dict_set['창위치'][16], self.ui.dict_set['창위치'][17])
-            except:
-                pass
-        self.ui.ct_groupBoxxxxx_04.setGeometry(5, -10, 990, 670)
 
         self.ui.dialog_jisu.setFixedSize(770, 700)
         if self.ui.dict_set['창위치기억'] and self.ui.dict_set['창위치'] is not None:

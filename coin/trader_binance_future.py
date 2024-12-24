@@ -5,10 +5,10 @@ import binance
 import asyncio
 import pyupbit
 import pandas as pd
-from threading import Timer
 from multiprocessing import Process, Queue
 from binance import AsyncClient, BinanceSocketManager
-from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetBinanceShortPgSgSp, GetBinanceLongPgSgSp
+from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetBinanceShortPgSgSp, GetBinanceLongPgSgSp, \
+    threading_timer
 from utility.setting import columns_cj, columns_tj, columns_tdf, columns_jgf, columns_tt, ui_num, DB_TRADELIST, DICT_SET
 
 
@@ -255,7 +255,7 @@ class TraderBinanceFuture:
 
     def TradeProcKill(self):
         self.dict_bool['프로세스종료'] = True
-        Timer(180, self.ctraderQ.put, args=['프로세스종료']).start()
+        threading_timer(180, self.ctraderQ.put, '프로세스종료')
 
     def WebSocketsStart(self, wsq):
         self.proc_webs = Process(target=WebSocketManager, args=(self.dict_set['Access_key2'], self.dict_set['Secret_key2'], wsq), daemon=True)
@@ -467,7 +467,7 @@ class TraderBinanceFuture:
         if curr_time < self.dict_time['주문시간']:
             next_time = (self.dict_time['주문시간'] - curr_time).total_seconds()
             data = [og, code, op, oc, on, signal_time, manual, fixc, ordertype]
-            Timer(next_time, self.ctraderQ.put, args=[data]).start()
+            threading_timer(next_time, self.ctraderQ.put, data)
             return
 
         ret = None

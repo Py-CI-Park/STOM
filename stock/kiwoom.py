@@ -1,8 +1,11 @@
+import os
+import sys
 import zipfile
 import datetime
 import pythoncom
 import pandas as pd
 from PyQt5.QAxContainer import QAxWidget
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utility.setting import OPENAPI_PATH
 
 

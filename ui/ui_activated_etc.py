@@ -1,35 +1,23 @@
 import sqlite3
 import pandas as pd
+from PyQt5.QtWidgets import QPushButton
 from utility.setting import DB_BACKTEST, ui_num
 
 
 def activated_01(ui):
-    table_name, ui_name_ = None, None
-    if ui.focusWidget() == ui.ss_comboBoxxxx_01:
-        table_name = ui.ss_comboBoxxxx_01.currentText()
-        ui_name_   = 'S상세기록'
-    elif ui.focusWidget() == ui.ss_comboBoxxxx_02:
-        table_name = ui.ss_comboBoxxxx_02.currentText()
-        ui_name_   = 'S상세기록'
-    elif ui.focusWidget() == ui.ss_comboBoxxxx_03:
-        table_name = ui.ss_comboBoxxxx_03.currentText()
-        ui_name_   = 'S상세기록'
-    elif ui.focusWidget() == ui.cs_comboBoxxxx_01:
-        table_name = ui.cs_comboBoxxxx_01.currentText()
-        ui_name_   = 'C상세기록'
-    elif ui.focusWidget() == ui.cs_comboBoxxxx_02:
-        table_name = ui.cs_comboBoxxxx_02.currentText()
-        ui_name_   = 'C상세기록'
-    elif ui.focusWidget() == ui.cs_comboBoxxxx_03:
-        table_name = ui.cs_comboBoxxxx_03.currentText()
-        ui_name_   = 'C상세기록'
-    if table_name is None:
-        return
+    if type(ui.focusWidget()) != QPushButton:
+        table_name = ui.focusWidget().currentText()
+        if ui.focusWidget() in (ui.ss_comboBoxxxx_01, ui.ss_comboBoxxxx_02, ui.ss_comboBoxxxx_03):
+            ui_num_text = 'S상세기록'
+        else:
+            ui_num_text = 'C상세기록'
+        if table_name is None:
+            return
 
-    con = sqlite3.connect(DB_BACKTEST)
-    df  = pd.read_sql(f"SELECT * FROM '{table_name}'", con).set_index('index')
-    con.close()
-    ui.update_tablewidget.update_tablewidget((ui_num[ui_name_], df))
+        con = sqlite3.connect(DB_BACKTEST)
+        df  = pd.read_sql(f"SELECT * FROM '{table_name}'", con).set_index('index')
+        con.close()
+        ui.update_tablewidget.update_tablewidget((ui_num[ui_num_text], df))
 
 def activated_02(ui):
     name = ui.sj_set_comBoxx_01.currentText()

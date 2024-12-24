@@ -217,7 +217,7 @@ def svc_button_clicked_08(ui, proc_query, queryQ):
     try:
         vars_ = {}
         opt   = opt.replace('self.vars', 'vars_')
-        exec(compile(opt, '<string>', 'exec'), None, locals())
+        exec(compile(opt, '<string>', 'exec'))
         for i in range(len(vars_)):
             stg = stg.replace(f'self.vars[{i}]', f'{vars_[i][1]}')
     except Exception as e:
@@ -252,7 +252,7 @@ def svc_button_clicked_09(ui, proc_query, queryQ):
     try:
         vars_ = {}
         opt   = opt.replace('self.vars', 'vars_')
-        exec(compile(opt, '<string>', 'exec'), None, locals())
+        exec(compile(opt, '<string>', 'exec'))
         for i in range(len(vars_)):
             stg = stg.replace(f'self.vars[{i}]', f'{vars_[i][1]}')
     except Exception as e:

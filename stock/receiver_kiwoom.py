@@ -1,12 +1,12 @@
-import sys
 import zmq
 import sqlite3
 import operator
 import numpy as np
-from stock.kiwoom import *
+from kiwoom import *
 from multiprocessing import Queue
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utility.setting import DICT_SET, DB_STOCK_TICK, ui_num
 from utility.static import now, strf_time, strp_time, timedelta_sec, int_hms, roundfigure_upper5, qtest_qwait, GetVIPrice, GetSangHahanga
 

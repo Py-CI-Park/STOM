@@ -2,7 +2,6 @@ import os
 import random
 import shutil
 import sqlite3
-import subprocess
 import pandas as pd
 from PyQt5.QtCore import QDate
 from PyQt5.QtWidgets import QMessageBox, QLineEdit
@@ -273,16 +272,7 @@ def sj_button_cicked_07(ui):
         ui.sj_back_cheBox_03.setChecked(True) if df['백테매수시간기준'][0] else ui.sj_back_cheBox_03.setChecked(False)
         ui.sj_back_cheBox_04.setChecked(True) if df['백테일괄로딩'][0] else ui.sj_back_cheBox_04.setChecked(False)
         ui.sj_back_cheBox_05.setChecked(True) if not df['백테일괄로딩'][0] else ui.sj_back_cheBox_05.setChecked(False)
-        ui.sj_back_cheBox_06.setChecked(True) if df['주식일봉데이터'][0] else ui.sj_back_cheBox_06.setChecked(False)
-        ui.sj_back_cheBox_07.setChecked(True) if df['주식분봉데이터'][0] else ui.sj_back_cheBox_07.setChecked(False)
-        ui.sj_back_comBox_01.setCurrentText(str(df['주식분봉기간'][0]))
-        ui.sj_back_cheBox_08.setChecked(True) if df['주식일봉데이터다운'][0] else ui.sj_back_cheBox_08.setChecked(False)
-        ui.sj_back_cheBox_09.setChecked(True) if df['주식일봉다운컴종료'][0] else ui.sj_back_cheBox_09.setChecked(False)
-        ui.sj_back_liEdit_01.setText(str(df['일봉다운실행시간'][0]))
-        ui.sj_back_cheBox_10.setChecked(True) if df['코인일봉데이터'][0] else ui.sj_back_cheBox_10.setChecked(False)
-        ui.sj_back_cheBox_11.setChecked(True) if df['코인분봉데이터'][0] else ui.sj_back_cheBox_11.setChecked(False)
-        ui.sj_back_comBox_02.setCurrentText(str(df['코인분봉기간'][0]))
-        ui.sj_back_cheBox_12.setChecked(True) if df['코인일봉데이터다운'][0] else ui.sj_back_cheBox_12.setChecked(False)
+        ui.sj_back_cheBox_12.setChecked(True) if df['보조지표사용'][0] else ui.sj_back_cheBox_12.setChecked(False)
         ui.sj_back_cheBox_13.setChecked(True) if df['그래프저장하지않기'][0] else ui.sj_back_cheBox_13.setChecked(False)
         ui.sj_back_cheBox_14.setChecked(True) if df['그래프띄우지않기'][0] else ui.sj_back_cheBox_14.setChecked(False)
         ui.sj_back_cheBox_15.setChecked(True) if df['디비자동관리'][0] else ui.sj_back_cheBox_15.setChecked(False)
@@ -668,25 +658,16 @@ def sj_button_cicked_14(ui, proc_query, queryQ):
             ui.UpdateDictSet()
 
 def sj_button_cicked_15(ui, proc_query, queryQ):
-    bl = 1 if ui.sj_back_cheBox_01.isChecked() else 0
+    bl  = 1 if ui.sj_back_cheBox_01.isChecked() else 0
     bbg = 1 if ui.sj_back_cheBox_02.isChecked() else 0
     bsg = 1 if ui.sj_back_cheBox_03.isChecked() else 0
     bld = 1 if ui.sj_back_cheBox_04.isChecked() else 0
-    sdb = 1 if ui.sj_back_cheBox_06.isChecked() else 0
-    smb = 1 if ui.sj_back_cheBox_07.isChecked() else 0
-    sab = 1 if ui.sj_back_cheBox_08.isChecked() else 0
-    de = 1 if ui.sj_back_cheBox_09.isChecked() else 0
-    cdb = 1 if ui.sj_back_cheBox_10.isChecked() else 0
-    cmb = 1 if ui.sj_back_cheBox_11.isChecked() else 0
-    cab = 1 if ui.sj_back_cheBox_12.isChecked() else 0
+    bjj = 1 if ui.sj_back_cheBox_12.isChecked() else 0
     gsv = 1 if ui.sj_back_cheBox_13.isChecked() else 0
     gpl = 1 if ui.sj_back_cheBox_14.isChecked() else 0
     atd = 1 if ui.sj_back_cheBox_15.isChecked() else 0
     ext = 1 if ui.sj_back_cheBox_16.isChecked() else 0
     bdf = 1 if ui.sj_back_cheBox_18.isChecked() else 0
-    dt = ui.sj_back_liEdit_01.text()
-    smp = int(ui.sj_back_comBox_01.currentText())
-    cmp = int(ui.sj_back_comBox_02.currentText())
     bwd = 0
     bss = 1 if ui.sj_back_cheBox_19.isChecked() else 0
     if ui.sj_back_comBox_05.currentText() == '금':
@@ -704,35 +685,23 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
         bd = ui.sj_back_liEdit_02.text()
     aa = 1 if ui.sj_back_cheBox_20.isChecked() else 0
 
-    if '' in (dt, bd, bst):
+    if '' in (bd, bst):
         QMessageBox.critical(ui, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
-    elif int(dt) < 154000:
-        QMessageBox.critical(ui, '오류 알림', '주식 일봉데이터 자동 다운로드는\n15시 40분 이전에 실행할 수 없습니다.\n')
     else:
-        dt, bst = int(dt), int(bst)
+        bst = int(bst)
         if proc_query.is_alive():
-            query = f"UPDATE back SET 블랙리스트추가 = {bl}, 백테주문관리적용 = {bbg}, 백테매수시간기준 = {bsg}, 백테일괄로딩 = {bld}, 주식일봉데이터 = {sdb}, " \
-                    f"주식분봉데이터 = {smb}, 주식분봉기간 = {smp}, 주식일봉데이터다운 = {sab}, 주식일봉다운컴종료 = {de}, 일봉다운실행시간 = {dt}, " \
-                    f"코인일봉데이터 = {cdb}, 코인분봉데이터 = {cmb}, 코인분봉기간 = {cmp}, 코인일봉데이터다운 = {cab}, 그래프저장하지않기 = {gsv}, " \
-                    f"그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴실행 = {bss}, 백테스케쥴요일 = {bwd}, 백테스케쥴시간 = {bst}, " \
-                    f"백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', 백테날짜고정 = {bdf}, 백테날짜 = '{bd}', 범위자동관리 = {aa}"
+            query = f"UPDATE back SET 블랙리스트추가 = {bl}, 백테주문관리적용 = {bbg}, 백테매수시간기준 = {bsg}, 백테일괄로딩 = {bld}, " \
+                    f"그래프저장하지않기 = {gsv}, 그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴실행 = {bss}, " \
+                    f"백테스케쥴요일 = {bwd}, 백테스케쥴시간 = {bst}, 백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', " \
+                    f"백테날짜고정 = {bdf}, 백테날짜 = '{bd}', 범위자동관리 = {aa}, 보조지표사용 = {bjj}"
             queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+        pre_bbg = ui.dict_set['백테주문관리적용']
         ui.dict_set['블랙리스트추가'] = bl
         ui.dict_set['백테주문관리적용'] = bbg
         ui.dict_set['백테매수시간기준'] = bsg
         ui.dict_set['백테일괄로딩'] = bld
-        ui.dict_set['주식일봉데이터'] = sdb
-        ui.dict_set['주식분봉데이터'] = smb
-        ui.dict_set['주식분봉기간'] = smp
-        ui.dict_set['주식일봉데이터다운'] = sab
-        ui.dict_set['주식일봉다운컴종료'] = de
-        ui.dict_set['일봉다운실행시간'] = dt
-        ui.dict_set['코인일봉데이터'] = cdb
-        ui.dict_set['코인분봉데이터'] = cmb
-        ui.dict_set['코인분봉기간'] = cmp
-        ui.dict_set['코인일봉데이터다운'] = cab
         ui.dict_set['그래프저장하지않기'] = gsv
         ui.dict_set['그래프띄우지않기'] = gpl
         ui.dict_set['디비자동관리'] = atd
@@ -745,10 +714,10 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
         ui.dict_set['백테날짜고정'] = bdf
         ui.dict_set['백테날짜'] = bd
         ui.dict_set['범위자동관리'] = aa
+        ui.dict_set['보조지표사용'] = bjj
         ui.UpdateDictSet()
-
-        if sab:
-            QMessageBox.warning(ui, '경고', '전략종료 후 컴퓨터종료가 체크되어 있으면\n일봉 다운로드가 실행되지 않으니 유의하시길 바랍니다.\n')
+        if pre_bbg != bbg:
+            ui.BacktestEngineKill()
 
 def sj_button_cicked_16(ui, proc_query, queryQ):
     the = ui.sj_etc_comBoxx_01.currentText()
@@ -796,10 +765,6 @@ def sj_button_cicked_17(ui):
         ui.sj_tele_liEdit_02.setEchoMode(QLineEdit.Password)
         ui.sj_etc_pButton_01.setText('계정 텍스트 보기')
         ui.sj_etc_pButton_01.setStyleSheet(style_bc_bt)
-
-def sj_button_cicked_18(ui):
-    ui.daydata_download = True
-    subprocess.Popen('python download_kiwoom.py')
 
 def sj_button_cicked_19(ui):
     con = sqlite3.connect(DB_SETTING)

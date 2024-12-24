@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import QMessageBox, QApplication
 from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
 from ui.set_style import style_bc_st, style_bc_dk
-from ui.set_text import famous_saying, coin_buy_var, coin_future_buy_var, coin_buy_var_, coin_future_buy_var_, \
-    coin_buy1, coin_buy2, coin_buy3, coin_buy4, coin_buy5, coin_buy6, coin_buy_signal, coin_future_buy_signal
+from ui.set_text import famous_saying, coin_buy_var, coin_future_buy_var, coin_buy1, coin_buy2, coin_buy3, coin_buy4, \
+    coin_buy5, coin_buy6, coin_buy_signal, coin_future_buy_signal
 
 
 def cvjb_button_clicked_01(ui):
@@ -48,10 +48,7 @@ def cvjb_button_clicked_02(ui, proc_query, queryQ):
 
 def cvjb_button_clicked_03(ui):
     ui.cs_textEditttt_01.clear()
-    if not ui.dict_set['코인일봉데이터'] and not ui.dict_set['코인분봉데이터']:
-        ui.cs_textEditttt_01.append(coin_buy_var if ui.dict_set['거래소'] == '업비트' else coin_future_buy_var)
-    else:
-        ui.cs_textEditttt_01.append(coin_buy_var_ if ui.dict_set['거래소'] == '업비트' else coin_future_buy_var_)
+    ui.cs_textEditttt_01.append(coin_buy_var if ui.dict_set['거래소'] == '업비트' else coin_future_buy_var)
     ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
 
 def cvjb_button_clicked_04(ui, cstgQ):

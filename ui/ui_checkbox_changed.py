@@ -105,10 +105,6 @@ def checkbox_changed_10(ui, state):
 
 def checkbox_changed_11(ui, state):
     if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
-        if ui.sj_back_cheBox_08.isChecked():
-            QMessageBox.critical(ui, '오류 알림', '일봉데이터 자동다운로드 시는 선택할 수 없습니다.\n')
-            ui.focusWidget().nextCheckState()
-            return
         for widget in ui.com_exit_list:
             if widget != ui.focusWidget():
                 if widget.isChecked():
