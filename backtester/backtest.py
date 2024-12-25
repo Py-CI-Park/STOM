@@ -5,7 +5,7 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd
+from backtester.back_static import PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd, InitBackSequence
 from utility.static import now, strf_time
 from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, columns_vj, DICT_SET, DB_STOCK_BACK, DB_COIN_BACK, coinreadlines
 
@@ -304,6 +304,7 @@ class BackTest:
                      dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
 
         time.sleep(1)
+        InitBackSequence()
         data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.pattern)
         for q in self.bstq_list:
             q.put(('백테시작', 2))

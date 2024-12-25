@@ -3,6 +3,7 @@ import time
 import sqlite3
 import pandas as pd
 from multiprocessing import Process, Queue
+from backtester.back_static import InitBackSequence
 from utility.static import now, pickle_write
 from utility.setting import ui_num, PATTERN_PATH, DB_STRATEGY
 
@@ -105,6 +106,7 @@ class PatternModeling:
         Process(target=Total, args=(mq, self.wq, self.tq, self.ui_gubun, self.back_cnt, self.multi)).start()
 
         time.sleep(1)
+        InitBackSequence()
         data = ('학습정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
                 dict_pattern_buy, dict_pattern_sell)
         for q in self.beq_list:

@@ -26,12 +26,12 @@ def ct_button_clicked_01(ui):
                 return
 
         elif gubun == '업비트':
-            ui.proc_simulator_rv = Process(target=ReceiverUpbit2, args=(ui.qlist,), daemon=True)
-            ui.proc_simulator_td = Process(target=TraderUpbit2, args=(ui.qlist,), daemon=True)
+            ui.proc_simulator_rv  = Process(target=ReceiverUpbit2, args=(ui.qlist,), daemon=True)
+            ui.proc_simulator_td  = Process(target=TraderUpbit2, args=(ui.qlist,), daemon=True)
             ui.proc_strategy_coin = Process(target=StrategyUpbit, args=(ui.qlist,), daemon=True)
         else:
-            ui.proc_simulator_rv = Process(target=ReceiverBinanceFuture2, args=(ui.qlist,), daemon=True)
-            ui.proc_simulator_td = Process(target=TraderBinanceFuture2, args=(ui.qlist,), daemon=True)
+            ui.proc_simulator_rv  = Process(target=ReceiverBinanceFuture2, args=(ui.qlist,), daemon=True)
+            ui.proc_simulator_td  = Process(target=TraderBinanceFuture2, args=(ui.qlist,), daemon=True)
             ui.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(ui.qlist,), daemon=True)
 
         if gubun == '주식':

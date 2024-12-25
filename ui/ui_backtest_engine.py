@@ -208,8 +208,8 @@ def start_backengine(ui, gubun):
             ui.back_eques[i].put(('종목명', ui.dict_cn))
     ui.windowQ.put((ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'))
 
+    ui.windowQ.put((ui_num['백테엔진'], '데이터 로딩 시작'))
     if divid_mode == '종목코드별 분류':
-        ui.windowQ.put((ui_num['백테엔진'], '데이터 로딩 시작'))
         code_lists = []
         for i in range(multi):
             code_lists.append([code for j, code in enumerate(table_list) if j % multi == i])
@@ -218,7 +218,6 @@ def start_backengine(ui, gubun):
                                   code_days, day_codes, divid_mode, one_code))
 
     elif divid_mode == '일자별 분류':
-        ui.windowQ.put((ui_num['백테엔진'], '데이터 로딩 시작'))
         day_lists = []
         for i in range(multi):
             day_lists.append([day for j, day in enumerate(day_list) if j % multi == i])
@@ -226,7 +225,6 @@ def start_backengine(ui, gubun):
             ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
                                   code_days, day_codes, divid_mode, one_code))
     else:
-        ui.windowQ.put((ui_num['백테엔진'], f'데이터 로딩시작'))
         day_list = code_days[one_code]
         day_lists = []
         for i in range(multi):
@@ -328,37 +326,39 @@ def backtest_process_kill(ui, gubun):
     ui.back_cancelling = True
     ui.totalQ.put('백테중지')
     qtest_qwait(3)
-    if ui.proc_backtester_bs is not None and ui.proc_backtester_bs.is_alive():   ui.proc_backtester_bs.kill()
-    if ui.proc_backtester_bf is not None and ui.proc_backtester_bf.is_alive():   ui.proc_backtester_bf.kill()
-    if ui.proc_backtester_bc is not None and ui.proc_backtester_bc.is_alive():   ui.proc_backtester_bc.kill()
-    if ui.proc_backtester_bp is not None and ui.proc_backtester_bp.is_alive():   ui.proc_backtester_bp.kill()
-    if ui.proc_backtester_o is not None and ui.proc_backtester_o.is_alive():    ui.proc_backtester_o.kill()
-    if ui.proc_backtester_ov is not None and ui.proc_backtester_ov.is_alive():   ui.proc_backtester_ov.kill()
-    if ui.proc_backtester_ovc is not None and ui.proc_backtester_ovc.is_alive():  ui.proc_backtester_ovc.kill()
-    if ui.proc_backtester_ot is not None and ui.proc_backtester_ot.is_alive():   ui.proc_backtester_ot.kill()
-    if ui.proc_backtester_ovt is not None and ui.proc_backtester_ovt.is_alive():  ui.proc_backtester_ovt.kill()
+
+    if ui.proc_backtester_bs   is not None and ui.proc_backtester_bs.is_alive():   ui.proc_backtester_bs.kill()
+    if ui.proc_backtester_bf   is not None and ui.proc_backtester_bf.is_alive():   ui.proc_backtester_bf.kill()
+    if ui.proc_backtester_bc   is not None and ui.proc_backtester_bc.is_alive():   ui.proc_backtester_bc.kill()
+    if ui.proc_backtester_bp   is not None and ui.proc_backtester_bp.is_alive():   ui.proc_backtester_bp.kill()
+    if ui.proc_backtester_o    is not None and ui.proc_backtester_o.is_alive():    ui.proc_backtester_o.kill()
+    if ui.proc_backtester_ov   is not None and ui.proc_backtester_ov.is_alive():   ui.proc_backtester_ov.kill()
+    if ui.proc_backtester_ovc  is not None and ui.proc_backtester_ovc.is_alive():  ui.proc_backtester_ovc.kill()
+    if ui.proc_backtester_ot   is not None and ui.proc_backtester_ot.is_alive():   ui.proc_backtester_ot.kill()
+    if ui.proc_backtester_ovt  is not None and ui.proc_backtester_ovt.is_alive():  ui.proc_backtester_ovt.kill()
     if ui.proc_backtester_ovct is not None and ui.proc_backtester_ovct.is_alive(): ui.proc_backtester_ovct.kill()
-    if ui.proc_backtester_oc is not None and ui.proc_backtester_oc.is_alive():   ui.proc_backtester_oc.kill()
-    if ui.proc_backtester_ocv is not None and ui.proc_backtester_ocv.is_alive():  ui.proc_backtester_ocv.kill()
+    if ui.proc_backtester_oc   is not None and ui.proc_backtester_oc.is_alive():   ui.proc_backtester_oc.kill()
+    if ui.proc_backtester_ocv  is not None and ui.proc_backtester_ocv.is_alive():  ui.proc_backtester_ocv.kill()
     if ui.proc_backtester_ocvc is not None and ui.proc_backtester_ocvc.is_alive(): ui.proc_backtester_ocvc.kill()
-    if ui.proc_backtester_og is not None and ui.proc_backtester_og.is_alive():   ui.proc_backtester_og.kill()
-    if ui.proc_backtester_ogv is not None and ui.proc_backtester_ogv.is_alive():  ui.proc_backtester_ogv.kill()
+    if ui.proc_backtester_og   is not None and ui.proc_backtester_og.is_alive():   ui.proc_backtester_og.kill()
+    if ui.proc_backtester_ogv  is not None and ui.proc_backtester_ogv.is_alive():  ui.proc_backtester_ogv.kill()
     if ui.proc_backtester_ogvc is not None and ui.proc_backtester_ogvc.is_alive(): ui.proc_backtester_ogvc.kill()
-    if ui.proc_backtester_or is not None and ui.proc_backtester_or.is_alive():   ui.proc_backtester_or.kill()
-    if ui.proc_backtester_orv is not None and ui.proc_backtester_orv.is_alive():  ui.proc_backtester_orv.kill()
+    if ui.proc_backtester_or   is not None and ui.proc_backtester_or.is_alive():   ui.proc_backtester_or.kill()
+    if ui.proc_backtester_orv  is not None and ui.proc_backtester_orv.is_alive():  ui.proc_backtester_orv.kill()
     if ui.proc_backtester_orvc is not None and ui.proc_backtester_orvc.is_alive(): ui.proc_backtester_orvc.kill()
-    if ui.proc_backtester_b is not None and ui.proc_backtester_b.is_alive():    ui.proc_backtester_b.kill()
-    if ui.proc_backtester_bv is not None and ui.proc_backtester_bv.is_alive():   ui.proc_backtester_bv.kill()
-    if ui.proc_backtester_bvc is not None and ui.proc_backtester_bvc.is_alive():  ui.proc_backtester_bvc.kill()
-    if ui.proc_backtester_bt is not None and ui.proc_backtester_bt.is_alive():   ui.proc_backtester_bt.kill()
-    if ui.proc_backtester_bvt is not None and ui.proc_backtester_bvt.is_alive():  ui.proc_backtester_bvt.kill()
+    if ui.proc_backtester_b    is not None and ui.proc_backtester_b.is_alive():    ui.proc_backtester_b.kill()
+    if ui.proc_backtester_bv   is not None and ui.proc_backtester_bv.is_alive():   ui.proc_backtester_bv.kill()
+    if ui.proc_backtester_bvc  is not None and ui.proc_backtester_bvc.is_alive():  ui.proc_backtester_bvc.kill()
+    if ui.proc_backtester_bt   is not None and ui.proc_backtester_bt.is_alive():   ui.proc_backtester_bt.kill()
+    if ui.proc_backtester_bvt  is not None and ui.proc_backtester_bvt.is_alive():  ui.proc_backtester_bvt.kill()
     if ui.proc_backtester_bvct is not None and ui.proc_backtester_bvct.is_alive(): ui.proc_backtester_bvct.kill()
-    if ui.proc_backtester_br is not None and ui.proc_backtester_br.is_alive():   ui.proc_backtester_br.kill()
-    if ui.proc_backtester_brv is not None and ui.proc_backtester_brv.is_alive():  ui.proc_backtester_brv.kill()
+    if ui.proc_backtester_br   is not None and ui.proc_backtester_br.is_alive():   ui.proc_backtester_br.kill()
+    if ui.proc_backtester_brv  is not None and ui.proc_backtester_brv.is_alive():  ui.proc_backtester_brv.kill()
     if ui.proc_backtester_brvc is not None and ui.proc_backtester_brvc.is_alive(): ui.proc_backtester_brvc.kill()
-    if ui.main_btn == 2:
-        ui.ss_pushButtonn_08.setStyleSheet(style_bc_dk)
-    elif ui.main_btn == 3:
-        ui.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
+
+    if ui.main_btn == 2:   ui.ss_pushButtonn_08.setStyleSheet(style_bc_dk)
+    elif ui.main_btn == 3: ui.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
+
     if gubun: ui.BacktestEngineKill()
+
     ui.back_cancelling = False

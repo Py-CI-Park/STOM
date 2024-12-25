@@ -6,7 +6,7 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, GetMoneytopQuery
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery, InitBackSequence
 from utility.static import factorial, strf_time, now, timedelta_day, strp_time, timedelta_sec
 from utility.setting import ui_num, DB_STRATEGY, DICT_SET, DB_BACKTEST, DB_STOCK_BACK, DB_COIN_BACK
 
@@ -314,6 +314,7 @@ class OptimizeConditions:
             buy_conds, sell_conds = self.GetCondlist()
             if len(buy_conds) == 20:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 [{i+1}/{rcount}]단계 시작, 최고 기준값[{hstd:,.2f}]'))
+                InitBackSequence()
                 for q in self.bstq_list:
                     q.put(('백테시작', 3))
                 if is_long is None:

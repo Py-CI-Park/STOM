@@ -134,7 +134,7 @@ def mnbutton_c_clicked_05(ui):
             for table_name in table_list:
                 ui.queryQ.put(('백테디비', f'DROP TABLE {table_name}'))
             ui.queryQ.put(('백테디비', 'VACUUM'))
-        QMessageBox.information(ui, '알림', '백테그래프 및 기록DB가 삭제되었습니다.')
+            QMessageBox.information(ui, '알림', '백테그래프 및 기록DB가 삭제되었습니다.')
 
 
 def mnbutton_c_clicked_06(ui):
@@ -163,4 +163,4 @@ def mnbutton_c_clicked_06(ui):
             df = pd.DataFrame([data], columns=columns).set_index('index')
             ui.queryQ.put((df, 'telegram', 'append'))
             ui.queryQ.put(('설정디비', 'VACUUM'))
-        QMessageBox.information(ui, '알림', '계정 설정 항목이 모두 초기화되었습니다.')
+            QMessageBox.information(ui, '알림', '계정 설정 항목이 모두 초기화되었습니다.')

@@ -3,7 +3,7 @@ def text_changed_01(ui):
         return
     if ui.sd_scheckBoxxxx_01.isChecked():
         gubun = ui.list_slineEdittttt.index(ui.dialog_scheduler.focusWidget())
-        text = ui.list_slineEdittttt[gubun].text()
+        text  = ui.list_slineEdittttt[gubun].text()
         for i, widget in enumerate(ui.list_slineEdittttt):
             if i != gubun:
                 widget.setText(text)
@@ -14,7 +14,7 @@ def text_changed_02(ui):
         return
     if ui.sd_scheckBoxxxx_01.isChecked():
         gubun = ui.list_elineEdittttt.index(ui.dialog_scheduler.focusWidget())
-        text = ui.list_elineEdittttt[gubun].text()
+        text  = ui.list_elineEdittttt[gubun].text()
         for i, widget in enumerate(ui.list_elineEdittttt):
             if i != gubun:
                 widget.setText(text)
@@ -25,7 +25,7 @@ def text_changed_03(ui):
         return
     if ui.sd_scheckBoxxxx_01.isChecked():
         gubun = ui.list_blineEdittttt.index(ui.dialog_scheduler.focusWidget())
-        text = ui.list_blineEdittttt[gubun].text()
+        text  = ui.list_blineEdittttt[gubun].text()
         for i, widget in enumerate(ui.list_blineEdittttt):
             if i != gubun:
                 widget.setText(text)
@@ -36,7 +36,7 @@ def text_changed_04(ui):
         return
     if ui.sd_scheckBoxxxx_01.isChecked():
         gubun = ui.list_alineEdittttt.index(ui.dialog_scheduler.focusWidget())
-        text = ui.list_alineEdittttt[gubun].text()
+        text  = ui.list_alineEdittttt[gubun].text()
         for i, widget in enumerate(ui.list_alineEdittttt):
             combo_text = ui.list_gcomboBoxxxxx[i].currentText()
             if i != gubun and '최적화' not in combo_text and '전진분석' not in combo_text:

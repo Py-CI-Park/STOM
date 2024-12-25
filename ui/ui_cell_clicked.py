@@ -13,11 +13,11 @@ def cell_clicked_01(ui, row, col):
     item = ui.focusWidget().item(row, 0)
     if item is None:
         return
-    name = item.text()
-    linetext = ui.ct_lineEdittttt_03.text()
-    tickcount = int(linetext) if linetext != '' else 30
+    name       = item.text()
+    linetext   = ui.ct_lineEdittttt_03.text()
+    tickcount  = int(linetext) if linetext != '' else 30
     searchdate = strf_time('%Y%m%d') if stock else strf_time('%Y%m%d', timedelta_sec(-32400))
-    code = ui.dict_code[name] if name in ui.dict_code.keys() else name
+    code       = ui.dict_code[name] if name in ui.dict_code.keys() else name
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ShowDialog(name, tickcount, searchdate, col)
@@ -42,10 +42,10 @@ def cell_clicked_03(ui, row):
     item = ui.cjg_tableWidgettt.item(row, 0)
     if item is None:
         return
-    code = item.text()
+    code    = item.text()
     columns = columns_jg if 'KRW' in code else columns_jgf
-    oc = comma2float(ui.cjg_tableWidgettt.item(row, columns.index('보유수량')).text())
-    c = comma2float(ui.cjg_tableWidgettt.item(row, columns.index('현재가')).text())
+    oc      = comma2float(ui.cjg_tableWidgettt.item(row, columns.index('보유수량')).text())
+    c       = comma2float(ui.cjg_tableWidgettt.item(row, columns.index('현재가')).text())
     buttonReply = QMessageBox.question(
         ui, '코인 시장가 매도', f'{code} {oc}개를 시장가매도합니다.\n계속하시겠습니까?\n',
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
@@ -69,10 +69,10 @@ def cell_clicked_04(ui, row):
     item = ui.focusWidget().item(row, 1)
     if item is None:
         return
-    name = item.text()
-    linetext = ui.ct_lineEdittttt_03.text()
+    name      = item.text()
+    linetext  = ui.ct_lineEdittttt_03.text()
     tickcount = int(linetext) if linetext != '' else 30
-    code = ui.dict_code[name] if name in ui.dict_code.keys() else name
+    code      = ui.dict_code[name] if name in ui.dict_code.keys() else name
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
@@ -88,22 +88,22 @@ def cell_clicked_05(ui, row):
         return
     date = item.text()
     date = date.replace('.', '')
-    table_name = 's_tradelist' if gubun == '주식' else 'c_tradelist' if ui.dict_set[
-                                                                          '거래소'] == '업비트' else 'c_tradelist_future'
+    table_name = 's_tradelist' if gubun == '주식' else 'c_tradelist' if ui.dict_set['거래소'] == '업비트' else 'c_tradelist_future'
 
     con = sqlite3.connect(DB_TRADELIST)
     df = pd.read_sql(f"SELECT * FROM {table_name} WHERE 체결시간 LIKE '{date}%'", con)
     con.close()
 
+    df['index'] = df['index'].apply(lambda x: str(x))
     if len(date) == 6 and gubun == '코인':
-        df['구분용체결시간'] = df['체결시간'].apply(lambda x: x[:6])
+        df['구분용체결시간'] = df['index'].apply(lambda x: x[:6])
         df = df[df['구분용체결시간'] == date]
     elif len(date) == 4 and gubun == '코인':
-        df['구분용체결시간'] = df['체결시간'].apply(lambda x: x[:4])
+        df['구분용체결시간'] = df['index'].apply(lambda x: x[:4])
         df = df[df['구분용체결시간'] == date]
-
     df['index'] = df['index'].apply(lambda x: f'{x[:4]}-{x[4:6]}-{x[6:8]} {x[8:10]}:{x[10:12]}:{x[12:14]}')
     df.set_index('index', inplace=True)
+
     ui.ShowDialogGraph(df)
 
 
@@ -119,14 +119,14 @@ def cell_clicked_06(ui, row):
     if item is None:
         return
 
-    name = item.text()
+    name       = item.text()
     searchdate = tableWidget.item(row, 2).text()[:8]
-    buytime = comma2int(tableWidget.item(row, 2).text())
-    selltime = comma2int(tableWidget.item(row, 3).text())
-    buyprice = comma2float(tableWidget.item(row, 5).text())
-    sellprice = comma2float(tableWidget.item(row, 6).text())
-    detail = [buytime, buyprice, selltime, sellprice]
-    buytimes = tableWidget.item(row, 13).text()
+    buytime    = comma2int(tableWidget.item(row, 2).text())
+    selltime   = comma2int(tableWidget.item(row, 3).text())
+    buyprice   = comma2float(tableWidget.item(row, 5).text())
+    sellprice  = comma2float(tableWidget.item(row, 6).text())
+    detail     = [buytime, buyprice, selltime, sellprice]
+    buytimes   = tableWidget.item(row, 13).text()
 
     coin = True if 'KRW' in name or 'USDT' in name else False
     code = ui.dict_code[name] if name in ui.dict_code.keys() else name
@@ -142,12 +142,12 @@ def cell_clicked_07(ui, row):
     item = ui.ct_tableWidgett_01.item(row, 0)
     if item is None:
         return
-    name = item.text()
-    coin = True if 'KRW' in name or 'USDT' in name else False
-    code = ui.dict_code[name] if name in ui.dict_code.keys() else name
+    name       = item.text()
+    coin       = True if 'KRW' in name or 'USDT' in name else False
+    code       = ui.dict_code[name] if name in ui.dict_code.keys() else name
     searchdate = ui.ct_dateEdittttt_02.date().toString('yyyyMMdd')
-    linetext = ui.ct_lineEdittttt_03.text()
-    tickcount = int(linetext) if linetext != '' else 30
+    linetext   = ui.ct_lineEdittttt_03.text()
+    tickcount  = int(linetext) if linetext != '' else 30
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))

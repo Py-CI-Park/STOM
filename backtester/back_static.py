@@ -10,9 +10,17 @@ from numba import jit
 from traceback import print_exc
 from matplotlib import pyplot as plt
 from optuna_dashboard import run_server
+from multiprocessing import shared_memory
 from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time, thread_decorator
 from utility.setting import ui_num, GRAPH_PATH, DB_SETTING, DB_OPTUNA
+
+
+def InitBackSequence():
+    exist_shm = shared_memory.SharedMemory(name='back_sequence')
+    shm_index = np.ndarray((2,), dtype=np.int32, buffer=exist_shm.buf)
+    shm_index[0] = 0
+    exist_shm.close()
 
 
 @thread_decorator

@@ -6,7 +6,7 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, GetMoneytopQuery
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery, InitBackSequence
 from utility.static import strf_time, now, timedelta_day, timedelta_sec, strp_time, threading_timer
 from utility.setting import DB_STOCK_BACK, ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_COIN_BACK
 
@@ -327,6 +327,7 @@ class OptimizeGeneticAlgorithm:
                     data = (ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 [{k}][{i+1}/{vc}]단계 시작, 최고 기준값[{hstd:,.2f}]')
                     threading_timer(6, self.wq.put, data)
 
+                    InitBackSequence()
                     data = ('변수정보', vars_lists)
                     self.tq.put(data)
                     for q in self.bstq_list:

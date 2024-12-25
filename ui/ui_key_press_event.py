@@ -41,9 +41,9 @@ def key_press_event(ui, event):
                 ui.ShowDialog(name, tickcount, searchdate, col)
         elif ui.focusWidget() in (ui.sds_tableWidgettt, ui.cds_tableWidgettt):
             if ui.focusWidget() == ui.sds_tableWidgettt:
-                searchdate  = ui.s_calendarWidgett.selectedDate().toString('yyyyMMdd')
+                searchdate = ui.s_calendarWidgett.selectedDate().toString('yyyyMMdd')
             else:
-                searchdate  = ui.c_calendarWidgett.selectedDate().toString('yyyyMMdd')
+                searchdate = ui.c_calendarWidgett.selectedDate().toString('yyyyMMdd')
             row  = ui.focusWidget().currentIndex().row()
             item = ui.focusWidget().item(row, 1)
             if item is not None:
@@ -88,16 +88,16 @@ def key_press_event(ui, event):
             row  = tableWidget.currentIndex().row()
             item = tableWidget.item(row, 0)
             if item is not None:
-                name = item.text()
+                name       = item.text()
                 searchdate = tableWidget.item(row, 2).text()[:8]
-                buytime = comma2int(tableWidget.item(row, 2).text())
-                selltime = comma2int(tableWidget.item(row, 3).text())
-                buyprice = comma2float(tableWidget.item(row, 5).text())
-                sellprice = comma2float(tableWidget.item(row, 6).text())
-                detail = [buytime, buyprice, selltime, sellprice]
-                buytimes = tableWidget.item(row, 13).text()
-                coin = True if 'KRW' in name or 'USDT' in name else False
-                code = ui.dict_code[name] if name in ui.dict_code.keys() else name
+                buytime    = comma2int(tableWidget.item(row, 2).text())
+                selltime   = comma2int(tableWidget.item(row, 3).text())
+                buyprice   = comma2float(tableWidget.item(row, 5).text())
+                sellprice  = comma2float(tableWidget.item(row, 6).text())
+                detail     = [buytime, buyprice, selltime, sellprice]
+                buytimes   = tableWidget.item(row, 13).text()
+                coin       = True if 'KRW' in name or 'USDT' in name else False
+                code       = ui.dict_code[name] if name in ui.dict_code.keys() else name
                 ui.ct_lineEdittttt_04.setText(code)
                 ui.ct_lineEdittttt_05.setText(name)
                 ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))

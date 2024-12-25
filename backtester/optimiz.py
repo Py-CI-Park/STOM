@@ -7,7 +7,7 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd
+from backtester.back_static import SendTextAndStd, PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd, InitBackSequence
 from utility.static import strf_time, strp_time, now, timedelta_day, threading_timer
 from utility.setting import DB_STOCK_BACK, DB_COIN_BACK, ui_num, DB_STRATEGY, DB_BACKTEST, columns_vc, DICT_SET, DB_SETTING, DB_OPTUNA
 
@@ -882,6 +882,7 @@ class Optimize:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} {optivars_name}의 최적값 갱신 완료'))
 
     def PutData(self, data):
+        InitBackSequence()
         self.tq.put(data)
         for q in self.bstq_list:
             q.put(('백테시작', data[-1]))

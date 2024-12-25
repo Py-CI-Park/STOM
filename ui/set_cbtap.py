@@ -26,7 +26,7 @@ class SetCoinBack:
         self.ui.czoo_pushButon_01 = self.wc.setPushbutton('확대(esc)', box=self.ui.cs_tab, click=self.ui.czooButtonClicked_01)
         self.ui.czoo_pushButon_02 = self.wc.setPushbutton('확대(esc)', box=self.ui.cs_tab, click=self.ui.czooButtonClicked_02)
 
-        self.ui.coin_esczom_list = [self.ui.czoo_pushButon_01, self.ui.czoo_pushButon_02]
+        self.ui.coin_esczom_list  = [self.ui.czoo_pushButon_01, self.ui.czoo_pushButon_02]
 
     # =================================================================================================================
 
@@ -42,7 +42,7 @@ class SetCoinBack:
         self.ui.cs_pushButtonn_06 = self.wc.setPushbutton('그래프', box=self.ui.cs_tab, click=self.ui.csButtonClicked_04, tip='선택된 상세기록의 그래프를 표시한다.')
         self.ui.cs_pushButtonn_07 = self.wc.setPushbutton('비교', box=self.ui.cs_tab, click=self.ui.csButtonClicked_05, tip='두개 이상의 그래프를 선택 비교한다.')
 
-        self.ui.coin_detail_list = [
+        self.ui.coin_detail_list  = [
             self.ui.cs_tableWidget_01, self.ui.cs_comboBoxxxx_01, self.ui.cs_pushButtonn_01, self.ui.cs_pushButtonn_02,
             self.ui.cs_comboBoxxxx_02, self.ui.cs_pushButtonn_03, self.ui.cs_pushButtonn_04, self.ui.cs_comboBoxxxx_03,
             self.ui.cs_pushButtonn_05, self.ui.cs_pushButtonn_06, self.ui.cs_pushButtonn_07
@@ -57,7 +57,7 @@ class SetCoinBack:
         self.ui.cs_progressBar_01 = self.wc.setProgressBar(self.ui.cs_tab, style=style_pgbar, visible=False)
         self.ui.cs_pushButtonn_08 = self.wc.setPushbutton('백테스트 중지', box=self.ui.cs_tab, click=self.ui.csButtonClicked_06, color=2, visible=False, tip='(Alt+Enter) 실행중인 백테스트를 중지한다.')
 
-        self.ui.coin_baklog_list = [self.ui.cs_textEditttt_09, self.ui.cs_progressBar_01, self.ui.cs_pushButtonn_08]
+        self.ui.coin_baklog_list  = [self.ui.cs_textEditttt_09, self.ui.cs_progressBar_01, self.ui.cs_pushButtonn_08]
 
     # =================================================================================================================
 
@@ -100,7 +100,7 @@ class SetCoinBack:
         self.ui.cvjs_pushButon_13 = self.wc.setPushbutton('매도시그널', box=self.ui.cs_tab, click=self.ui.cvjsButtonClicked_13, color=3)
         self.ui.cvjs_pushButon_14 = self.wc.setPushbutton('매도전략 중지', box=self.ui.cs_tab, click=self.ui.cvjsButtonClicked_14, color=1, tip='실행중인 매도전략을 당장 중지한다.')
 
-        self.ui.coin_backte_list = [
+        self.ui.coin_backte_list  = [
             self.ui.cvjb_comboBoxx_01, self.ui.cvjb_lineEditt_01, self.ui.cvjb_pushButon_01, self.ui.cvjb_pushButon_02,
             self.ui.cvjb_pushButon_03, self.ui.cvjb_pushButon_04, self.ui.cvjb_pushButon_05, self.ui.cvjb_pushButon_06,
             self.ui.cvjb_pushButon_07, self.ui.cvjb_pushButon_08, self.ui.cvjb_pushButon_09, self.ui.cvjb_pushButon_10,
@@ -127,7 +127,7 @@ class SetCoinBack:
         self.ui.cvjb_lineEditt_04 = self.wc.setLineedit(self.ui.cs_tab, ltext='20', style=style_bc_dk)
         self.ui.cvjb_lineEditt_05 = self.wc.setLineedit(self.ui.cs_tab, ltext='30', style=style_bc_dk)
 
-        self.ui.coin_datedt_list = [self.ui.cvjb_labelllll_01, self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02, self.ui.cvjb_lineEditt_05]
+        self.ui.coin_datedt_list  = [self.ui.cvjb_labelllll_01, self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02, self.ui.cvjb_lineEditt_05]
 
     # =================================================================================================================
 
@@ -142,7 +142,7 @@ class SetCoinBack:
         self.ui.cvj_pushButton_13 = self.wc.setPushbutton('백테스트 로그', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_07, color=4, tip='단축키(Alt+9)')
         self.ui.cvj_pushButton_14 = self.wc.setPushbutton('상세기록', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_08, color=4, tip='단축키(Alt+0)')
 
-        self.ui.coin_editer_list = [
+        self.ui.coin_editer_list  = [
             self.ui.cvj_pushButton_07, self.ui.cvj_pushButton_08, self.ui.cvj_pushButton_09, self.ui.cvj_pushButton_10,
             self.ui.cvj_pushButton_11, self.ui.cvj_pushButton_12, self.ui.cvj_pushButton_13, self.ui.cvj_pushButton_14,
             self.ui.cvj_pushButton_15, self.ui.cvj_pushButton_16
@@ -171,7 +171,7 @@ class SetCoinBack:
         self.ui.cvc_pushButton_05 = self.wc.setPushbutton('기준값', color=2, box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_10, tip='백테 결과값 중 특정 수치를 만족하지 못하면\n기준값을 0으로 도출하도록 설정한다.')
         self.ui.cvc_pushButton_36 = self.wc.setPushbutton('optuna', color=3, box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_11, tip='옵튜나의 샘플러를 선택하거나 대시보드를 열람한다')
 
-        self.ui.coin_period_list = [
+        self.ui.coin_period_list  = [
             self.ui.cvc_labellllll_01, self.ui.cvc_labellllll_02, self.ui.cvc_comboBoxxx_03, self.ui.cvc_comboBoxxx_04,
             self.ui.cvc_comboBoxxx_05, self.ui.cvc_comboBoxxx_06, self.ui.cvc_labellllll_03, self.ui.cvc_comboBoxxx_07,
             self.ui.cvc_pushButton_05, self.ui.cvc_pushButton_36
@@ -204,7 +204,7 @@ class SetCoinBack:
         self.ui.cvc_lineEdittt_05 = self.wc.setLineedit(self.ui.cs_tab, font=qfont14, aleft=True, visible=False, style=style_bc_dk)
         self.ui.cvc_pushButton_14 = self.wc.setPushbutton('매도전략으로 저장', box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_09, color=1, visible=False, tip='최적값으로 백테용 매도전략으로 저장한다.')
 
-        self.ui.coin_optimz_list = [
+        self.ui.coin_optimz_list  = [
             self.ui.cvc_comboBoxxx_01, self.ui.cvc_comboBoxxx_02, self.ui.cvc_comboBoxxx_03, self.ui.cvc_comboBoxxx_08,
             self.ui.cvc_lineEdittt_01, self.ui.cvc_lineEdittt_02, self.ui.cvc_lineEdittt_03, self.ui.cvc_labellllll_04,
             self.ui.cvc_pushButton_01, self.ui.cvc_pushButton_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04,
@@ -226,7 +226,7 @@ class SetCoinBack:
         self.ui.cvc_pushButton_31 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BVT', color=3, tip='학습기간, 검증기간, 확인기간을 선택하여 진행되며\n베이지안 검증 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
         self.ui.cvc_pushButton_32 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_14, cmd='최적화BT', color=3, tip='학습기간, 확인기간을 선택하여 진행되며\n베이지안 최적화로 구한 최적값을 확인기간에 대하여 테스트한다.')
 
-        self.ui.coin_optest_list = [
+        self.ui.coin_optest_list  = [
             self.ui.cvc_pushButton_15, self.ui.cvc_pushButton_16, self.ui.cvc_pushButton_17, self.ui.cvc_comboBoxxx_02,
             self.ui.cvc_lineEdittt_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04, self.ui.cvc_pushButton_30,
             self.ui.cvc_pushButton_31, self.ui.cvc_pushButton_32
@@ -244,7 +244,7 @@ class SetCoinBack:
         self.ui.cvc_pushButton_34 = self.wc.setPushbutton('검증', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BRV', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 검증 최적화 테스트를 전진분석한다.')
         self.ui.cvc_pushButton_35 = self.wc.setPushbutton('베이지안', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_15, cmd='전진분석BR', color=3, tip='학습기간, 검증기간, 확인기간, 전체기간을 선택하여 진행되며\n베이지안 최적화 테스트를 전진분석한다.')
 
-        self.ui.coin_rwftvd_list = [
+        self.ui.coin_rwftvd_list  = [
             self.ui.cvc_pushButton_18, self.ui.cvc_pushButton_19, self.ui.cvc_pushButton_20, self.ui.cvc_comboBoxxx_02,
             self.ui.cvc_lineEdittt_02, self.ui.cvc_pushButton_03, self.ui.cvc_pushButton_04, self.ui.cvjb_labelllll_01,
             self.ui.cvjb_dateEditt_01, self.ui.cvjb_dateEditt_02, self.ui.cvc_pushButton_33, self.ui.cvc_pushButton_34,
@@ -266,7 +266,7 @@ class SetCoinBack:
         self.ui.cva_pushButton_04 = self.wc.setPushbutton('GA 변수범위 로딩(F9)', box=self.ui.cs_tab, click=self.ui.cvaButtonClicked_01, color=1)
         self.ui.cva_pushButton_05 = self.wc.setPushbutton('GA 변수범위 저장(F12)', box=self.ui.cs_tab, click=self.ui.cvaButtonClicked_02, color=1, tip='작성된 변수범위를 저장한다.\nCtrl 키와 함께 누르면 코드 테스트 과정을 생략한다.')
 
-        self.ui.coin_gaopti_list = [
+        self.ui.coin_gaopti_list  = [
             self.ui.cva_pushButton_01, self.ui.cva_pushButton_02, self.ui.cva_pushButton_03, self.ui.cva_comboBoxxx_01,
             self.ui.cva_lineEdittt_01, self.ui.cva_pushButton_04, self.ui.cva_pushButton_05, self.ui.cvc_labellllll_04
         ]
@@ -310,7 +310,7 @@ class SetCoinBack:
 
         self.ui.cvo_pushButton_08 = self.wc.setPushbutton('예제', box=self.ui.cs_tab, click=self.ui.cvcButtonClicked_07, color=3)
 
-        self.ui.coin_opcond_list = [
+        self.ui.coin_opcond_list  = [
             self.ui.cs_textEditttt_07, self.ui.cs_textEditttt_08, self.ui.cvo_comboBoxxx_01, self.ui.cvo_lineEdittt_01,
             self.ui.cvo_pushButton_01, self.ui.cvo_pushButton_02, self.ui.cvo_comboBoxxx_02, self.ui.cvo_lineEdittt_02,
             self.ui.cvo_pushButton_03, self.ui.cvo_pushButton_04, self.ui.cvo_pushButton_05, self.ui.cvo_pushButton_06,

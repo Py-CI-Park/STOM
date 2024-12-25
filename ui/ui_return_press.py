@@ -6,8 +6,8 @@ from ui.set_style import style_bc_dk
 def return_press_01(ui):
     if ui.dialog_chart.focusWidget() in (ui.ct_lineEdittttt_04, ui.ct_lineEdittttt_05, ui.ct_pushButtonnn_01):
         searchdate = ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
-        linetext = ui.ct_lineEdittttt_03.text()
-        tickcount = int(linetext) if linetext != '' else 30
+        linetext   = ui.ct_lineEdittttt_03.text()
+        tickcount  = int(linetext) if linetext != '' else 30
         if ui.dialog_chart.focusWidget() == ui.ct_lineEdittttt_04:
             name = ui.ct_lineEdittttt_04.text()
         else:
@@ -25,12 +25,12 @@ def return_press_01(ui):
         item = ui.ct_tableWidgett_01.item(row, 0)
         if item is None:
             return
-        name = item.text()
-        coin = True if 'KRW' in name or 'USDT' in name else False
-        code = ui.dict_code[name] if name in ui.dict_code.keys() else name
+        name       = item.text()
+        coin       = True if 'KRW' in name or 'USDT' in name else False
+        code       = ui.dict_code[name] if name in ui.dict_code.keys() else name
         searchdate = ui.ct_dateEdittttt_02.date().toString('yyyyMMdd')
-        linetext = ui.ct_lineEdittttt_03.text()
-        tickcount = int(linetext) if linetext != '' else 30
+        linetext   = ui.ct_lineEdittttt_03.text()
+        tickcount  = int(linetext) if linetext != '' else 30
         ui.ct_lineEdittttt_04.setText(code)
         ui.ct_lineEdittttt_05.setText(name)
         ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))

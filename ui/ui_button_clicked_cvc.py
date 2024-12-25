@@ -222,9 +222,9 @@ def cvc_button_clicked_08(ui):
         return
 
     con = sqlite3.connect(DB_STRATEGY)
-    df = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
+    df  = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
     stg = df['전략코드'][stgy]
-    df = pd.read_sql(f'SELECT * FROM "{tabl}"', con).set_index('index')
+    df  = pd.read_sql(f'SELECT * FROM "{tabl}"', con).set_index('index')
     opt = df['전략코드'][opti]
     con.close()
 
@@ -258,9 +258,9 @@ def cvc_button_clicked_09(ui):
         return
 
     con = sqlite3.connect(DB_STRATEGY)
-    df = pd.read_sql('SELECT * FROM coinoptisell', con).set_index('index')
+    df  = pd.read_sql('SELECT * FROM coinoptisell', con).set_index('index')
     stg = df['전략코드'][stgy]
-    df = pd.read_sql(f'SELECT * FROM "{tabl}"', con).set_index('index')
+    df  = pd.read_sql(f'SELECT * FROM "{tabl}"', con).set_index('index')
     opt = df['전략코드'][opti]
     con.close()
 

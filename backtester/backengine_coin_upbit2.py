@@ -35,7 +35,7 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
         j = 0
         total_ticks = 0
         while True:
-            result, ticks, exist_shm = self.SetArrayTick(same_days, same_time)
+            result, ticks, exist_shm2 = self.SetArrayTick(same_days, same_time)
             if result:
                 if self.dict_set['백테주문관리적용'] and self.dict_set['코인매수금지블랙리스트'] and \
                         self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
@@ -64,8 +64,8 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
                             if j % 100 == 0: self.tq.put('탐색완료')
 
                 if self.opti_turn == 0: total_ticks += ticks
+                if exist_shm2 is not None: exist_shm2.close()
                 self.tq.put('백테완료')
-                if exist_shm is not None: exist_shm.close()
             else:
                 break
 
@@ -78,8 +78,10 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else self.indexb
-            return self.array_tick[pindex, aindex]
+            if pre < 데이터길이:
+                pindex = (self.indexn - pre) if pre != -1 else self.indexb
+                return self.array_tick[pindex, aindex]
+            return 0
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -196,9 +198,11 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
             elif tick == 1200:
                 return Parameter_Previous(39, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
-                return round(self.array_tick[sindex:eindex, 1].mean(), 8)
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                    eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                    return round(self.array_tick[sindex:eindex, 1].mean(), 8)
+                return 0
 
         def GetArrayIndex(aindex):
             return aindex + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
@@ -207,16 +211,18 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
-                if gubun_ == 'max':
-                    return self.array_tick[sindex:eindex, vindex].max()
-                elif gubun_ == 'min':
-                    return self.array_tick[sindex:eindex, vindex].min()
-                elif gubun_ == 'sum':
-                    return self.array_tick[sindex:eindex, vindex].sum()
-                else:
-                    return self.array_tick[sindex:eindex, vindex].mean()
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                    eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                    if gubun_ == 'max':
+                        return self.array_tick[sindex:eindex, vindex].max()
+                    elif gubun_ == 'min':
+                        return self.array_tick[sindex:eindex, vindex].min()
+                    elif gubun_ == 'sum':
+                        return self.array_tick[sindex:eindex, vindex].sum()
+                    else:
+                        return self.array_tick[sindex:eindex, vindex].mean()
+                return 0
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(40, 1, tick, pre, 'max')
@@ -252,10 +258,12 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn - pre - tick - 1) if pre != -1  else self.indexb - tick - 1
-                eindex = (self.indexn - pre) if pre != -1  else self.indexb
-                dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
-                return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn - pre - tick + 1) if pre != -1  else self.indexb - tick + 1
+                    eindex = (self.indexn - pre) if pre != -1  else self.indexb
+                    dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
+                    return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+                return 0
 
         def 등락율각도(tick, pre=0):
             return Parameter_Dgree(50, 5, tick, pre, 10)

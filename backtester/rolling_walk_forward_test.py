@@ -7,7 +7,7 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, GetMoneytopQuery, PltShow, GetResultDataframe, GetBackResult, AddMdd
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery, PltShow, GetResultDataframe, GetBackResult, AddMdd, InitBackSequence
 from utility.static import strf_time, now, timedelta_day, strp_time, threading_timer
 from utility.setting import ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_STOCK_BACK, DB_COIN_BACK, DB_OPTUNA
 
@@ -766,6 +766,7 @@ class RollingWalkForwardTest:
         return vars_, self.study.best_value
 
     def PutData(self, data):
+        InitBackSequence()
         self.tq.put(data[:3])
         for q in self.bstq_list:
             q.put(('백테시작', data[2], data[-1]))

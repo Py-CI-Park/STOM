@@ -707,8 +707,8 @@ class KWTrader:
 
                 jg = jp * cc
                 pg, sg, sp = GetKiwoomPgSgSp(jg, cc * cp)
-                self.UpdateTradelist(index, name, jg, pg, cc, sp, sg, ct)
-
+                if -30 < sp < 30:
+                    self.UpdateTradelist(index, name, jg, pg, cc, sp, sg, ct)
                 if sp < 0:
                     self.dict_name[code][3] = timedelta_sec(self.dict_set['주식매수금지손절간격초'])
 

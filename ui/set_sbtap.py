@@ -124,8 +124,8 @@ class SetStockBack:
         self.ui.svjb_dateEditt_02 = self.wc.setDateEdit(self.ui.ss_tab)
         self.ui.svjb_lineEditt_02 = self.wc.setLineedit(self.ui.ss_tab, ltext='90000', style=style_bc_dk)
         self.ui.svjb_lineEditt_03 = self.wc.setLineedit(self.ui.ss_tab, ltext='93000', style=style_bc_dk)
-        self.ui.svjb_lineEditt_04 = self.wc.setLineedit(self.ui.ss_tab, ltext='20', style=style_bc_dk)
-        self.ui.svjb_lineEditt_05 = self.wc.setLineedit(self.ui.ss_tab, ltext='30', style=style_bc_dk)
+        self.ui.svjb_lineEditt_04 = self.wc.setLineedit(self.ui.ss_tab, ltext='20',    style=style_bc_dk)
+        self.ui.svjb_lineEditt_05 = self.wc.setLineedit(self.ui.ss_tab, ltext='30',    style=style_bc_dk)
 
         self.ui.stock_datedt_list = [self.ui.svjb_labelllll_01, self.ui.svjb_dateEditt_01, self.ui.svjb_dateEditt_02, self.ui.svjb_lineEditt_05]
 

@@ -236,8 +236,10 @@ class StrategyKiwoom:
             매도수5호가잔량합, 관심종목, 종목코드, 종목명, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else self.indexb
-            return self.dict_tik_ar[종목코드][pindex, aindex]
+            if pre < 데이터길이:
+                pindex = (self.indexn - pre) if pre != -1 else self.indexb
+                return self.dict_tik_ar[종목코드][pindex, aindex]
+            return 0
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -372,24 +374,28 @@ class StrategyKiwoom:
             elif tick == 1200:
                 return Parameter_Previous(48, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
-                return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 3)
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                    eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                    return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 3)
+                return 0
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
-                if gubun_ == 'max':
-                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
-                elif gubun_ == 'min':
-                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].min()
-                elif gubun_ == 'sum':
-                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].sum()
-                else:
-                    return self.dict_tik_ar[종목코드][sindex:eindex, vindex].mean()
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                    eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                    if gubun_ == 'max':
+                        return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
+                    elif gubun_ == 'min':
+                        return self.dict_tik_ar[종목코드][sindex:eindex, vindex].min()
+                    elif gubun_ == 'sum':
+                        return self.dict_tik_ar[종목코드][sindex:eindex, vindex].sum()
+                    else:
+                        return self.dict_tik_ar[종목코드][sindex:eindex, vindex].mean()
+                return 0
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(49, 1, tick, pre, 'max')
@@ -425,10 +431,12 @@ class StrategyKiwoom:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (self.indexn - pre - tick - 1) if pre != -1  else self.indexb - tick - 1
-                eindex = (self.indexn - pre) if pre != -1  else self.indexb
-                dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
-                return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn - pre - tick + 1) if pre != -1  else self.indexb - tick + 1
+                    eindex = (self.indexn - pre) if pre != -1  else self.indexb
+                    dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
+                    return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+                return 0
 
         def 등락율각도(tick, pre=0):
             return Parameter_Dgree(59, 5, tick, pre, 5)

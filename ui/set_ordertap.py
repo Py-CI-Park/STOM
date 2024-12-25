@@ -14,16 +14,16 @@ class SetOrderTap:
         self.ui.sj_od_groupBoxxx_04 = QGroupBox(' 코인 매도주문의 방법 및 유형, 금지 사항 등을 설정한다.', self.ui.sod_tab)
 
         self.ui.sj_sodb_labellll_01 = QLabel('▣ 주문유형선택', self.ui.sj_od_groupBoxxx_01)
-        self.ui.sj_sodb_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
-        self.ui.sj_sodb_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_sodb_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_01,      changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_sodb_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_01,      changed=self.ui.sbCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
         self.ui.sj_sodb_checkBox_03 = self.wc.setCheckBox('최유리지정가', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도1호가에 매도는 매수1호가에 원하는 수량만큼 주문하고 부족한 수량은 잔량 대기하는 방식')
         self.ui.sj_sodb_checkBox_04 = self.wc.setCheckBox('최우선지정가', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매수1호가에 매도는 매도1호가에 원하는 수량만큼 주문하는 방식, 체결이 안될 수도 있음')
-        self.ui.sj_sodb_checkBox_05 = self.wc.setCheckBox('지정가IOC', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
-        self.ui.sj_sodb_checkBox_06 = self.wc.setCheckBox('시장가IOC', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
-        self.ui.sj_sodb_checkBox_07 = self.wc.setCheckBox('최유리IOC', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도1호가에 매도는 매수1호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
-        self.ui.sj_sodb_checkBox_08 = self.wc.setCheckBox('지정가FOK', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='원하는 가격에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
-        self.ui.sj_sodb_checkBox_09 = self.wc.setCheckBox('시장가FOK', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
-        self.ui.sj_sodb_checkBox_10 = self.wc.setCheckBox('최유리FOK', self.ui.sj_od_groupBoxxx_01, changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호1가에 매도는 매수1호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
+        self.ui.sj_sodb_checkBox_05 = self.wc.setCheckBox('지정가IOC', self.ui.sj_od_groupBoxxx_01,   changed=self.ui.sbCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
+        self.ui.sj_sodb_checkBox_06 = self.wc.setCheckBox('시장가IOC', self.ui.sj_od_groupBoxxx_01,   changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
+        self.ui.sj_sodb_checkBox_07 = self.wc.setCheckBox('최유리IOC', self.ui.sj_od_groupBoxxx_01,   changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도1호가에 매도는 매수1호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
+        self.ui.sj_sodb_checkBox_08 = self.wc.setCheckBox('지정가FOK', self.ui.sj_od_groupBoxxx_01,   changed=self.ui.sbCheckboxChanged_01, tip='원하는 가격에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
+        self.ui.sj_sodb_checkBox_09 = self.wc.setCheckBox('시장가FOK', self.ui.sj_od_groupBoxxx_01,   changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
+        self.ui.sj_sodb_checkBox_10 = self.wc.setCheckBox('최유리FOK', self.ui.sj_od_groupBoxxx_01,   changed=self.ui.sbCheckboxChanged_01, tip='매수는 매도호1가에 매도는 매수1호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
         self.ui.sj_sodb_labellll_02 = QLabel('▣ 분할매수횟수               (1 : 분할매수X)', self.ui.sj_od_groupBoxxx_01)
 
         self.ui.sodb_checkbox_list1 = [
@@ -83,16 +83,16 @@ class SetOrderTap:
         # =============================================================================================================
 
         self.ui.sj_sods_labellll_01 = QLabel('▣ 주문유형선택', self.ui.sj_od_groupBoxxx_02)
-        self.ui.sj_sods_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
-        self.ui.sj_sods_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_sods_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_02,      changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_sods_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_02,      changed=self.ui.ssCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
         self.ui.sj_sods_checkBox_03 = self.wc.setCheckBox('최유리지정가', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도1호가에 매도는 매수1호가에 원하는 수량만큼 주문하고 부족한 수량은 잔량 대기하는 방식')
         self.ui.sj_sods_checkBox_04 = self.wc.setCheckBox('최우선지정가', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매수1호가에 매도는 매도1호가에 원하는 수량만큼 주문하는 방식, 체결이 안될 수도 있음')
-        self.ui.sj_sods_checkBox_05 = self.wc.setCheckBox('지정가IOC', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
-        self.ui.sj_sods_checkBox_06 = self.wc.setCheckBox('시장가IOC', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
-        self.ui.sj_sods_checkBox_07 = self.wc.setCheckBox('최유리IOC', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도1호가에 매도는 매수1호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
-        self.ui.sj_sods_checkBox_08 = self.wc.setCheckBox('지정가FOK', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='원하는 가격에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
-        self.ui.sj_sods_checkBox_09 = self.wc.setCheckBox('시장가FOK', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
-        self.ui.sj_sods_checkBox_10 = self.wc.setCheckBox('최유리FOK', self.ui.sj_od_groupBoxxx_02, changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호1가에 매도는 매수1호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
+        self.ui.sj_sods_checkBox_05 = self.wc.setCheckBox('지정가IOC', self.ui.sj_od_groupBoxxx_02,   changed=self.ui.ssCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
+        self.ui.sj_sods_checkBox_06 = self.wc.setCheckBox('시장가IOC', self.ui.sj_od_groupBoxxx_02,   changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
+        self.ui.sj_sods_checkBox_07 = self.wc.setCheckBox('최유리IOC', self.ui.sj_od_groupBoxxx_02,   changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도1호가에 매도는 매수1호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
+        self.ui.sj_sods_checkBox_08 = self.wc.setCheckBox('지정가FOK', self.ui.sj_od_groupBoxxx_02,   changed=self.ui.ssCheckboxChanged_01, tip='원하는 가격에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
+        self.ui.sj_sods_checkBox_09 = self.wc.setCheckBox('시장가FOK', self.ui.sj_od_groupBoxxx_02,   changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
+        self.ui.sj_sods_checkBox_10 = self.wc.setCheckBox('최유리FOK', self.ui.sj_od_groupBoxxx_02,   changed=self.ui.ssCheckboxChanged_01, tip='매수는 매도호1가에 매도는 매수1호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
         self.ui.sj_sods_labellll_02 = QLabel('▣ 분할매도횟수               (1 : 분할매도X)', self.ui.sj_od_groupBoxxx_02)
 
         self.ui.sods_checkbox_list1 = [
@@ -149,8 +149,8 @@ class SetOrderTap:
         # =============================================================================================================
 
         self.ui.sj_codb_labellll_01 = QLabel('▣ 주문유형선택', self.ui.sj_od_groupBoxxx_03)
-        self.ui.sj_codb_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_03, changed=self.ui.cbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
-        self.ui.sj_codb_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_03, changed=self.ui.cbCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_codb_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_03,    changed=self.ui.cbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_codb_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_03,    changed=self.ui.cbCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
         self.ui.sj_codb_checkBox_19 = self.wc.setCheckBox('지정가IOC', self.ui.sj_od_groupBoxxx_03, changed=self.ui.cbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
         self.ui.sj_codb_checkBox_20 = self.wc.setCheckBox('지정가FOK', self.ui.sj_od_groupBoxxx_03, changed=self.ui.cbCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
         self.ui.sj_codb_labellll_02 = QLabel('▣ 분할매수횟수               (1 : 분할매수X)', self.ui.sj_od_groupBoxxx_03)
@@ -206,8 +206,8 @@ class SetOrderTap:
         # =============================================================================================================
 
         self.ui.sj_cods_labellll_01 = QLabel('▣ 주문유형선택', self.ui.sj_od_groupBoxxx_04)
-        self.ui.sj_cods_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_04, changed=self.ui.csCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
-        self.ui.sj_cods_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_04, changed=self.ui.csCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_cods_checkBox_01 = self.wc.setCheckBox('시장가', self.ui.sj_od_groupBoxxx_04,    changed=self.ui.csCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하는 방식')
+        self.ui.sj_cods_checkBox_02 = self.wc.setCheckBox('지정가', self.ui.sj_od_groupBoxxx_04,    changed=self.ui.csCheckboxChanged_01, tip='원하는 가격에 원하는 수량만큼 주문하는 방식')
         self.ui.sj_cods_checkBox_19 = self.wc.setCheckBox('지정가IOC', self.ui.sj_od_groupBoxxx_04, changed=self.ui.csCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량만큼 주문하고 미체결수량은 취소하는 방식')
         self.ui.sj_cods_checkBox_20 = self.wc.setCheckBox('지정가FOK', self.ui.sj_od_groupBoxxx_04, changed=self.ui.csCheckboxChanged_01, tip='매수는 매도호가에 매도는 매수호가에 원하는 수량이 있을 경우 주문하고 없을 경우 취소하는 방식')
         self.ui.sj_cods_labellll_02 = QLabel('▣ 분할매도횟수               (1 : 분할매도X)', self.ui.sj_od_groupBoxxx_04)

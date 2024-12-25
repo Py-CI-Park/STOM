@@ -211,7 +211,7 @@ class LiveClient:
             trh   = df8['전진분석'].iloc[:-1].sum()
             trv   = df8['전진분석V'].iloc[:-1].sum()
             trvc  = df8['전진분석VC'].iloc[:-1].sum()
-            ttb = tbk + tbf + toh + tov + tovc + toht + tovt + tovct + tog + togv + togvc + toc + tocv + tocvc + trh + trv + trvc
+            ttb   = tbk + tbf + toh + tov + tovc + toht + tovt + tovct + tog + togv + togvc + toc + tocv + tocvc + trh + trv + trvc
             abk   = df8['백테스트'].iloc[:-1].mean()
             abf   = df8['백파인더'].iloc[:-1].mean()
             aoh   = df8['최적화'].iloc[:-1].mean()
@@ -229,10 +229,10 @@ class LiveClient:
             arh   = df8['전진분석'].iloc[:-1].mean()
             arv   = df8['전진분석V'].iloc[:-1].mean()
             arvc  = df8['전진분석VC'].iloc[:-1].mean()
-            tta = abk + abf + aoh + aov + aovc + aoht + aovt + aovct + aog + aogv + aogvc + aoc + aocv + aocvc + arh + arv + arvc
+            tta   = abk + abf + aoh + aov + aovc + aoht + aovt + aovct + aog + aogv + aogvc + aoc + aocv + aocvc + arh + arv + arvc
             mbk, mbf, moh, mov, movc, moht, movt, movct, mog, mogv, mogvc, moc, mocv, mocvc, mrh, mrv, mrvc = df8.iloc[-1]
-            ttm = mbk + mbf + moh + mov + movc + moht + movt + movct + mog + mogv + mogvc + moc + mocv + mocvc + mrh + mrv + mrvc
-            df8 = pd.DataFrame(columns=columns_sb)
+            ttm   = mbk + mbf + moh + mov + movc + moht + movt + movct + mog + mogv + mogvc + moc + mocv + mocvc + mrh + mrv + mrvc
+            df8   = pd.DataFrame(columns=columns_sb)
             df8.loc[0] = '합계', tbk, tbf, toh, tov, tovc, toht, tovt, tovct, tog, togv, togvc, toc, tocv, tocvc, trh, trv, trvc, ttb
             df8.loc[1] = '평균', abk, abf, aoh, aov, aovc, aoht, aovt, aovct, aog, aogv, aogvc, aoc, aocv, aocvc, arh, arv, arvc, tta
             df8.loc[2] = 'MY', mbk, mbf, moh, mov, movc, moht, movt, movct, mog, mogv, mogvc, moc, mocv, mocvc, mrh, mrv, mrvc, ttm

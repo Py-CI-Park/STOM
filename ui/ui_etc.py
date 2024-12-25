@@ -74,38 +74,38 @@ def update_dictset(ui):
 
 
 def chart_clear(ui):
-    ui.ctpg_tik_name = None
-    ui.ctpg_tik_cline = None
-    ui.ctpg_tik_hline = None
-    ui.ctpg_tik_xticks = None
-    ui.ctpg_tik_arry = None
-    ui.ctpg_tik_legend = {}
-    ui.ctpg_tik_item = {}
-    ui.ctpg_tik_data = {}
-    ui.ctpg_tik_factors = []
-    ui.ctpg_tik_labels = []
+    ui.ctpg_tik_name         = None
+    ui.ctpg_tik_cline        = None
+    ui.ctpg_tik_hline        = None
+    ui.ctpg_tik_xticks       = None
+    ui.ctpg_tik_arry         = None
+    ui.ctpg_tik_legend       = {}
+    ui.ctpg_tik_item         = {}
+    ui.ctpg_tik_data         = {}
+    ui.ctpg_tik_factors      = []
+    ui.ctpg_tik_labels       = []
 
-    ui.ctpg_day_name = None
-    ui.ctpg_day_index = None
-    ui.ctpg_day_lastmoveavg = None
-    ui.ctpg_day_lastcandle = None
+    ui.ctpg_day_name         = None
+    ui.ctpg_day_index        = None
+    ui.ctpg_day_lastmoveavg  = None
+    ui.ctpg_day_lastcandle   = None
     ui.ctpg_day_infiniteline = None
     ui.ctpg_day_lastmoneybar = None
-    ui.ctpg_day_legend1 = None
-    ui.ctpg_day_legend2 = None
-    ui.ctpg_day_ymin = 0
-    ui.ctpg_day_ymax = 0
+    ui.ctpg_day_legend1      = None
+    ui.ctpg_day_legend2      = None
+    ui.ctpg_day_ymin         = 0
+    ui.ctpg_day_ymax         = 0
 
-    ui.ctpg_min_name = None
-    ui.ctpg_min_index = None
-    ui.ctpg_min_lastmoveavg = None
-    ui.ctpg_min_lastcandle = None
+    ui.ctpg_min_name         = None
+    ui.ctpg_min_index        = None
+    ui.ctpg_min_lastmoveavg  = None
+    ui.ctpg_min_lastcandle   = None
     ui.ctpg_min_infiniteline = None
     ui.ctpg_min_lastmoneybar = None
-    ui.ctpg_min_legend1 = None
-    ui.ctpg_min_legend2 = None
-    ui.ctpg_min_ymin = 0
-    ui.ctpg_min_ymax = 0
+    ui.ctpg_min_legend1      = None
+    ui.ctpg_min_legend2      = None
+    ui.ctpg_min_ymin         = 0
+    ui.ctpg_min_ymax         = 0
 
 
 def calendar_clicked(ui, gubun):

@@ -106,54 +106,54 @@ class CoinFutureBackEngine:
             if '정보' in data[0]:
                 if self.back_type == '최적화':
                     if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStgFuture(data[7], self.gubun)
+                        self.betting   = data[1]
+                        avg_list       = data[2]
+                        self.startday  = data[3]
+                        self.endday    = data[4]
+                        self.starttime = data[5]
+                        self.endtime   = data[6]
+                        self.buystg    = GetBuyStgFuture(data[7], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop(1)
                     elif data[0] == '변수정보':
-                        self.vars_list  = data[1]
-                        self.opti_turn  = data[2]
-                        self.vars       = [var[1] for var in self.vars_list]
+                        self.vars_list = data[1]
+                        self.opti_turn = data[2]
+                        self.vars      = [var[1] for var in self.vars_list]
                         self.InitDivid(0)
                         self.InitTradeInfo()
                         self.BackTest()
                 elif self.back_type == '전진분석':
                     if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.starttime  = data[3]
-                        self.endtime    = data[4]
-                        self.buystg     = GetBuyStgFuture(data[5], self.gubun)
+                        self.betting   = data[1]
+                        avg_list       = data[2]
+                        self.starttime = data[3]
+                        self.endtime   = data[4]
+                        self.buystg    = GetBuyStgFuture(data[5], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[6], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
                             self.BackStop(1)
                     elif data[0] == '변수정보':
-                        self.vars_list  = data[1]
-                        self.opti_turn  = data[2]
-                        self.vars       = [var[1] for var in self.vars_list]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
+                        self.vars_list = data[1]
+                        self.opti_turn = data[2]
+                        self.vars      = [var[1] for var in self.vars_list]
+                        self.startday  = data[3]
+                        self.endday    = data[4]
                         if self.opti_turn == 1: self.tick_calcul = False
                         self.InitDivid(0)
                         self.InitTradeInfo()
                         self.BackTest()
                 elif self.back_type == 'GA최적화':
                     if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        avg_list        = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStgFuture(data[7], self.gubun)
+                        self.betting   = data[1]
+                        avg_list       = data[2]
+                        self.startday  = data[3]
+                        self.endday    = data[4]
+                        self.starttime = data[5]
+                        self.endtime   = data[6]
+                        self.buystg    = GetBuyStgFuture(data[7], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[8], self.gubun)
                         self.CheckAvglist(avg_list)
                         if self.buystg is None or self.sellstg is None:
@@ -168,12 +168,12 @@ class CoinFutureBackEngine:
                         self.BackTest()
                 elif self.back_type == '조건최적화':
                     if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        self.avgtime    = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
+                        self.betting   = data[1]
+                        self.avgtime   = data[2]
+                        self.startday  = data[3]
+                        self.endday    = data[4]
+                        self.starttime = data[5]
+                        self.endtime   = data[6]
                         self.InitDivid(0)
                         self.TotalTickCount()
                     elif data[0] == '조건정보':
@@ -196,13 +196,13 @@ class CoinFutureBackEngine:
                             self.BackTest()
                 elif self.back_type == '백테스트':
                     if data[0] == '백테정보':
-                        self.betting    = data[1]
-                        self.avgtime    = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStgFuture(data[7], self.gubun)
+                        self.betting   = data[1]
+                        self.avgtime   = data[2]
+                        self.startday  = data[3]
+                        self.endday    = data[4]
+                        self.starttime = data[5]
+                        self.endtime   = data[6]
+                        self.buystg    = GetBuyStgFuture(data[7], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[8], self.gubun)
                         self.pattern_test = data[9]
                         self.InitDivid(2)
@@ -214,19 +214,19 @@ class CoinFutureBackEngine:
                         else:
                             self.BackTest()
                     elif data[0] == '학습정보':
-                        self.betting    = data[1]
-                        self.avgtime    = data[2]
-                        self.startday   = data[3]
-                        self.endday     = data[4]
-                        self.starttime  = data[5]
-                        self.endtime    = data[6]
-                        self.buystg     = GetBuyStgFuture(data[7], self.gubun)
+                        self.betting   = data[1]
+                        self.avgtime   = data[2]
+                        self.startday  = data[3]
+                        self.endday    = data[4]
+                        self.starttime = data[5]
+                        self.endtime   = data[6]
+                        self.buystg    = GetBuyStgFuture(data[7], self.gubun)
                         self.sellstg, self.dict_sconds = GetSellStgFuture(data[8], self.gubun)
                         self.dict_pattern      = data[9]
                         self.dict_pattern_buy  = data[10]
                         self.dict_pattern_sell = data[11]
-                        self.pattern_buy  = []
-                        self.pattern_sell = []
+                        self.pattern_buy       = []
+                        self.pattern_sell      = []
                         self.InitDivid(1)
                         self.InitTradeInfo()
                         if self.buystg is None or self.sellstg is None:
@@ -242,11 +242,11 @@ class CoinFutureBackEngine:
                         self.dict_pattern_sell = data[3]
                 elif self.back_type == '백파인더':
                     if data[0] == '백테정보':
-                        self.avgtime    = data[1]
-                        self.startday   = data[2]
-                        self.endday     = data[3]
-                        self.starttime  = data[4]
-                        self.endtime    = data[5]
+                        self.avgtime   = data[1]
+                        self.startday  = data[2]
+                        self.endday    = data[3]
+                        self.starttime = data[4]
+                        self.endtime   = data[5]
                         self.InitDivid(0)
                         self.InitTradeInfo()
                         try:
@@ -279,14 +279,6 @@ class CoinFutureBackEngine:
             self.opti_turn = 2
         elif self.back_type in ('GA최적화', '조건최적화'):
             self.opti_turn = 3
-
-        if self.gubun == 0:
-            self.lock.acquire()
-            exist_shm = shared_memory.SharedMemory(name='back_sequence')
-            shm_index = np.ndarray((2,), dtype=np.int32, buffer=exist_shm.buf)
-            shm_index[0] = 0
-            exist_shm.close()
-            self.lock.release()
 
     def InitTradeInfo(self):
         self.dict_cond_indexn = {}
@@ -329,8 +321,6 @@ class CoinFutureBackEngine:
                         pickle_write(name, arry_tick)
                         data = (None, len_df_tick, code, name)
                     self.bq.put(data)
-            self.bq.put('로딩완료')
-
         elif divid_mode == '일자별 분류':
             gubun, startday, endday, starttime, endtime, day_list, avg_list, code_days, day_codes, _, _ = data
             code_list = []
@@ -361,7 +351,6 @@ class CoinFutureBackEngine:
                         pickle_write(name, arry_tick)
                         data = (None, len_df_tick, code, name)
                     self.bq.put(data)
-            self.bq.put('로딩완료')
         else:
             gubun, startday, endday, starttime, endtime, day_list, avg_list, _, _, _, code = data
             df_tick, len_df_tick = None, 0
@@ -385,11 +374,11 @@ class CoinFutureBackEngine:
                     pickle_write(name, arry_tick)
                     data = (None, len_df_tick, code, name)
                 self.bq.put(data)
-            self.bq.put('로딩완료')
 
         con.close()
         self.avg_list = avg_list
         self.startday_, self.endday_, self.starttime_, self.endtime_ = startday, endday, starttime, endtime
+        self.bq.put('로딩완료')
 
     def CheckAvglist(self, avg_list):
         not_in_list = [x for x in avg_list if x not in self.avg_list]
@@ -408,25 +397,24 @@ class CoinFutureBackEngine:
 
     def SetArrayTick(self, same_days, same_time):
         self.lock.acquire()
+        reslut     = False
+        ticks      = 0
         exist_shm1 = shared_memory.SharedMemory(name='back_sequence')
         shm_index  = np.ndarray((2,), dtype=np.int32, buffer=exist_shm1.buf)
         exist_shm2 = None
+
         if shm_index[0] < shm_index[1]:
             if self.dict_set['백테일괄로딩']:
                 self.code, name, shape = self.shm_list[shm_index[0]]
-                shm_index[0] += 1
-                exist_shm1.close()
-                self.lock.release()
                 exist_shm2 = shared_memory.SharedMemory(name=name)
                 array_tick = np.ndarray(shape, dtype=np.float64, buffer=exist_shm2.buf)
             else:
                 self.code, file_name = self.shm_list[shm_index[0]]
-                shm_index[0] += 1
-                exist_shm1.close()
-                self.lock.release()
                 array_tick = pickle_read(file_name)
 
+            shm_index[0] += 1
             self.name = self.code
+
             if same_days and same_time:
                 self.array_tick = array_tick
             elif same_time:
@@ -440,20 +428,22 @@ class CoinFutureBackEngine:
                                              (array_tick[:, 0] <= self.endday * 1000000 + 240000) &
                                              (array_tick[:, 0] % 1000000 >= self.starttime) &
                                              (array_tick[:, 0] % 1000000 <= self.endtime)]
-            return True, len(self.array_tick), exist_shm2
-        else:
-            self.lock.release()
-            return False, None, None
+            reslut = True
+            ticks  = len(self.array_tick)
+
+        exist_shm1.close()
+        self.lock.release()
+        return reslut, ticks, exist_shm2
 
     def TotalTickCount(self):
         same_days   = self.startday_ == self.startday and self.endday_ == self.endday
         same_time   = self.starttime_ == self.starttime and self.endtime_ == self.endtime
         total_ticks = 0
         while True:
-            result, ticks, exist_shm = self.SetArrayTick(same_days, same_time)
+            result, ticks, exist_shm2 = self.SetArrayTick(same_days, same_time)
             if result:
                 total_ticks += ticks
-                if exist_shm is not None: exist_shm.close()
+                if exist_shm2 is not None: exist_shm2.close()
             else:
                 break
         self.tq.put(('전체틱수', int(total_ticks / 100)))
@@ -470,7 +460,7 @@ class CoinFutureBackEngine:
         j = 0
         total_ticks = 0
         while True:
-            result, ticks, exist_shm = self.SetArrayTick(same_days, same_time)
+            result, ticks, exist_shm2 = self.SetArrayTick(same_days, same_time)
             if result:
                 self.last = ticks - 1
                 if ticks > 0:
@@ -495,8 +485,8 @@ class CoinFutureBackEngine:
                             if j % 100 == 0: self.tq.put('탐색완료')
 
                 if self.opti_turn == 0: total_ticks += ticks
+                if exist_shm2 is not None: exist_shm2.close()
                 self.tq.put('백테완료')
-                if exist_shm is not None: exist_shm.close()
             else:
                 break
 
@@ -509,8 +499,10 @@ class CoinFutureBackEngine:
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else self.indexb
-            return self.array_tick[pindex, aindex]
+            if pre < 데이터길이:
+                pindex = (self.indexn - pre) if pre != -1 else self.indexb
+                return self.array_tick[pindex, aindex]
+            return 0
 
         def 현재가N(pre):
             return Parameter_Previous(1, pre)
@@ -627,9 +619,11 @@ class CoinFutureBackEngine:
             elif tick == 1200:
                 return Parameter_Previous(39, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
-                return round(self.array_tick[sindex:eindex, 1].mean(), 8)
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                    eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                    return round(self.array_tick[sindex:eindex, 1].mean(), 8)
+                return 0
 
         def GetArrayIndex(aindex):
             return aindex + 12 * self.avg_list.index(self.avgtime if self.back_type in ('백테스트', '조건최적화', '백파인더') else self.vars[0])
@@ -638,16 +632,18 @@ class CoinFutureBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
-                if gubun_ == 'max':
-                    return self.array_tick[sindex:eindex, vindex].max()
-                elif gubun_ == 'min':
-                    return self.array_tick[sindex:eindex, vindex].min()
-                elif gubun_ == 'sum':
-                    return self.array_tick[sindex:eindex, vindex].sum()
-                else:
-                    return self.array_tick[sindex:eindex, vindex].mean()
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                    eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                    if gubun_ == 'max':
+                        return self.array_tick[sindex:eindex, vindex].max()
+                    elif gubun_ == 'min':
+                        return self.array_tick[sindex:eindex, vindex].min()
+                    elif gubun_ == 'sum':
+                        return self.array_tick[sindex:eindex, vindex].sum()
+                    else:
+                        return self.array_tick[sindex:eindex, vindex].mean()
+                return 0
 
         def 최고현재가(tick, pre=0):
             return Parameter_Area(40, 1, tick, pre, 'max')
@@ -683,10 +679,12 @@ class CoinFutureBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn - pre - tick - 1) if pre != -1  else self.indexb - tick - 1
-                eindex = (self.indexn - pre) if pre != -1  else self.indexb
-                dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
-                return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+                if tick + pre <= 데이터길이:
+                    sindex = (self.indexn - pre - tick + 1) if pre != -1  else self.indexb - tick + 1
+                    eindex = (self.indexn - pre) if pre != -1  else self.indexb
+                    dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
+                    return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
+                return 0
 
         def 등락율각도(tick, pre=0):
             return Parameter_Dgree(50, 5, tick, pre, 10)

@@ -108,12 +108,12 @@ def sj_button_cicked_04(ui):
 
 
 def sj_button_cicked_05(ui):
-    con = sqlite3.connect(DB_SETTING)
-    df = pd.read_sql('SELECT * FROM stock', con).set_index('index')
+    con  = sqlite3.connect(DB_SETTING)
+    df   = pd.read_sql('SELECT * FROM stock', con).set_index('index')
     con.close()
-    con = sqlite3.connect(DB_STRATEGY)
-    dfb = pd.read_sql('SELECT * FROM stockbuy', con).set_index('index')
-    dfs = pd.read_sql('SELECT * FROM stocksell', con).set_index('index')
+    con  = sqlite3.connect(DB_STRATEGY)
+    dfb  = pd.read_sql('SELECT * FROM stockbuy', con).set_index('index')
+    dfs  = pd.read_sql('SELECT * FROM stocksell', con).set_index('index')
     dfob = pd.read_sql('SELECT * FROM stockoptibuy', con).set_index('index')
     dfos = pd.read_sql('SELECT * FROM stockoptisell', con).set_index('index')
     con.close()
@@ -189,12 +189,12 @@ def sj_button_cicked_05(ui):
 
 
 def sj_button_cicked_06(ui):
-    con = sqlite3.connect(DB_SETTING)
-    df = pd.read_sql('SELECT * FROM coin', con).set_index('index')
+    con  = sqlite3.connect(DB_SETTING)
+    df   = pd.read_sql('SELECT * FROM coin', con).set_index('index')
     con.close()
-    con = sqlite3.connect(DB_STRATEGY)
-    dfb = pd.read_sql('SELECT * FROM coinbuy', con).set_index('index')
-    dfs = pd.read_sql('SELECT * FROM coinsell', con).set_index('index')
+    con  = sqlite3.connect(DB_STRATEGY)
+    dfb  = pd.read_sql('SELECT * FROM coinbuy', con).set_index('index')
+    dfs  = pd.read_sql('SELECT * FROM coinsell', con).set_index('index')
     dfob = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
     dfos = pd.read_sql('SELECT * FROM coinoptisell', con).set_index('index')
     con.close()
@@ -331,24 +331,24 @@ def sj_button_cicked_08(ui):
 
 
 def sj_button_cicked_09(ui):
-    sg = ui.sj_main_comBox_01.currentText()
-    sr = 1 if ui.sj_main_cheBox_01.isChecked() else 0
-    st = 1 if ui.sj_main_cheBox_02.isChecked() else 0
-    ss = 1 if ui.sj_main_cheBox_03.isChecked() else 0
-    cg = ui.sj_main_comBox_02.currentText()
-    cr = 1 if ui.sj_main_cheBox_04.isChecked() else 0
-    ct = 1 if ui.sj_main_cheBox_05.isChecked() else 0
-    cs = 1 if ui.sj_main_cheBox_06.isChecked() else 0
-    jj = 1 if ui.sj_main_cheBox_07.isChecked() else 0
+    sg  = ui.sj_main_comBox_01.currentText()
+    sr  = 1 if ui.sj_main_cheBox_01.isChecked() else 0
+    st  = 1 if ui.sj_main_cheBox_02.isChecked() else 0
+    ss  = 1 if ui.sj_main_cheBox_03.isChecked() else 0
+    cg  = ui.sj_main_comBox_02.currentText()
+    cr  = 1 if ui.sj_main_cheBox_04.isChecked() else 0
+    ct  = 1 if ui.sj_main_cheBox_05.isChecked() else 0
+    cs  = 1 if ui.sj_main_cheBox_06.isChecked() else 0
+    jj  = 1 if ui.sj_main_cheBox_07.isChecked() else 0
     smt = ui.sj_main_liEdit_01.text()
     smd = ui.sj_main_liEdit_02.text()
     cmt = ui.sj_main_liEdit_03.text()
     cmd = ui.sj_main_liEdit_04.text()
     rdt = ui.sj_main_liEdit_05.text()
     tdt = ui.sj_main_liEdit_06.text()
-    mt = 'ISOLATED' if ui.sj_main_comBox_03.currentText() == '격리' else 'CROSSED'
-    pt = 'false' if ui.sj_main_comBox_04.currentText() == '단방향' else 'true'
-    vu = 1 if ui.sj_main_cheBox_09.isChecked() else 0
+    mt  = 'ISOLATED' if ui.sj_main_comBox_03.currentText() == '격리' else 'CROSSED'
+    pt  = 'false' if ui.sj_main_comBox_04.currentText() == '단방향' else 'true'
+    vu  = 1 if ui.sj_main_cheBox_09.isChecked() else 0
     if ui.sj_main_cheBox_10.isChecked():
         rg = 1
     elif ui.sj_main_cheBox_11.isChecked():
@@ -495,19 +495,19 @@ def sj_button_cicked_12(ui):
 
 
 def sj_button_cicked_13(ui):
-    me = 1 if ui.sj_stock_ckBox_01.isChecked() else 0
-    sd = 1 if ui.sj_stock_ckBox_02.isChecked() else 0
+    me  = 1 if ui.sj_stock_ckBox_01.isChecked() else 0
+    sd  = 1 if ui.sj_stock_ckBox_02.isChecked() else 0
     cs1 = 1 if ui.sj_stock_ckBox_03.isChecked() else 0
     pc1 = 1 if ui.sj_stock_ckBox_04.isChecked() else 0
     ce1 = 1 if ui.sj_stock_ckBox_05.isChecked() else 0
     cs2 = 1 if ui.sj_stock_ckBox_06.isChecked() else 0
     pc2 = 1 if ui.sj_stock_ckBox_07.isChecked() else 0
     ce2 = 1 if ui.sj_stock_ckBox_08.isChecked() else 0
-    ts = 1 if ui.sj_stock_ckBox_09.isChecked() else 0
-    cm = 1 if ui.sj_stock_ckBox_10.isChecked() else 0
-    cp = 1 if ui.sj_stock_ckBox_11.isChecked() else 0
-    p1 = 1 if ui.sj_stock_ckBox_12.isChecked() else 0
-    p2 = 1 if ui.sj_stock_ckBox_13.isChecked() else 0
+    ts  = 1 if ui.sj_stock_ckBox_09.isChecked() else 0
+    cm  = 1 if ui.sj_stock_ckBox_10.isChecked() else 0
+    cp  = 1 if ui.sj_stock_ckBox_11.isChecked() else 0
+    p1  = 1 if ui.sj_stock_ckBox_12.isChecked() else 0
+    p2  = 1 if ui.sj_stock_ckBox_13.isChecked() else 0
     by1 = ui.sj_stock_cbBox_01.currentText()
     sl1 = ui.sj_stock_cbBox_02.currentText()
     by2 = ui.sj_stock_cbBox_03.currentText()
@@ -518,8 +518,8 @@ def sj_button_cicked_13(ui):
     at2 = ui.sj_stock_lEdit_04.text()
     bc2 = ui.sj_stock_lEdit_05.text()
     se2 = ui.sj_stock_lEdit_06.text()
-    sc = ui.sj_stock_lEdit_07.text()
-    sj = ui.sj_stock_lEdit_08.text()
+    sc  = ui.sj_stock_lEdit_07.text()
+    sj  = ui.sj_stock_lEdit_08.text()
     cmp = ui.sj_stock_lEdit_09.text()
     cpp = ui.sj_stock_lEdit_10.text()
     if '' in (at1, bc1, se1, at2, bc2, se2, sc, sj, cmp, cpp):
@@ -581,19 +581,19 @@ def sj_button_cicked_13(ui):
 
 
 def sj_button_cicked_14(ui):
-    me = 1 if ui.sj_coin_cheBox_01.isChecked() else 0
-    sd = 1 if ui.sj_coin_cheBox_02.isChecked() else 0
+    me  = 1 if ui.sj_coin_cheBox_01.isChecked() else 0
+    sd  = 1 if ui.sj_coin_cheBox_02.isChecked() else 0
     cs1 = 1 if ui.sj_coin_cheBox_03.isChecked() else 0
     pc1 = 1 if ui.sj_coin_cheBox_04.isChecked() else 0
     ce1 = 1 if ui.sj_coin_cheBox_05.isChecked() else 0
     cs2 = 1 if ui.sj_coin_cheBox_06.isChecked() else 0
     pc2 = 1 if ui.sj_coin_cheBox_07.isChecked() else 0
     ce2 = 1 if ui.sj_coin_cheBox_08.isChecked() else 0
-    tc = 1 if ui.sj_coin_cheBox_09.isChecked() else 0
-    cm = 1 if ui.sj_coin_cheBox_10.isChecked() else 0
-    cp = 1 if ui.sj_coin_cheBox_11.isChecked() else 0
-    p1 = 1 if ui.sj_coin_cheBox_12.isChecked() else 0
-    p2 = 1 if ui.sj_coin_cheBox_13.isChecked() else 0
+    tc  = 1 if ui.sj_coin_cheBox_09.isChecked() else 0
+    cm  = 1 if ui.sj_coin_cheBox_10.isChecked() else 0
+    cp  = 1 if ui.sj_coin_cheBox_11.isChecked() else 0
+    p1  = 1 if ui.sj_coin_cheBox_12.isChecked() else 0
+    p2  = 1 if ui.sj_coin_cheBox_13.isChecked() else 0
     by1 = ui.sj_coin_comBox_01.currentText()
     sl1 = ui.sj_coin_comBox_02.currentText()
     by2 = ui.sj_coin_comBox_03.currentText()
@@ -604,8 +604,8 @@ def sj_button_cicked_14(ui):
     at2 = ui.sj_coin_liEdit_04.text()
     bc2 = ui.sj_coin_liEdit_05.text()
     se2 = ui.sj_coin_liEdit_06.text()
-    sc = ui.sj_coin_liEdit_07.text()
-    sj = ui.sj_coin_liEdit_08.text()
+    sc  = ui.sj_coin_liEdit_07.text()
+    sj  = ui.sj_coin_liEdit_08.text()
     cmp = ui.sj_coin_liEdit_09.text()
     cpp = ui.sj_coin_liEdit_10.text()
     if '' in (at1, bc1, se1, at2, bc2, se2, sc, sj, cmp, cpp):
@@ -673,7 +673,7 @@ def sj_button_cicked_14(ui):
 
 
 def sj_button_cicked_15(ui):
-    bl = 1 if ui.sj_back_cheBox_01.isChecked() else 0
+    bl  = 1 if ui.sj_back_cheBox_01.isChecked() else 0
     bbg = 1 if ui.sj_back_cheBox_02.isChecked() else 0
     bsg = 1 if ui.sj_back_cheBox_03.isChecked() else 0
     bld = 1 if ui.sj_back_cheBox_04.isChecked() else 0
@@ -742,8 +742,8 @@ def sj_button_cicked_16(ui):
     inr = 1 if ui.sj_etc_checBox_01.isChecked() else 0
     ldp = 1 if ui.sj_etc_checBox_02.isChecked() else 0
     cgo = 1 if ui.sj_etc_checBox_03.isChecked() else 0
-    pe = 1 if ui.sj_etc_checBox_04.isChecked() else 0
-    ce = 1 if ui.sj_etc_checBox_05.isChecked() else 0
+    pe  = 1 if ui.sj_etc_checBox_04.isChecked() else 0
+    ce  = 1 if ui.sj_etc_checBox_05.isChecked() else 0
     slv = 1 if ui.sj_etc_checBox_06.isChecked() else 0
     pex = 1 if ui.sj_etc_checBox_07.isChecked() else 0
 
@@ -792,52 +792,35 @@ def sj_button_cicked_19(ui):
     con.close()
 
     if len(df) > 0:
-        ui.sj_sodb_checkBox_01.setChecked(True) if df['주식매수주문구분'][0] == '시장가' else ui.sj_sodb_checkBox_01.setChecked(
-            False)
-        ui.sj_sodb_checkBox_02.setChecked(True) if df['주식매수주문구분'][0] == '지정가' else ui.sj_sodb_checkBox_02.setChecked(
-            False)
-        ui.sj_sodb_checkBox_03.setChecked(True) if df['주식매수주문구분'][0] == '최유리지정가' else ui.sj_sodb_checkBox_03.setChecked(
-            False)
-        ui.sj_sodb_checkBox_04.setChecked(True) if df['주식매수주문구분'][0] == '최우선지정가' else ui.sj_sodb_checkBox_04.setChecked(
-            False)
-        ui.sj_sodb_checkBox_05.setChecked(True) if df['주식매수주문구분'][0] == '지정가IOC' else ui.sj_sodb_checkBox_05.setChecked(
-            False)
-        ui.sj_sodb_checkBox_06.setChecked(True) if df['주식매수주문구분'][0] == '시장가IOC' else ui.sj_sodb_checkBox_06.setChecked(
-            False)
-        ui.sj_sodb_checkBox_07.setChecked(True) if df['주식매수주문구분'][0] == '최유리IOC' else ui.sj_sodb_checkBox_07.setChecked(
-            False)
-        ui.sj_sodb_checkBox_08.setChecked(True) if df['주식매수주문구분'][0] == '지정가FOK' else ui.sj_sodb_checkBox_08.setChecked(
-            False)
-        ui.sj_sodb_checkBox_09.setChecked(True) if df['주식매수주문구분'][0] == '시장가FOK' else ui.sj_sodb_checkBox_09.setChecked(
-            False)
-        ui.sj_sodb_checkBox_10.setChecked(True) if df['주식매수주문구분'][0] == '최유리FOK' else ui.sj_sodb_checkBox_10.setChecked(
-            False)
+        ui.sj_sodb_checkBox_01.setChecked(True) if df['주식매수주문구분'][0] == '시장가' else ui.sj_sodb_checkBox_01.setChecked(False)
+        ui.sj_sodb_checkBox_02.setChecked(True) if df['주식매수주문구분'][0] == '지정가' else ui.sj_sodb_checkBox_02.setChecked(False)
+        ui.sj_sodb_checkBox_03.setChecked(True) if df['주식매수주문구분'][0] == '최유리지정가' else ui.sj_sodb_checkBox_03.setChecked(False)
+        ui.sj_sodb_checkBox_04.setChecked(True) if df['주식매수주문구분'][0] == '최우선지정가' else ui.sj_sodb_checkBox_04.setChecked(False)
+        ui.sj_sodb_checkBox_05.setChecked(True) if df['주식매수주문구분'][0] == '지정가IOC' else ui.sj_sodb_checkBox_05.setChecked(False)
+        ui.sj_sodb_checkBox_06.setChecked(True) if df['주식매수주문구분'][0] == '시장가IOC' else ui.sj_sodb_checkBox_06.setChecked(False)
+        ui.sj_sodb_checkBox_07.setChecked(True) if df['주식매수주문구분'][0] == '최유리IOC' else ui.sj_sodb_checkBox_07.setChecked(False)
+        ui.sj_sodb_checkBox_08.setChecked(True) if df['주식매수주문구분'][0] == '지정가FOK' else ui.sj_sodb_checkBox_08.setChecked(False)
+        ui.sj_sodb_checkBox_09.setChecked(True) if df['주식매수주문구분'][0] == '시장가FOK' else ui.sj_sodb_checkBox_09.setChecked(False)
+        ui.sj_sodb_checkBox_10.setChecked(True) if df['주식매수주문구분'][0] == '최유리FOK' else ui.sj_sodb_checkBox_10.setChecked(False)
         ui.sj_sodb_lineEdit_01.setText(str(df['주식매수분할횟수'][0]))
-        ui.sj_sodb_checkBox_11.setChecked(True) if df['주식매수분할방법'][0] == 1 else ui.sj_sodb_checkBox_11.setChecked(
-            False)
-        ui.sj_sodb_checkBox_12.setChecked(True) if df['주식매수분할방법'][0] == 2 else ui.sj_sodb_checkBox_12.setChecked(
-            False)
-        ui.sj_sodb_checkBox_13.setChecked(True) if df['주식매수분할방법'][0] == 3 else ui.sj_sodb_checkBox_13.setChecked(
-            False)
+        ui.sj_sodb_checkBox_11.setChecked(True) if df['주식매수분할방법'][0] == 1 else ui.sj_sodb_checkBox_11.setChecked(False)
+        ui.sj_sodb_checkBox_12.setChecked(True) if df['주식매수분할방법'][0] == 2 else ui.sj_sodb_checkBox_12.setChecked(False)
+        ui.sj_sodb_checkBox_13.setChecked(True) if df['주식매수분할방법'][0] == 3 else ui.sj_sodb_checkBox_13.setChecked(False)
         ui.sj_sodb_checkBox_14.setChecked(True) if df['주식매수분할시그널'][0] else ui.sj_sodb_checkBox_14.setChecked(False)
         ui.sj_sodb_checkBox_15.setChecked(True) if df['주식매수분할하방'][0] else ui.sj_sodb_checkBox_15.setChecked(False)
         ui.sj_sodb_checkBox_16.setChecked(True) if df['주식매수분할상방'][0] else ui.sj_sodb_checkBox_16.setChecked(False)
         ui.sj_sodb_lineEdit_02.setText(str(df['주식매수분할하방수익률'][0]))
         ui.sj_sodb_lineEdit_03.setText(str(df['주식매수분할상방수익률'][0]))
-        ui.sj_sodb_checkBox_27.setChecked(True) if df['주식매수분할고정수익률'][0] else ui.sj_sodb_checkBox_27.setChecked(
-            False)
+        ui.sj_sodb_checkBox_27.setChecked(True) if df['주식매수분할고정수익률'][0] else ui.sj_sodb_checkBox_27.setChecked(False)
         ui.sj_sodb_comboBox_01.setCurrentText(str(df['주식매수지정가기준가격'][0]))
         ui.sj_sodb_comboBox_02.setCurrentText(str(df['주식매수지정가호가번호'][0]))
         ui.sj_sodb_comboBox_03.setCurrentText(str(df['주식매수시장가잔량범위'][0]))
         ui.sj_sodb_checkBox_17.setChecked(True) if df['주식매수취소관심이탈'][0] else ui.sj_sodb_checkBox_17.setChecked(False)
-        ui.sj_sodb_checkBox_18.setChecked(True) if df['주식매수취소매도시그널'][0] else ui.sj_sodb_checkBox_18.setChecked(
-            False)
+        ui.sj_sodb_checkBox_18.setChecked(True) if df['주식매수취소매도시그널'][0] else ui.sj_sodb_checkBox_18.setChecked(False)
         ui.sj_sodb_checkBox_19.setChecked(True) if df['주식매수취소시간'][0] else ui.sj_sodb_checkBox_19.setChecked(False)
         ui.sj_sodb_lineEdit_04.setText(str(df['주식매수취소시간초'][0]))
-        ui.sj_sodb_checkBox_20.setChecked(True) if df['주식매수금지블랙리스트'][0] else ui.sj_sodb_checkBox_20.setChecked(
-            False)
-        ui.sj_sodb_checkBox_21.setChecked(True) if df['주식매수금지라운드피겨'][0] else ui.sj_sodb_checkBox_21.setChecked(
-            False)
+        ui.sj_sodb_checkBox_20.setChecked(True) if df['주식매수금지블랙리스트'][0] else ui.sj_sodb_checkBox_20.setChecked(False)
+        ui.sj_sodb_checkBox_21.setChecked(True) if df['주식매수금지라운드피겨'][0] else ui.sj_sodb_checkBox_21.setChecked(False)
         ui.sj_sodb_lineEdit_05.setText(str(df['주식매수금지라운드호가'][0]))
         ui.sj_sodb_checkBox_22.setChecked(True) if df['주식매수금지손절횟수'][0] else ui.sj_sodb_checkBox_22.setChecked(False)
         ui.sj_sodb_lineEdit_06.setText(str(df['주식매수금지손절횟수값'][0]))
@@ -863,33 +846,20 @@ def sj_button_cicked_20(ui):
     con.close()
 
     if len(df) > 0:
-        ui.sj_sods_checkBox_01.setChecked(True) if df['주식매도주문구분'][0] == '시장가' else ui.sj_sods_checkBox_01.setChecked(
-            False)
-        ui.sj_sods_checkBox_02.setChecked(True) if df['주식매도주문구분'][0] == '지정가' else ui.sj_sods_checkBox_02.setChecked(
-            False)
-        ui.sj_sods_checkBox_03.setChecked(True) if df['주식매도주문구분'][0] == '최유리지정가' else ui.sj_sods_checkBox_03.setChecked(
-            False)
-        ui.sj_sods_checkBox_04.setChecked(True) if df['주식매도주문구분'][0] == '최우선지정가' else ui.sj_sods_checkBox_04.setChecked(
-            False)
-        ui.sj_sods_checkBox_05.setChecked(True) if df['주식매도주문구분'][0] == '지정가IOC' else ui.sj_sods_checkBox_05.setChecked(
-            False)
-        ui.sj_sods_checkBox_06.setChecked(True) if df['주식매도주문구분'][0] == '시장가IOC' else ui.sj_sods_checkBox_06.setChecked(
-            False)
-        ui.sj_sods_checkBox_07.setChecked(True) if df['주식매도주문구분'][0] == '최유리IOC' else ui.sj_sods_checkBox_07.setChecked(
-            False)
-        ui.sj_sods_checkBox_08.setChecked(True) if df['주식매도주문구분'][0] == '지정가FOK' else ui.sj_sods_checkBox_08.setChecked(
-            False)
-        ui.sj_sods_checkBox_09.setChecked(True) if df['주식매도주문구분'][0] == '시장가FOK' else ui.sj_sods_checkBox_09.setChecked(
-            False)
-        ui.sj_sods_checkBox_10.setChecked(True) if df['주식매도주문구분'][0] == '최유리FOK' else ui.sj_sods_checkBox_10.setChecked(
-            False)
+        ui.sj_sods_checkBox_01.setChecked(True) if df['주식매도주문구분'][0] == '시장가' else ui.sj_sods_checkBox_01.setChecked(False)
+        ui.sj_sods_checkBox_02.setChecked(True) if df['주식매도주문구분'][0] == '지정가' else ui.sj_sods_checkBox_02.setChecked(False)
+        ui.sj_sods_checkBox_03.setChecked(True) if df['주식매도주문구분'][0] == '최유리지정가' else ui.sj_sods_checkBox_03.setChecked(False)
+        ui.sj_sods_checkBox_04.setChecked(True) if df['주식매도주문구분'][0] == '최우선지정가' else ui.sj_sods_checkBox_04.setChecked(False)
+        ui.sj_sods_checkBox_05.setChecked(True) if df['주식매도주문구분'][0] == '지정가IOC' else ui.sj_sods_checkBox_05.setChecked(False)
+        ui.sj_sods_checkBox_06.setChecked(True) if df['주식매도주문구분'][0] == '시장가IOC' else ui.sj_sods_checkBox_06.setChecked(False)
+        ui.sj_sods_checkBox_07.setChecked(True) if df['주식매도주문구분'][0] == '최유리IOC' else ui.sj_sods_checkBox_07.setChecked(False)
+        ui.sj_sods_checkBox_08.setChecked(True) if df['주식매도주문구분'][0] == '지정가FOK' else ui.sj_sods_checkBox_08.setChecked(False)
+        ui.sj_sods_checkBox_09.setChecked(True) if df['주식매도주문구분'][0] == '시장가FOK' else ui.sj_sods_checkBox_09.setChecked(False)
+        ui.sj_sods_checkBox_10.setChecked(True) if df['주식매도주문구분'][0] == '최유리FOK' else ui.sj_sods_checkBox_10.setChecked(False)
         ui.sj_sods_lineEdit_01.setText(str(df['주식매도분할횟수'][0]))
-        ui.sj_sods_checkBox_11.setChecked(True) if df['주식매도분할방법'][0] == 1 else ui.sj_sods_checkBox_11.setChecked(
-            False)
-        ui.sj_sods_checkBox_12.setChecked(True) if df['주식매도분할방법'][0] == 2 else ui.sj_sods_checkBox_12.setChecked(
-            False)
-        ui.sj_sods_checkBox_13.setChecked(True) if df['주식매도분할방법'][0] == 3 else ui.sj_sods_checkBox_13.setChecked(
-            False)
+        ui.sj_sods_checkBox_11.setChecked(True) if df['주식매도분할방법'][0] == 1 else ui.sj_sods_checkBox_11.setChecked(False)
+        ui.sj_sods_checkBox_12.setChecked(True) if df['주식매도분할방법'][0] == 2 else ui.sj_sods_checkBox_12.setChecked(False)
+        ui.sj_sods_checkBox_13.setChecked(True) if df['주식매도분할방법'][0] == 3 else ui.sj_sods_checkBox_13.setChecked(False)
         ui.sj_sods_checkBox_14.setChecked(True) if df['주식매도분할시그널'][0] else ui.sj_sods_checkBox_14.setChecked(False)
         ui.sj_sods_checkBox_15.setChecked(True) if df['주식매도분할하방'][0] else ui.sj_sods_checkBox_15.setChecked(False)
         ui.sj_sods_checkBox_16.setChecked(True) if df['주식매도분할상방'][0] else ui.sj_sods_checkBox_16.setChecked(False)
@@ -899,20 +869,16 @@ def sj_button_cicked_20(ui):
         ui.sj_sods_comboBox_02.setCurrentText(str(df['주식매도지정가호가번호'][0]))
         ui.sj_sods_comboBox_03.setCurrentText(str(df['주식매도시장가잔량범위'][0]))
         ui.sj_sods_checkBox_17.setChecked(True) if df['주식매도취소관심진입'][0] else ui.sj_sods_checkBox_17.setChecked(False)
-        ui.sj_sods_checkBox_18.setChecked(True) if df['주식매도취소매수시그널'][0] else ui.sj_sods_checkBox_18.setChecked(
-            False)
+        ui.sj_sods_checkBox_18.setChecked(True) if df['주식매도취소매수시그널'][0] else ui.sj_sods_checkBox_18.setChecked(False)
         ui.sj_sods_checkBox_19.setChecked(True) if df['주식매도취소시간'][0] else ui.sj_sods_checkBox_19.setChecked(False)
         ui.sj_sods_lineEdit_04.setText(str(df['주식매도취소시간초'][0]))
-        ui.sj_sods_checkBox_20.setChecked(True) if df['주식매도손절수익률청산'][0] else ui.sj_sods_checkBox_20.setChecked(
-            False)
+        ui.sj_sods_checkBox_20.setChecked(True) if df['주식매도손절수익률청산'][0] else ui.sj_sods_checkBox_20.setChecked(False)
         ui.sj_sods_lineEdit_05.setText(str(df['주식매도손절수익률'][0]))
-        ui.sj_sods_checkBox_21.setChecked(True) if df['주식매도손절수익금청산'][0] else ui.sj_sods_checkBox_21.setChecked(
-            False)
+        ui.sj_sods_checkBox_21.setChecked(True) if df['주식매도손절수익금청산'][0] else ui.sj_sods_checkBox_21.setChecked(False)
         ui.sj_sods_lineEdit_06.setText(str(df['주식매도손절수익금'][0]))
         ui.sj_sods_checkBox_22.setChecked(True) if df['주식매도금지매수횟수'][0] else ui.sj_sods_checkBox_22.setChecked(False)
         ui.sj_sods_lineEdit_07.setText(str(df['주식매도금지매수횟수값'][0]))
-        ui.sj_sods_checkBox_23.setChecked(True) if df['주식매도금지라운드피겨'][0] else ui.sj_sods_checkBox_23.setChecked(
-            False)
+        ui.sj_sods_checkBox_23.setChecked(True) if df['주식매도금지라운드피겨'][0] else ui.sj_sods_checkBox_23.setChecked(False)
         ui.sj_sods_lineEdit_08.setText(str(df['주식매도금지라운드호가'][0]))
         ui.sj_sods_checkBox_24.setChecked(True) if df['주식매도금지시간'][0] else ui.sj_sods_checkBox_24.setChecked(False)
         ui.sj_sods_lineEdit_09.setText(str(df['주식매도금지시작시간'][0]))
@@ -932,40 +898,29 @@ def sj_button_cicked_21(ui):
     con.close()
 
     if len(df) > 0:
-        ui.sj_codb_checkBox_01.setChecked(True) if df['코인매수주문구분'][0] == '시장가' else ui.sj_codb_checkBox_01.setChecked(
-            False)
-        ui.sj_codb_checkBox_02.setChecked(True) if df['코인매수주문구분'][0] == '지정가' else ui.sj_codb_checkBox_02.setChecked(
-            False)
-        ui.sj_codb_checkBox_19.setChecked(True) if df['코인매수주문구분'][0] == '지정가IOC' else ui.sj_codb_checkBox_19.setChecked(
-            False)
-        ui.sj_codb_checkBox_20.setChecked(True) if df['코인매수주문구분'][0] == '지정가FOK' else ui.sj_codb_checkBox_20.setChecked(
-            False)
+        ui.sj_codb_checkBox_01.setChecked(True) if df['코인매수주문구분'][0] == '시장가' else ui.sj_codb_checkBox_01.setChecked(False)
+        ui.sj_codb_checkBox_02.setChecked(True) if df['코인매수주문구분'][0] == '지정가' else ui.sj_codb_checkBox_02.setChecked(False)
+        ui.sj_codb_checkBox_19.setChecked(True) if df['코인매수주문구분'][0] == '지정가IOC' else ui.sj_codb_checkBox_19.setChecked(False)
+        ui.sj_codb_checkBox_20.setChecked(True) if df['코인매수주문구분'][0] == '지정가FOK' else ui.sj_codb_checkBox_20.setChecked(False)
         ui.sj_codb_lineEdit_01.setText(str(df['코인매수분할횟수'][0]))
-        ui.sj_codb_checkBox_03.setChecked(True) if df['코인매수분할방법'][0] == 1 else ui.sj_codb_checkBox_03.setChecked(
-            False)
-        ui.sj_codb_checkBox_04.setChecked(True) if df['코인매수분할방법'][0] == 2 else ui.sj_codb_checkBox_04.setChecked(
-            False)
-        ui.sj_codb_checkBox_05.setChecked(True) if df['코인매수분할방법'][0] == 3 else ui.sj_codb_checkBox_05.setChecked(
-            False)
+        ui.sj_codb_checkBox_03.setChecked(True) if df['코인매수분할방법'][0] == 1 else ui.sj_codb_checkBox_03.setChecked(False)
+        ui.sj_codb_checkBox_04.setChecked(True) if df['코인매수분할방법'][0] == 2 else ui.sj_codb_checkBox_04.setChecked(False)
+        ui.sj_codb_checkBox_05.setChecked(True) if df['코인매수분할방법'][0] == 3 else ui.sj_codb_checkBox_05.setChecked(False)
         ui.sj_codb_checkBox_06.setChecked(True) if df['코인매수분할시그널'][0] else ui.sj_codb_checkBox_06.setChecked(False)
         ui.sj_codb_checkBox_07.setChecked(True) if df['코인매수분할하방'][0] else ui.sj_codb_checkBox_07.setChecked(False)
         ui.sj_codb_checkBox_08.setChecked(True) if df['코인매수분할상방'][0] else ui.sj_codb_checkBox_08.setChecked(False)
         ui.sj_codb_lineEdit_02.setText(str(df['코인매수분할하방수익률'][0]))
         ui.sj_codb_lineEdit_03.setText(str(df['코인매수분할상방수익률'][0]))
-        ui.sj_codb_checkBox_27.setChecked(True) if df['코인매수분할고정수익률'][0] else ui.sj_codb_checkBox_27.setChecked(
-            False)
+        ui.sj_codb_checkBox_27.setChecked(True) if df['코인매수분할고정수익률'][0] else ui.sj_codb_checkBox_27.setChecked(False)
         ui.sj_codb_comboBox_01.setCurrentText(str(df['코인매수지정가기준가격'][0]))
         ui.sj_codb_comboBox_02.setCurrentText(str(df['코인매수지정가호가번호'][0]))
         ui.sj_codb_comboBox_03.setCurrentText(str(df['코인매수시장가잔량범위'][0]))
         ui.sj_codb_checkBox_09.setChecked(True) if df['코인매수취소관심이탈'][0] else ui.sj_codb_checkBox_09.setChecked(False)
-        ui.sj_codb_checkBox_10.setChecked(True) if df['코인매수취소매도시그널'][0] else ui.sj_codb_checkBox_10.setChecked(
-            False)
+        ui.sj_codb_checkBox_10.setChecked(True) if df['코인매수취소매도시그널'][0] else ui.sj_codb_checkBox_10.setChecked(False)
         ui.sj_codb_checkBox_11.setChecked(True) if df['코인매수취소시간'][0] else ui.sj_codb_checkBox_11.setChecked(False)
         ui.sj_codb_lineEdit_04.setText(str(df['코인매수취소시간초'][0]))
-        ui.sj_codb_checkBox_12.setChecked(True) if df['코인매수금지블랙리스트'][0] else ui.sj_codb_checkBox_12.setChecked(
-            False)
-        ui.sj_codb_checkBox_13.setChecked(True) if df['코인매수금지200원이하'][0] else ui.sj_codb_checkBox_13.setChecked(
-            False)
+        ui.sj_codb_checkBox_12.setChecked(True) if df['코인매수금지블랙리스트'][0] else ui.sj_codb_checkBox_12.setChecked(False)
+        ui.sj_codb_checkBox_13.setChecked(True) if df['코인매수금지200원이하'][0] else ui.sj_codb_checkBox_13.setChecked(False)
         ui.sj_codb_checkBox_14.setChecked(True) if df['코인매수금지손절횟수'][0] else ui.sj_codb_checkBox_14.setChecked(False)
         ui.sj_codb_lineEdit_05.setText(str(df['코인매수금지손절횟수값'][0]))
         ui.sj_codb_checkBox_15.setChecked(True) if df['코인매수금지거래횟수'][0] else ui.sj_codb_checkBox_15.setChecked(False)
@@ -990,21 +945,14 @@ def sj_button_cicked_22(ui):
     con.close()
 
     if len(df) > 0:
-        ui.sj_cods_checkBox_01.setChecked(True) if df['코인매도주문구분'][0] == '시장가' else ui.sj_cods_checkBox_01.setChecked(
-            False)
-        ui.sj_cods_checkBox_02.setChecked(True) if df['코인매도주문구분'][0] == '지정가' else ui.sj_cods_checkBox_02.setChecked(
-            False)
-        ui.sj_cods_checkBox_19.setChecked(True) if df['코인매도주문구분'][0] == '지정가IOC' else ui.sj_cods_checkBox_19.setChecked(
-            False)
-        ui.sj_cods_checkBox_20.setChecked(True) if df['코인매도주문구분'][0] == '지정가FOK' else ui.sj_cods_checkBox_20.setChecked(
-            False)
+        ui.sj_cods_checkBox_01.setChecked(True) if df['코인매도주문구분'][0] == '시장가' else ui.sj_cods_checkBox_01.setChecked(False)
+        ui.sj_cods_checkBox_02.setChecked(True) if df['코인매도주문구분'][0] == '지정가' else ui.sj_cods_checkBox_02.setChecked(False)
+        ui.sj_cods_checkBox_19.setChecked(True) if df['코인매도주문구분'][0] == '지정가IOC' else ui.sj_cods_checkBox_19.setChecked(False)
+        ui.sj_cods_checkBox_20.setChecked(True) if df['코인매도주문구분'][0] == '지정가FOK' else ui.sj_cods_checkBox_20.setChecked(False)
         ui.sj_cods_lineEdit_01.setText(str(df['코인매도분할횟수'][0]))
-        ui.sj_cods_checkBox_03.setChecked(True) if df['코인매도분할방법'][0] == 1 else ui.sj_cods_checkBox_03.setChecked(
-            False)
-        ui.sj_cods_checkBox_04.setChecked(True) if df['코인매도분할방법'][0] == 2 else ui.sj_cods_checkBox_04.setChecked(
-            False)
-        ui.sj_cods_checkBox_05.setChecked(True) if df['코인매도분할방법'][0] == 3 else ui.sj_cods_checkBox_05.setChecked(
-            False)
+        ui.sj_cods_checkBox_03.setChecked(True) if df['코인매도분할방법'][0] == 1 else ui.sj_cods_checkBox_03.setChecked(False)
+        ui.sj_cods_checkBox_04.setChecked(True) if df['코인매도분할방법'][0] == 2 else ui.sj_cods_checkBox_04.setChecked(False)
+        ui.sj_cods_checkBox_05.setChecked(True) if df['코인매도분할방법'][0] == 3 else ui.sj_cods_checkBox_05.setChecked(False)
         ui.sj_cods_checkBox_06.setChecked(True) if df['코인매도분할시그널'][0] else ui.sj_cods_checkBox_06.setChecked(False)
         ui.sj_cods_checkBox_07.setChecked(True) if df['코인매도분할하방'][0] else ui.sj_cods_checkBox_07.setChecked(False)
         ui.sj_cods_checkBox_08.setChecked(True) if df['코인매도분할상방'][0] else ui.sj_cods_checkBox_08.setChecked(False)
@@ -1014,15 +962,12 @@ def sj_button_cicked_22(ui):
         ui.sj_cods_comboBox_02.setCurrentText(str(df['코인매도지정가호가번호'][0]))
         ui.sj_cods_comboBox_03.setCurrentText(str(df['코인매도시장가잔량범위'][0]))
         ui.sj_cods_checkBox_09.setChecked(True) if df['코인매도취소관심진입'][0] else ui.sj_cods_checkBox_09.setChecked(False)
-        ui.sj_cods_checkBox_10.setChecked(True) if df['코인매도취소매수시그널'][0] else ui.sj_cods_checkBox_10.setChecked(
-            False)
+        ui.sj_cods_checkBox_10.setChecked(True) if df['코인매도취소매수시그널'][0] else ui.sj_cods_checkBox_10.setChecked(False)
         ui.sj_cods_checkBox_11.setChecked(True) if df['코인매도취소시간'][0] else ui.sj_cods_checkBox_11.setChecked(False)
         ui.sj_cods_lineEdit_04.setText(str(df['코인매도취소시간초'][0]))
-        ui.sj_cods_checkBox_12.setChecked(True) if df['코인매도손절수익률청산'][0] else ui.sj_cods_checkBox_12.setChecked(
-            False)
+        ui.sj_cods_checkBox_12.setChecked(True) if df['코인매도손절수익률청산'][0] else ui.sj_cods_checkBox_12.setChecked(False)
         ui.sj_cods_lineEdit_05.setText(str(df['코인매도손절수익률'][0]))
-        ui.sj_cods_checkBox_13.setChecked(True) if df['코인매도손절수익금청산'][0] else ui.sj_cods_checkBox_13.setChecked(
-            False)
+        ui.sj_cods_checkBox_13.setChecked(True) if df['코인매도손절수익금청산'][0] else ui.sj_cods_checkBox_13.setChecked(False)
         ui.sj_cods_lineEdit_06.setText(str(df['코인매도손절수익금'][0]))
         ui.sj_cods_checkBox_14.setChecked(True) if df['코인매도금지매수횟수'][0] else ui.sj_cods_checkBox_14.setChecked(False)
         ui.sj_cods_lineEdit_07.setText(str(df['코인매도금지매수횟수값'][0]))
@@ -1055,34 +1000,34 @@ def sj_button_cicked_23(ui):
     if ui.sj_sodb_checkBox_11.isChecked(): ds = 1
     if ui.sj_sodb_checkBox_12.isChecked(): ds = 2
     if ui.sj_sodb_checkBox_13.isChecked(): ds = 3
-    ds1 = 1 if ui.sj_sodb_checkBox_14.isChecked() else 0
-    ds2 = 1 if ui.sj_sodb_checkBox_15.isChecked() else 0
-    ds3 = 1 if ui.sj_sodb_checkBox_16.isChecked() else 0
+    ds1  = 1 if ui.sj_sodb_checkBox_14.isChecked() else 0
+    ds2  = 1 if ui.sj_sodb_checkBox_15.isChecked() else 0
+    ds3  = 1 if ui.sj_sodb_checkBox_16.isChecked() else 0
     ds2c = ui.sj_sodb_lineEdit_02.text()
     ds3c = ui.sj_sodb_lineEdit_03.text()
-    bp = ui.sj_sodb_comboBox_01.currentText()
-    ju = ui.sj_sodb_comboBox_02.currentText()
-    su = ui.sj_sodb_comboBox_03.currentText()
-    bf = 1 if ui.sj_sodb_checkBox_27.isChecked() else 0
-    bc1 = 1 if ui.sj_sodb_checkBox_17.isChecked() else 0
-    bc2 = 1 if ui.sj_sodb_checkBox_18.isChecked() else 0
-    bc3 = 1 if ui.sj_sodb_checkBox_19.isChecked() else 0
+    bp   = ui.sj_sodb_comboBox_01.currentText()
+    ju   = ui.sj_sodb_comboBox_02.currentText()
+    su   = ui.sj_sodb_comboBox_03.currentText()
+    bf   = 1 if ui.sj_sodb_checkBox_27.isChecked() else 0
+    bc1  = 1 if ui.sj_sodb_checkBox_17.isChecked() else 0
+    bc2  = 1 if ui.sj_sodb_checkBox_18.isChecked() else 0
+    bc3  = 1 if ui.sj_sodb_checkBox_19.isChecked() else 0
     bc3c = ui.sj_sodb_lineEdit_04.text()
-    bb1 = 1 if ui.sj_sodb_checkBox_20.isChecked() else 0
-    bb2 = 1 if ui.sj_sodb_checkBox_21.isChecked() else 0
+    bb1  = 1 if ui.sj_sodb_checkBox_20.isChecked() else 0
+    bb2  = 1 if ui.sj_sodb_checkBox_21.isChecked() else 0
     bb2c = ui.sj_sodb_lineEdit_05.text()
-    bb3 = 1 if ui.sj_sodb_checkBox_22.isChecked() else 0
+    bb3  = 1 if ui.sj_sodb_checkBox_22.isChecked() else 0
     bb3c = ui.sj_sodb_lineEdit_06.text()
-    bb4 = 1 if ui.sj_sodb_checkBox_23.isChecked() else 0
+    bb4  = 1 if ui.sj_sodb_checkBox_23.isChecked() else 0
     bb4c = ui.sj_sodb_lineEdit_07.text()
-    bb5 = 1 if ui.sj_sodb_checkBox_24.isChecked() else 0
+    bb5  = 1 if ui.sj_sodb_checkBox_24.isChecked() else 0
     bb5s = ui.sj_sodb_lineEdit_08.text()
     bb5e = ui.sj_sodb_lineEdit_09.text()
-    bb6 = 1 if ui.sj_sodb_checkBox_25.isChecked() else 0
+    bb6  = 1 if ui.sj_sodb_checkBox_25.isChecked() else 0
     bb6s = ui.sj_sodb_lineEdit_10.text()
-    bb7 = 1 if ui.sj_sodb_checkBox_26.isChecked() else 0
+    bb7  = 1 if ui.sj_sodb_checkBox_26.isChecked() else 0
     bb7s = ui.sj_sodb_lineEdit_11.text()
-    bb8 = ui.sj_sodb_lineEdit_12.text()
+    bb8  = ui.sj_sodb_lineEdit_12.text()
     bb8c = ui.sj_sodb_comboBox_04.currentText()
     bb8h = ui.sj_sodb_comboBox_05.currentText()
 
@@ -1169,32 +1114,32 @@ def sj_button_cicked_24(ui):
     if ui.sj_sods_checkBox_11.isChecked(): ds = 1
     if ui.sj_sods_checkBox_12.isChecked(): ds = 2
     if ui.sj_sods_checkBox_13.isChecked(): ds = 3
-    ds1 = 1 if ui.sj_sods_checkBox_14.isChecked() else 0
-    ds2 = 1 if ui.sj_sods_checkBox_15.isChecked() else 0
-    ds3 = 1 if ui.sj_sods_checkBox_16.isChecked() else 0
+    ds1  = 1 if ui.sj_sods_checkBox_14.isChecked() else 0
+    ds2  = 1 if ui.sj_sods_checkBox_15.isChecked() else 0
+    ds3  = 1 if ui.sj_sods_checkBox_16.isChecked() else 0
     ds2c = ui.sj_sods_lineEdit_02.text()
     ds3c = ui.sj_sods_lineEdit_03.text()
-    bp = ui.sj_sods_comboBox_01.currentText()
-    ju = ui.sj_sods_comboBox_02.currentText()
-    su = ui.sj_sods_comboBox_03.currentText()
-    bc1 = 1 if ui.sj_sods_checkBox_17.isChecked() else 0
-    bc2 = 1 if ui.sj_sods_checkBox_18.isChecked() else 0
-    bc3 = 1 if ui.sj_sods_checkBox_19.isChecked() else 0
+    bp   = ui.sj_sods_comboBox_01.currentText()
+    ju   = ui.sj_sods_comboBox_02.currentText()
+    su   = ui.sj_sods_comboBox_03.currentText()
+    bc1  = 1 if ui.sj_sods_checkBox_17.isChecked() else 0
+    bc2  = 1 if ui.sj_sods_checkBox_18.isChecked() else 0
+    bc3  = 1 if ui.sj_sods_checkBox_19.isChecked() else 0
     bc3c = ui.sj_sods_lineEdit_04.text()
-    bb0 = 1 if ui.sj_sods_checkBox_20.isChecked() else 0
+    bb0  = 1 if ui.sj_sods_checkBox_20.isChecked() else 0
     bb0c = ui.sj_sods_lineEdit_05.text()
-    bb6 = 1 if ui.sj_sods_checkBox_21.isChecked() else 0
+    bb6  = 1 if ui.sj_sods_checkBox_21.isChecked() else 0
     bb6c = ui.sj_sods_lineEdit_06.text()
-    bb1 = 1 if ui.sj_sods_checkBox_22.isChecked() else 0
+    bb1  = 1 if ui.sj_sods_checkBox_22.isChecked() else 0
     bb1c = ui.sj_sods_lineEdit_07.text()
-    bb2 = 1 if ui.sj_sods_checkBox_23.isChecked() else 0
+    bb2  = 1 if ui.sj_sods_checkBox_23.isChecked() else 0
     bb2c = ui.sj_sods_lineEdit_08.text()
-    bb3 = 1 if ui.sj_sods_checkBox_24.isChecked() else 0
+    bb3  = 1 if ui.sj_sods_checkBox_24.isChecked() else 0
     bb3s = ui.sj_sods_lineEdit_09.text()
     bb3e = ui.sj_sods_lineEdit_10.text()
-    bb4 = 1 if ui.sj_sods_checkBox_25.isChecked() else 0
+    bb4  = 1 if ui.sj_sods_checkBox_25.isChecked() else 0
     bb4s = ui.sj_sods_lineEdit_11.text()
-    bb5 = ui.sj_sods_lineEdit_12.text()
+    bb5  = ui.sj_sods_lineEdit_12.text()
     bb5c = ui.sj_sods_comboBox_04.currentText()
     bb5h = ui.sj_sods_comboBox_05.currentText()
 
@@ -1275,33 +1220,33 @@ def sj_button_cicked_25(ui):
     if ui.sj_codb_checkBox_03.isChecked(): ds = 1
     if ui.sj_codb_checkBox_04.isChecked(): ds = 2
     if ui.sj_codb_checkBox_05.isChecked(): ds = 3
-    ds1 = 1 if ui.sj_codb_checkBox_06.isChecked() else 0
-    ds2 = 1 if ui.sj_codb_checkBox_07.isChecked() else 0
-    ds3 = 1 if ui.sj_codb_checkBox_08.isChecked() else 0
+    ds1  = 1 if ui.sj_codb_checkBox_06.isChecked() else 0
+    ds2  = 1 if ui.sj_codb_checkBox_07.isChecked() else 0
+    ds3  = 1 if ui.sj_codb_checkBox_08.isChecked() else 0
     ds2c = ui.sj_codb_lineEdit_02.text()
     ds3c = ui.sj_codb_lineEdit_03.text()
-    bp = ui.sj_codb_comboBox_01.currentText()
-    ju = ui.sj_codb_comboBox_02.currentText()
-    su = ui.sj_codb_comboBox_03.currentText()
-    bf = 1 if ui.sj_codb_checkBox_27.isChecked() else 0
-    bc1 = 1 if ui.sj_codb_checkBox_09.isChecked() else 0
-    bc2 = 1 if ui.sj_codb_checkBox_10.isChecked() else 0
-    bc3 = 1 if ui.sj_codb_checkBox_11.isChecked() else 0
+    bp   = ui.sj_codb_comboBox_01.currentText()
+    ju   = ui.sj_codb_comboBox_02.currentText()
+    su   = ui.sj_codb_comboBox_03.currentText()
+    bf   = 1 if ui.sj_codb_checkBox_27.isChecked() else 0
+    bc1  = 1 if ui.sj_codb_checkBox_09.isChecked() else 0
+    bc2  = 1 if ui.sj_codb_checkBox_10.isChecked() else 0
+    bc3  = 1 if ui.sj_codb_checkBox_11.isChecked() else 0
     bc3c = ui.sj_codb_lineEdit_04.text()
-    bb1 = 1 if ui.sj_codb_checkBox_12.isChecked() else 0
-    bb2 = 1 if ui.sj_codb_checkBox_13.isChecked() else 0
-    bb3 = 1 if ui.sj_codb_checkBox_14.isChecked() else 0
+    bb1  = 1 if ui.sj_codb_checkBox_12.isChecked() else 0
+    bb2  = 1 if ui.sj_codb_checkBox_13.isChecked() else 0
+    bb3  = 1 if ui.sj_codb_checkBox_14.isChecked() else 0
     bb3c = ui.sj_codb_lineEdit_05.text()
-    bb4 = 1 if ui.sj_codb_checkBox_15.isChecked() else 0
+    bb4  = 1 if ui.sj_codb_checkBox_15.isChecked() else 0
     bb4c = ui.sj_codb_lineEdit_06.text()
-    bb5 = 1 if ui.sj_codb_checkBox_16.isChecked() else 0
+    bb5  = 1 if ui.sj_codb_checkBox_16.isChecked() else 0
     bb5s = ui.sj_codb_lineEdit_07.text()
     bb5e = ui.sj_codb_lineEdit_08.text()
-    bb6 = 1 if ui.sj_codb_checkBox_17.isChecked() else 0
+    bb6  = 1 if ui.sj_codb_checkBox_17.isChecked() else 0
     bb6s = ui.sj_codb_lineEdit_09.text()
-    bb7 = 1 if ui.sj_codb_checkBox_18.isChecked() else 0
+    bb7  = 1 if ui.sj_codb_checkBox_18.isChecked() else 0
     bb7s = ui.sj_codb_lineEdit_10.text()
-    bb8 = ui.sj_codb_lineEdit_11.text()
+    bb8  = ui.sj_codb_lineEdit_11.text()
     bb8c = ui.sj_codb_comboBox_04.currentText()
     bb8h = ui.sj_codb_comboBox_05.currentText()
 
@@ -1380,30 +1325,30 @@ def sj_button_cicked_26(ui):
     if ui.sj_cods_checkBox_03.isChecked(): ds = 1
     if ui.sj_cods_checkBox_04.isChecked(): ds = 2
     if ui.sj_cods_checkBox_05.isChecked(): ds = 3
-    ds1 = 1 if ui.sj_cods_checkBox_06.isChecked() else 0
-    ds2 = 1 if ui.sj_cods_checkBox_07.isChecked() else 0
-    ds3 = 1 if ui.sj_cods_checkBox_08.isChecked() else 0
+    ds1  = 1 if ui.sj_cods_checkBox_06.isChecked() else 0
+    ds2  = 1 if ui.sj_cods_checkBox_07.isChecked() else 0
+    ds3  = 1 if ui.sj_cods_checkBox_08.isChecked() else 0
     ds2c = ui.sj_cods_lineEdit_02.text()
     ds3c = ui.sj_cods_lineEdit_03.text()
-    bp = ui.sj_cods_comboBox_01.currentText()
-    ju = ui.sj_cods_comboBox_02.currentText()
-    su = ui.sj_cods_comboBox_03.currentText()
-    bc1 = 1 if ui.sj_cods_checkBox_09.isChecked() else 0
-    bc2 = 1 if ui.sj_cods_checkBox_10.isChecked() else 0
-    bc3 = 1 if ui.sj_cods_checkBox_11.isChecked() else 0
+    bp   = ui.sj_cods_comboBox_01.currentText()
+    ju   = ui.sj_cods_comboBox_02.currentText()
+    su   = ui.sj_cods_comboBox_03.currentText()
+    bc1  = 1 if ui.sj_cods_checkBox_09.isChecked() else 0
+    bc2  = 1 if ui.sj_cods_checkBox_10.isChecked() else 0
+    bc3  = 1 if ui.sj_cods_checkBox_11.isChecked() else 0
     bc3c = ui.sj_cods_lineEdit_04.text()
-    bb0 = 1 if ui.sj_cods_checkBox_12.isChecked() else 0
+    bb0  = 1 if ui.sj_cods_checkBox_12.isChecked() else 0
     bb0c = ui.sj_cods_lineEdit_05.text()
-    bb6 = 1 if ui.sj_cods_checkBox_13.isChecked() else 0
+    bb6  = 1 if ui.sj_cods_checkBox_13.isChecked() else 0
     bb6c = ui.sj_cods_lineEdit_06.text()
-    bb1 = 1 if ui.sj_cods_checkBox_14.isChecked() else 0
+    bb1  = 1 if ui.sj_cods_checkBox_14.isChecked() else 0
     bb1c = ui.sj_cods_lineEdit_07.text()
-    bb3 = 1 if ui.sj_cods_checkBox_15.isChecked() else 0
+    bb3  = 1 if ui.sj_cods_checkBox_15.isChecked() else 0
     bb3s = ui.sj_cods_lineEdit_08.text()
     bb3e = ui.sj_cods_lineEdit_09.text()
-    bb4 = 1 if ui.sj_cods_checkBox_16.isChecked() else 0
+    bb4  = 1 if ui.sj_cods_checkBox_16.isChecked() else 0
     bb4s = ui.sj_cods_lineEdit_10.text()
-    bb5 = ui.sj_cods_lineEdit_11.text()
+    bb5  = ui.sj_cods_lineEdit_11.text()
     bb5c = ui.sj_cods_comboBox_04.currentText()
     bb5h = ui.sj_cods_comboBox_05.currentText()
 
