@@ -382,19 +382,19 @@ class StrategyBinanceFuture:
             return Parameter_Area(44, 7, tick, pre, 'min')
 
         def 최고초당매수수량(tick, pre=0):
-            return Parameter_Area(45, 14, tick, pre, 'max')
+            return Parameter_Area(45, 8, tick, pre, 'max')
 
         def 최고초당매도수량(tick, pre=0):
-            return Parameter_Area(46, 15, tick, pre, 'max')
+            return Parameter_Area(46, 9, tick, pre, 'max')
 
         def 누적초당매수수량(tick, pre=0):
-            return Parameter_Area(47, 14, tick, pre, 'sum')
+            return Parameter_Area(47, 8, tick, pre, 'sum')
 
         def 누적초당매도수량(tick, pre=0):
-            return Parameter_Area(48, 15, tick, pre, 'sum')
+            return Parameter_Area(48, 9, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return int(Parameter_Area(49, 19, tick, pre, 'mean'))
+            return int(Parameter_Area(49, 10, tick, pre, 'mean'))
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick == 평균값계산틱수:

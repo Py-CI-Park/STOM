@@ -65,7 +65,7 @@ class UBReceiver:
         self.list_prmt   = []
         self.list_gsjm1  = []
         self.list_gsjm2  = []
-        self.tuple_jang  = ()
+        self.tuple_jango = ()
         self.tuple_order = ()
 
         self.int_logt         = int(strf_time('%Y%m%d%H%M', timedelta_sec(-32400)))
@@ -232,7 +232,7 @@ class UBReceiver:
     def UpdateTuple(self, data):
         gubun, data = data
         if gubun == '잔고목록':
-            self.tuple_jang = data
+            self.tuple_jango = data
         elif gubun == '주문목록':
             self.tuple_order = data
         elif gubun == '호가종목코드':
@@ -334,7 +334,7 @@ class UBReceiver:
             data  = (dt,) + tuple(self.dict_tick[code][:9]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, logt)
 
             self.cstgQ.put(data)
-            if code in self.tuple_order or code in self.tuple_jang:
+            if code in self.tuple_order or code in self.tuple_jango:
                 self.ctraderQ.put((code, c))
             if self.dict_set['리시버공유'] == 1:
                 self.zq.put(('tickdata', data))

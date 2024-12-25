@@ -240,19 +240,19 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             return Parameter_Area(44, 7, tick, pre, 'min')
 
         def 최고초당매수수량(tick, pre=0):
-            return Parameter_Area(45, 14, tick, pre, 'max')
-
-        def 누적초당매수수량(tick, pre=0):
-            return Parameter_Area(46, 14, tick, pre, 'sum')
+            return Parameter_Area(45, 8, tick, pre, 'max')
 
         def 최고초당매도수량(tick, pre=0):
-            return Parameter_Area(47, 15, tick, pre, 'max')
+            return Parameter_Area(46, 9, tick, pre, 'max')
+
+        def 누적초당매수수량(tick, pre=0):
+            return Parameter_Area(47, 8, tick, pre, 'sum')
 
         def 누적초당매도수량(tick, pre=0):
-            return Parameter_Area(48, 15, tick, pre, 'sum')
+            return Parameter_Area(48, 9, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return int(Parameter_Area(49, 19, tick, pre, 'mean'))
+            return int(Parameter_Area(49, 10, tick, pre, 'mean'))
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick in self.avg_list:
@@ -450,7 +450,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
             보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                 매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
-                매도분할횟수, 매수주문취소시간, 매도주문취소시간, 포지션 = self.trade_info[vturn][vkey].values()
+                매도분할횟수, 매수주문취소시간, 매도주문취소시간 = self.trade_info[vturn][vkey].values()
             포지션, 수익금, 수익률, 최고수익률, 최저수익률, 보유시간 = \
                 self.GetSellInfo(vturn, vkey, 매수틱번호, 보유수량, 매수가, 현재가, 최고수익률, 최저수익률, 매수시간, now_utc())
 

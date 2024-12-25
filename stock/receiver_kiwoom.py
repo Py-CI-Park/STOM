@@ -79,7 +79,7 @@ class KWReceiver:
         self.dict_sgbn = {}
 
         self.list_gsjm   = []
-        self.tuple_janng = ()
+        self.tuple_jango = ()
         self.tuple_order = ()
 
         self.list_prmt  = None
@@ -174,7 +174,7 @@ class KWReceiver:
     def UpdateTuple(self, data):
         gubun, data = data
         if gubun == '잔고목록':
-            self.tuple_janng = data
+            self.tuple_jango = data
         elif gubun == '주문목록':
             self.tuple_order = data
         elif gubun == '호가종목코드':
@@ -753,7 +753,7 @@ class KWReceiver:
             data  = (dt,) + tuple(self.dict_tick[code]) + (sm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, name, logt)
 
             self.sstgQs[self.dict_sgbn[code]].put(data)
-            if code in self.tuple_janng or code in self.tuple_order:
+            if code in self.tuple_jango or code in self.tuple_order:
                 self.straderQ.put((code, c))
 
             if self.dict_set['리시버공유'] == 1:

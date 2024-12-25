@@ -103,7 +103,7 @@ class TelegramMsg:
             print('텔레그램 설정 오류 알림 - 텔레그램 봇이 설정되지 않아 스크린샷를 보낼 수 없습니다.')
 
     def UpdateDataframe(self, df):
-        if df.columns[1] == '매수금액':
+        if '매수금액' in df.columns:
             text = ''
             for index in df.index:
                 ct    = df['체결시간'][index][8:10] + ':' + df['체결시간'][index][10:12]
@@ -112,7 +112,7 @@ class TelegramMsg:
                 name  = df['종목명'][index]
                 text += f'{ct} {per:.2f}% {sg:,.0f}원 {name}\n'
             self.SendMsg(text)
-        elif df.columns[1] in ('매입가', '포지션'):
+        elif '매입가' in df.columns:
             text   = ''
             m_unit = '원' if df.columns[1] == '매입가' else 'USDT'
             for index in df.index:
@@ -130,7 +130,7 @@ class TelegramMsg:
             tpp   = round(tsg / tbg * 100, 2)
             text += f'{tbg:,.0f}{m_unit} {tpg:,.0f}{m_unit} {tpp:.2f}% {tsg:,.0f}{m_unit}\n'
             self.SendMsg(text)
-        elif df.columns[1] == '주문구분':
+        elif '주문구분' in df.columns:
             text = ''
             for index in df.index:
                 ct   = df['체결시간'][index][8:10] + ':' + df['체결시간'][index][10:12]
