@@ -10,10 +10,11 @@ class TelegramMsg:
         windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13
         """
+        self.windowQ  = qlist[0]
         self.teleQ    = qlist[3]
         self.ctraderQ = qlist[9]
         self.cstgQ    = qlist[10]
-        self.wdzservQ  = qlist[13]
+        self.wdzservQ = qlist[13]
         self.dict_set = None
         self.updater  = None
         self.bot      = None
@@ -24,7 +25,10 @@ class TelegramMsg:
         while True:
             data = self.teleQ.get()
             if type(data) == str:
-                self.SendMsg(data)
+                if '.png' not in data:
+                    self.SendMsg(data)
+                else:
+                    self.SendPhoto(data)
             elif type(data) == pd.DataFrame:
                 self.UpdateDataframe(data)
             elif data[0] == '설정변경':
@@ -53,7 +57,8 @@ class TelegramMsg:
         custum_button = [
             ['S잔고청산', 'S전략중지', 'C잔고청산', 'C전략중지'],
             ['S체결목록', 'S거래목록', 'S잔고평가'],
-            ['C체결목록', 'C거래목록', 'C잔고평가']
+            ['C체결목록', 'C거래목록', 'C잔고평가'],
+            ['S스톰라이브', 'C스톰라이브', '백테라이브']
         ]
         reply_markup = telegram.ReplyKeyboardMarkup(custum_button)
         self.bot.send_message(chat_id=self.dict_set['텔레그램사용자아이디'], text='사용자버튼 설정을 완료하였습니다.', reply_markup=reply_markup)
@@ -71,6 +76,8 @@ class TelegramMsg:
         elif cmd == 'C전략중지':
             self.cstgQ.put('매수전략중지')
             self.SendMsg('코인 전략 중지 완료')
+        elif '라이브' in cmd:
+            self.windowQ.put(cmd)
         elif 'S' in cmd:
             self.wdzservQ.put(('trader', cmd))
         elif 'C' in cmd:
@@ -81,9 +88,19 @@ class TelegramMsg:
             try:
                 self.bot.sendMessage(chat_id=self.dict_set['텔레그램사용자아이디'], text=msg)
             except Exception as e:
-                print(f'텔레그램 명령 오류 알림 - SendMsg {e}')
+                print(f'텔레그램 명령 오류 알림 - sendMessage {e}')
         else:
             print('텔레그램 설정 오류 알림 - 텔레그램 봇이 설정되지 않아 메세지를 보낼 수 없습니다.')
+
+    def SendPhoto(self, path):
+        if self.bot is not None:
+            try:
+                with open(path, 'rb') as image:
+                    self.bot.send_photo(chat_id=self.dict_set['텔레그램사용자아이디'], photo=image)
+            except Exception as e:
+                print(f'텔레그램 명령 오류 알림 - send_photo {e}')
+        else:
+            print('텔레그램 설정 오류 알림 - 텔레그램 봇이 설정되지 않아 스크린샷를 보낼 수 없습니다.')
 
     def UpdateDataframe(self, df):
         if df.columns[1] == '매수금액':

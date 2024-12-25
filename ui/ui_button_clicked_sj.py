@@ -51,6 +51,7 @@ def sj_button_cicked_01(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '기본 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_02(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM sacc', con).set_index('index')
@@ -78,6 +79,7 @@ def sj_button_cicked_02(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '주식 계정 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_03(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM cacc', con).set_index('index')
@@ -93,6 +95,7 @@ def sj_button_cicked_03(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '계정 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_04(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM telegram', con).set_index('index')
@@ -102,6 +105,7 @@ def sj_button_cicked_04(ui):
         ui.sj_tele_liEdit_02.setText(de_text(ui.dict_set['키'], df['int_id'][0]))
     else:
         QMessageBox.critical(ui, '오류 알림', '텔레그램 봇토큰 및 사용자 아이디\n설정값이 존재하지 않습니다.\n')
+
 
 def sj_button_cicked_05(ui):
     con = sqlite3.connect(DB_SETTING)
@@ -183,6 +187,7 @@ def sj_button_cicked_05(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '주식 전략 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_06(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM coin', con).set_index('index')
@@ -262,6 +267,7 @@ def sj_button_cicked_06(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '코인 전략 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_07(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM back', con).set_index('index')
@@ -305,6 +311,7 @@ def sj_button_cicked_07(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '백테 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_08(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM etc', con).set_index('index')
@@ -320,6 +327,7 @@ def sj_button_cicked_08(ui):
         ui.sj_etc_comBoxx_01.setCurrentText(df['테마'][0])
     else:
         QMessageBox.critical(ui, '오류 알림', '기타 설정값이\n존재하지 않습니다.\n')
+
 
 def sj_button_cicked_09(ui, proc_query, queryQ):
     sg = ui.sj_main_comBox_01.currentText()
@@ -389,6 +397,7 @@ def sj_button_cicked_09(ui, proc_query, queryQ):
         ui.UpdateDictSet()
         SetLogFile(ui)
 
+
 def sj_button_cicked_10(ui, proc_query, queryQ):
     id1 = ui.sj_sacc_liEdit_01.text()
     ps1 = ui.sj_sacc_liEdit_02.text()
@@ -440,6 +449,7 @@ def sj_button_cicked_10(ui, proc_query, queryQ):
             ui.dict_set['계좌비밀번호4'] = ap2
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def sj_button_cicked_11(ui, proc_query, queryQ):
     access_key = ui.sj_cacc_liEdit_01.text()
     secret_key = ui.sj_cacc_liEdit_02.text()
@@ -464,6 +474,7 @@ def sj_button_cicked_11(ui, proc_query, queryQ):
             ui.dict_set['Secret_key2'] = secret_key
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def sj_button_cicked_12(ui, proc_query, queryQ, teleQ):
     str_bot = ui.sj_tele_liEdit_01.text()
     int_id = ui.sj_tele_liEdit_02.text()
@@ -480,6 +491,7 @@ def sj_button_cicked_12(ui, proc_query, queryQ, teleQ):
         ui.dict_set['텔레그램사용자아이디'] = int(int_id)
         teleQ.put(('설정변경', ui.dict_set))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
+
 
 def sj_button_cicked_13(ui, proc_query, queryQ):
     me = 1 if ui.sj_stock_ckBox_01.isChecked() else 0
@@ -565,6 +577,7 @@ def sj_button_cicked_13(ui, proc_query, queryQ):
         ui.dict_set['주식장초패턴인식'] = p1
         ui.dict_set['주식장중패턴인식'] = p2
         ui.UpdateDictSet()
+
 
 def sj_button_cicked_14(ui, proc_query, queryQ):
     me = 1 if ui.sj_coin_cheBox_01.isChecked() else 0
@@ -657,8 +670,9 @@ def sj_button_cicked_14(ui, proc_query, queryQ):
             ui.dict_set['코인장중패턴인식'] = p2
             ui.UpdateDictSet()
 
+
 def sj_button_cicked_15(ui, proc_query, queryQ):
-    bl  = 1 if ui.sj_back_cheBox_01.isChecked() else 0
+    bl = 1 if ui.sj_back_cheBox_01.isChecked() else 0
     bbg = 1 if ui.sj_back_cheBox_02.isChecked() else 0
     bsg = 1 if ui.sj_back_cheBox_03.isChecked() else 0
     bld = 1 if ui.sj_back_cheBox_04.isChecked() else 0
@@ -719,6 +733,7 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
         if pre_bbg != bbg:
             ui.BacktestEngineKill()
 
+
 def sj_button_cicked_16(ui, proc_query, queryQ):
     the = ui.sj_etc_comBoxx_01.currentText()
     inr = 1 if ui.sj_etc_checBox_01.isChecked() else 0
@@ -745,6 +760,7 @@ def sj_button_cicked_16(ui, proc_query, queryQ):
     ui.dict_set['프로그램종료'] = pex
     ui.UpdateDictSet()
 
+
 def sj_button_cicked_17(ui):
     if ui.sj_etc_pButton_01.text() == '계정 텍스트 보기':
         ui.pa_lineEditttt_01.clear()
@@ -766,22 +782,33 @@ def sj_button_cicked_17(ui):
         ui.sj_etc_pButton_01.setText('계정 텍스트 보기')
         ui.sj_etc_pButton_01.setStyleSheet(style_bc_bt)
 
+
 def sj_button_cicked_19(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM stockbuyorder', con).set_index('index')
     con.close()
 
     if len(df) > 0:
-        ui.sj_sodb_checkBox_01.setChecked(True) if df['주식매수주문구분'][0] == '시장가' else ui.sj_sodb_checkBox_01.setChecked(False)
-        ui.sj_sodb_checkBox_02.setChecked(True) if df['주식매수주문구분'][0] == '지정가' else ui.sj_sodb_checkBox_02.setChecked(False)
-        ui.sj_sodb_checkBox_03.setChecked(True) if df['주식매수주문구분'][0] == '최유리지정가' else ui.sj_sodb_checkBox_03.setChecked(False)
-        ui.sj_sodb_checkBox_04.setChecked(True) if df['주식매수주문구분'][0] == '최우선지정가' else ui.sj_sodb_checkBox_04.setChecked(False)
-        ui.sj_sodb_checkBox_05.setChecked(True) if df['주식매수주문구분'][0] == '지정가IOC' else ui.sj_sodb_checkBox_05.setChecked(False)
-        ui.sj_sodb_checkBox_06.setChecked(True) if df['주식매수주문구분'][0] == '시장가IOC' else ui.sj_sodb_checkBox_06.setChecked(False)
-        ui.sj_sodb_checkBox_07.setChecked(True) if df['주식매수주문구분'][0] == '최유리IOC' else ui.sj_sodb_checkBox_07.setChecked(False)
-        ui.sj_sodb_checkBox_08.setChecked(True) if df['주식매수주문구분'][0] == '지정가FOK' else ui.sj_sodb_checkBox_08.setChecked(False)
-        ui.sj_sodb_checkBox_09.setChecked(True) if df['주식매수주문구분'][0] == '시장가FOK' else ui.sj_sodb_checkBox_09.setChecked(False)
-        ui.sj_sodb_checkBox_10.setChecked(True) if df['주식매수주문구분'][0] == '최유리FOK' else ui.sj_sodb_checkBox_10.setChecked(False)
+        ui.sj_sodb_checkBox_01.setChecked(True) if df['주식매수주문구분'][0] == '시장가' else ui.sj_sodb_checkBox_01.setChecked(
+            False)
+        ui.sj_sodb_checkBox_02.setChecked(True) if df['주식매수주문구분'][0] == '지정가' else ui.sj_sodb_checkBox_02.setChecked(
+            False)
+        ui.sj_sodb_checkBox_03.setChecked(True) if df['주식매수주문구분'][0] == '최유리지정가' else ui.sj_sodb_checkBox_03.setChecked(
+            False)
+        ui.sj_sodb_checkBox_04.setChecked(True) if df['주식매수주문구분'][0] == '최우선지정가' else ui.sj_sodb_checkBox_04.setChecked(
+            False)
+        ui.sj_sodb_checkBox_05.setChecked(True) if df['주식매수주문구분'][0] == '지정가IOC' else ui.sj_sodb_checkBox_05.setChecked(
+            False)
+        ui.sj_sodb_checkBox_06.setChecked(True) if df['주식매수주문구분'][0] == '시장가IOC' else ui.sj_sodb_checkBox_06.setChecked(
+            False)
+        ui.sj_sodb_checkBox_07.setChecked(True) if df['주식매수주문구분'][0] == '최유리IOC' else ui.sj_sodb_checkBox_07.setChecked(
+            False)
+        ui.sj_sodb_checkBox_08.setChecked(True) if df['주식매수주문구분'][0] == '지정가FOK' else ui.sj_sodb_checkBox_08.setChecked(
+            False)
+        ui.sj_sodb_checkBox_09.setChecked(True) if df['주식매수주문구분'][0] == '시장가FOK' else ui.sj_sodb_checkBox_09.setChecked(
+            False)
+        ui.sj_sodb_checkBox_10.setChecked(True) if df['주식매수주문구분'][0] == '최유리FOK' else ui.sj_sodb_checkBox_10.setChecked(
+            False)
         ui.sj_sodb_lineEdit_01.setText(str(df['주식매수분할횟수'][0]))
         ui.sj_sodb_checkBox_11.setChecked(True) if df['주식매수분할방법'][0] == 1 else ui.sj_sodb_checkBox_11.setChecked(
             False)
@@ -826,22 +853,33 @@ def sj_button_cicked_19(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '주문관리 주식매수 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_20(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM stocksellorder', con).set_index('index')
     con.close()
 
     if len(df) > 0:
-        ui.sj_sods_checkBox_01.setChecked(True) if df['주식매도주문구분'][0] == '시장가' else ui.sj_sods_checkBox_01.setChecked(False)
-        ui.sj_sods_checkBox_02.setChecked(True) if df['주식매도주문구분'][0] == '지정가' else ui.sj_sods_checkBox_02.setChecked(False)
-        ui.sj_sods_checkBox_03.setChecked(True) if df['주식매도주문구분'][0] == '최유리지정가' else ui.sj_sods_checkBox_03.setChecked(False)
-        ui.sj_sods_checkBox_04.setChecked(True) if df['주식매도주문구분'][0] == '최우선지정가' else ui.sj_sods_checkBox_04.setChecked(False)
-        ui.sj_sods_checkBox_05.setChecked(True) if df['주식매도주문구분'][0] == '지정가IOC' else ui.sj_sods_checkBox_05.setChecked(False)
-        ui.sj_sods_checkBox_06.setChecked(True) if df['주식매도주문구분'][0] == '시장가IOC' else ui.sj_sods_checkBox_06.setChecked(False)
-        ui.sj_sods_checkBox_07.setChecked(True) if df['주식매도주문구분'][0] == '최유리IOC' else ui.sj_sods_checkBox_07.setChecked(False)
-        ui.sj_sods_checkBox_08.setChecked(True) if df['주식매도주문구분'][0] == '지정가FOK' else ui.sj_sods_checkBox_08.setChecked(False)
-        ui.sj_sods_checkBox_09.setChecked(True) if df['주식매도주문구분'][0] == '시장가FOK' else ui.sj_sods_checkBox_09.setChecked(False)
-        ui.sj_sods_checkBox_10.setChecked(True) if df['주식매도주문구분'][0] == '최유리FOK' else ui.sj_sods_checkBox_10.setChecked(False)
+        ui.sj_sods_checkBox_01.setChecked(True) if df['주식매도주문구분'][0] == '시장가' else ui.sj_sods_checkBox_01.setChecked(
+            False)
+        ui.sj_sods_checkBox_02.setChecked(True) if df['주식매도주문구분'][0] == '지정가' else ui.sj_sods_checkBox_02.setChecked(
+            False)
+        ui.sj_sods_checkBox_03.setChecked(True) if df['주식매도주문구분'][0] == '최유리지정가' else ui.sj_sods_checkBox_03.setChecked(
+            False)
+        ui.sj_sods_checkBox_04.setChecked(True) if df['주식매도주문구분'][0] == '최우선지정가' else ui.sj_sods_checkBox_04.setChecked(
+            False)
+        ui.sj_sods_checkBox_05.setChecked(True) if df['주식매도주문구분'][0] == '지정가IOC' else ui.sj_sods_checkBox_05.setChecked(
+            False)
+        ui.sj_sods_checkBox_06.setChecked(True) if df['주식매도주문구분'][0] == '시장가IOC' else ui.sj_sods_checkBox_06.setChecked(
+            False)
+        ui.sj_sods_checkBox_07.setChecked(True) if df['주식매도주문구분'][0] == '최유리IOC' else ui.sj_sods_checkBox_07.setChecked(
+            False)
+        ui.sj_sods_checkBox_08.setChecked(True) if df['주식매도주문구분'][0] == '지정가FOK' else ui.sj_sods_checkBox_08.setChecked(
+            False)
+        ui.sj_sods_checkBox_09.setChecked(True) if df['주식매도주문구분'][0] == '시장가FOK' else ui.sj_sods_checkBox_09.setChecked(
+            False)
+        ui.sj_sods_checkBox_10.setChecked(True) if df['주식매도주문구분'][0] == '최유리FOK' else ui.sj_sods_checkBox_10.setChecked(
+            False)
         ui.sj_sods_lineEdit_01.setText(str(df['주식매도분할횟수'][0]))
         ui.sj_sods_checkBox_11.setChecked(True) if df['주식매도분할방법'][0] == 1 else ui.sj_sods_checkBox_11.setChecked(
             False)
@@ -884,16 +922,21 @@ def sj_button_cicked_20(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '주문관리 주식매도 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_21(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM coinbuyorder', con).set_index('index')
     con.close()
 
     if len(df) > 0:
-        ui.sj_codb_checkBox_01.setChecked(True) if df['코인매수주문구분'][0] == '시장가' else ui.sj_codb_checkBox_01.setChecked(False)
-        ui.sj_codb_checkBox_02.setChecked(True) if df['코인매수주문구분'][0] == '지정가' else ui.sj_codb_checkBox_02.setChecked(False)
-        ui.sj_codb_checkBox_19.setChecked(True) if df['코인매수주문구분'][0] == '지정가IOC' else ui.sj_codb_checkBox_19.setChecked(False)
-        ui.sj_codb_checkBox_20.setChecked(True) if df['코인매수주문구분'][0] == '지정가FOK' else ui.sj_codb_checkBox_20.setChecked(False)
+        ui.sj_codb_checkBox_01.setChecked(True) if df['코인매수주문구분'][0] == '시장가' else ui.sj_codb_checkBox_01.setChecked(
+            False)
+        ui.sj_codb_checkBox_02.setChecked(True) if df['코인매수주문구분'][0] == '지정가' else ui.sj_codb_checkBox_02.setChecked(
+            False)
+        ui.sj_codb_checkBox_19.setChecked(True) if df['코인매수주문구분'][0] == '지정가IOC' else ui.sj_codb_checkBox_19.setChecked(
+            False)
+        ui.sj_codb_checkBox_20.setChecked(True) if df['코인매수주문구분'][0] == '지정가FOK' else ui.sj_codb_checkBox_20.setChecked(
+            False)
         ui.sj_codb_lineEdit_01.setText(str(df['코인매수분할횟수'][0]))
         ui.sj_codb_checkBox_03.setChecked(True) if df['코인매수분할방법'][0] == 1 else ui.sj_codb_checkBox_03.setChecked(
             False)
@@ -937,16 +980,21 @@ def sj_button_cicked_21(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '주문관리 코인매수 설정값이\n존재하지 않습니다.\n')
 
+
 def sj_button_cicked_22(ui):
     con = sqlite3.connect(DB_SETTING)
     df = pd.read_sql('SELECT * FROM coinsellorder', con).set_index('index')
     con.close()
 
     if len(df) > 0:
-        ui.sj_cods_checkBox_01.setChecked(True) if df['코인매도주문구분'][0] == '시장가' else ui.sj_cods_checkBox_01.setChecked(False)
-        ui.sj_cods_checkBox_02.setChecked(True) if df['코인매도주문구분'][0] == '지정가' else ui.sj_cods_checkBox_02.setChecked(False)
-        ui.sj_cods_checkBox_19.setChecked(True) if df['코인매도주문구분'][0] == '지정가IOC' else ui.sj_cods_checkBox_19.setChecked(False)
-        ui.sj_cods_checkBox_20.setChecked(True) if df['코인매도주문구분'][0] == '지정가FOK' else ui.sj_cods_checkBox_20.setChecked(False)
+        ui.sj_cods_checkBox_01.setChecked(True) if df['코인매도주문구분'][0] == '시장가' else ui.sj_cods_checkBox_01.setChecked(
+            False)
+        ui.sj_cods_checkBox_02.setChecked(True) if df['코인매도주문구분'][0] == '지정가' else ui.sj_cods_checkBox_02.setChecked(
+            False)
+        ui.sj_cods_checkBox_19.setChecked(True) if df['코인매도주문구분'][0] == '지정가IOC' else ui.sj_cods_checkBox_19.setChecked(
+            False)
+        ui.sj_cods_checkBox_20.setChecked(True) if df['코인매도주문구분'][0] == '지정가FOK' else ui.sj_cods_checkBox_20.setChecked(
+            False)
         ui.sj_cods_lineEdit_01.setText(str(df['코인매도분할횟수'][0]))
         ui.sj_cods_checkBox_03.setChecked(True) if df['코인매도분할방법'][0] == 1 else ui.sj_cods_checkBox_03.setChecked(
             False)
@@ -985,6 +1033,7 @@ def sj_button_cicked_22(ui):
         ui.sj_cods_comboBox_05.setCurrentText(str(df['코인매도정정호가'][0]))
     else:
         QMessageBox.critical(ui, '오류 알림', '주문관리 코인매도 설정값이\n존재하지 않습니다.\n')
+
 
 def sj_button_cicked_23(ui, proc_query, queryQ):
     od = ''
@@ -1099,6 +1148,7 @@ def sj_button_cicked_23(ui, proc_query, queryQ):
         ui.dict_set['주식매수정정호가'] = bb8h
         ui.UpdateDictSet()
 
+
 def sj_button_cicked_24(ui, proc_query, queryQ):
     od = ''
     if ui.sj_sods_checkBox_01.isChecked(): od = '시장가'
@@ -1210,6 +1260,7 @@ def sj_button_cicked_24(ui, proc_query, queryQ):
         ui.dict_set['주식매도정정호가'] = bb5h
         ui.UpdateDictSet()
 
+
 def sj_button_cicked_25(ui, proc_query, queryQ):
     od = ''
     if ui.sj_codb_checkBox_01.isChecked(): od = '시장가'
@@ -1314,6 +1365,7 @@ def sj_button_cicked_25(ui, proc_query, queryQ):
         ui.dict_set['코인매수정정호가'] = bb8h
         ui.UpdateDictSet()
 
+
 def sj_button_cicked_26(ui, proc_query, queryQ):
     od = ''
     if ui.sj_cods_checkBox_01.isChecked(): od = '시장가'
@@ -1414,8 +1466,10 @@ def sj_button_cicked_26(ui, proc_query, queryQ):
         ui.dict_set['코인매도정정호가차이'] = bb5c
         ui.dict_set['코인매도정정호가'] = bb5h
 
+
 def sj_button_cicked_27(ui):
     LoadSettings(ui)
+
 
 def sj_button_cicked_28(ui, proc_query, queryQ):
     name = ui.sj_set_comBoxx_01.currentText()
@@ -1457,6 +1511,7 @@ def sj_button_cicked_28(ui, proc_query, queryQ):
         ui.sjButtonClicked_26()
         QMessageBox.information(ui, '모든 설정 적용 완료', random.choice(famous_saying))
 
+
 def sj_button_cicked_29(ui):
     name = ui.sj_set_comBoxx_01.currentText()
     if name == '':
@@ -1466,6 +1521,7 @@ def sj_button_cicked_29(ui):
     os.remove(remove_file)
     LoadSettings(ui)
     QMessageBox.information(ui, '삭제 완료', random.choice(famous_saying))
+
 
 def sj_button_cicked_30(ui):
     name = ui.sj_set_liEditt_01.text()
@@ -1477,6 +1533,7 @@ def sj_button_cicked_30(ui):
     shutil.copy(origin_file, copy_file)
     LoadSettings(ui)
     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
+
 
 def LoadSettings(ui):
     ui.sj_set_comBoxx_01.clear()

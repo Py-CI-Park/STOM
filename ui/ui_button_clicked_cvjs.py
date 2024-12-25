@@ -25,6 +25,7 @@ def cvjs_button_clicked_01(ui):
                     ui.cvjs_lineEditt_01.setText(index)
             ui.cvjs_pushButon_04.setStyleSheet(style_bc_st)
 
+
 def cvjs_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.cvjs_lineEditt_01.text()
     strategy = ui.cs_textEditttt_02.toPlainText()
@@ -46,10 +47,12 @@ def cvjs_button_clicked_02(ui, proc_query, queryQ):
             ui.cvjs_pushButon_04.setStyleSheet(style_bc_st)
             QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvjs_button_clicked_03(ui):
     ui.cs_textEditttt_02.clear()
     ui.cs_textEditttt_02.append(coin_sell_var if ui.dict_set['거래소'] == '업비트' else coin_future_sell_var)
     ui.cvjs_pushButon_04.setStyleSheet(style_bc_st)
+
 
 def cvjs_button_clicked_04(ui, cstgQ):
     strategy = ui.cs_textEditttt_02.toPlainText()
@@ -66,32 +69,42 @@ def cvjs_button_clicked_04(ui, cstgQ):
             ui.cvjs_pushButon_04.setStyleSheet(style_bc_dk)
             ui.cvjs_pushButon_14.setStyleSheet(style_bc_st)
 
+
 def cvjs_button_clicked_05(ui):
     ui.cs_textEditttt_02.append(coin_sell1)
+
 
 def cvjs_button_clicked_06(ui):
     ui.cs_textEditttt_02.append(coin_sell2)
 
+
 def cvjs_button_clicked_07(ui):
     ui.cs_textEditttt_02.append(coin_sell3)
+
 
 def cvjs_button_clicked_08(ui):
     ui.cs_textEditttt_02.append(coin_sell4)
 
+
 def cvjs_button_clicked_09(ui):
     ui.cs_textEditttt_02.append(coin_sell5)
+
 
 def cvjs_button_clicked_10(ui):
     ui.cs_textEditttt_02.append(coin_sell6)
 
+
 def cvjs_button_clicked_11(ui):
     ui.cs_textEditttt_02.append(coin_sell7)
+
 
 def cvjs_button_clicked_12(ui):
     ui.cs_textEditttt_02.append(coin_sell8)
 
+
 def cvjs_button_clicked_13(ui):
     ui.cs_textEditttt_02.append(coin_sell_signal if ui.dict_set['거래소'] == '업비트' else coin_future_sell_signal)
+
 
 def cvjs_button_clicked_14(ui, cstgQ):
     if ui.CoinStrategyProcessAlive():

@@ -5,20 +5,21 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import PltShow, GetMoneytopQuery, GetBackResult2
+from backtester.back_static import PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd
 from ui.set_text import example_stock_buy, example_stock_sell
 from utility.static import now, strf_time
 from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, columns_vj, DICT_SET, DB_STOCK_BACK, DB_COIN_BACK, coinreadlines
 
 
 class Total:
-    def __init__(self, wq, sq, tq, mq, lq, bq, bstq_list, backname, ui_gubun, gubun):
+    def __init__(self, wq, sq, tq, teleQ, mq, lq, bq, bstq_list, backname, ui_gubun, gubun):
         self.wq           = wq
         self.sq           = sq
         self.tq           = tq
         self.mq           = mq
         self.lq           = lq
         self.bq           = bq
+        self.teleQ        = teleQ
         self.bstq_list    = bstq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
@@ -97,16 +98,7 @@ class Total:
 
             elif data[0] == '백테결과':
                 _, list_tsg, arry_bct = data
-                if list_tsg is not None:
-                    columns = ['index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-                               '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간']
-                    self.df_tsg = pd.DataFrame(list_tsg, columns=columns)
-                    self.df_tsg.set_index('index', inplace=True)
-                    self.df_tsg.sort_index(inplace=True)
-                    arry_bct = arry_bct[arry_bct[:, 1] > 0]
-                    self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
-                    if self.blacklist: self.InsertBlacklist()
-                    self.Report()
+                self.Report(list_tsg, arry_bct)
 
             elif data[0] == '백테정보':
                 self.betting     = data[1]
@@ -160,11 +152,18 @@ class Total:
                 with open('./utility/blacklist_coin.txt', 'w') as f:
                     f.write(''.join(coinreadlines))
 
-    def Report(self):
+    def Report(self, list_tsg, arry_bct):
         if self.buystg_name == '벤치전략':
             self.mq.put('벤치테스트 완료')
         else:
-            self.df_tsg, self.df_bct, result = GetBackResult2(self.df_tsg, self.df_bct, self.betting, self.day_count)
+            self.df_tsg, self.df_bct = GetResultDataframe(self.ui_gubun, list_tsg, arry_bct)
+            if self.blacklist: self.InsertBlacklist()
+
+            _df_tsg   = self.df_tsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
+            arry_tsg  = np.array(_df_tsg, dtype='float64')
+            arry_bct  = np.sort(arry_bct, axis=0)[::-1]
+            result    = GetBackResult(arry_tsg, arry_bct, self.betting, self.day_count, self.ui_gubun)
+            result    = AddMdd(arry_tsg, result)
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
             save_time = strf_time('%Y%m%d%H%M%S')
             startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
@@ -222,23 +221,24 @@ class Total:
                     else:
                         sell_vars = f'{sell_vars}, {text}'
 
-                PltShow('백테스트', self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
+                PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
                         self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False, buy_vars=buy_vars, sell_vars=sell_vars)
             else:
                 if not self.dict_set['그래프저장하지않기']:
-                    PltShow('백테스트', self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
+                    PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
                             self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'])
 
             self.mq.put(f'{self.backname} 완료')
 
 
 class BackTest:
-    def __init__(self, wq, bq, sq, tq, lq, beq_list, bstq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, teleQ, beq_list, bstq_list, backname, ui_gubun):
         self.wq        = wq
         self.bq        = bq
         self.sq        = sq
         self.tq        = tq
         self.lq        = lq
+        self.teleQ     = teleQ
         self.beq_list  = beq_list
         self.bstq_list = bstq_list
         self.backname  = backname
@@ -311,7 +311,7 @@ class BackTest:
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
 
         mq = Queue()
-        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.lq, self.bq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)).start()
+        Process(target=Total, args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.lq, self.bq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
         self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,

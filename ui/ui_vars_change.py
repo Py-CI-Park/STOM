@@ -83,15 +83,15 @@ def get_gavars_to_optivars(ga_vars_text):
         exec(compile(ga_vars_text, '<string>', 'exec'))
         for i in range(len(vars_)):
             if len(vars_[i][0]) == 1:
-                vars_high  = vars_[i][1]
-                vars_gap   = 0
+                vars_high = vars_[i][1]
+                vars_gap = 0
                 vars_start = vars_high
-                vars_end   = vars_high
+                vars_end = vars_high
             else:
                 vars_high, vars_gap = vars_[i][1], vars_[i][0][1] - vars_[i][0][0]
                 if type(vars_gap) == float: vars_gap = round(vars_gap, 2)
                 vars_start = vars_[i][0][0]
-                vars_end   = vars_[i][0][-1]
+                vars_end = vars_[i][0][-1]
             opti_vars_text = f'{opti_vars_text}vars_[{i}] = [[{vars_start}, {vars_end}, {vars_gap}], {vars_high}]\n'
     except:
         print_exc()
@@ -155,14 +155,15 @@ def get_stgtxt_to_varstxt(ui, buystg, sellstg):
 
     return buystg_str[:-1], sellstg_str[:-1]
 
+
 def get_stgtxt_sort(buystg, sellstg):
     buystg_str, sellstg_str = '', ''
     if buystg != '' and sellstg != '' and 'self.vars' in buystg and 'self.vars' in sellstg:
-        buy_num  = int(buystg.split('self.vars[')[1].split(']')[0])
+        buy_num = int(buystg.split('self.vars[')[1].split(']')[0])
         sell_num = int(sellstg.split('self.vars[')[1].split(']')[0])
-        cnt      = 1
-        buystg   = buystg.split('\n')
-        sellstg  = sellstg.split('\n')
+        cnt = 1
+        buystg = buystg.split('\n')
+        sellstg = sellstg.split('\n')
         if buy_num < sell_num:
             for line in buystg:
                 if 'self.vars' in line and '#' not in line:
@@ -243,6 +244,7 @@ def get_stgtxt_sort(buystg, sellstg):
                     buystg_str += line + '\n'
 
     return buystg_str[:-1], sellstg_str[:-1]
+
 
 def get_stgtxt_sort2(optivars, gavars):
     optivars_str, gavars_str = '', ''

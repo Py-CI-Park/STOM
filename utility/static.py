@@ -20,14 +20,16 @@ def threading_timer(sec, func, args=None):
     else:
         Timer(int(sec), func, args=[args]).start()
 
+
 def get_port_number():
     port_number = 5500
-    run_count   = 0
+    run_count = 0
     for proc in psutil.process_iter():
         if 'cmd' in proc.name():
             run_count += 1
     port_number += run_count * 10
     return port_number
+
 
 def win_proc_alive(name):
     alive = False
@@ -36,9 +38,11 @@ def win_proc_alive(name):
             alive = True
     return alive
 
+
 def opstarter_kill():
     if win_proc_alive('opstarter'):
         os.system('C:/Windows/System32/taskkill /f /im opstarter.exe')
+
 
 def array_to_bytes(x: np.ndarray) -> bytes:
     np_bytes = BytesIO()
@@ -46,13 +50,16 @@ def array_to_bytes(x: np.ndarray) -> bytes:
     np.save(np_bytes, x, allow_pickle=True)
     return np_bytes.getvalue()
 
+
 def bytes_to_array(b: bytes) -> np.ndarray:
     np_bytes = BytesIO(b)
     return np.load(np_bytes, allow_pickle=True)
 
+
 def pickle_write(file, data):
     with open(f'{file}.pkl', "wb") as f:
         _pickle.dump(data, f, protocol=-1)
+
 
 def pickle_read(file):
     data = None
@@ -61,14 +68,18 @@ def pickle_read(file):
             data = _pickle.load(f)
     return data
 
+
 def pickle_delete(file):
     if os.path.isfile(file):
         os.remove(file)
 
+
 def thread_decorator(func):
     def wrapper(*args):
         Thread(target=func, args=args, daemon=True).start()
+
     return wrapper
+
 
 def error_decorator(func):
     def wrapper(*args):
@@ -76,29 +87,40 @@ def error_decorator(func):
             func(*args)
         except:
             print_exc()
+
     return wrapper
+
 
 def qtest_qwait(sec):
     # noinspection PyArgumentList
     QTest.qWait(int(sec * 1000))
 
+
 def now():
     return datetime.datetime.now()
+
 
 def now_utc():
     return timedelta_sec(-32400)
 
+
 def int_hms():
     return int(strf_time('%H%M%S'))
+
 
 def int_hms_utc():
     return int(strf_time('%H%M%S', timedelta_sec(-32400)))
 
+
 def timedelta_sec(second, std_time=None):
-    return now() + datetime.timedelta(seconds=float(second)) if std_time is None else std_time + datetime.timedelta(seconds=float(second))
+    return now() + datetime.timedelta(seconds=float(second)) if std_time is None else std_time + datetime.timedelta(
+        seconds=float(second))
+
 
 def timedelta_day(day, std_time=None):
-    return now() + datetime.timedelta(days=float(day)) if std_time is None else std_time + datetime.timedelta(days=float(day))
+    return now() + datetime.timedelta(days=float(day)) if std_time is None else std_time + datetime.timedelta(
+        days=float(day))
+
 
 def strp_time(timetype, str_time):
     if timetype == '%Y%m%d%H%M%S':
@@ -109,11 +131,14 @@ def strp_time(timetype, str_time):
         str_time = f'2000-01-01 {str_time[:2]}:{str_time[2:4]}:{str_time[4:6]}'
     return datetime.datetime.fromisoformat(str_time)
 
+
 def strf_time(timetype, std_time=None):
     return now().strftime(timetype) if std_time is None else std_time.strftime(timetype)
 
+
 def from_timestamp(time):
     return datetime.datetime.fromtimestamp(time)
+
 
 def change_format(text, dotdowndel=False, dotdown4=False, dotdown8=False):
     text = str(text)
@@ -130,10 +155,12 @@ def change_format(text, dotdowndel=False, dotdown4=False, dotdown8=False):
             format_data = f'{float(text):,.2f}'
     return format_data
 
+
 def floor_down(float_, decimal_point):
     float_ = int(float_ * (1 / decimal_point))
     float_ = float_ * decimal_point
     return float_
+
 
 def comma2int(t):
     if '.' in t: t = t.split('.')[0]
@@ -142,10 +169,12 @@ def comma2int(t):
     if ',' in t: t = t.replace(',', '')
     return int(t)
 
+
 def comma2float(t):
     if ' ' in t: t = t.replace(' ', '')
     if ',' in t: t = t.replace(',', '')
     return float(t)
+
 
 def write_key():
     key = str(Fernet.generate_key(), 'utf-8')
@@ -155,28 +184,34 @@ def write_key():
     reg.SetValueEx(openkey, 'EN_KEY', 0, reg.REG_SZ, key)
     reg.CloseKey(openkey)
 
+
 def read_key():
     openkey = reg.OpenKey(reg.HKEY_LOCAL_MACHINE, r'SOFTWARE\WOW6432Node\STOM\EN_KEY', 0, reg.KEY_ALL_ACCESS)
-    key, _  = reg.QueryValueEx(openkey, 'EN_KEY')
+    key, _ = reg.QueryValueEx(openkey, 'EN_KEY')
     reg.CloseKey(openkey)
     return key
+
 
 def en_text(key, text):
     fernet = Fernet(bytes(key, 'utf-8'))
     return str(fernet.encrypt(bytes(text, 'utf-8')), 'utf-8')
 
+
 def de_text(key, text):
     fernet = Fernet(bytes(key, 'utf-8'))
     return str(fernet.decrypt(bytes(text, 'utf-8')), 'utf-8')
 
+
 def factorial(x):
     return 1 if x <= 1 else factorial(x - 1) * x
+
 
 def text_not_in_special_characters(t):
     t = t.replace(' ', '')
     if t == re.findall(r'\w+', t)[0]:
         return True
     return False
+
 
 def roundfigure_upper5(price, index):
     if index < 20230125000000:
@@ -207,6 +242,7 @@ def roundfigure_upper5(price, index):
             return True
     return False
 
+
 def roundfigure_upper(price, unit, index):
     if index < 20230125000000:
         if 1000 <= price <= 1000 + 5 * unit:
@@ -235,6 +271,7 @@ def roundfigure_upper(price, unit, index):
         if 500000 <= price <= 500000 + 1000 * unit:
             return True
     return False
+
 
 def roundfigure_lower(price, unit, index):
     if index < 20230125000000:
@@ -265,6 +302,7 @@ def roundfigure_lower(price, unit, index):
             return True
     return False
 
+
 def GetUpbitHogaunit(price):
     if price < 0.01:
         return 0.0001
@@ -291,9 +329,10 @@ def GetUpbitHogaunit(price):
 
 
 try:
-    from numba import njit
+    from numba import jit
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetKiwoomPgSgSp(bg, cg):
         texs = int(cg * 0.0018)
         bfee = int(bg * 0.00015 / 10) * 10
@@ -303,7 +342,8 @@ try:
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetUpbitPgSgSp(bg, cg):
         bfee = bg * 0.0005
         sfee = cg * 0.0005
@@ -312,7 +352,8 @@ try:
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetBinanceLongPgSgSp(bg, cg, market1, market2):
         bfee = bg * (0.0004 if market1 else 0.0002)
         sfee = (cg - bfee) * (0.0004 if market2 else 0.0002)
@@ -321,7 +362,8 @@ try:
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetBinanceShortPgSgSp(bg, cg, market1, market2):
         bfee = bg * (0.0004 if market1 else 0.0002)
         sfee = (cg - bfee) * (0.0004 if market2 else 0.0002)
@@ -330,7 +372,8 @@ try:
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetVIPrice(kosd, std_price, index):
         uvi = int(std_price * 1.1)
         x = GetHogaunit(kosd, uvi, index)
@@ -342,7 +385,8 @@ try:
             dvi -= dvi % y
         return int(uvi), int(dvi), int(x)
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetSangHahanga(kosd, predayclose, index):
         uplimitprice = int(predayclose * 1.30)
         x = GetHogaunit(kosd, uplimitprice, index)
@@ -354,7 +398,8 @@ try:
             downlimitprice += x - downlimitprice % x
         return int(uplimitprice), int(downlimitprice)
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetUvilower5(uvi, hogaunit, index):
         upper5 = uvi - hogaunit * 5
         if GetHogaunit(True, upper5, index) != hogaunit:
@@ -369,7 +414,8 @@ try:
             upper5 = uvi - hogaunit * k - hogaunit2 * (5 - k)
         return upper5
 
-    @njit
+
+    @jit(nopython=True, cache=True)
     def GetHogaunit(kosd, price, index):
         if index < 20230125000000:
             if price < 1000:
@@ -414,6 +460,7 @@ except:
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
 
+
     def GetUpbitPgSgSp(bg, cg):
         bfee = bg * 0.0005
         sfee = cg * 0.0005
@@ -421,6 +468,7 @@ except:
         sg = int(round(pg - bg))
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
+
 
     def GetBinanceLongPgSgSp(bg, cg, market1, market2):
         bfee = bg * (0.0004 if market1 else 0.0002)
@@ -430,6 +478,7 @@ except:
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
 
+
     def GetBinanceShortPgSgSp(bg, cg, market1, market2):
         bfee = bg * (0.0004 if market1 else 0.0002)
         sfee = (cg - bfee) * (0.0004 if market2 else 0.0002)
@@ -437,6 +486,7 @@ except:
         sg = round(pg - bg, 4)
         sp = round(sg / bg * 100, 2)
         return pg, sg, sp
+
 
     def GetVIPrice(kosd, std_price, index):
         uvi = int(std_price * 1.1)
@@ -449,6 +499,7 @@ except:
             dvi -= dvi % y
         return int(uvi), int(dvi), int(x)
 
+
     def GetSangHahanga(kosd, predayclose, index):
         uplimitprice = int(predayclose * 1.30)
         x = GetHogaunit(kosd, uplimitprice, index)
@@ -459,6 +510,7 @@ except:
         if downlimitprice % x != 0:
             downlimitprice += x - downlimitprice % x
         return int(uplimitprice), int(downlimitprice)
+
 
     def GetUvilower5(uvi, hogaunit, index):
         upper5 = uvi - hogaunit * 5
@@ -473,6 +525,7 @@ except:
                 k += 1
             upper5 = uvi - hogaunit * k - hogaunit2 * (5 - k)
         return upper5
+
 
     def GetHogaunit(kosd, price, index):
         if index < 20230125000000:

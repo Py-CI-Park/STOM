@@ -29,22 +29,26 @@ def mnbutton_c_clicked_01(ui, index):
         ui.main_btn_list[index].setIcon(ui.icon_log)
     elif index == 6:
         if ui.dict_set['거래소'] == '업비트':
-            ui.sj_coin_labell_03.setText('장초전략                        백만원,  장중전략                        백만원              전략중지 및 잔고청산  |')
+            ui.sj_coin_labell_03.setText(
+                '장초전략                        백만원,  장중전략                        백만원              전략중지 및 잔고청산  |')
         else:
-            ui.sj_coin_labell_03.setText('장초전략                        USDT,   장중전략                        USDT              전략중지 및 잔고청산  |')
+            ui.sj_coin_labell_03.setText(
+                '장초전략                        USDT,   장중전략                        USDT              전략중지 및 잔고청산  |')
 
     ui.main_btn = index
     ui.main_btn_list[prev_main_btn].setStyleSheet(style_bc_bb)
     ui.main_btn_list[ui.main_btn].setStyleSheet(style_bc_bt)
     ui.main_box_list[prev_main_btn].setVisible(False)
     ui.main_box_list[ui.main_btn].setVisible(True)
-    QTimer.singleShot(400, lambda: ui.image_label1.setVisible(True if ui.svc_labellllll_05.isVisible() or ui.cvc_labellllll_05.isVisible() else False))
+    QTimer.singleShot(400, lambda: ui.image_label1.setVisible(
+        True if ui.svc_labellllll_05.isVisible() or ui.cvc_labellllll_05.isVisible() else False))
     ui.animation = QPropertyAnimation(ui.main_box_list[ui.main_btn], b'size')
     ui.animation.setEasingCurve(QEasingCurve.InCirc)
     ui.animation.setDuration(300)
     ui.animation.setStartValue(QSize(0, 757))
     ui.animation.setEndValue(QSize(1353, 757))
     ui.animation.start()
+
 
 def mnbutton_c_clicked_02(ui):
     if ui.main_btn == 0:
@@ -71,6 +75,7 @@ def mnbutton_c_clicked_02(ui):
             widget.setVisible(boolean2)
     else:
         QMessageBox.warning(ui, '오류 알림', '해당 버튼은 트레이더탭에서만 작동합니다.\n')
+
 
 def mnbutton_c_clicked_03(ui, wdzservQ, soundQ, stocklogin=False):
     if stocklogin:
@@ -102,6 +107,7 @@ def mnbutton_c_clicked_03(ui, wdzservQ, soundQ, stocklogin=False):
             wdzservQ.put(('manager', '주식수동시작'))
     ui.ms_pushButton.setStyleSheet(style_bc_bt)
 
+
 def mnbutton_c_clicked_04(ui):
     if ui.geometry().width() > 1000:
         ui.setFixedSize(722, 383)
@@ -109,6 +115,7 @@ def mnbutton_c_clicked_04(ui):
     else:
         ui.setFixedSize(1403, 763)
         ui.zo_pushButton.setStyleSheet(style_bc_bb)
+
 
 def mnbutton_c_clicked_05(ui, proc_query, queryQ):
     buttonReply = QMessageBox.warning(
@@ -128,6 +135,7 @@ def mnbutton_c_clicked_05(ui, proc_query, queryQ):
                 queryQ.put(('백테디비', f'DROP TABLE {table_name}'))
             queryQ.put(('백테디비', 'VACUUM'))
         QMessageBox.information(ui, '알림', '백테그래프 및 기록DB가 삭제되었습니다.')
+
 
 def mnbutton_c_clicked_06(ui, proc_query, queryQ):
     buttonReply = QMessageBox.warning(

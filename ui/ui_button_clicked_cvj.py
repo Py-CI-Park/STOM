@@ -76,6 +76,7 @@ def cvj_button_clicked_01(ui):
     ui.cvj_pushButton_09.setFocus()
     cChangeSvjButtonColor(ui)
 
+
 def cvj_button_clicked_02(ui):
     ui.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if ui.extend_window else 463)
     ui.cs_textEditttt_04.setGeometry(7, 756 if ui.extend_window else 478, 647, 602 if ui.extend_window else 272)
@@ -138,6 +139,7 @@ def cvj_button_clicked_02(ui):
 
     ui.cvj_pushButton_07.setFocus()
     cChangeSvjButtonColor(ui)
+
 
 def cvj_button_clicked_03(ui):
     ui.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if ui.extend_window else 463)
@@ -205,6 +207,7 @@ def cvj_button_clicked_03(ui):
 
     ui.cvj_pushButton_08.setFocus()
     cChangeSvjButtonColor(ui)
+
 
 def cvj_button_clicked_04(ui):
     ui.cs_textEditttt_05.setGeometry(7, 10, 497, 1347 if ui.extend_window else 740)
@@ -287,6 +290,7 @@ def cvj_button_clicked_04(ui):
     ui.cvj_pushButton_12.setFocus()
     cChangeSvjButtonColor(ui)
 
+
 def cvj_button_clicked_05(ui):
     ui.cs_textEditttt_03.setGeometry(7, 10, 647, 740 if ui.extend_window else 463)
     ui.cs_textEditttt_04.setGeometry(7, 756 if ui.extend_window else 478, 647, 602 if ui.extend_window else 272)
@@ -348,6 +352,7 @@ def cvj_button_clicked_05(ui):
 
     ui.cvj_pushButton_11.setFocus()
     cChangeSvjButtonColor(ui)
+
 
 def cvj_button_clicked_06(ui):
     ui.cs_textEditttt_01.setGeometry(7, 10, 497, 740 if ui.extend_window else 463)
@@ -421,6 +426,7 @@ def cvj_button_clicked_06(ui):
     ui.cvj_pushButton_16.setFocus()
     cChangeSvjButtonColor(ui)
 
+
 def change_pre_button_edit(ui):
     if ui.cvj_pushButton_01.isVisible():
         ui.cvj_pushButton_15.setStyleSheet(style_bc_bd)
@@ -438,6 +444,7 @@ def change_pre_button_edit(ui):
         ui.cvj_pushButton_16.setStyleSheet(style_bc_bd)
     elif ui.cvc_pushButton_29.isVisible():
         ui.cvj_pushButton_11.setStyleSheet(style_bc_bd)
+
 
 def cvj_button_clicked_07(ui):
     change_pre_button_edit(ui)
@@ -466,6 +473,7 @@ def cvj_button_clicked_07(ui):
     ui.cvj_pushButton_13.setStyleSheet(style_bc_dk)
     ui.cvj_pushButton_14.setStyleSheet(style_bc_bs)
 
+
 def cvj_button_clicked_08(ui):
     change_pre_button_edit(ui)
     ui.cs_textEditttt_01.setVisible(False)
@@ -492,6 +500,7 @@ def cvj_button_clicked_08(ui):
     ui.cvj_pushButton_14.setFocus()
     ui.cvj_pushButton_14.setStyleSheet(style_bc_dk)
     ui.cvj_pushButton_13.setStyleSheet(style_bc_bs)
+
 
 def cvj_button_clicked_09(ui):
     ui.cs_textEditttt_01.setGeometry(7, 10, 1000, 740 if ui.extend_window else 463)
@@ -552,6 +561,7 @@ def cvj_button_clicked_09(ui):
 
     ui.cvj_pushButton_15.setFocus()
     cChangeSvjButtonColor(ui)
+
 
 def cvj_button_clicked_10(ui):
     ui.cs_textEditttt_07.setGeometry(7, 10, 497, 1347 if ui.extend_window else 740)
@@ -618,7 +628,8 @@ def cvj_button_clicked_10(ui):
     ui.cvj_pushButton_10.setFocus()
     cChangeSvjButtonColor(ui)
 
-def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
+
+def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
@@ -626,7 +637,7 @@ def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         back_club = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (
-                    QApplication.keyboardModifiers() & Qt.AltModifier) else False
+                QApplication.keyboardModifiers() & Qt.AltModifier) else False
         if back_club and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진을 먼저 실행하십시오.\n')
             return
@@ -637,14 +648,14 @@ def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        startday  = ui.cvjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday    = ui.cvjb_dateEditt_02.date().toString('yyyyMMdd')
+        startday = ui.cvjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday = ui.cvjb_dateEditt_02.date().toString('yyyyMMdd')
         starttime = ui.cvjb_lineEditt_02.text()
-        endtime   = ui.cvjb_lineEditt_03.text()
-        betting   = ui.cvjb_lineEditt_04.text()
-        avgtime   = ui.cvjb_lineEditt_05.text()
-        buystg    = ui.cvjb_comboBoxx_01.currentText()
-        sellstg   = ui.cvjs_comboBoxx_01.currentText()
+        endtime = ui.cvjb_lineEditt_03.text()
+        betting = ui.cvjb_lineEditt_04.text()
+        avgtime = ui.cvjb_lineEditt_05.text()
+        buystg = ui.cvjb_comboBoxx_01.currentText()
+        sellstg = ui.cvjs_comboBoxx_01.currentText()
         bl = True if ui.dict_set['블랙리스트추가'] else False
 
         if int(avgtime) not in ui.avg_list:
@@ -667,13 +678,14 @@ def cvj_button_clicked_11(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         ))
         ui.proc_backtester_bb = Process(
             target=BackTest,
-            args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '백테스트',
+            args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '백테스트',
                   'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
         )
         ui.proc_backtester_bb.start()
         ui.cvjButtonClicked_07()
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
+
 
 def cvj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
@@ -724,13 +736,15 @@ def cvj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
 
+
 def cvj_button_clicked_13(ui):
     if ui.cs_textEditttt_01.isVisible():
         ui.cs_textEditttt_01.clear()
         ui.cs_textEditttt_02.clear()
         ui.cs_textEditttt_01.append(example_finder if ui.dict_set['거래소'] == '업비트' else example_finder_future)
 
-def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
+
+def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
@@ -746,24 +760,27 @@ def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        randomopti  = True if not (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) else False
-        onlybuy     = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.ShiftModifier) else False
-        onlysell    = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (QApplication.keyboardModifiers() & Qt.AltModifier) else False
-        starttime   = ui.cvjb_lineEditt_02.text()
-        endtime     = ui.cvjb_lineEditt_03.text()
-        betting     = ui.cvjb_lineEditt_04.text()
-        buystg      = ui.cvc_comboBoxxx_01.currentText()
-        sellstg     = ui.cvc_comboBoxxx_08.currentText()
-        optivars    = ui.cvc_comboBoxxx_02.currentText()
-        ccount      = ui.cvc_comboBoxxx_06.currentText()
-        optistd     = ui.cvc_comboBoxxx_07.currentText()
+        randomopti = True if not (QApplication.keyboardModifiers() & Qt.ControlModifier) and (
+                    QApplication.keyboardModifiers() & Qt.AltModifier) else False
+        onlybuy = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (
+                    QApplication.keyboardModifiers() & Qt.ShiftModifier) else False
+        onlysell = True if (QApplication.keyboardModifiers() & Qt.ControlModifier) and (
+                    QApplication.keyboardModifiers() & Qt.AltModifier) else False
+        starttime = ui.cvjb_lineEditt_02.text()
+        endtime = ui.cvjb_lineEditt_03.text()
+        betting = ui.cvjb_lineEditt_04.text()
+        buystg = ui.cvc_comboBoxxx_01.currentText()
+        sellstg = ui.cvc_comboBoxxx_08.currentText()
+        optivars = ui.cvc_comboBoxxx_02.currentText()
+        ccount = ui.cvc_comboBoxxx_06.currentText()
+        optistd = ui.cvc_comboBoxxx_07.currentText()
         weeks_train = ui.cvc_comboBoxxx_03.currentText()
         weeks_valid = ui.cvc_comboBoxxx_04.currentText()
-        weeks_test  = ui.cvc_comboBoxxx_05.currentText()
+        weeks_test = ui.cvc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
         optunasampl = ui.op_comboBoxxxx_01.currentText()
-        optunafixv  = ui.op_lineEditttt_01.text()
+        optunafixv = ui.op_lineEditttt_01.text()
         optunacount = ui.op_lineEditttt_02.text()
         optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
@@ -792,84 +809,84 @@ def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
         if back_name == '최적화O':
             ui.proc_backtester_o = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_o.start()
         elif back_name == '최적화OV':
             ui.proc_backtester_ov = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ov.start()
         elif back_name == '최적화OVC':
             ui.proc_backtester_ovc = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ovc.start()
         elif back_name == '최적화B':
             ui.proc_backtester_b = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_b.start()
         elif back_name == '최적화BV':
             ui.proc_backtester_bv = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bv.start()
         elif back_name == '최적화BVC':
             ui.proc_backtester_bvc = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bvc.start()
         elif back_name == '최적화OT':
             ui.proc_backtester_ot = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ot.start()
         elif back_name == '최적화OVT':
             ui.proc_backtester_ovt = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ovt.start()
         elif back_name == '최적화OVCT':
             ui.proc_backtester_ovct = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ovct.start()
         elif back_name == '최적화BT':
             ui.proc_backtester_bt = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bt.start()
         elif back_name == '최적화BVT':
             ui.proc_backtester_bvt = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bvt.start()
         else:
             ui.proc_backtester_bvct = Process(
                 target=Optimize,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bvct.start()
@@ -877,7 +894,8 @@ def cvj_button_clicked_14(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
 
-def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
+
+def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
@@ -891,20 +909,20 @@ def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        randomopti  = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
-        startday    = ui.cvjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday      = ui.cvjb_dateEditt_02.date().toString('yyyyMMdd')
-        starttime   = ui.cvjb_lineEditt_02.text()
-        endtime     = ui.cvjb_lineEditt_03.text()
-        betting     = ui.cvjb_lineEditt_04.text()
-        buystg      = ui.cvc_comboBoxxx_01.currentText()
-        sellstg     = ui.cvc_comboBoxxx_08.currentText()
-        optivars    = ui.cvc_comboBoxxx_02.currentText()
-        ccount      = ui.cvc_comboBoxxx_06.currentText()
-        optistd     = ui.cvc_comboBoxxx_07.currentText()
+        randomopti = True if (QApplication.keyboardModifiers() & Qt.AltModifier) and 'B' not in back_name else False
+        startday = ui.cvjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday = ui.cvjb_dateEditt_02.date().toString('yyyyMMdd')
+        starttime = ui.cvjb_lineEditt_02.text()
+        endtime = ui.cvjb_lineEditt_03.text()
+        betting = ui.cvjb_lineEditt_04.text()
+        buystg = ui.cvc_comboBoxxx_01.currentText()
+        sellstg = ui.cvc_comboBoxxx_08.currentText()
+        optivars = ui.cvc_comboBoxxx_02.currentText()
+        ccount = ui.cvc_comboBoxxx_06.currentText()
+        optistd = ui.cvc_comboBoxxx_07.currentText()
         weeks_train = ui.cvc_comboBoxxx_03.currentText()
         weeks_valid = ui.cvc_comboBoxxx_04.currentText()
-        weeks_test  = ui.cvc_comboBoxxx_05.currentText()
+        weeks_test = ui.cvc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -937,48 +955,49 @@ def cvj_button_clicked_15(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
         if back_name == '전진분석OR':
             ui.proc_backtester_or = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_or.start()
         elif back_name == '전진분석ORV':
             ui.proc_backtester_orv = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_orv.start()
         elif back_name == '전진분석ORVC':
             ui.proc_backtester_orvc = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_orvc.start()
         elif back_name == '전진분석BR':
             ui.proc_backtester_br = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_br.start()
         elif back_name == '전진분석BRV':
             ui.proc_backtester_brv = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_brv.start()
         else:
             ui.proc_backtester_brvc = Process(
                 target=RollingWalkForwardTest,
-                args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name,
                       'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_brvc.start()
         ui.cvjButtonClicked_07()
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
+
 
 def cvj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
@@ -994,16 +1013,16 @@ def cvj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        starttime   = ui.cvjb_lineEditt_02.text()
-        endtime     = ui.cvjb_lineEditt_03.text()
-        betting     = ui.cvjb_lineEditt_04.text()
-        buystg      = ui.cvc_comboBoxxx_01.currentText()
-        sellstg     = ui.cvc_comboBoxxx_08.currentText()
-        optivars    = ui.cva_comboBoxxx_01.currentText()
-        optistd     = ui.cvc_comboBoxxx_07.currentText()
+        starttime = ui.cvjb_lineEditt_02.text()
+        endtime = ui.cvjb_lineEditt_03.text()
+        betting = ui.cvjb_lineEditt_04.text()
+        buystg = ui.cvc_comboBoxxx_01.currentText()
+        sellstg = ui.cvc_comboBoxxx_08.currentText()
+        optivars = ui.cva_comboBoxxx_01.currentText()
+        optistd = ui.cvc_comboBoxxx_07.currentText()
         weeks_train = ui.cvc_comboBoxxx_03.currentText()
         weeks_valid = ui.cvc_comboBoxxx_04.currentText()
-        weeks_test  = ui.cvc_comboBoxxx_05.currentText()
+        weeks_test = ui.cvc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -1053,6 +1072,7 @@ def cvj_button_clicked_16(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
 
+
 def cvj_button_clicked_17(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
@@ -1067,19 +1087,19 @@ def cvj_button_clicked_17(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        starttime   = ui.cvjb_lineEditt_02.text()
-        endtime     = ui.cvjb_lineEditt_03.text()
-        betting     = ui.cvjb_lineEditt_04.text()
-        avgtime     = ui.cvjb_lineEditt_05.text()
-        buystg      = ui.cvo_comboBoxxx_01.currentText()
-        sellstg     = ui.cvo_comboBoxxx_02.currentText()
-        bcount      = ui.cvo_lineEdittt_03.text()
-        scount      = ui.cvo_lineEdittt_04.text()
-        rcount      = ui.cvo_lineEdittt_05.text()
-        optistd     = ui.cvc_comboBoxxx_07.currentText()
+        starttime = ui.cvjb_lineEditt_02.text()
+        endtime = ui.cvjb_lineEditt_03.text()
+        betting = ui.cvjb_lineEditt_04.text()
+        avgtime = ui.cvjb_lineEditt_05.text()
+        buystg = ui.cvo_comboBoxxx_01.currentText()
+        sellstg = ui.cvo_comboBoxxx_02.currentText()
+        bcount = ui.cvo_lineEdittt_03.text()
+        scount = ui.cvo_lineEdittt_04.text()
+        rcount = ui.cvo_lineEdittt_05.text()
+        optistd = ui.cvc_comboBoxxx_07.currentText()
         weeks_train = ui.cvc_comboBoxxx_03.currentText()
         weeks_valid = ui.cvc_comboBoxxx_04.currentText()
-        weeks_test  = ui.cvc_comboBoxxx_05.currentText()
+        weeks_test = ui.cvc_comboBoxxx_05.currentText()
         benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
         bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -1129,6 +1149,7 @@ def cvj_button_clicked_17(ui, back_name, windowQ, backQ, soundQ, totalQ, liveQ):
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
 
+
 def cvj_button_clicked_18(ui):
     opti_vars_text = ui.cs_textEditttt_05.toPlainText()
     if opti_vars_text != '':
@@ -1137,6 +1158,7 @@ def cvj_button_clicked_18(ui):
         ui.cs_textEditttt_06.append(ga_vars_text)
     else:
         QMessageBox.critical(ui, '오류 알림', '현재 최적화 범위 코드가 공백 상태입니다.\n최적화 범위 코드를 작성하거나 로딩하십시오.\n')
+
 
 def cvj_button_clicked_19(ui):
     ga_vars_text = ui.cs_textEditttt_06.toPlainText()
@@ -1147,6 +1169,7 @@ def cvj_button_clicked_19(ui):
     else:
         QMessageBox.critical(ui, '오류 알림', '현재 GA 범위 코드가 공백 상태입니다.\nGA 범위 코드를 작성하거나 로딩하십시오.\n')
 
+
 def cvj_button_clicked_20(ui):
     buystg = ui.cs_textEditttt_01.toPlainText()
     sellstg = ui.cs_textEditttt_02.toPlainText()
@@ -1155,6 +1178,7 @@ def cvj_button_clicked_20(ui):
     ui.cs_textEditttt_04.clear()
     ui.cs_textEditttt_03.append(buystg_str)
     ui.cs_textEditttt_04.append(sellstg_str)
+
 
 def cvj_button_clicked_21(ui):
     optivars = ui.cs_textEditttt_05.toPlainText()
@@ -1165,6 +1189,7 @@ def cvj_button_clicked_21(ui):
     ui.cs_textEditttt_05.append(optivars_str)
     ui.cs_textEditttt_06.append(gavars_str)
 
+
 def cvj_button_clicked_22(ui):
     buystg = ui.cs_textEditttt_03.toPlainText()
     sellstg = ui.cs_textEditttt_04.toPlainText()
@@ -1173,6 +1198,7 @@ def cvj_button_clicked_22(ui):
     ui.cs_textEditttt_04.clear()
     ui.cs_textEditttt_03.append(buystg_str)
     ui.cs_textEditttt_04.append(sellstg_str)
+
 
 def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
     if ui.BacktestProcessAlive():
@@ -1197,15 +1223,15 @@ def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
             QMessageBox.critical(ui, '오류 알림', '학습할 매도전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
             return
 
-        betting   = ui.cvjb_lineEditt_04.text()
-        avgtime   = ui.cvjb_lineEditt_05.text()
-        startday  = ui.pt_dateEdittttt_01.date().toString('yyyyMMdd')
-        endday    = ui.pt_dateEdittttt_02.date().toString('yyyyMMdd')
+        betting = ui.cvjb_lineEditt_04.text()
+        avgtime = ui.cvjb_lineEditt_05.text()
+        startday = ui.pt_dateEdittttt_01.date().toString('yyyyMMdd')
+        endday = ui.pt_dateEdittttt_02.date().toString('yyyyMMdd')
         starttime = ui.cvjb_lineEditt_02.text()
-        endtime   = ui.cvjb_lineEditt_03.text()
-        buystg    = ui.cvjb_comboBoxx_01.currentText()
-        sellstg   = ui.cvjs_comboBoxx_01.currentText()
-        multi     = int(ui.be_lineEdittttt_04.text())
+        endtime = ui.cvjb_lineEditt_03.text()
+        buystg = ui.cvjb_comboBoxx_01.currentText()
+        sellstg = ui.cvjs_comboBoxx_01.currentText()
+        multi = int(ui.be_lineEdittttt_04.text())
 
         ui.ClearBacktestQ()
         for q in ui.back_eques:
@@ -1214,13 +1240,17 @@ def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
         dict_pattern, dict_pattern_buy, dict_pattern_sell = get_pattern_setup(get_pattern_text(ui))
         backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
                    dict_pattern_buy, dict_pattern_sell))
-        ui.proc_backtester_bp = Process(target=PatternModeling, args=(windowQ, backQ, totalQ, ui.back_cques, ui.back_eques, 'C', ui.back_count, multi))
+        ui.proc_backtester_bp = Process(
+            target=PatternModeling,
+            args=(windowQ, backQ, totalQ, ui.back_cques, ui.back_eques, 'C', ui.back_count, multi)
+        )
         ui.proc_backtester_bp.start()
         ui.cvjButtonClicked_07()
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
 
-def cvj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ):
+
+def cvj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
@@ -1234,14 +1264,14 @@ def cvj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
-        startday  = ui.cvjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday    = ui.cvjb_dateEditt_02.date().toString('yyyyMMdd')
+        startday = ui.cvjb_dateEditt_01.date().toString('yyyyMMdd')
+        endday = ui.cvjb_dateEditt_02.date().toString('yyyyMMdd')
         starttime = ui.cvjb_lineEditt_02.text()
-        endtime   = ui.cvjb_lineEditt_03.text()
-        betting   = ui.cvjb_lineEditt_04.text()
-        avgtime   = ui.cvjb_lineEditt_05.text()
-        buystg    = ui.cvjb_comboBoxx_01.currentText()
-        sellstg   = ui.cvjs_comboBoxx_01.currentText()
+        endtime = ui.cvjb_lineEditt_03.text()
+        betting = ui.cvjb_lineEditt_04.text()
+        avgtime = ui.cvjb_lineEditt_05.text()
+        buystg = ui.cvjb_comboBoxx_01.currentText()
+        sellstg = ui.cvjs_comboBoxx_01.currentText()
         bl = True if ui.dict_set['블랙리스트추가'] else False
 
         if int(avgtime) not in ui.avg_list:
@@ -1264,18 +1294,20 @@ def cvj_button_clicked_24(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         ))
         ui.proc_backtester_bc = Process(
             target=BackTest,
-            args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '백테스트', 'C')
+            args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '백테스트', 'C')
         )
         ui.proc_backtester_bc.start()
         ui.cvjButtonClicked_07()
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
 
+
 def cvj_button_clicked_25(ui):
     if not ui.dialog_pattern.isVisible():
         ui.dialog_pattern.show()
     else:
         ui.dialog_pattern.close()
+
 
 def cChangeSvjButtonColor(ui):
     for button in ui.coin_editer_list:

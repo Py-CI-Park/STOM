@@ -22,6 +22,7 @@ def cell_clicked_01(ui, row, col):
     ui.ct_lineEdittttt_05.setText(name)
     ui.ShowDialog(name, tickcount, searchdate, col)
 
+
 def cell_clicked_02(ui, row, wdzservQ):
     item = ui.sjg_tableWidgettt.item(row, 0)
     if item is None:
@@ -35,6 +36,7 @@ def cell_clicked_02(ui, row, wdzservQ):
     )
     if buttonReply == QMessageBox.Yes:
         wdzservQ.put(('trader', ('매도', ui.dict_code[name], name, c, oc, now(), True)))
+
 
 def cell_clicked_03(ui, row, ctraderQ):
     item = ui.cjg_tableWidgettt.item(row, 0)
@@ -57,6 +59,7 @@ def cell_clicked_03(ui, row, ctraderQ):
                 p = 'SELL_LONG' if p == 'LONG' else 'BUY_SHORT'
                 ctraderQ.put((p, code, c, oc, now(), True))
 
+
 def cell_clicked_04(ui, row):
     searchdate = ''
     if ui.focusWidget() == ui.sds_tableWidgettt:
@@ -75,6 +78,7 @@ def cell_clicked_04(ui, row):
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
     ui.ShowDialog(name, tickcount, searchdate, 4)
 
+
 def cell_clicked_05(ui, row):
     gubun = '주식'
     if ui.focusWidget() == ui.cns_tableWidgettt:
@@ -84,7 +88,8 @@ def cell_clicked_05(ui, row):
         return
     date = item.text()
     date = date.replace('.', '')
-    table_name = 's_tradelist' if gubun == '주식' else 'c_tradelist' if ui.dict_set['거래소'] == '업비트' else 'c_tradelist_future'
+    table_name = 's_tradelist' if gubun == '주식' else 'c_tradelist' if ui.dict_set[
+                                                                          '거래소'] == '업비트' else 'c_tradelist_future'
 
     con = sqlite3.connect(DB_TRADELIST)
     df = pd.read_sql(f"SELECT * FROM {table_name} WHERE 체결시간 LIKE '{date}%'", con)
@@ -101,12 +106,13 @@ def cell_clicked_05(ui, row):
     df.set_index('index', inplace=True)
     ui.ShowDialogGraph(df)
 
+
 def cell_clicked_06(ui, row):
     tableWidget = None
     if ui.focusWidget() == ui.ss_tableWidget_01:
-        tableWidget  = ui.ss_tableWidget_01
+        tableWidget = ui.ss_tableWidget_01
     elif ui.focusWidget() == ui.cs_tableWidget_01:
-        tableWidget  = ui.cs_tableWidget_01
+        tableWidget = ui.cs_tableWidget_01
     if tableWidget is None:
         return
     item = tableWidget.item(row, 0)
@@ -128,7 +134,9 @@ def cell_clicked_06(ui, row):
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
     tickcount = int(ui.cvjb_lineEditt_05.text()) if coin else int(ui.svjb_lineEditt_05.text())
-    ui.ShowDialogChart(False, coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), detail, buytimes)
+    ui.ShowDialogChart(False, coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(),
+                       ui.ct_lineEdittttt_02.text(), detail, buytimes)
+
 
 def cell_clicked_07(ui, row, chartQ):
     item = ui.ct_tableWidgett_01.item(row, 0)
@@ -143,7 +151,9 @@ def cell_clicked_07(ui, row, chartQ):
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-    chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), ui.GetKlist()))
+    chartQ.put(
+        (coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), ui.GetKlist()))
+
 
 def cell_clicked_08(ui, row):
     item = ui.dialog_info.focusWidget().item(row, 3)
@@ -151,6 +161,7 @@ def cell_clicked_08(ui, row):
         return
     if ui.dialog_web.isVisible():
         ui.webEngineView.load(QUrl(item.text()))
+
 
 def cell_clicked_09(ui, row, col, windowQ):
     if ui.dialog_db.focusWidget() == ui.db_tableWidgett_01:
@@ -269,6 +280,7 @@ def cell_clicked_09(ui, row, col, windowQ):
 
     ui.ShowDB()
 
+
 def cell_clicked_10(ui, row, col):
     item = ui.hg_tableWidgett_01.item(row, col)
     if item is not None:
@@ -280,8 +292,10 @@ def cell_clicked_10(ui, row, col):
         ui.od_lineEdittttt_01.setText(str(order_price))
         ui.TextChanged_05()
 
+
 def cell_clicked_11(ui):
-    table_name = 's_tradelist' if ui.focusWidget() == ui.snt_tableWidgettt else 'c_tradelist' if ui.dict_set['거래소'] == '업비트' else 'c_tradelist_future'
+    table_name = 's_tradelist' if ui.focusWidget() == ui.snt_tableWidgettt else 'c_tradelist' if ui.dict_set[
+                                                                                                     '거래소'] == '업비트' else 'c_tradelist_future'
     con = sqlite3.connect(DB_TRADELIST)
     df = pd.read_sql(f"SELECT * FROM {table_name}", con)
     con.close()

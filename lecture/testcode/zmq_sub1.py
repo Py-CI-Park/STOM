@@ -1,6 +1,7 @@
 import zmq
 import datetime
 
+
 class ZmqClient:
     def __init__(self):
         zctx = zmq.Context()
@@ -11,7 +12,7 @@ class ZmqClient:
 
     def Start(self):
         while True:
-            msg  = self.sock.recv_string()
+            msg = self.sock.recv_string()
             data = self.sock.recv_pyobj()
             print('C1', msg, data, datetime.datetime.now())
 

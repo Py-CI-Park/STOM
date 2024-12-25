@@ -136,7 +136,6 @@ class TraderBinanceFuture:
             self.dict_lvrg = {x: 1 for x in codes}
 
         self.cstgQ.put(('바낸선물단위정보', self.dict_info))
-        self.windowQ.put((ui_num['바낸선물단위정보'], self.dict_info))
         self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 호가단위 및 소숫점자리수 조회 완료'))
 
         if not self.dict_set['코인모의투자']:

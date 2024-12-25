@@ -47,6 +47,7 @@ def show_dialog_graph(ui, df):
     ui.canvas2.figure.tight_layout()
     ui.canvas2.draw()
 
+
 def show_dialog(ui, code_or_name, tickcount, searchdate, col):
     coin = False
     if code_or_name in ui.dict_code.keys():
@@ -75,7 +76,9 @@ def show_dialog(ui, code_or_name, tickcount, searchdate, col):
         if not coin:
             ui.ShowDialogWeb(False, code)
         ui.ShowDialogHoga(False, coin, code)
-        ui.ShowDialogChart(False, coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text())
+        ui.ShowDialogChart(False, coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(),
+                           ui.ct_lineEdittttt_02.text())
+
 
 def show_dialog_web(ui, show, code, webcQ):
     if ui.webEngineView is None:
@@ -92,6 +95,7 @@ def show_dialog_web(ui, show, code, webcQ):
     if ui.dialog_web.isVisible() and ui.dialog_info.isVisible():
         ui.webEngineView.load(QUrl(f'https://finance.naver.com/item/main.naver?code={code}'))
         webcQ.put(('기업정보', code))
+
 
 def show_dialog_hoga(ui, show, coin, code):
     if show and not ui.dialog_hoga.isVisible():
@@ -133,7 +137,9 @@ def show_dialog_hoga(ui, show, coin, code):
             ui.od_lineEdittttt_01.setText('')
             ui.od_lineEdittttt_02.setText('')
 
-def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ, tickcount, searchdate, starttime, endtime, detail, buytimes):
+
+def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ, tickcount, searchdate, starttime,
+                      endtime, detail, buytimes):
     if not ui.dialog_chart.isVisible():
         if ui.main_btn in (1, 3):
             ui.ct_lineEdittttt_01.setText('0')
@@ -155,6 +161,7 @@ def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ,
                 chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist()))
             else:
                 chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(), detail, buytimes))
+
 
 def show_dialog_chart2(ui):
     if ui.ct_pushButtonnn_06.text() == '확장':
@@ -182,6 +189,7 @@ def show_dialog_chart2(ui):
         ui.ct_pushButtonnn_06.setText('확장')
         ui.ct_pushButtonnn_06.setStyleSheet(style_bc_bt)
 
+
 def show_qsize(ui):
     if not ui.showQsize:
         ui.qs_pushButton.setStyleSheet(style_bc_bt)
@@ -190,8 +198,10 @@ def show_qsize(ui):
         ui.qs_pushButton.setStyleSheet(style_bc_bb)
         ui.showQsize = False
 
+
 def show_dialog_factor(ui):
     ui.dialog_factor.show() if not ui.dialog_factor.isVisible() else ui.dialog_factor.close()
+
 
 def show_dialog_test(ui):
     if not ui.dialog_test.isVisible():
@@ -200,6 +210,7 @@ def show_dialog_test(ui):
     else:
         ui.ct_pushButtonnn_05.setStyleSheet(style_bc_bb)
         ui.dialog_test.close()
+
 
 def show_chart(ui):
     if not ui.dialog_chart.isVisible():
@@ -212,6 +223,7 @@ def show_chart(ui):
         ui.dialog_chart.show()
     else:
         ui.dialog_chart.close()
+
 
 def show_hoga(ui):
     if not ui.dialog_hoga.isVisible():
@@ -232,6 +244,7 @@ def show_hoga(ui):
     else:
         ui.dialog_hoga.close()
 
+
 def show_giup(ui):
     if ui.webEngineView is None:
         ui.webEngineView = QWebEngineView()
@@ -247,6 +260,7 @@ def show_giup(ui):
         ui.dialog_web.close()
     ui.dialog_info.show() if not ui.dialog_info.isVisible() else ui.dialog_info.close()
 
+
 def show_treemap(ui, webcQ):
     if not ui.dialog_tree.isVisible():
         ui.dialog_tree.show()
@@ -254,8 +268,10 @@ def show_treemap(ui, webcQ):
     else:
         ui.dialog_tree.close()
 
+
 def show_jisu(ui):
     ui.dialog_jisu.show() if not ui.dialog_jisu.isVisible() else ui.dialog_jisu.close()
+
 
 def show_db(ui):
     if not ui.dialog_db.isVisible():
@@ -348,8 +364,10 @@ def show_db(ui):
 
     con.close()
 
+
 def show_backscheduler(ui):
     ui.dialog_scheduler.show() if not ui.dialog_scheduler.isVisible() else ui.dialog_scheduler.close()
+
 
 def show_kimp(ui, qlist):
     if not ui.dialog_kimp.isVisible():
@@ -362,6 +380,7 @@ def show_kimp(ui, qlist):
         if ui.CoinKimpProcessAlive():
             ui.proc_coin_kimp.kill()
             qtest_qwait(3)
+
 
 def show_order(ui):
     if not ui.dialog_order.isVisible():
@@ -386,9 +405,11 @@ def show_order(ui):
     else:
         ui.dialog_order.close()
 
+
 def show_video(ui):
     ui.videoWidget.setVisible(True)
     ui.mediaPlayer.play()
+
 
 def put_hoga_code(ui, coin, code, wdzservQ, creceivQ):
     if coin:
@@ -398,11 +419,12 @@ def put_hoga_code(ui, coin, code, wdzservQ, creceivQ):
         if ui.CoinReceiverProcessAlive():  creceivQ.put(('호가종목코드', '000000'))
         wdzservQ.put(('receiver', ('호가종목코드', code)))
 
+
 def chart_moneytop_list(ui):
     searchdate = ui.ct_dateEdittttt_02.date().toString('yyyyMMdd')
-    starttime  = ui.ct_lineEdittttt_01.text()
-    endtime    = ui.ct_lineEdittttt_02.text()
-    coin       = True if ui.ct_pushButtonnn_06.text() == '코인' else False
+    starttime = ui.ct_lineEdittttt_01.text()
+    endtime = ui.ct_lineEdittttt_02.text()
+    coin = True if ui.ct_pushButtonnn_06.text() == '코인' else False
 
     if coin:
         db_name1 = f'{DB_PATH}/coin_tick_{searchdate}.db'
@@ -417,15 +439,21 @@ def chart_moneytop_list(ui):
     try:
         if os.path.isfile(db_name1):
             con = sqlite3.connect(db_name1)
-            df = pd.read_sql(f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}", con)
+            df = pd.read_sql(
+                f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}",
+                con)
             con.close()
         elif os.path.isfile(db_name2):
             con = sqlite3.connect(db_name2)
-            df = pd.read_sql(f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}", con)
+            df = pd.read_sql(
+                f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}",
+                con)
             con.close()
         elif os.path.isfile(db_name3):
             con = sqlite3.connect(db_name3)
-            df = pd.read_sql(f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}", con)
+            df = pd.read_sql(
+                f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}",
+                con)
             con.close()
     except:
         pass
@@ -435,7 +463,8 @@ def chart_moneytop_list(ui):
         return
 
     table_list = list(set(';'.join(df['거래대금순위'].to_list()[30:]).split(';')))
-    name_list  = [ui.dict_name[code] if code in ui.dict_name.keys() else code for code in table_list] if not coin else table_list
+    name_list = [ui.dict_name[code] if code in ui.dict_name.keys() else code for code in
+                 table_list] if not coin else table_list
     name_list.sort()
 
     ui.ct_tableWidgett_01.setRowCount(len(name_list))

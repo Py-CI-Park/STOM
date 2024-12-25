@@ -1,13 +1,9 @@
 import math
-# noinspection PyUnresolvedReferences
-import talib
-# noinspection PyUnresolvedReferences
-import numpy as np
 from traceback import print_exc
 from backtester.back_static import GetTradeInfo
 from backtester.backengine_coin_future import CoinFutureBackEngine
-from utility.setting import BACK_TEMP, dict_order_ratio
-from utility.static import strp_time, timedelta_sec, pickle_read, GetBinanceLongPgSgSp, GetBinanceShortPgSgSp
+from utility.setting import dict_order_ratio
+from utility.static import strp_time, timedelta_sec, GetBinanceLongPgSgSp, GetBinanceShortPgSgSp
 
 
 # noinspection PyUnusedLocal
@@ -48,18 +44,13 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             self.tick_calcul = True
 
         for code in self.code_list:
-            self.code = self.name = code
-            self.total_count = 0
-
-            if self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
+            if self.dict_set['코인매수금지블랙리스트'] and code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
                 self.tq.put(('백테완료', 0))
                 continue
 
-            if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
-
+            self.code = self.name = code
+            self.total_count = 0
             self.SetArrayTick(code, same_days, same_time)
-
             self.last = len(self.array_tick) - 1
             if self.last > 0:
                 for i, index in enumerate(self.array_tick[:, 0]):
@@ -89,7 +80,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else self.indexb
             return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
@@ -207,8 +198,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             elif tick == 1200:
                 return Parameter_Previous(39, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 return round(self.array_tick[sindex:eindex, 1].mean(), 8)
 
         def GetArrayIndex(aindex):
@@ -218,8 +209,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 if gubun_ == 'max':
                     return self.array_tick[sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -263,8 +254,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -348,6 +339,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                         매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                         매도분할횟수, 매수주문취소시간, 매도주문취소시간, 포지션 = self.trade_info[vars_turn][vars_key].values()
+                    self.indexb = 매수틱번호
                     if self.trade_info[vars_turn][vars_key]['보유중']:
                         if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
                             _, 수익금, 수익률 = GetBinanceLongPgSgSp(
@@ -529,6 +521,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                     보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                         매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                         매도분할횟수, 매수주문취소시간, 매도주문취소시간, 포지션 = self.trade_info[vars_turn][vars_key].values()
+                    self.indexb = 매수틱번호
                     if self.trade_info[vars_turn][vars_key]['보유중']:
                         if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
                             _, 수익금, 수익률 = GetBinanceLongPgSgSp(
@@ -719,6 +712,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                 매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                 매도분할횟수, 매수주문취소시간, 매도주문취소시간, 포지션 = self.trade_info[vars_turn][vars_key].values()
+            self.indexb = 매수틱번호
             if self.trade_info[vars_turn][vars_key]['보유중']:
                 if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
                     _, 수익금, 수익률 = GetBinanceLongPgSgSp(

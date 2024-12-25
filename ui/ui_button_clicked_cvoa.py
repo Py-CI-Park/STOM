@@ -21,6 +21,7 @@ def cva_button_clicked_01(ui):
             if i == 0:
                 ui.cva_lineEdittt_01.setText(index)
 
+
 def cva_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.cva_lineEdittt_01.text()
     strategy = ui.cs_textEditttt_06.toPlainText()
@@ -38,6 +39,7 @@ def cva_button_clicked_02(ui, proc_query, queryQ):
                 queryQ.put(('전략디비', df, 'coinvars', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvo_button_clicked_01(ui):
     con = sqlite3.connect(DB_STRATEGY)
     df = pd.read_sql('SELECT * FROM coinbuyconds', con).set_index('index')
@@ -50,6 +52,7 @@ def cvo_button_clicked_01(ui):
             ui.cvo_comboBoxxx_01.addItem(index)
             if i == 0:
                 ui.cvo_lineEdittt_01.setText(index)
+
 
 def cvo_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.cvo_lineEdittt_01.text()
@@ -68,6 +71,7 @@ def cvo_button_clicked_02(ui, proc_query, queryQ):
                 queryQ.put(('전략디비', df, 'coinbuyconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvo_button_clicked_03(ui):
     con = sqlite3.connect(DB_STRATEGY)
     df = pd.read_sql('SELECT * FROM coinsellconds', con).set_index('index')
@@ -80,6 +84,7 @@ def cvo_button_clicked_03(ui):
             ui.cvo_comboBoxxx_02.addItem(index)
             if i == 0:
                 ui.cvo_lineEdittt_02.setText(index)
+
 
 def cvo_button_clicked_04(ui, proc_query, queryQ):
     strategy_name = ui.cvo_lineEdittt_02.text()
@@ -97,6 +102,7 @@ def cvo_button_clicked_04(ui, proc_query, queryQ):
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
                 queryQ.put(('전략디비', df, 'coinsellconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
+
 
 def cvo_button_clicked_05(ui):
     QMessageBox.critical(ui, '오류 알림', '범위 편집기 상태에서만 작동합니다.\n')

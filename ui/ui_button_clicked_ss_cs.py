@@ -8,7 +8,7 @@ from utility.setting import DB_BACKTEST, ui_num, GRAPH_PATH
 
 def ssbutton_clicked_01(ui):
     con = sqlite3.connect(DB_BACKTEST)
-    df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
+    df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
     ui.ss_comboBoxxxx_01.clear()
     for table in df['name'].to_list()[::-1]:
         if 'stock' in table and '_bt_' in table:
@@ -21,13 +21,15 @@ def ssbutton_clicked_01(ui):
         ui.update_tablewidget.update_tablewidget((ui_num['S상세기록'], df))
     con.close()
 
+
 def ssbutton_clicked_02(ui):
     con = sqlite3.connect(DB_BACKTEST)
-    df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
+    df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
     ui.ss_comboBoxxxx_02.clear()
     for table in df['name'].to_list()[::-1]:
         if 'stock' in table and \
-                ('o_' in table or 'ov_' in table or 'ovc_' in table or 'b_' in table or 'bv_' in table or 'bvc_' in table):
+                (
+                        'o_' in table or 'ov_' in table or 'ovc_' in table or 'b_' in table or 'bv_' in table or 'bvc_' in table):
             ui.ss_comboBoxxxx_02.addItem(table)
     try:
         df = pd.read_sql(f"SELECT * FROM '{ui.ss_comboBoxxxx_02.currentText()}'", con).set_index('index')
@@ -36,6 +38,7 @@ def ssbutton_clicked_02(ui):
     else:
         ui.update_tablewidget.update_tablewidget((ui_num['S상세기록'], df))
     con.close()
+
 
 def ssbutton_clicked_03(ui):
     con = sqlite3.connect(DB_BACKTEST)
@@ -52,6 +55,7 @@ def ssbutton_clicked_03(ui):
     else:
         ui.update_tablewidget.update_tablewidget((ui_num['S상세기록'], df))
     con.close()
+
 
 def ssbutton_clicked_04(ui):
     comboBox = None
@@ -75,6 +79,7 @@ def ssbutton_clicked_04(ui):
     except:
         QMessageBox.critical(ui, '오류 알림', '저장된 그래프 파일이 존재하지 않습니다.\n')
 
+
 def ssbutton_clicked_05(ui):
     if not ui.dialog_comp.isVisible():
         ui.dialog_comp.show()
@@ -84,7 +89,8 @@ def ssbutton_clicked_05(ui):
         con.close()
 
         if len(df) > 0:
-            ui.backdetail_list = [x for x in df['name'].to_list()[::-1] if 'stock' in x and ('t_' in x or 'v_' in x or 'c_' in x or 'vc_' in x)]
+            ui.backdetail_list = [x for x in df['name'].to_list()[::-1] if
+                                  'stock' in x and ('t_' in x or 'v_' in x or 'c_' in x or 'vc_' in x)]
             if len(ui.backdetail_list) > 0:
                 ui.backcheckbox_list = []
                 count = len(ui.backdetail_list)
@@ -97,6 +103,7 @@ def ssbutton_clicked_05(ui):
                     ui.cp_tableWidget_01.setRowCount(40)
     else:
         ui.dialog_comp.close()
+
 
 def ssbutton_clicked_06(ui):
     buttonReply = QMessageBox.question(
@@ -112,6 +119,7 @@ def ssbutton_clicked_06(ui):
         ui.ssicon_alert = False
         ui.main_btn_list[2].setIcon(ui.icon_stocks)
 
+
 def csbutton_clicked_01(ui):
     con = sqlite3.connect(DB_BACKTEST)
     df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
@@ -126,6 +134,7 @@ def csbutton_clicked_01(ui):
     else:
         ui.update_tablewidget.update_tablewidget((ui_num['C상세기록'], df))
     con.close()
+
 
 def csbutton_clicked_02(ui):
     con = sqlite3.connect(DB_BACKTEST)
@@ -143,12 +152,14 @@ def csbutton_clicked_02(ui):
         ui.update_tablewidget.update_tablewidget((ui_num['C상세기록'], df))
     con.close()
 
+
 def csbutton_clicked_03(ui):
     con = sqlite3.connect(DB_BACKTEST)
     df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
     ui.cs_comboBoxxxx_03.clear()
     for table in df['name'].to_list()[::-1]:
-        if 'coin' in table and '_bt_' not in table and ('t_' in table or 'or_' in table or 'orv_' in table or 'orvc_' in table or 'br_' in table or 'brv_' in table or 'brvc_' in table):
+        if 'coin' in table and '_bt_' not in table and (
+                't_' in table or 'or_' in table or 'orv_' in table or 'orvc_' in table or 'br_' in table or 'brv_' in table or 'brvc_' in table):
             ui.cs_comboBoxxxx_03.addItem(table)
     try:
         df = pd.read_sql(f"SELECT * FROM '{ui.cs_comboBoxxxx_03.currentText()}'", con).set_index('index')
@@ -157,6 +168,7 @@ def csbutton_clicked_03(ui):
     else:
         ui.update_tablewidget.update_tablewidget((ui_num['C상세기록'], df))
     con.close()
+
 
 def csbutton_clicked_04(ui):
     comboBox = None
@@ -180,6 +192,7 @@ def csbutton_clicked_04(ui):
     except:
         QMessageBox.critical(ui, '오류 알림', '저장된 그래프 파일이 존재하지 않습니다.\n')
 
+
 def csbutton_clicked_05(ui):
     if not ui.dialog_comp.isVisible():
         ui.dialog_comp.show()
@@ -189,7 +202,8 @@ def csbutton_clicked_05(ui):
         con.close()
 
         if len(df) > 0:
-            ui.backdetail_list = [x for x in df['name'].to_list()[::-1] if 'coin' in x and ('t_' in x or 'v_' in x or 'c_' in x or 'h_' in x)]
+            ui.backdetail_list = [x for x in df['name'].to_list()[::-1] if
+                                  'coin' in x and ('t_' in x or 'v_' in x or 'c_' in x or 'h_' in x)]
 
         if len(ui.backdetail_list) > 0:
             ui.backcheckbox_list = []
@@ -203,6 +217,7 @@ def csbutton_clicked_05(ui):
                 ui.cp_tableWidget_01.setRowCount(40)
     else:
         ui.dialog_comp.close()
+
 
 def csbutton_clicked_06(ui):
     buttonReply = QMessageBox.question(

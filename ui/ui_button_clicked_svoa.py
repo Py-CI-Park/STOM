@@ -7,6 +7,7 @@ from ui.set_text import famous_saying
 from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
 
+
 def sva_button_clicked_01(ui):
     con = sqlite3.connect(DB_STRATEGY)
     df = pd.read_sql('SELECT * FROM stockvars', con).set_index('index')
@@ -19,6 +20,7 @@ def sva_button_clicked_01(ui):
             ui.sva_comboBoxxx_01.addItem(index)
             if i == 0:
                 ui.sva_lineEdittt_01.setText(index)
+
 
 def sva_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.sva_lineEdittt_01.text()
@@ -37,6 +39,7 @@ def sva_button_clicked_02(ui, proc_query, queryQ):
                 queryQ.put(('전략디비', df, 'stockvars', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def svo_button_clicked_01(ui):
     con = sqlite3.connect(DB_STRATEGY)
     df = pd.read_sql('SELECT * FROM stockbuyconds', con).set_index('index')
@@ -49,6 +52,7 @@ def svo_button_clicked_01(ui):
             ui.svo_comboBoxxx_01.addItem(index)
             if i == 0:
                 ui.svo_lineEdittt_01.setText(index)
+
 
 def svo_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.svo_lineEdittt_01.text()
@@ -67,6 +71,7 @@ def svo_button_clicked_02(ui, proc_query, queryQ):
                 queryQ.put(('전략디비', df, 'stockbuyconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def svo_button_clicked_03(ui):
     con = sqlite3.connect(DB_STRATEGY)
     df = pd.read_sql('SELECT * FROM stocksellconds', con).set_index('index')
@@ -79,6 +84,7 @@ def svo_button_clicked_03(ui):
             ui.svo_comboBoxxx_02.addItem(index)
             if i == 0:
                 ui.svo_lineEdittt_02.setText(index)
+
 
 def svo_button_clicked_04(ui, proc_query, queryQ):
     strategy_name = ui.svo_lineEdittt_02.text()
@@ -96,6 +102,7 @@ def svo_button_clicked_04(ui, proc_query, queryQ):
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
                 queryQ.put(('전략디비', df, 'stocksellconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
+
 
 def svo_button_clicked_05(ui):
     QMessageBox.critical(ui, '오류 알림', '범위 편집기 상태에서만 작동합니다.\n')

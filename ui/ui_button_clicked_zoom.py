@@ -1,4 +1,3 @@
-
 def szoo_button_clicked_01(ui):
     if ui.svj_pushButton_01.isVisible():
         if ui.szoo_pushButon_01.text() == '확대(esc)':
@@ -35,6 +34,7 @@ def szoo_button_clicked_01(ui):
                 ui.ss_textEditttt_05.setVisible(True)
             ui.szoo_pushButon_02.setVisible(True)
 
+
 def szoo_button_clicked_02(ui):
     if ui.svj_pushButton_01.isVisible():
         if ui.szoo_pushButon_02.text() == '확대(esc)':
@@ -46,7 +46,8 @@ def szoo_button_clicked_02(ui):
         else:
             ui.szoo_pushButon_02.setText('확대(esc)')
             ui.szoo_pushButon_02.setGeometry(952, 761 if ui.extend_window else 483, 50, 20)
-            ui.ss_textEditttt_02.setGeometry(7, 756 if ui.extend_window else 480, 1000, 602 if ui.extend_window else 272)
+            ui.ss_textEditttt_02.setGeometry(7, 756 if ui.extend_window else 480, 1000,
+                                             602 if ui.extend_window else 272)
             ui.ss_textEditttt_01.setVisible(True)
             ui.szoo_pushButon_01.setVisible(True)
     else:
@@ -70,6 +71,7 @@ def szoo_button_clicked_02(ui):
             else:
                 ui.ss_textEditttt_05.setVisible(True)
             ui.szoo_pushButon_01.setVisible(True)
+
 
 def czoo_button_clicked_01(ui):
     if ui.cvj_pushButton_01.isVisible():
@@ -107,6 +109,7 @@ def czoo_button_clicked_01(ui):
                 ui.cs_textEditttt_05.setVisible(True)
             ui.czoo_pushButon_02.setVisible(True)
 
+
 def czoo_button_clicked_02(ui):
     if ui.cvj_pushButton_01.isVisible():
         if ui.czoo_pushButon_02.text() == '확대(esc)':
@@ -118,7 +121,8 @@ def czoo_button_clicked_02(ui):
         else:
             ui.czoo_pushButon_02.setText('확대(esc)')
             ui.czoo_pushButon_02.setGeometry(952, 761 if ui.extend_window else 483, 50, 20)
-            ui.cs_textEditttt_02.setGeometry(7, 756 if ui.extend_window else 480, 1000, 602 if ui.extend_window else 272)
+            ui.cs_textEditttt_02.setGeometry(7, 756 if ui.extend_window else 480, 1000,
+                                             602 if ui.extend_window else 272)
             ui.cs_textEditttt_01.setVisible(True)
             ui.czoo_pushButon_01.setVisible(True)
     else:

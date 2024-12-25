@@ -1,7 +1,5 @@
 import gc
 import math
-# noinspection PyUnresolvedReferences
-import talib
 import sqlite3
 import datetime
 import numpy as np
@@ -81,8 +79,7 @@ class CoinFutureBackEngine:
         self.current_min  = []
         self.index        = 0
         self.indexn       = 0
-        self.dindex       = 0
-        self.mindex       = 0
+        self.indexb       = 0
         self.tick_count   = 0
         self.last         = 0
 
@@ -299,9 +296,9 @@ class CoinFutureBackEngine:
                 except:
                     pass
                 if gubun == '데이터크기':
-                    self.total_ticks += len_df_tick
                     self.bq.put((code, len_df_tick))
                 elif len_df_tick > 0:
+                    self.total_ticks += len_df_tick
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
@@ -323,7 +320,6 @@ class CoinFutureBackEngine:
                             len_df_tick += len(df_tick)
                         except:
                             pass
-                    self.total_ticks += len_df_tick
                     self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 code_list = []
@@ -340,6 +336,7 @@ class CoinFutureBackEngine:
                     except:
                         pass
                     if len_df_tick > 0:
+                        self.total_ticks += len_df_tick
                         df_tick = AddAvgData(df_tick, 8, avg_list)
                         arry_tick = np.array(df_tick)
                         if self.dict_set['보조지표사용']:
@@ -360,7 +357,6 @@ class CoinFutureBackEngine:
                         len_df_tick = len(df_tick)
                     except:
                         pass
-                    self.total_ticks += len_df_tick
                     self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 df_tick, len_df_tick = None, 0
@@ -370,6 +366,7 @@ class CoinFutureBackEngine:
                 except:
                     pass
                 if len_df_tick > 0:
+                    self.total_ticks += len_df_tick
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
@@ -403,6 +400,9 @@ class CoinFutureBackEngine:
                 self.wq.put((ui_num['C백테스트'], '학습된 패턴 데이터가 없어 백테스트를 중지합니다.'))
 
     def SetArrayTick(self, code, same_days, same_time):
+        if not self.dict_set['백테일괄로딩']:
+            self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
+
         if same_days and same_time:
             self.array_tick = self.dict_tik_ar[code]
         elif same_time:
@@ -437,12 +437,7 @@ class CoinFutureBackEngine:
         for code in self.code_list:
             self.code = self.name = code
             self.total_count = 0
-
-            if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
-
             self.SetArrayTick(code, same_days, same_time)
-
             self.last = len(self.array_tick) - 1
             if self.last > 0:
                 for i, index in enumerate(self.array_tick[:, 0]):
@@ -472,7 +467,7 @@ class CoinFutureBackEngine:
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else self.indexb
             return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
@@ -590,8 +585,8 @@ class CoinFutureBackEngine:
             elif tick == 1200:
                 return Parameter_Previous(39, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 return round(self.array_tick[sindex:eindex, 1].mean(), 8)
 
         def GetArrayIndex(aindex):
@@ -601,8 +596,8 @@ class CoinFutureBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 if gubun_ == 'max':
                     return self.array_tick[sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -646,8 +641,8 @@ class CoinFutureBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -736,6 +731,7 @@ class CoinFutureBackEngine:
                     else:
                         _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
                             self.trade_info[vars_turn][vars_key].values()
+                        self.indexb = 매수틱번호
                         if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
                             _, 수익금, 수익률 = GetBinanceLongPgSgSp(
                                 보유수량 * 매수가, 보유수량 * 현재가,
@@ -752,7 +748,6 @@ class CoinFutureBackEngine:
                             self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
                         보유시간 = (now_utc() - 매수시간).total_seconds()
                         포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
-
                         self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
                         exec(self.sellstg)
 
@@ -781,6 +776,7 @@ class CoinFutureBackEngine:
                     else:
                         _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
                             self.trade_info[vars_turn][vars_key].values()
+                        self.indexb = 매수틱번호
                         if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
                             _, 수익금, 수익률 = GetBinanceLongPgSgSp(
                                 보유수량 * 매수가, 보유수량 * 현재가,
@@ -797,7 +793,6 @@ class CoinFutureBackEngine:
                             self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
                         보유시간 = (now_utc() - 매수시간).total_seconds()
                         포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
-
                         self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
@@ -823,6 +818,7 @@ class CoinFutureBackEngine:
             else:
                 _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
                     self.trade_info[vars_turn][vars_key].values()
+                self.indexb = 매수틱번호
                 if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
                     _, 수익금, 수익률 = GetBinanceLongPgSgSp(
                         보유수량 * 매수가, 보유수량 * 현재가,
@@ -839,7 +835,6 @@ class CoinFutureBackEngine:
                     self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
                 보유시간 = (now_utc() - 매수시간).total_seconds()
                 포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
-
                 self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
                 exec(self.sellstg)
 
@@ -956,7 +951,7 @@ class CoinFutureBackEngine:
             sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else \
                 self.dict_sconds[vars_key][self.sell_cond]
             abt, bcx = '', True
-            data = ['백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_key]
+            data = ['백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_turn, vars_key]
             self.bstq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
             self.sell_count += 1
         self.trade_info[vars_turn][vars_key] = GetTradeInfo(1)

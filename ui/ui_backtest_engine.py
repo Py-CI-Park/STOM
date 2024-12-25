@@ -44,18 +44,19 @@ def backtest_engine_show(ui, gubun):
     ui.dialog_backengine.show()
     ui.backengin_window_open = True
 
+
 @thread_decorator
 def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
     ui.backtest_engine = True
-    ui.startday  = int(ui.be_dateEdittttt_01.date().toString('yyyyMMdd'))
-    ui.endday    = int(ui.be_dateEdittttt_02.date().toString('yyyyMMdd'))
+    ui.startday = int(ui.be_dateEdittttt_01.date().toString('yyyyMMdd'))
+    ui.endday = int(ui.be_dateEdittttt_02.date().toString('yyyyMMdd'))
     ui.starttime = int(ui.be_lineEdittttt_01.text())
-    ui.endtime   = int(ui.be_lineEdittttt_02.text())
-    ui.avg_list  = [int(x) for x in ui.be_lineEdittttt_03.text().split(',')]
-    multi          = int(ui.be_lineEdittttt_04.text())
-    divid_mode     = ui.be_comboBoxxxxx_01.currentText()
-    one_name       = ui.be_comboBoxxxxx_02.currentText()
-    one_code       = ui.dict_code[one_name] if one_name in ui.dict_code.keys() else one_name
+    ui.endtime = int(ui.be_lineEdittttt_02.text())
+    ui.avg_list = [int(x) for x in ui.be_lineEdittttt_03.text().split(',')]
+    multi = int(ui.be_lineEdittttt_04.text())
+    divid_mode = ui.be_comboBoxxxxx_01.currentText()
+    one_name = ui.be_comboBoxxxxx_02.currentText()
+    one_code = ui.dict_code[one_name] if one_name in ui.dict_code.keys() else one_name
 
     wdzservQ.put(('manager', '백테엔진구동'))
     for i in range(20):
@@ -72,25 +73,35 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         if gubun == '주식':
             if not ui.dict_set['백테주문관리적용']:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
+                    proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True),
+                                   daemon=True)
                 else:
-                    proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
+                    proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques),
+                                   daemon=True)
             else:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
+                    proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True),
+                                   daemon=True)
                 else:
-                    proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
+                    proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques),
+                                   daemon=True)
         else:
             if not ui.dict_set['백테주문관리적용']:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
+                    proc = Process(target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
+                                   args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
                 else:
-                    proc = Process(target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
+                    proc = Process(target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
+                                   args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
             else:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
+                    proc = Process(
+                        target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2,
+                        args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
                 else:
-                    proc = Process(target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
+                    proc = Process(
+                        target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2,
+                        args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
         proc.start()
         ui.back_eprocs.append(proc)
         ui.back_eques.append(bpq)
@@ -190,7 +201,8 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         for i in range(multi):
             code_lists.append([code for j, code in enumerate(table_list) if j % multi == i])
         for i, codes in enumerate(code_lists):
-            ui.back_eques[i].put(('데이터크기', ui.startday, ui.endday, ui.starttime, ui.endtime, codes, ui.avg_list, code_days, day_codes, divid_mode, one_code))
+            ui.back_eques[i].put(('데이터크기', ui.startday, ui.endday, ui.starttime, ui.endtime, codes, ui.avg_list,
+                                  code_days, day_codes, divid_mode, one_code))
 
         dict_lendf = {}
         last = len(table_list)
@@ -202,13 +214,14 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 windowQ.put((ui_num['백테엔진'], f'종목별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
         windowQ.put((ui_num['백테엔진'], '종목별 데이터 크기 추출 완료'))
 
-        code_lists  = [[] for _ in range(multi)]
-        total_list  = [0 for _ in range(multi)]
-        add_count   = 0
-        multi_num   = 0
-        reverse     = False
-        divid_lendf = int(sum(dict_lendf.values()) / multi)
-        sort_lendf  = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
+        code_lists = [[] for _ in range(multi)]
+        total_list = [0 for _ in range(multi)]
+        total_ticks = sum(dict_lendf.values())
+        divid_lendf = int(total_ticks / multi)
+        add_count = 0
+        multi_num = 0
+        reverse = False
+        sort_lendf = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
         for code, lendf in sort_lendf:
             code_lists[multi_num].append(code)
             total_list[multi_num] += lendf
@@ -216,10 +229,10 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 add_count += 1
                 if add_count % multi == 0:
                     if reverse:
-                        reverse   = False
+                        reverse = False
                         multi_num = 0
                     else:
-                        reverse   = True
+                        reverse = True
                         multi_num = multi - 1
                 else:
                     if reverse:
@@ -231,7 +244,8 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
 
         windowQ.put((ui_num['백테엔진'], '종목코드별 분류 완료'))
         for i, codes in enumerate(code_lists):
-            ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, codes, ui.avg_list, code_days, day_codes, divid_mode, one_code))
+            ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, codes, ui.avg_list,
+                                  code_days, day_codes, divid_mode, one_code))
 
     elif divid_mode == '일자별 분류':
         windowQ.put((ui_num['백테엔진'], '일자별 데이터 크기 추출 시작'))
@@ -239,7 +253,8 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         for i in range(multi):
             day_lists.append([day for j, day in enumerate(day_list) if j % multi == i])
         for i, days in enumerate(day_lists):
-            ui.back_eques[i].put(('데이터크기', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list, code_days, day_codes, divid_mode, one_code))
+            ui.back_eques[i].put(('데이터크기', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
+                                  code_days, day_codes, divid_mode, one_code))
 
         dict_lendf = {}
         last = len(day_list)
@@ -251,17 +266,14 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 windowQ.put((ui_num['백테엔진'], f'일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
         windowQ.put((ui_num['백테엔진'], '일자별 데이터 크기 추출 완료'))
 
-        day_lists  = []
-        total_list = []
-        for _ in range(multi):
-            day_lists.append([])
-            total_list.append(0)
-
-        add_count   = 0
-        multi_num   = 0
-        reverse     = False
-        divid_lendf = int(sum(dict_lendf.values()) / multi)
-        sort_lendf  = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
+        day_lists = [[] for _ in range(multi)]
+        total_list = [0 for _ in range(multi)]
+        total_ticks = sum(dict_lendf.values())
+        divid_lendf = int(total_ticks / multi)
+        add_count = 0
+        multi_num = 0
+        reverse = False
+        sort_lendf = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
         for day, lendf in sort_lendf:
             day_lists[multi_num].append(day)
             total_list[multi_num] += lendf
@@ -269,10 +281,10 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 add_count += 1
                 if add_count % multi == 0:
                     if reverse:
-                        reverse   = False
+                        reverse = False
                         multi_num = 0
                     else:
-                        reverse   = True
+                        reverse = True
                         multi_num = multi - 1
                 else:
                     if reverse:
@@ -284,7 +296,8 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
 
         windowQ.put((ui_num['백테엔진'], '일자별 분류 완료'))
         for i, days in enumerate(day_lists):
-            ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list, code_days, day_codes, divid_mode, one_code))
+            ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
+                                  code_days, day_codes, divid_mode, one_code))
     else:
         windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 시작'))
         day_list = code_days[one_code]
@@ -292,7 +305,8 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         for i in range(multi):
             day_lists.append([day for j, day in enumerate(day_list) if j % multi == i])
         for i, days in enumerate(day_lists):
-            ui.back_eques[i].put(('데이터크기', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list, code_days, day_codes, divid_mode, one_code))
+            ui.back_eques[i].put(('데이터크기', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
+                                  code_days, day_codes, divid_mode, one_code))
 
         dict_lendf = {}
         last = len(day_list)
@@ -304,17 +318,14 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
         windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 완료'))
 
-        day_lists  = []
-        total_list = []
-        for _ in range(multi):
-            day_lists.append([])
-            total_list.append(0)
-
-        add_count   = 0
-        multi_num   = 0
-        reverse     = False
-        divid_lendf = int(sum(dict_lendf.values()) / multi)
-        sort_lendf  = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
+        day_lists = [[] for _ in range(multi)]
+        total_list = [0 for _ in range(multi)]
+        total_ticks = sum(dict_lendf.values())
+        divid_lendf = int(total_ticks / multi)
+        add_count = 0
+        multi_num = 0
+        reverse = False
+        sort_lendf = sorted(dict_lendf.items(), key=operator.itemgetter(1), reverse=True)
         for day, lendf in sort_lendf:
             day_lists[multi_num].append(day)
             total_list[multi_num] += lendf
@@ -322,10 +333,10 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 add_count += 1
                 if add_count % multi == 0:
                     if reverse:
-                        reverse   = False
+                        reverse = False
                         multi_num = 0
                     else:
-                        reverse   = True
+                        reverse = True
                         multi_num = multi - 1
                 else:
                     if reverse:
@@ -337,13 +348,15 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
 
         windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 분류 완료'))
         for i, days in enumerate(day_lists):
-            ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list, code_days, day_codes, divid_mode, one_code))
+            ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
+                                  code_days, day_codes, divid_mode, one_code))
 
     for _ in range(multi):
         data = backQ.get()
         ui.back_count += data
         windowQ.put((ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'))
     windowQ.put((ui_num['백테엔진'], '백테엔진 준비 완료'))
+
 
 def back_code_test1(stg_code, testQ):
     print('전략 코드 오류 테스트 시작')
@@ -352,12 +365,14 @@ def back_code_test1(stg_code, testQ):
     Process(target=BackCodeTest, args=(testQ, stg_code), daemon=True).start()
     return back_code_test_wait('전략', testQ)
 
+
 def back_code_test2(vars_code, testQ, ga):
     print('범위 코드 오류 테스트 시작')
     while not testQ.empty():
         testQ.get()
     Process(target=BackCodeTest, args=(testQ, '', vars_code, ga), daemon=True).start()
     return back_code_test_wait('범위', testQ)
+
 
 def back_code_test3(gubun, conds_code, testQ):
     print('조건 코드 오류 테스트 시작')
@@ -372,8 +387,9 @@ def back_code_test3(gubun, conds_code, testQ):
     Process(target=BackCodeTest, args=(testQ, conds_code), daemon=True).start()
     return back_code_test_wait('조건', testQ)
 
+
 def back_code_test_wait(gubun, testQ):
-    test_ok   = False
+    test_ok = False
     test_time = timedelta_sec(3)
 
     while now() < test_time:
@@ -389,6 +405,7 @@ def back_code_test_wait(gubun, testQ):
 
     return test_ok
 
+
 def clear_backtestQ(backQ, totalQ):
     if not backQ.empty():
         while not backQ.empty():
@@ -397,39 +414,42 @@ def clear_backtestQ(backQ, totalQ):
         while not totalQ.empty():
             totalQ.get()
 
+
 def backtest_process_kill(ui, gubun, totalQ):
     ui.back_condition = False
     totalQ.put('백테중지')
     qtest_qwait(3)
-    if ui.proc_backtester_bb is not None and   ui.proc_backtester_bb.is_alive():   ui.proc_backtester_bb.kill()
-    if ui.proc_backtester_bf is not None and   ui.proc_backtester_bf.is_alive():   ui.proc_backtester_bf.kill()
-    if ui.proc_backtester_bc is not None and   ui.proc_backtester_bc.is_alive():   ui.proc_backtester_bc.kill()
-    if ui.proc_backtester_bp is not None and   ui.proc_backtester_bp.is_alive():   ui.proc_backtester_bp.kill()
-    if ui.proc_backtester_o is not None and    ui.proc_backtester_o.is_alive():    ui.proc_backtester_o.kill()
-    if ui.proc_backtester_ov is not None and   ui.proc_backtester_ov.is_alive():   ui.proc_backtester_ov.kill()
-    if ui.proc_backtester_ovc is not None and  ui.proc_backtester_ovc.is_alive():  ui.proc_backtester_ovc.kill()
-    if ui.proc_backtester_ot is not None and   ui.proc_backtester_ot.is_alive():   ui.proc_backtester_ot.kill()
-    if ui.proc_backtester_ovt is not None and  ui.proc_backtester_ovt.is_alive():  ui.proc_backtester_ovt.kill()
+    if ui.proc_backtester_bb is not None and ui.proc_backtester_bb.is_alive():   ui.proc_backtester_bb.kill()
+    if ui.proc_backtester_bf is not None and ui.proc_backtester_bf.is_alive():   ui.proc_backtester_bf.kill()
+    if ui.proc_backtester_bc is not None and ui.proc_backtester_bc.is_alive():   ui.proc_backtester_bc.kill()
+    if ui.proc_backtester_bp is not None and ui.proc_backtester_bp.is_alive():   ui.proc_backtester_bp.kill()
+    if ui.proc_backtester_o is not None and ui.proc_backtester_o.is_alive():    ui.proc_backtester_o.kill()
+    if ui.proc_backtester_ov is not None and ui.proc_backtester_ov.is_alive():   ui.proc_backtester_ov.kill()
+    if ui.proc_backtester_ovc is not None and ui.proc_backtester_ovc.is_alive():  ui.proc_backtester_ovc.kill()
+    if ui.proc_backtester_ot is not None and ui.proc_backtester_ot.is_alive():   ui.proc_backtester_ot.kill()
+    if ui.proc_backtester_ovt is not None and ui.proc_backtester_ovt.is_alive():  ui.proc_backtester_ovt.kill()
     if ui.proc_backtester_ovct is not None and ui.proc_backtester_ovct.is_alive(): ui.proc_backtester_ovct.kill()
-    if ui.proc_backtester_or is not None and   ui.proc_backtester_or.is_alive():   ui.proc_backtester_or.kill()
-    if ui.proc_backtester_orv is not None and  ui.proc_backtester_orv.is_alive():  ui.proc_backtester_orv.kill()
+    if ui.proc_backtester_or is not None and ui.proc_backtester_or.is_alive():   ui.proc_backtester_or.kill()
+    if ui.proc_backtester_orv is not None and ui.proc_backtester_orv.is_alive():  ui.proc_backtester_orv.kill()
     if ui.proc_backtester_orvc is not None and ui.proc_backtester_orvc.is_alive(): ui.proc_backtester_orvc.kill()
-    if ui.proc_backtester_b is not None and    ui.proc_backtester_b.is_alive():    ui.proc_backtester_b.kill()
-    if ui.proc_backtester_bv is not None and   ui.proc_backtester_bv.is_alive():   ui.proc_backtester_bv.kill()
-    if ui.proc_backtester_bvc is not None and  ui.proc_backtester_bvc.is_alive():  ui.proc_backtester_bvc.kill()
-    if ui.proc_backtester_bt is not None and   ui.proc_backtester_bt.is_alive():   ui.proc_backtester_bt.kill()
-    if ui.proc_backtester_bvt is not None and  ui.proc_backtester_bvt.is_alive():  ui.proc_backtester_bvt.kill()
+    if ui.proc_backtester_b is not None and ui.proc_backtester_b.is_alive():    ui.proc_backtester_b.kill()
+    if ui.proc_backtester_bv is not None and ui.proc_backtester_bv.is_alive():   ui.proc_backtester_bv.kill()
+    if ui.proc_backtester_bvc is not None and ui.proc_backtester_bvc.is_alive():  ui.proc_backtester_bvc.kill()
+    if ui.proc_backtester_bt is not None and ui.proc_backtester_bt.is_alive():   ui.proc_backtester_bt.kill()
+    if ui.proc_backtester_bvt is not None and ui.proc_backtester_bvt.is_alive():  ui.proc_backtester_bvt.kill()
     if ui.proc_backtester_bvct is not None and ui.proc_backtester_bvct.is_alive(): ui.proc_backtester_bvct.kill()
-    if ui.proc_backtester_br is not None and   ui.proc_backtester_br.is_alive():   ui.proc_backtester_br.kill()
-    if ui.proc_backtester_brv is not None and  ui.proc_backtester_brv.is_alive():  ui.proc_backtester_brv.kill()
+    if ui.proc_backtester_br is not None and ui.proc_backtester_br.is_alive():   ui.proc_backtester_br.kill()
+    if ui.proc_backtester_brv is not None and ui.proc_backtester_brv.is_alive():  ui.proc_backtester_brv.kill()
     if ui.proc_backtester_brvc is not None and ui.proc_backtester_brvc.is_alive(): ui.proc_backtester_brvc.kill()
-    if ui.proc_backtester_oc is not None and   ui.proc_backtester_oc.is_alive():   ui.proc_backtester_oc.kill()
-    if ui.proc_backtester_ocv is not None and  ui.proc_backtester_ocv.is_alive():  ui.proc_backtester_ocv.kill()
+    if ui.proc_backtester_oc is not None and ui.proc_backtester_oc.is_alive():   ui.proc_backtester_oc.kill()
+    if ui.proc_backtester_ocv is not None and ui.proc_backtester_ocv.is_alive():  ui.proc_backtester_ocv.kill()
     if ui.proc_backtester_ocvc is not None and ui.proc_backtester_ocvc.is_alive(): ui.proc_backtester_ocvc.kill()
-    if ui.proc_backtester_og is not None and   ui.proc_backtester_og.is_alive():   ui.proc_backtester_og.kill()
-    if ui.proc_backtester_ogv is not None and  ui.proc_backtester_ogv.is_alive():  ui.proc_backtester_ogv.kill()
+    if ui.proc_backtester_og is not None and ui.proc_backtester_og.is_alive():   ui.proc_backtester_og.kill()
+    if ui.proc_backtester_ogv is not None and ui.proc_backtester_ogv.is_alive():  ui.proc_backtester_ogv.kill()
     if ui.proc_backtester_ogvc is not None and ui.proc_backtester_ogvc.is_alive(): ui.proc_backtester_ogvc.kill()
-    if ui.main_btn == 2:   ui.ss_pushButtonn_08.setStyleSheet(style_bc_dk)
-    elif ui.main_btn == 3: ui.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
+    if ui.main_btn == 2:
+        ui.ss_pushButtonn_08.setStyleSheet(style_bc_dk)
+    elif ui.main_btn == 3:
+        ui.cs_pushButtonn_08.setStyleSheet(style_bc_dk)
     if gubun: ui.BacktestEngineKill()
     ui.back_condition = True

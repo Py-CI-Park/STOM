@@ -71,11 +71,22 @@ class DrawChart:
         if self.ui.ct_checkBoxxxxx_25.isChecked():     self.ui.ctpg_tik_factors.append('HT_PHASE, HT_QUDRA')
         if self.ui.ct_checkBoxxxxx_26.isChecked():     self.ui.ctpg_tik_factors.append('OBV')
 
+        if not coin:
+            tuple_factor = (
+                ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금'),
+                ci('초당거래대금평균'), ci('등락율각도'), ci('당일거래대금각도'), ci('전일비각도'), ci('관심종목'), ci('APO'),
+                ci('HT_SINE'), ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')
+            )
+        else:
+            tuple_factor = (
+                ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금'),
+                ci('초당거래대금평균'), ci('등락율각도'), ci('당일거래대금각도'), ci('관심종목'), ci('APO'), ci('HT_SINE'),
+                ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')
+            )
+
         for i in range(len(self.ui.ctpg_tik_arry[0, :])):
             tick_arry = self.ui.ctpg_tik_arry[:, i]
-            if i in (ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금'),
-                     ci('초당거래대금평균'), ci('등락율각도'), ci('당일거래대금각도'), ci('전일비각도'), ci('관심종목'),
-                     ci('APO'), ci('HT_SINE'), ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')):
+            if i in tuple_factor:
                 self.ui.ctpg_tik_data[i] = tick_arry
             else:
                 self.ui.ctpg_tik_data[i] = tick_arry[tick_arry != 0]

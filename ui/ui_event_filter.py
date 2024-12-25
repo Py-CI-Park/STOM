@@ -200,6 +200,7 @@ def event_filter(ui, widget, event):
     else:
         return QMainWindow.eventFilter(ui, widget, event)
 
+
 def close_event(ui, a):
     buttonReply = QMessageBox.question(
         ui, "프로그램 종료", "프로그램을 종료합니다.",

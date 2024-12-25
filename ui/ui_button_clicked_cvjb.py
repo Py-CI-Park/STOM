@@ -25,9 +25,10 @@ def cvjb_button_clicked_01(ui):
                     ui.cvjb_lineEditt_01.setText(index)
             ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
 
+
 def cvjb_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.cvjb_lineEditt_01.text()
-    strategy      = ui.cs_textEditttt_01.toPlainText()
+    strategy = ui.cs_textEditttt_01.toPlainText()
     if 'self.tickcols' not in strategy:
         strategy = ui.GetFixStrategy(strategy, '매수')
 
@@ -38,7 +39,8 @@ def cvjb_button_clicked_02(ui, proc_query, queryQ):
     elif strategy == '':
         QMessageBox.critical(ui, '오류 알림', '매수전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
-        if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
+        if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(
+                strategy):
             if proc_query.is_alive():
                 queryQ.put(('전략디비', f"DELETE FROM coinbuy WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -46,10 +48,12 @@ def cvjb_button_clicked_02(ui, proc_query, queryQ):
             ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
             QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvjb_button_clicked_03(ui):
     ui.cs_textEditttt_01.clear()
     ui.cs_textEditttt_01.append(coin_buy_var if ui.dict_set['거래소'] == '업비트' else coin_future_buy_var)
     ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
+
 
 def cvjb_button_clicked_04(ui, cstgQ):
     strategy = ui.cs_textEditttt_01.toPlainText()
@@ -66,26 +70,34 @@ def cvjb_button_clicked_04(ui, cstgQ):
             ui.cvjb_pushButon_04.setStyleSheet(style_bc_dk)
             ui.cvjb_pushButon_12.setStyleSheet(style_bc_st)
 
+
 def cvjb_button_clicked_05(ui):
     ui.cs_textEditttt_01.append(coin_buy1)
+
 
 def cvjb_button_clicked_06(ui):
     ui.cs_textEditttt_01.append(coin_buy2)
 
+
 def cvjb_button_clicked_07(ui):
     ui.cs_textEditttt_01.append(coin_buy3)
+
 
 def cvjb_button_clicked_08(ui):
     ui.cs_textEditttt_01.append(coin_buy4)
 
+
 def cvjb_button_clicked_09(ui):
     ui.cs_textEditttt_01.append(coin_buy5)
+
 
 def cvjb_button_clicked_10(ui):
     ui.cs_textEditttt_01.append(coin_buy6)
 
+
 def cvjb_button_clicked_11(ui):
     ui.cs_textEditttt_01.append(coin_buy_signal if ui.dict_set['거래소'] == '업비트' else coin_future_buy_signal)
+
 
 def cvjb_button_clicked_12(ui, cstgQ):
     if ui.CoinStrategyProcessAlive():

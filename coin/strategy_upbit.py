@@ -48,6 +48,7 @@ class StrategyUpbit:
         self.dict_hilo  = {}
 
         self.indexn     = 0
+        self.indexb     = 0
         self.jgrv_count = 0
         self.int_tujagm = 0
         self.stg_change = False
@@ -206,7 +207,7 @@ class StrategyUpbit:
             매도수5호가잔량합, 관심종목, 종목코드, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else self.indexb
             return self.dict_tik_ar[종목코드][pindex, aindex]
 
         def 현재가N(pre):
@@ -324,16 +325,16 @@ class StrategyUpbit:
             elif tick == 1200:
                 return Parameter_Previous(39, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 return round(self.dict_tik_ar[종목코드][sindex:eindex, 1].mean(), 8)
 
         def Parameter_Area(aindex, vindex, tick, pre, gubun_):
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 if gubun_ == 'max':
                     return self.dict_tik_ar[종목코드][sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -377,8 +378,8 @@ class StrategyUpbit:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -552,6 +553,7 @@ class StrategyUpbit:
                 최고수익률, 최저수익률 = self.dict_hilo[종목코드]
             else:
                 매수틱번호, 수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, 0, now_utc(), 0, 0, 0
+            self.indexb = 매수틱번호
 
             BBT = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분초 < self.dict_set['코인매수금지종료시간'])
             BLK = not self.dict_set['코인매수금지블랙리스트'] or 종목코드 not in self.dict_set['코인블랙리스트']

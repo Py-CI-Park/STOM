@@ -8,7 +8,7 @@ def sactivated_01(ui):
     strategy_name = ui.svjb_comboBoxx_01.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockbuy WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockbuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_01.clear()
@@ -17,11 +17,12 @@ def sactivated_01(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '전략이 DB에 존재하지 않습니다.\n전략을 다시 로딩하십시오.\n')
 
+
 def sactivated_02(ui):
     strategy_name = ui.svjs_comboBoxx_01.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stocksell WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stocksell WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_02.clear()
@@ -30,11 +31,12 @@ def sactivated_02(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '전략이 DB에 존재하지 않습니다.\n전략을 다시 로딩하십시오.\n')
 
+
 def sactivated_03(ui):
     strategy_name = ui.svc_comboBoxxx_01.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_03.clear()
@@ -43,11 +45,12 @@ def sactivated_03(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '전략이 DB에 존재하지 않습니다.\n전략을 다시 로딩하십시오.\n')
 
+
 def sactivated_04(ui):
     strategy_name = ui.svc_comboBoxxx_02.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockoptivars WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockoptivars WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_05.clear()
@@ -56,11 +59,12 @@ def sactivated_04(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '범위가 DB에 존재하지 않습니다.\n범위을 다시 로딩하십시오.\n')
 
+
 def sactivated_05(ui):
     strategy_name = ui.svc_comboBoxxx_08.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockoptisell WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockoptisell WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_04.clear()
@@ -69,11 +73,12 @@ def sactivated_05(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '전략이 DB에 존재하지 않습니다.\n전략을 다시 로딩하십시오.\n')
 
+
 def sactivated_06(ui):
     strategy_name = ui.sva_comboBoxxx_01.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockvars WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockvars WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_06.clear()
@@ -82,11 +87,12 @@ def sactivated_06(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '범위가 DB에 존재하지 않습니다.\n범위을 다시 로딩하십시오.\n')
 
+
 def sactivated_07(ui):
     strategy_name = ui.svo_comboBoxxx_01.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockbuyconds WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockbuyconds WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_07.clear()
@@ -95,11 +101,12 @@ def sactivated_07(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '조건이 DB에 존재하지 않습니다.\n조건을 다시 로딩하십시오.\n')
 
+
 def sactivated_08(ui):
     strategy_name = ui.svo_comboBoxxx_02.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stocksellconds WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stocksellconds WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             ui.ss_textEditttt_08.clear()
@@ -108,11 +115,12 @@ def sactivated_08(ui):
         else:
             QMessageBox.critical(ui, '오류 알림', '조건이 DB에 존재하지 않습니다.\n조건을 다시 로딩하십시오.\n')
 
+
 def sactivated_09(ui):
     strategy_name = ui.sj_stock_cbBox_01.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             optivars = [var for var in list(df.loc[strategy_name])[1:] if var != 9999. and var is not None]
@@ -125,11 +133,12 @@ def sactivated_09(ui):
                 f'최적화 백테스트를 실행할 경우 자동으로 변경됩니다.\n'
             )
 
+
 def sactivated_10(ui):
     strategy_name = ui.sj_stock_cbBox_03.currentText()
     if strategy_name != '':
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
+        df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
             optivars = [var for var in list(df.loc[strategy_name])[1:] if var != 9999. and var is not None]

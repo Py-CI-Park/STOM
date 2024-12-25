@@ -144,8 +144,6 @@ class UpdateTextedit:
                         self.AutoDataBase(2)
                     elif data[1] == '당일 데이터 백테디비로 추가 완료':
                         self.AutoDataBase(3)
-            elif data[0] == ui_num['바낸선물단위정보']:
-                self.ui.dict_info = data[1]
         elif len(data) == 5:
             self.ui.dict_name = data[1]
             self.ui.dict_code = data[2]

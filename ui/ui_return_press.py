@@ -34,7 +34,9 @@ def return_press_01(ui, chartQ):
         ui.ct_lineEdittttt_04.setText(code)
         ui.ct_lineEdittttt_05.setText(name)
         ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-        chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), ui.GetKlist()))
+        chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(),
+                    ui.GetKlist()))
+
 
 def return_press_02(ui, teleQ):
     if ui.pa_lineEditttt_01.text() == ui.dict_set['계좌비밀번호1'] or \

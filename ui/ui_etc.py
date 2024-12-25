@@ -4,10 +4,10 @@ import pandas as pd
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtMultimedia import QMediaPlayer
-
+from PyQt5.QtWidgets import QApplication
 from utility.setting import DB_TRADELIST
 from utility.setting import columns_dt, columns_dd, ui_num
-from utility.static import thread_decorator, qtest_qwait
+from utility.static import thread_decorator, qtest_qwait, strf_time
 
 
 def update_image(ui, data):
@@ -22,12 +22,15 @@ def update_image(ui, data):
     qpix = qpix.scaled(QSize(335, 602), Qt.IgnoreAspectRatio)
     ui.image_label2.setPixmap(qpix)
 
+
 def update_sqsize(ui, data):
     ui.srqsize, ui.stqsize, ui.ssqsize = data
+
 
 @thread_decorator
 def update_cpuper(ui):
     ui.cpu_per = int(psutil.cpu_percent(interval=1))
+
 
 def auto_back_schedule(ui, gubun, soundQ, teleQ):
     if gubun == 1:
@@ -56,6 +59,7 @@ def auto_back_schedule(ui, gubun, soundQ, teleQ):
         teleQ.put('백테스트 스케쥴러 완료')
         ui.auto_mode = False
 
+
 def update_dictset(ui, wdzservQ, creceivQ, ctraderQ, cstgQ, chartQ, proc_chart):
     wdzservQ.put(('manager', ('설정변경', ui.dict_set)))
     if ui.CoinReceiverProcessAlive(): creceivQ.put(('설정변경', ui.dict_set))
@@ -66,46 +70,48 @@ def update_dictset(ui, wdzservQ, creceivQ, ctraderQ, cstgQ, chartQ, proc_chart):
         for bpq in ui.back_eques:
             bpq.put(('설정변경', ui.dict_set))
 
-def chart_clear(ui):
-    ui.ctpg_tik_name         = None
-    ui.ctpg_tik_cline        = None
-    ui.ctpg_tik_hline        = None
-    ui.ctpg_tik_xticks       = None
-    ui.ctpg_tik_arry         = None
-    ui.ctpg_tik_legend       = {}
-    ui.ctpg_tik_item         = {}
-    ui.ctpg_tik_data         = {}
-    ui.ctpg_tik_factors      = []
-    ui.ctpg_tik_labels       = []
 
-    ui.ctpg_day_name         = None
-    ui.ctpg_day_index        = None
-    ui.ctpg_day_lastmoveavg  = None
-    ui.ctpg_day_lastcandle   = None
+def chart_clear(ui):
+    ui.ctpg_tik_name = None
+    ui.ctpg_tik_cline = None
+    ui.ctpg_tik_hline = None
+    ui.ctpg_tik_xticks = None
+    ui.ctpg_tik_arry = None
+    ui.ctpg_tik_legend = {}
+    ui.ctpg_tik_item = {}
+    ui.ctpg_tik_data = {}
+    ui.ctpg_tik_factors = []
+    ui.ctpg_tik_labels = []
+
+    ui.ctpg_day_name = None
+    ui.ctpg_day_index = None
+    ui.ctpg_day_lastmoveavg = None
+    ui.ctpg_day_lastcandle = None
     ui.ctpg_day_infiniteline = None
     ui.ctpg_day_lastmoneybar = None
-    ui.ctpg_day_legend1      = None
-    ui.ctpg_day_legend2      = None
-    ui.ctpg_day_ymin         = 0
-    ui.ctpg_day_ymax         = 0
+    ui.ctpg_day_legend1 = None
+    ui.ctpg_day_legend2 = None
+    ui.ctpg_day_ymin = 0
+    ui.ctpg_day_ymax = 0
 
-    ui.ctpg_min_name         = None
-    ui.ctpg_min_index        = None
-    ui.ctpg_min_lastmoveavg  = None
-    ui.ctpg_min_lastcandle   = None
+    ui.ctpg_min_name = None
+    ui.ctpg_min_index = None
+    ui.ctpg_min_lastmoveavg = None
+    ui.ctpg_min_lastcandle = None
     ui.ctpg_min_infiniteline = None
     ui.ctpg_min_lastmoneybar = None
-    ui.ctpg_min_legend1      = None
-    ui.ctpg_min_legend2      = None
-    ui.ctpg_min_ymin         = 0
-    ui.ctpg_min_ymax         = 0
+    ui.ctpg_min_legend1 = None
+    ui.ctpg_min_legend2 = None
+    ui.ctpg_min_ymin = 0
+    ui.ctpg_min_ymax = 0
+
 
 def calendar_clicked(ui, gubun):
     if gubun == 'S':
-        table     = 's_tradelist'
+        table = 's_tradelist'
         searchday = ui.s_calendarWidgett.selectedDate().toString('yyyyMMdd')
     else:
-        table     = 'c_tradelist' if ui.dict_set['거래소'] == '업비트' else 'c_tradelist_future'
+        table = 'c_tradelist' if ui.dict_set['거래소'] == '업비트' else 'c_tradelist_future'
         searchday = ui.c_calendarWidgett.selectedDate().toString('yyyyMMdd')
     con = sqlite3.connect(DB_TRADELIST)
     df1 = pd.read_sql(f"SELECT * FROM {table} WHERE 체결시간 LIKE '{searchday}%'", con).set_index('index')
@@ -127,6 +133,28 @@ def calendar_clicked(ui, gubun):
     ui.update_tablewidget.update_tablewidget((ui_num[f'{gubun}당일합계'], df2))
     ui.update_tablewidget.update_tablewidget((ui_num[f'{gubun}당일상세'], df1))
 
+
 def video_widget_close(ui, state):
     if state == QMediaPlayer.StoppedState:
         ui.videoWidget.setVisible(False)
+
+
+def stom_live_screenshot(ui, cmd, teleQ):
+    ui.mnButtonClicked_01(4)
+    qtest_qwait(1)
+    if cmd == 'S스톰라이브':
+        mid = 'S'
+        ui.slv_tapWidgett_01.setCurrentIndex(ui.slv_index1)
+    elif cmd == 'C스톰라이브':
+        mid = 'C'
+        ui.slv_tapWidgett_01.setCurrentIndex(ui.slv_index2)
+    else:
+        mid = 'B'
+        ui.slv_tapWidgett_01.setCurrentIndex(ui.slv_index3)
+    qtest_qwait(1)
+    file_name = f'./_log/StomLive_{mid}_{strf_time("%Y%m%d%H%M%S")}.png'
+    screen = QApplication.primaryScreen()
+    screenshot = screen.grabWindow(ui.winId())
+    screenshot.save(file_name, 'png')
+    teleQ.put(file_name)
+    ui.mnButtonClicked_01(0)

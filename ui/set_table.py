@@ -46,9 +46,9 @@ class SetTable:
             widget.setVisible(False)
 
         self.ui.slv_tapWidgett_01 = QTabWidget(self.ui.lv_tab)
-        self.ui.slv_tapWidgett_01.addTab(self.ui.slv_tab, '주식 라이브')
-        self.ui.slv_tapWidgett_01.addTab(self.ui.clv_tab, '코인 라이브')
-        self.ui.slv_tapWidgett_01.addTab(self.ui.blv_tab, '백테 라이브')
+        self.ui.slv_index1 = self.ui.slv_tapWidgett_01.addTab(self.ui.slv_tab, '주식 라이브')
+        self.ui.slv_index2 = self.ui.slv_tapWidgett_01.addTab(self.ui.clv_tab, '코인 라이브')
+        self.ui.slv_index3 = self.ui.slv_tapWidgett_01.addTab(self.ui.blv_tab, '백테 라이브')
 
         self.ui.slsd_tableWidgett = self.wc.setTablewidget(self.ui.slv_tab, columns_tt, 30)
         self.ui.slsn_tableWidgett = self.wc.setTablewidget(self.ui.slv_tab, columns_nt, 1)

@@ -25,6 +25,7 @@ def svjs_button_clicked_01(ui):
                     ui.svjs_lineEditt_01.setText(index)
             ui.svjs_pushButon_04.setStyleSheet(style_bc_st)
 
+
 def svjs_button_clicked_02(ui, proc_query, queryQ):
     strategy_name = ui.svjs_lineEditt_01.text()
     strategy = ui.ss_textEditttt_02.toPlainText()
@@ -37,7 +38,8 @@ def svjs_button_clicked_02(ui, proc_query, queryQ):
     elif strategy == '':
         QMessageBox.critical(ui, '오류 알림', '매도전략의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
-        if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
+        if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(
+                strategy):
             if proc_query.is_alive():
                 queryQ.put(('전략디비', f"DELETE FROM stocksell WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
@@ -45,10 +47,12 @@ def svjs_button_clicked_02(ui, proc_query, queryQ):
             ui.svjs_pushButon_04.setStyleSheet(style_bc_st)
             QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def svjs_button_clicked_03(ui):
     ui.ss_textEditttt_02.clear()
     ui.ss_textEditttt_02.append(stock_sell_var)
     ui.svjs_pushButon_04.setStyleSheet(style_bc_st)
+
 
 def svjs_button_clicked_04(ui, wdzservQ):
     strategy = ui.ss_textEditttt_02.toPlainText()
@@ -64,32 +68,42 @@ def svjs_button_clicked_04(ui, wdzservQ):
             ui.svjs_pushButon_04.setStyleSheet(style_bc_dk)
             ui.svjs_pushButon_14.setStyleSheet(style_bc_st)
 
+
 def svjs_button_clicked_05(ui):
     ui.ss_textEditttt_02.append(stock_sell1)
+
 
 def svjs_button_clicked_06(ui):
     ui.ss_textEditttt_02.append(stock_sell2)
 
+
 def svjs_button_clicked_07(ui):
     ui.ss_textEditttt_02.append(stock_sell3)
+
 
 def svjs_button_clicked_08(ui):
     ui.ss_textEditttt_02.append(stock_sell4)
 
+
 def svjs_button_clicked_09(ui):
     ui.ss_textEditttt_02.append(stock_sell5)
+
 
 def svjs_button_clicked_10(ui):
     ui.ss_textEditttt_02.append(stock_sell6)
 
+
 def svjs_button_clicked_11(ui):
     ui.ss_textEditttt_02.append(stock_sell7)
+
 
 def svjs_button_clicked_12(ui):
     ui.ss_textEditttt_02.append(stock_sell8)
 
+
 def svjs_button_clicked_13(ui):
     ui.ss_textEditttt_02.append(stock_sell_signal)
+
 
 def svjs_button_clicked_14(ui, wdzservQ):
     wdzservQ.put(('strategy', '매도전략중지'))

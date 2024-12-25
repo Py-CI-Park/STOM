@@ -155,7 +155,6 @@ class Window(QMainWindow):
         self.dict_cn          = None
         self.dict_mt          = None
 
-        self.dict_info        = {}
         self.vars             = {}
         self.buy_index        = []
         self.sell_index       = []
@@ -295,6 +294,8 @@ class Window(QMainWindow):
         self.writer.signal7.connect(self.ImageUpdate)
         # noinspection PyUnresolvedReferences
         self.writer.signal8.connect(self.UpdateSQsize)
+        # noinspection PyUnresolvedReferences
+        self.writer.signal9.connect(self.StomliveScreenshot)
         self.writer.start()
 
         font_name = 'C:/Windows/Fonts/malgun.ttf'
@@ -315,6 +316,7 @@ class Window(QMainWindow):
     def CalendarClicked(self, gubun):      calendar_clicked(self, gubun)
     def AutoBackSchedule(self, gubun):     auto_back_schedule(self, gubun, soundQ, teleQ)
     def VideoWidgetClose(self, state):     video_widget_close(self, state)
+    def StomliveScreenshot(self, cmd):     stom_live_screenshot(self, cmd, teleQ)
     # =================================================================================================================
     def CheckboxChanged_01(self, state):   checkbox_changed_01(self, state)
     def CheckboxChanged_02(self, state):   checkbox_changed_02(self, state)
@@ -452,9 +454,9 @@ class Window(QMainWindow):
     # =================================================================================================================
     def beButtonClicked_01(self):      bebutton_clicked_01(self)
     def BacktestEngineKill(self):      backtest_engine_kill(self, windowQ)
-    def BackBench(self):               back_bench(self, windowQ, backQ, soundQ, totalQ, liveQ)
+    def BackBench(self):               back_bench(self, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def sdButtonClicked_01(self):      sdbutton_clicked_01(self)
-    def sdButtonClicked_02(self):      sdbutton_clicked_02(self, windowQ, backQ, soundQ, totalQ, liveQ)
+    def sdButtonClicked_02(self):      sdbutton_clicked_02(self, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def sdButtonClicked_03(self):      sdbutton_clicked_03(self)
     def sdButtonClicked_04(self):      sdbutton_clicked_04(self)
     def sdButtonClicked_05(self):      sdbutton_clicked_05(self, proc_query, queryQ)
@@ -554,11 +556,11 @@ class Window(QMainWindow):
     def svjButtonClicked_08(self): svj_button_clicked_08(self)
     def svjButtonClicked_09(self): svj_button_clicked_09(self)
     def svjButtonClicked_10(self): svj_button_clicked_10(self)
-    def svjButtonClicked_11(self): svj_button_clicked_11(self, windowQ, backQ, soundQ, totalQ, liveQ)
+    def svjButtonClicked_11(self): svj_button_clicked_11(self, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def svjButtonClicked_12(self): svj_button_clicked_12(self, windowQ, backQ, soundQ, totalQ, liveQ)
     def svjButtonClicked_13(self): svj_button_clicked_13(self)
-    def svjButtonClicked_14(self, back_name): svj_button_clicked_14(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
-    def svjButtonClicked_15(self, back_name): svj_button_clicked_15(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
+    def svjButtonClicked_14(self, back_name): svj_button_clicked_14(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
+    def svjButtonClicked_15(self, back_name): svj_button_clicked_15(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def svjButtonClicked_16(self, back_name): svj_button_clicked_16(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
     def svjButtonClicked_17(self, back_name): svj_button_clicked_17(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
     def svjButtonClicked_18(self): svj_button_clicked_18(self)
@@ -567,7 +569,7 @@ class Window(QMainWindow):
     def svjButtonClicked_21(self): svj_button_clicked_21(self)
     def svjButtonClicked_22(self): svj_button_clicked_22(self)
     def svjButtonClicked_23(self): svj_button_clicked_23(self, windowQ, backQ, totalQ)
-    def svjButtonClicked_24(self): svj_button_clicked_24(self, windowQ, backQ, soundQ, totalQ, liveQ)
+    def svjButtonClicked_24(self): svj_button_clicked_24(self, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def svjButtonClicked_25(self): svj_button_clicked_25(self)
     # =================================================================================================================
     def svjsButtonClicked_01(self): svjs_button_clicked_01(self)
@@ -629,11 +631,11 @@ class Window(QMainWindow):
     def cvjButtonClicked_08(self): cvj_button_clicked_08(self)
     def cvjButtonClicked_09(self): cvj_button_clicked_09(self)
     def cvjButtonClicked_10(self): cvj_button_clicked_10(self)
-    def cvjButtonClicked_11(self): cvj_button_clicked_11(self, windowQ, backQ, soundQ, totalQ, liveQ)
+    def cvjButtonClicked_11(self): cvj_button_clicked_11(self, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def cvjButtonClicked_12(self): cvj_button_clicked_12(self, windowQ, backQ, soundQ, totalQ, liveQ)
     def cvjButtonClicked_13(self): cvj_button_clicked_13(self)
-    def cvjButtonClicked_14(self, back_name): cvj_button_clicked_14(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
-    def cvjButtonClicked_15(self, back_name): cvj_button_clicked_15(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
+    def cvjButtonClicked_14(self, back_name): cvj_button_clicked_14(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
+    def cvjButtonClicked_15(self, back_name): cvj_button_clicked_15(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def cvjButtonClicked_16(self, back_name): cvj_button_clicked_16(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
     def cvjButtonClicked_17(self, back_name): cvj_button_clicked_17(self, back_name, windowQ, backQ, soundQ, totalQ, liveQ)
     def cvjButtonClicked_18(self): cvj_button_clicked_18(self)
@@ -642,7 +644,7 @@ class Window(QMainWindow):
     def cvjButtonClicked_21(self): cvj_button_clicked_21(self)
     def cvjButtonClicked_22(self): cvj_button_clicked_22(self)
     def cvjButtonClicked_23(self): cvj_button_clicked_23(self, windowQ, backQ, totalQ)
-    def cvjButtonClicked_24(self): cvj_button_clicked_24(self, windowQ, backQ, soundQ, totalQ, liveQ)
+    def cvjButtonClicked_24(self): cvj_button_clicked_24(self, windowQ, backQ, soundQ, totalQ, liveQ, teleQ)
     def cvjButtonClicked_25(self): cvj_button_clicked_25(self)
     # =================================================================================================================
     def cvjsButtonClicked_01(self): cvjs_button_clicked_01(self)

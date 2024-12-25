@@ -15,15 +15,15 @@ from utility.stomlive import StomLiveClient
 
 
 def process_starter(ui, qlist):
-    windowQ   = qlist[0]
-    soundQ    = qlist[1]
-    queryQ    = qlist[2]
-    chartQ    = qlist[4]
-    hogaQ     = qlist[5]
-    creceivQ  = qlist[8]
-    ctraderQ  = qlist[9]
-    cstgQ     = qlist[10]
-    inthms    = int_hms()
+    windowQ = qlist[0]
+    soundQ = qlist[1]
+    queryQ = qlist[2]
+    chartQ = qlist[4]
+    hogaQ = qlist[5]
+    creceivQ = qlist[8]
+    ctraderQ = qlist[9]
+    cstgQ = qlist[10]
+    inthms = int_hms()
     inthmsutc = int_hms_utc()
 
     if ui.int_time < 80000 <= inthms:
@@ -52,6 +52,11 @@ def process_starter(ui, qlist):
         ui.proc_stomlive = Process(target=StomLiveClient, args=(qlist,), daemon=True)
         ui.proc_stomlive.start()
 
+    if ui.dict_set['스톰라이브'] and ui.StomLiveProcessAlive():
+        if ui.int_time < 93100 <= inthms:
+            if ui.dict_set['주식트레이더']:   ui.StomliveScreenshot('S스톰라이브')
+            elif ui.dict_set['코인트레이더']: ui.StomliveScreenshot('C스톰라이브')
+
     if ui.dict_set['백테스케쥴실행'] and not ui.backtest_engine and now().weekday() == ui.dict_set['백테스케쥴요일']:
         if ui.int_time < ui.dict_set['백테스케쥴시간'] <= inthms:
             ui.AutoBackSchedule(1)
@@ -63,13 +68,18 @@ def process_starter(ui, qlist):
     UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ)
     ui.int_time = inthms
 
+
 def CoinReceiverStart(ui, qlist):
     if not ui.CoinReceiverProcessAlive():
         if ui.dict_set['리시버공유'] < 2:
-            ui.proc_receiver_coin = Process(target=ReceiverUpbit if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFuture, args=(qlist,))
+            ui.proc_receiver_coin = Process(
+                target=ReceiverUpbit if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFuture, args=(qlist,))
         else:
-            ui.proc_receiver_coin = Process(target=ReceiverUpbitClient if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFutureClient, args=(qlist,))
+            ui.proc_receiver_coin = Process(
+                target=ReceiverUpbitClient if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFutureClient,
+                args=(qlist,))
         ui.proc_receiver_coin.start()
+
 
 def CoinTraderStart(ui, qlist, windowQ):
     if ui.dict_set['거래소'] == '업비트' and (ui.dict_set['Access_key1'] is None or ui.dict_set['Secret_key1'] is None):
@@ -80,10 +90,12 @@ def CoinTraderStart(ui, qlist, windowQ):
         return
 
     if not ui.CoinStrategyProcessAlive():
-        ui.proc_strategy_coin = Process(target=StrategyUpbit if ui.dict_set['거래소'] == '업비트' else StrategyBinanceFuture, args=(qlist,), daemon=True)
+        ui.proc_strategy_coin = Process(target=StrategyUpbit if ui.dict_set['거래소'] == '업비트' else StrategyBinanceFuture,
+                                        args=(qlist,), daemon=True)
         ui.proc_strategy_coin.start()
     if not ui.CoinTraderProcessAlive():
-        ui.proc_trader_coin = Process(target=TraderUpbit if ui.dict_set['거래소'] == '업비트' else TraderBinanceFuture, args=(qlist,))
+        ui.proc_trader_coin = Process(target=TraderUpbit if ui.dict_set['거래소'] == '업비트' else TraderBinanceFuture,
+                                      args=(qlist,))
         ui.proc_trader_coin.start()
         if ui.dict_set['거래소'] == '바이낸스선물':
             ui.ctd_tableWidgettt.setColumnCount(len(columns_tdf))
@@ -111,6 +123,7 @@ def CoinTraderStart(ui, qlist, windowQ):
             ui.cjg_tableWidgettt.setColumnWidth(10, 90)
             ui.cjg_tableWidgettt.setColumnWidth(11, 90)
 
+
 def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ):
     inthms = int_hms()
     inthmsutc = int_hms_utc()
@@ -128,7 +141,7 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
     elif ui.dict_set['주식트레이더']:
         text = f'{text} | 키움증권'
     if ui.showQsize:
-        beqsize  = sum((stq.qsize() for stq in ui.back_eques)) if ui.back_eques else 0
+        beqsize = sum((stq.qsize() for stq in ui.back_eques)) if ui.back_eques else 0
         bstqsize = sum((ctq.qsize() for ctq in ui.back_cques)) if ui.back_cques else 0
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
@@ -149,6 +162,7 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
                 text = f'{text} | {ui.dict_set["주식장중매수전략"] if ui.dict_set["주식장중매수전략"] != "" else "전략사용안함"}'
         text = f"{text} | {strf_time('%Y-%m-%d %H:%M:%S')}"
     ui.setWindowTitle(text)
+
 
 def ClearTextEdit(ui):
     ui.sst_textEditttt_01.clear()

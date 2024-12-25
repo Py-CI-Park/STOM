@@ -94,6 +94,7 @@ def bactivated_01(ui):
             for item in optimized_count:
                 ui.list_p4comboBoxxxx[gubun].addItem(item)
 
+
 def bactivated_02(ui):
     if ui.sd_scheckBoxxxx_01.isChecked():
         list_comboBox = None
@@ -116,7 +117,7 @@ def bactivated_02(ui):
 
         if list_comboBox is not None:
             index = list_comboBox.index(ui.dialog_scheduler.focusWidget())
-            text  = list_comboBox[index].currentText()
+            text = list_comboBox[index].currentText()
             back_type = ui.list_gcomboBoxxxxx[index].currentText()
             for i, combobox in enumerate(ui.list_gcomboBoxxxxx):
                 if i != index and combobox.currentText() == back_type:
@@ -128,6 +129,7 @@ def bactivated_02(ui):
             ui.list_p1comboBoxxxx[index].setCurrentText('3')
             QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '전진분석은 학습기간을 전체로 설정할 수 없습니다.\n')
 
+
 def bactivated_03(ui):
     try:
         for checkbox in ui.list_checkBoxxxxxx:
@@ -138,7 +140,7 @@ def bactivated_03(ui):
         schedule_name = ui.sd_dcomboBoxxxx_01.currentText()
         ui.sd_dlineEditttt_01.setText(schedule_name)
         con = sqlite3.connect(DB_STRATEGY)
-        df  = pd.read_sql('SELECT * FROM schedule', con).set_index('index')
+        df = pd.read_sql('SELECT * FROM schedule', con).set_index('index')
         con.close()
         schedule = df['스케쥴'][schedule_name]
         schedule = schedule.split('^')

@@ -80,6 +80,7 @@ def pactivated_01(ui):
         ui.pt_comboBoxxxxx_32.setCurrentText(pattern[59])
         ui.pt_comboBoxxxxx_33.setCurrentText(pattern[60])
 
+
 def ptbutton_clicked_01(ui):
     con = sqlite3.connect(DB_STRATEGY)
     if ui.main_btn == 2:
@@ -91,6 +92,7 @@ def ptbutton_clicked_01(ui):
         ui.pt_comboBoxxxxx_00.clear()
         for pattern_name in df.index:
             ui.pt_comboBoxxxxx_00.addItem(pattern_name)
+
 
 def ptbutton_clicked_02(ui, proc_query, queryQ):
     if ui.main_btn == 2:
@@ -134,6 +136,7 @@ def ptbutton_clicked_02(ui, proc_query, queryQ):
             queryQ.put(('전략디비', df, 'coinpattern', 'append'))
         QMessageBox.information(ui.dialog_pattern, '저장 완료', random.choice(famous_saying))
 
+
 def ptbutton_clicked_03(ui):
     if ui.main_btn == 2:
         middle_name = 'stock'
@@ -141,7 +144,7 @@ def ptbutton_clicked_03(ui):
         middle_name = 'coin'
     last_name = ui.pt_comboBoxxxxx_00.currentText()
     if last_name != '':
-        pattern_buy_name  = f'{PATTERN_PATH}/pattern_{middle_name}_{last_name}_buy'
+        pattern_buy_name = f'{PATTERN_PATH}/pattern_{middle_name}_{last_name}_buy'
         pattern_sell_name = f'{PATTERN_PATH}/pattern_{middle_name}_{last_name}_sell'
         if os.path.isfile(f'{pattern_buy_name}.pkl') and os.path.isfile(f'{pattern_sell_name}.pkl'):
             if ui.backtest_engine:
@@ -150,7 +153,7 @@ def ptbutton_clicked_03(ui):
                 dict_pattern, dict_pattern_buy, dict_pattern_sell = get_pattern_setup(get_pattern_text(ui))
                 for q in ui.back_eques:
                     q.put(('패턴정보', dict_pattern, dict_pattern_buy, dict_pattern_sell))
-                pattern_buy  = pickle_read(pattern_buy_name)
+                pattern_buy = pickle_read(pattern_buy_name)
                 pattern_sell = pickle_read(pattern_sell_name)
                 for q in ui.back_eques:
                     q.put(('모델정보', pattern_buy, pattern_sell))
@@ -161,6 +164,7 @@ def ptbutton_clicked_03(ui):
             QMessageBox.critical(ui.dialog_pattern, '오류 알림', '학습 데이터 파일이 존재하지 않습니다.\n')
     else:
         QMessageBox.critical(ui.dialog_pattern, '오류 알림', '전송할 패턴 데이터의 이름을 콤보박스에서 선택하십시오.\n')
+
 
 def get_pattern_text(ui):
     pattern_text = [
@@ -228,6 +232,7 @@ def get_pattern_text(ui):
     ]
     pattern_text = '^'.join(pattern_text)
     return pattern_text
+
 
 def get_pattern_setup(pattern_text):
     pattern_setup = pattern_text.split('^')

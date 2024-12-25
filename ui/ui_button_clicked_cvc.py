@@ -26,6 +26,7 @@ def cvc_button_clicked_01(ui):
                 if i == 0:
                     ui.cvc_lineEdittt_01.setText(index)
 
+
 def cvc_button_clicked_02(ui, proc_query, queryQ):
     if ui.cs_textEditttt_03.isVisible():
         strategy_name = ui.cvc_lineEdittt_01.text()
@@ -99,6 +100,7 @@ def cvc_button_clicked_02(ui, proc_query, queryQ):
                         queryQ.put(('전략디비', df, 'coinoptibuy', 'append'))
                     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvc_button_clicked_03(ui):
     if ui.cs_textEditttt_05.isVisible():
         con = sqlite3.connect(DB_STRATEGY)
@@ -112,6 +114,7 @@ def cvc_button_clicked_03(ui):
                 ui.cvc_comboBoxxx_02.addItem(index)
                 if i == 0:
                     ui.cvc_lineEdittt_02.setText(index)
+
 
 def cvc_button_clicked_04(ui, proc_query, queryQ):
     if ui.cs_textEditttt_05.isVisible():
@@ -131,6 +134,7 @@ def cvc_button_clicked_04(ui, proc_query, queryQ):
                     queryQ.put(('전략디비', df, 'coinoptivars', 'append'))
                     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvc_button_clicked_05(ui):
     if ui.cs_textEditttt_04.isVisible():
         con = sqlite3.connect(DB_STRATEGY)
@@ -144,6 +148,7 @@ def cvc_button_clicked_05(ui):
                 ui.cvc_comboBoxxx_08.addItem(index)
                 if i == 0:
                     ui.cvc_lineEdittt_03.setText(index)
+
 
 def cvc_button_clicked_06(ui, proc_query, queryQ):
     if ui.cs_textEditttt_04.isVisible():
@@ -166,6 +171,7 @@ def cvc_button_clicked_06(ui, proc_query, queryQ):
                     queryQ.put(('전략디비', df, 'coinoptisell', 'append'))
                     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
+
 def cvc_button_clicked_07(ui):
     if ui.cs_textEditttt_01.isVisible():
         ui.cs_textEditttt_01.clear()
@@ -176,15 +182,19 @@ def cvc_button_clicked_07(ui):
     if ui.cs_textEditttt_03.isVisible():
         ui.cs_textEditttt_03.clear()
         if ui.cvc_pushButton_24.isVisible():
-            ui.cs_textEditttt_03.append(example_coinopti_buy1 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_buy1)
+            ui.cs_textEditttt_03.append(
+                example_coinopti_buy1 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_buy1)
         else:
-            ui.cs_textEditttt_03.append(example_coinopti_buy2 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_buy2)
+            ui.cs_textEditttt_03.append(
+                example_coinopti_buy2 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_buy2)
     if ui.cs_textEditttt_04.isVisible():
         ui.cs_textEditttt_04.clear()
         if ui.cvc_pushButton_24.isVisible():
-            ui.cs_textEditttt_04.append(example_coinopti_sell1 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_sell1)
+            ui.cs_textEditttt_04.append(
+                example_coinopti_sell1 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_sell1)
         else:
-            ui.cs_textEditttt_04.append(example_coinopti_sell2 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_sell2)
+            ui.cs_textEditttt_04.append(
+                example_coinopti_sell2 if ui.dict_set['거래소'] == '업비트' else example_coinopti_future_sell2)
     if ui.cs_textEditttt_05.isVisible():
         ui.cs_textEditttt_05.clear()
         ui.cs_textEditttt_05.append(example_opti_vars if ui.dict_set['거래소'] == '업비트' else example_opti_future_vars)
@@ -197,6 +207,7 @@ def cvc_button_clicked_07(ui):
     if ui.cs_textEditttt_08.isVisible():
         ui.cs_textEditttt_08.clear()
         ui.cs_textEditttt_08.append(example_sellconds if ui.dict_set['거래소'] == '업비트' else example_future_sellconds)
+
 
 def cvc_button_clicked_08(ui, proc_query, queryQ):
     tabl = 'coinoptivars' if not ui.cva_pushButton_01.isVisible() else 'coinvars'
@@ -219,7 +230,7 @@ def cvc_button_clicked_08(ui, proc_query, queryQ):
 
     try:
         vars_ = {}
-        opt   = opt.replace('self.vars', 'vars_')
+        opt = opt.replace('self.vars', 'vars_')
         exec(compile(opt, '<string>', 'exec'))
         for i in range(len(vars_)):
             stg = stg.replace(f'self.vars[{i}]', f'{vars_[i][1]}')
@@ -232,6 +243,7 @@ def cvc_button_clicked_08(ui, proc_query, queryQ):
         df = pd.DataFrame({'전략코드': [stg]}, index=[name])
         queryQ.put(('전략디비', df, 'coinbuy', 'append'))
         QMessageBox.information(ui, '저장 알림', '최적값으로 매수전략을 저장하였습니다.\n')
+
 
 def cvc_button_clicked_09(ui, proc_query, queryQ):
     tabl = 'coinoptivars' if not ui.cva_pushButton_01.isVisible() else 'coinvars'
@@ -254,7 +266,7 @@ def cvc_button_clicked_09(ui, proc_query, queryQ):
 
     try:
         vars_ = {}
-        opt   = opt.replace('self.vars', 'vars_')
+        opt = opt.replace('self.vars', 'vars_')
         exec(compile(opt, '<string>', 'exec'))
         for i in range(len(vars_)):
             stg = stg.replace(f'self.vars[{i}]', f'{vars_[i][1]}')
@@ -268,8 +280,10 @@ def cvc_button_clicked_09(ui, proc_query, queryQ):
         queryQ.put(('전략디비', df, 'coinsell', 'append'))
         QMessageBox.information(ui, '저장 알림', '최적값으로 매도전략을 저장하였습니다.\n')
 
+
 def cvc_button_clicked_10(ui):
     ui.dialog_std.show() if not ui.dialog_std.isVisible() else ui.dialog_std.close()
+
 
 def cvc_button_clicked_11(ui):
     if not ui.dialog_optuna.isVisible():

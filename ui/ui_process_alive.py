@@ -1,6 +1,6 @@
-
 def stom_live_process_alive(ui):
     return ui.proc_stomlive is not None and ui.proc_stomlive.is_alive()
+
 
 def simulator_process_alive(ui):
     result = False
@@ -10,17 +10,22 @@ def simulator_process_alive(ui):
         result = True
     return result
 
+
 def coin_receiver_process_alive(ui):
     return ui.proc_receiver_coin is not None and ui.proc_receiver_coin.is_alive()
+
 
 def coin_trader_process_alive(ui):
     return ui.proc_trader_coin is not None and ui.proc_trader_coin.is_alive()
 
+
 def coin_strategy_process_alive(ui):
     return ui.proc_strategy_coin is not None and ui.proc_strategy_coin.is_alive()
 
+
 def coinkimp_process_alive(ui):
     return ui.proc_coin_kimp is not None and ui.proc_coin_kimp.is_alive()
+
 
 def backtest_process_alive(ui):
     return (ui.proc_backtester_bb is not None and ui.proc_backtester_bb.is_alive()) or \

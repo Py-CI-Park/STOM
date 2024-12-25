@@ -6,17 +6,18 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, GetMoneytopQuery, PltShow, GetBackResult2
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery, PltShow, GetResultDataframe, GetBackResult, AddMdd
 from utility.static import strf_time, now, timedelta_day, strp_time, threading_timer
 from utility.setting import ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_STOCK_BACK, DB_COIN_BACK, DB_OPTUNA
 
 
 class Total:
-    def __init__(self, wq, sq, tq, mq, bstq_list, backname, ui_gubun, gubun):
+    def __init__(self, wq, sq, tq, teleQ, mq, bstq_list, backname, ui_gubun, gubun):
         self.wq           = wq
         self.sq           = sq
         self.tq           = tq
         self.mq           = mq
+        self.teleQ        = teleQ
         self.bstq_list    = bstq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
@@ -140,22 +141,9 @@ class Total:
                     dict_dummy = {}
 
             elif data[0] == '백테결과':
-                _, list_tsg, arry_bct = data
-                columns = [
-                    'index', '종목명', '시가총액' if self.ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-                    '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간'
-                ]
-                self.df_tsg = pd.DataFrame(list_tsg, columns=columns)
-                self.df_tsg.set_index('index', inplace=True)
-                self.df_tsg.sort_index(inplace=True)
-                arry_bct = arry_bct[arry_bct[:, 1] > 0]
-                self.df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
-                self.df_ttsg.append(self.df_tsg)
-                self.df_tbct.append(self.df_bct)
                 oc += 1
-                self.SemiReport(oc)
-                if oc == self.in_out_count:
-                    self.Report()
+                _, list_tsg, arry_bct = data
+                self.Report(list_tsg, arry_bct, oc)
 
             elif data[0] in ('TRAIN', 'VALID'):
                 gubun, num, data, vars_turn, vars_key = data
@@ -248,7 +236,11 @@ class Total:
             self.vars[vars_turn] = self.vars_list[vars_turn][0][vars_key]
         return ['최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, self.opti_turn, vars_turn, vars_key, self.vars, self.startday, self.endday, self.std_list, self.betting]
 
-    def SemiReport(self, oc):
+    def Report(self, list_tsg, arry_bct, oc):
+        self.df_tsg, self.df_bct = GetResultDataframe(self.ui_gubun, list_tsg, arry_bct)
+        self.df_ttsg.append(self.df_tsg)
+        self.df_tbct.append(self.df_bct)
+
         tc = len(self.df_tsg)
         if tc > 0:
             pc     = len(self.df_tsg[self.df_tsg['수익률'] >= 0])
@@ -267,55 +259,62 @@ class Total:
         startday = self.hstd_list[oc - 1][0]
         endday   = self.hstd_list[oc - 1][1]
         merge    = self.hstd_list[oc - 1][2]
-
-        text1 = f'[IN] P[{startday}~{endday}] {self.vars} MERGE[{merge:,.2f}]'
-        text2 = f'[OUT] P[{self.startday}~{self.endday}] TC[{tc}] MH[{mhct}] WR[{wr:.2f}%] TP[{tsp:.2f}%] TG[{tsg:,.0f}]'
+        text1    = f'[IN] P[{startday}~{endday}] {self.vars} MERGE[{merge:,.2f}]'
+        text2    = f'[OUT] P[{self.startday}~{self.endday}] TC[{tc}] MH[{mhct}] WR[{wr:.2f}%] TP[{tsp:.2f}%] TG[{tsg:,.0f}]'
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text1))
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text2))
         self.mq.put('아웃샘플 백테스트')
 
-    def Report(self):
-        self.df_ttsg = pd.concat(self.df_ttsg)
-        self.df_tbct = pd.concat(self.df_tbct)
+        if oc == self.in_out_count:
+            self.df_ttsg = pd.concat(self.df_ttsg)
+            self.df_ttsg.sort_index(inplace=True)
+            self.df_ttsg['수익금합계'] = self.df_ttsg['수익금'].cumsum()
+            self.df_ttsg[['수익금합계']] = self.df_ttsg[['수익금합계']].astype('float64')
+            self.df_tbct = pd.concat(self.df_tbct)
+            self.df_tbct.sort_index(inplace=True)
 
-        df_ttsg = self.df_ttsg[['수익금']].copy()
-        df_ttsg['index'] = df_ttsg.index
-        df_ttsg['index'] = df_ttsg['index'].apply(lambda x: x[:8])
-        out_day_count = len(list(set(df_ttsg['index'].to_list())))
+            df_ttsg = self.df_ttsg[['수익금']].copy()
+            df_ttsg['index'] = df_ttsg.index
+            df_ttsg['index'] = df_ttsg['index'].apply(lambda x: x[:8])
+            out_day_count = len(list(set(df_ttsg['index'].to_list())))
 
-        self.df_ttsg, self.df_tbct, result = GetBackResult2(self.df_ttsg, self.df_tbct, self.betting, out_day_count)
-        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
+            df_tsg   = self.df_ttsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
+            arry_tsg = np.array(df_tsg, dtype='float64')
+            arry_bct = np.sort(arry_bct, axis=0)[::-1]
+            result   = GetBackResult(arry_tsg, arry_bct, self.betting, out_day_count, self.ui_gubun)
+            result   = AddMdd(arry_tsg, result)
+            tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
-        startday, endday, starttime, endtime = str(self.startday_), str(self.endday_), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
-        startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
-        endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
-        starttime = starttime[:2] + ':' + starttime[2:4] + ':' + starttime[4:]
-        endtime   = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
-        bet_unit  = '원' if self.ui_gubun != 'CF' else 'USDT'
+            startday, endday, starttime, endtime = str(self.startday_), str(self.endday_), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
+            startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
+            endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
+            starttime = starttime[:2] + ':' + starttime[2:4] + ':' + starttime[4:]
+            endtime   = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
+            bet_unit  = '원' if self.ui_gubun != 'CF' else 'USDT'
 
-        if self.weeks_valid == 0:
-            back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습+검증/확인기간 : {self.weeks_train}/{self.weeks_test}, 거래일수 : {out_day_count}'
-        else:
-            back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증/확인기간 : {self.weeks_train}/{self.weeks_valid}/{self.weeks_test}, 거래일수 : {out_day_count}'
+            if self.weeks_valid == 0:
+                back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습+검증/확인기간 : {self.weeks_train}/{self.weeks_test}, 거래일수 : {out_day_count}'
+            else:
+                back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 학습/검증/확인기간 : {self.weeks_train}/{self.weeks_valid}/{self.weeks_test}, 거래일수 : {out_day_count}'
 
-        mdd_test   = f'최대낙폭금액 {mdd_:,.0f}{bet_unit}' if 'G' in self.optistandard else f'최대낙폭률 {mdd:,.2f}%'
-        label_text = f'종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {onegm:,}{bet_unit}, ' \
-                     f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
-                     f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, ' \
-                     f'{mdd_test}, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
+            mdd_test   = f'최대낙폭금액 {mdd_:,.0f}{bet_unit}' if 'G' in self.optistandard else f'최대낙폭률 {mdd:,.2f}%'
+            label_text = f'종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {onegm:,}{bet_unit}, ' \
+                         f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
+                         f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, ' \
+                         f'{mdd_test}, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
 
-        save_file_name = f"{self.savename}_{self.buystg_name}_{self.optistandard}_{self.file_name}"
-        con = sqlite3.connect(DB_BACKTEST)
-        self.df_ttsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
-        con.close()
-        self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_tsg))
+            save_file_name = f"{self.savename}_{self.buystg_name}_{self.optistandard}_{self.file_name}"
+            con = sqlite3.connect(DB_BACKTEST)
+            self.df_ttsg.to_sql(save_file_name, con, if_exists='append', chunksize=1000)
+            con.close()
+            self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_tsg))
 
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스트 완료'))
-        self.sq.put(f'{self.backname} 백테스트를 완료하였습니다.')
-        self.mq.put('백테스트 완료')
-        PltShow('전진분석', self.df_ttsg, self.df_tbct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
-                self.df_kp, self.df_kd, self.list_days, self.backname, back_text, label_text, save_file_name, self.schedul, False)
-        self.mq.put('백테스트 완료')
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스트 완료'))
+            self.sq.put(f'{self.backname} 백테스트를 완료하였습니다.')
+            self.mq.put('백테스트 완료')
+            PltShow('전진분석', self.teleQ, self.df_ttsg, self.df_tbct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
+                    self.df_kp, self.df_kd, self.list_days, self.backname, back_text, label_text, save_file_name, self.schedul, False)
+            self.mq.put('백테스트 완료')
 
 
 class StopWhenNotUpdateBestCallBack:
@@ -341,12 +340,13 @@ class StopWhenNotUpdateBestCallBack:
 
 
 class RollingWalkForwardTest:
-    def __init__(self, wq, bq, sq, tq, lq, beq_list, bstq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, teleQ, beq_list, bstq_list, backname, ui_gubun):
         self.wq        = wq
         self.bq        = bq
         self.sq        = sq
         self.tq        = tq
         self.lq        = lq
+        self.teleQ     = teleQ
         self.beq_list  = beq_list
         self.bstq_list = bstq_list
         self.backname  = backname
@@ -486,7 +486,7 @@ class RollingWalkForwardTest:
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text))
 
         mq = Queue()
-        Process(target=Total, args=(self.wq, self.sq, self.tq, mq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)).start()
+        Process(target=Total, args=(self.wq, self.sq, self.tq, self.teleQ, self.teleQ, mq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
 
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,

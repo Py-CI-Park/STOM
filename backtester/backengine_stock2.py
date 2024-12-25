@@ -1,13 +1,10 @@
 import math
-# noinspection PyUnresolvedReferences
-import talib
-# noinspection PyUnresolvedReferences
-import numpy as np
 from traceback import print_exc
-from backtester.backengine_stock import StockBackEngine
 from backtester.back_static import GetTradeInfo
-from utility.setting import BACK_TEMP, dict_order_ratio
-from utility.static import strp_time, timedelta_sec, roundfigure_upper, roundfigure_lower, pickle_read, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit
+from backtester.backengine_stock import StockBackEngine
+from utility.setting import dict_order_ratio
+from utility.static import strp_time, timedelta_sec, roundfigure_upper, roundfigure_lower, GetKiwoomPgSgSp, \
+    GetUvilower5, GetHogaunit
 
 
 # noinspection PyUnusedLocal
@@ -47,19 +44,14 @@ class StockBackEngine2(StockBackEngine):
             self.tick_calcul = True
 
         for code in self.code_list:
-            self.code = code
-            self.name = self.dict_cn[self.code] if self.code in self.dict_cn.keys() else self.code
-            self.total_count = 0
-
-            if self.dict_set['백테주문관리적용'] and self.dict_set['주식매수금지블랙리스트'] and self.code in self.dict_set['주식블랙리스트'] and self.back_type != '백파인더':
+            if self.dict_set['백테주문관리적용'] and self.dict_set['주식매수금지블랙리스트'] and code in self.dict_set['주식블랙리스트'] and self.back_type != '백파인더':
                 self.tq.put(('백테완료', 0))
                 continue
 
-            if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
-
+            self.code = code
+            self.name = self.dict_cn[self.code] if self.code in self.dict_cn.keys() else self.code
+            self.total_count = 0
             self.SetArrayTick(code, same_days, same_time)
-
             self.last = len(self.array_tick) - 1
             if self.last > 0:
                 for i, index in enumerate(self.array_tick[:, 0]):
@@ -89,7 +81,7 @@ class StockBackEngine2(StockBackEngine):
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else self.indexb
             return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
@@ -225,8 +217,8 @@ class StockBackEngine2(StockBackEngine):
             elif tick == 1200:
                 return Parameter_Previous(48, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 return round(self.array_tick[sindex:eindex, 1].mean(), 3)
 
         def GetArrayIndex(aindex):
@@ -236,8 +228,8 @@ class StockBackEngine2(StockBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 if gubun_ == 'max':
                     return self.array_tick[sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -281,8 +273,8 @@ class StockBackEngine2(StockBackEngine):
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -374,6 +366,7 @@ class StockBackEngine2(StockBackEngine):
                     보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                         매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                         매도분할횟수, 매수주문취소시간, 매도주문취소시간 = self.trade_info[vars_turn][vars_key].values()
+                    self.indexb = 매수틱번호
                     if self.trade_info[vars_turn][vars_key]['보유중']:
                         _, 수익금, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
                         if 수익률 > 최고수익률:
@@ -543,6 +536,7 @@ class StockBackEngine2(StockBackEngine):
                     보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                         매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                         매도분할횟수, 매수주문취소시간, 매도주문취소시간 = self.trade_info[vars_turn][vars_key].values()
+                    self.indexb = 매수틱번호
                     if self.trade_info[vars_turn][vars_key]['보유중']:
                         _, 수익금, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
                         if 수익률 > 최고수익률:
@@ -725,6 +719,7 @@ class StockBackEngine2(StockBackEngine):
             보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                 매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                 매도분할횟수, 매수주문취소시간, 매도주문취소시간 = self.trade_info[vars_turn][vars_key].values()
+            self.indexb = 매수틱번호
             if self.trade_info[vars_turn][vars_key]['보유중']:
                 _, 수익금, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
                 if 수익률 > 최고수익률:
@@ -924,8 +919,7 @@ class StockBackEngine2(StockBackEngine):
             매수주문취소시간, 매도주문취소시간 = self.trade_info[vars_turn][vars_key].values()
         """
         _, 매수가, _, 주문수량, 보유수량, _, _, _, _, _, 매수호가, _, _, _, _, \
-            매수호가단위, _, _, _, _, _, 매수주문취소시간 = self.trade_info[vars_turn][vars_key].values()
-
+            매수호가단위, _, _, _, _, _, 매수주문취소시간, _ = self.trade_info[vars_turn][vars_key].values()
         if self.dict_set['주식매수취소관심이탈'] and 관심이탈:
             self.trade_info[vars_turn][vars_key]['매수호가'] = 0
         elif self.dict_set['주식매수취소시간'] and strp_time('%Y%m%d%H%M%S', str(self.index)) > 매수주문취소시간:
@@ -1004,7 +998,6 @@ class StockBackEngine2(StockBackEngine):
         """
         _, _, _, _, _, _, _, _, _, _, _, 매도호가, _, _, _, _, \
             매도호가단위, _, 매도정정횟수, _, _, _, 매도주문취소시간 = self.trade_info[vars_turn][vars_key].values()
-
         if self.dict_set['주식매도취소관심진입'] and 관심진입:
             self.trade_info[vars_turn][vars_key]['매도호가'] = 0
         elif self.dict_set['주식매도취소시간'] and strp_time('%Y%m%d%H%M%S', str(self.index)) > 매도주문취소시간:

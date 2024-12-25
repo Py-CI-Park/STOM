@@ -8,6 +8,7 @@ from utility.static import now
 from utility.setting import ui_num, DB_TRADELIST, DB_SETTING, DB_STRATEGY, DB_COIN_TICK, DB_PATH, DB_STOCK_BACK, \
     DB_COIN_BACK, DB_STOCK_TICK, DB_BACKTEST
 
+
 class Query:
     def __init__(self, qlist):
         """

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from backtester.back_static import GetBackResult, AddMdd
 
 
 class BackSubTotal:
@@ -169,87 +170,48 @@ class BackSubTotal:
 
     def Result(self, gubun, data):
         """
-        index, 보유시간, 매도시간, 수익률, 수익금, 수익금합계
-          0       1       2       3     4       5
+        보유시간, 매도시간, 수익률, 수익금, 수익금합계
+          0       1       2       3      4
         """
         columns, list_data, arry_bct = data[:3]
         df_tsg = pd.DataFrame(list_data, columns=columns)
-        df_tsg.sort_values(by=['index'], inplace=True)
+        df_tsg.set_index('index', inplace=True)
+        df_tsg.sort_index(inplace=True)
         df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
-        df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype('float64')
-
-        arry_tsg = df_tsg.to_numpy()
+        arry_tsg = np.array(df_tsg, dtype='float64')
         arry_bct = arry_bct[arry_bct[:, 1] > 0]
-
         if len(data) == 11:
             vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_turn, vars_key = data[3:]
             if gubun:
-                arry_tsg = arry_tsg[(arry_tsg[:, 2] < vsday * 1000000) | ((veday * 1000000 + 240000 < arry_tsg[:, 2]) & (arry_tsg[:, 2] < tsday * 1000000))]
+                arry_tsg = arry_tsg[(arry_tsg[:, 1] < vsday * 1000000) | ((veday * 1000000 + 240000 < arry_tsg[:, 1]) & (arry_tsg[:, 1] < tsday * 1000000))]
                 arry_bct = arry_bct[(arry_bct[:, 0] < vsday * 1000000) | ((veday * 1000000 + 240000 < arry_bct[:, 0]) & (arry_bct[:, 0] < tsday * 1000000))]
+                arry_bct = np.sort(arry_bct, axis=0)[::-1]
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, tdaycnt, self.ui_gubun)
+                result   = AddMdd(arry_tsg, result)
             else:
-                arry_tsg = arry_tsg[(vsday * 1000000 <= arry_tsg[:, 2]) & (arry_tsg[:, 2] <= veday * 1000000 + 240000)]
+                arry_tsg = arry_tsg[(vsday * 1000000 <= arry_tsg[:, 1]) & (arry_tsg[:, 1] <= veday * 1000000 + 240000)]
                 arry_bct = arry_bct[(vsday * 1000000 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= veday * 1000000 + 240000)]
-            result = self.GetBackResult(arry_tsg, arry_bct, self.betting, tdaycnt if gubun else vdaycnt)
+                arry_bct = np.sort(arry_bct, axis=0)[::-1]
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, vdaycnt, self.ui_gubun)
+                result   = AddMdd(arry_tsg, result)
             self.tq.put(('TRAIN' if gubun else 'VALID', index, result, vars_turn, vars_key))
         elif len(data) == 10:
             vsday, veday, tdaycnt, vdaycnt, index, vars_turn, vars_key = data[3:]
             if gubun:
-                arry_tsg = arry_tsg[(arry_tsg[:, 2] < vsday * 1000000) | (veday * 1000000 + 240000 < arry_tsg[:, 2])]
+                arry_tsg = arry_tsg[(arry_tsg[:, 1] < vsday * 1000000) | (veday * 1000000 + 240000 < arry_tsg[:, 1])]
                 arry_bct = arry_bct[(vsday * 1000000 < arry_bct[:, 0]) | (arry_bct[:, 0] > veday * 1000000 + 240000)]
+                arry_bct = np.sort(arry_bct, axis=0)[::-1]
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, tdaycnt, self.ui_gubun)
+                result   = AddMdd(arry_tsg, result)
             else:
-                arry_tsg = arry_tsg[(vsday * 1000000 <= arry_tsg[:, 2]) & (arry_tsg[:, 2] <= veday * 1000000 + 240000)]
+                arry_tsg = arry_tsg[(vsday * 1000000 <= arry_tsg[:, 1]) & (arry_tsg[:, 1] <= veday * 1000000 + 240000)]
                 arry_bct = arry_bct[(vsday * 1000000 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= veday * 1000000 + 240000)]
-            result = self.GetBackResult(arry_tsg, arry_bct, self.betting, tdaycnt if gubun else vdaycnt)
+                arry_bct = np.sort(arry_bct, axis=0)[::-1]
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, vdaycnt, self.ui_gubun)
+                result   = AddMdd(arry_tsg, result)
             self.tq.put(('TRAIN' if gubun else 'VALID', index, result, vars_turn, vars_key))
         else:
             daycnt, vars_turn, vars_key = data[3:]
-            result = self.GetBackResult(arry_tsg, arry_bct, self.betting, daycnt)
+            result = GetBackResult(arry_tsg, arry_bct, self.betting, daycnt, self.ui_gubun)
+            result = AddMdd(arry_tsg, result)
             self.tq.put(('ALL', 0, result, vars_turn, vars_key))
-
-    def GetBackResult(self, arry_tsg, arry_bct, betting, day_count):
-        """
-        index, 보유시간, 매도시간, 수익률, 수익금, 수익금합계
-          0       1       2       3     4       5
-        """
-        tc  = len(arry_tsg)
-        if tc > 0:
-            arry_p = arry_tsg[arry_tsg[:, 4] >= 0]
-            arry_m = arry_tsg[arry_tsg[:, 4] < 0]
-            atc    = round(tc / day_count, 1)
-            pc     = len(arry_p)
-            mc     = len(arry_m)
-            wr     = round(pc / tc * 100, 2)
-            ah     = round(arry_tsg[:, 1].sum() / tc, 2)
-            ap     = round(arry_tsg[:, 3].sum() / tc, 2)
-            tsg    = int(arry_tsg[:, 4].sum())
-            app    = arry_p[:, 3].mean() if len(arry_p) > 0 else 0
-            amp    = abs(arry_m[:, 3].mean()) if len(arry_m) > 0 else 0
-
-            _arry_bct = arry_bct.copy()
-            _arry_bct = np.sort(_arry_bct, axis=0)[::-1]
-            try:
-                mhct  = _arry_bct[int(len(_arry_bct) * 0.01):, 1].max() if len(_arry_bct) > 100 else _arry_bct[:, 1].max()
-            except:
-                mhct  = 0
-            try:
-                onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
-            except:
-                onegm = betting
-            tsp  = round(tsg / onegm * 100, 2)
-            cagr = round(tsp / day_count * (250 if self.ui_gubun == 'S' else 365), 2)
-            tpi  = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
-
-            try:
-                array = arry_tsg[:, 5]
-                lower = np.argmax(np.maximum.accumulate(array) - array)
-                upper = np.argmax(array[:lower])
-                # noinspection PyTypeChecker
-                mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
-                mdd_  = int(abs(array[upper] - array[lower]))
-            except:
-                mdd   = abs(tsp)
-                mdd_  = abs(tsg)
-        else:
-            tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-        return [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_]

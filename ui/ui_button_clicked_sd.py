@@ -41,6 +41,7 @@ def bebutton_clicked_01(ui):
                 qtest_qwait(3)
                 ui.StartBacktestEngine('코인')
 
+
 def backtest_engine_kill(ui, windowQ):
     ui.ClearBacktestQ()
     for p in ui.back_cprocs:
@@ -53,17 +54,18 @@ def backtest_engine_kill(ui, windowQ):
     ui.back_cprocs = []
     ui.back_eques = []
     ui.back_cques = []
-    ui.dict_cn    = None
-    ui.dict_mt    = None
+    ui.dict_cn = None
+    ui.dict_mt = None
     ui.back_count = 0
-    ui.startday   = 0
-    ui.endday     = 0
-    ui.starttime  = 0
-    ui.endtime    = 0
+    ui.startday = 0
+    ui.endday = 0
+    ui.starttime = 0
+    ui.endtime = 0
     ui.backtest_engine = False
     windowQ.put((ui_num['백테엔진'], '<font color=#45cdf7>모든 백테엔진 프로세스가 종료되었습니다.</font>'))
 
-def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ):
+
+def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
     buttonReply = QMessageBox.question(
         ui, "벤치 테스트", "백테 벤치 테스트를 진행합니다.\n틱데이터가 9시 30분까지 로딩되어 있어야합니다.\n계속하시겠습니까?\n",
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
@@ -79,16 +81,17 @@ def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
                 return
 
-            startday  = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
-            endday    = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
+            startday = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
+            endday = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
             starttime = ui.svjb_lineEditt_02.text()
-            endtime   = ui.svjb_lineEditt_03.text()
-            betting   = ui.svjb_lineEditt_04.text()
-            avgtime   = ui.svjb_lineEditt_05.text()
-            bl        = True if ui.dict_set['블랙리스트추가'] else False
+            endtime = ui.svjb_lineEditt_03.text()
+            betting = ui.svjb_lineEditt_04.text()
+            avgtime = ui.svjb_lineEditt_05.text()
+            bl = True if ui.dict_set['블랙리스트추가'] else False
 
             if int(avgtime) not in ui.avg_list:
-                QMessageBox.critical(ui, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                QMessageBox.critical(ui, '오류 알림',
+                                     '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
                 return
             if '' in (startday, endday, starttime, endtime, betting, avgtime):
                 QMessageBox.critical(ui, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
@@ -98,12 +101,17 @@ def back_bench(ui, windowQ, backQ, soundQ, totalQ, liveQ):
             for q in ui.back_eques:
                 q.put(('백테유형', '백테스트'))
 
-            backQ.put((betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', ui.dict_cn, ui.back_count, bl, False, ui.df_kp, ui.df_kd, False, False))
-            ui.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '백테스트', 'S'))
+            backQ.put((betting, avgtime, startday, endday, starttime, endtime, '벤치전략', '벤치전략', ui.dict_cn,
+                       ui.back_count, bl, False, ui.df_kp, ui.df_kd, False, False))
+            ui.proc_backtester_bb = Process(
+                target=BackTest,
+                args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '백테스트', 'S')
+            )
             ui.proc_backtester_bb.start()
             ui.svjButtonClicked_07()
             ui.ss_progressBar_01.setValue(0)
             ui.ssicon_alert = True
+
 
 def sdbutton_clicked_01(ui):
     if type(ui.dialog_scheduler.focusWidget()) != QLineEdit:
@@ -112,7 +120,8 @@ def sdbutton_clicked_01(ui):
         else:
             ui.sd_pushButtonnn_01.setText('주식')
 
-def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
+
+def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
@@ -139,32 +148,38 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         if ui.back_scount < 16:
             back_name = ui.list_gcomboBoxxxxx[ui.back_scount].currentText()
             if back_name == '백테스트':
-                startday  = ui.list_sdateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
-                endday    = ui.list_edateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
+                startday = ui.list_sdateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
+                endday = ui.list_edateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
                 starttime = ui.list_slineEdittttt[ui.back_scount].text()
-                endtime   = ui.list_elineEdittttt[ui.back_scount].text()
-                betting   = ui.list_blineEdittttt[ui.back_scount].text()
-                avgtime   = ui.list_alineEdittttt[ui.back_scount].text()
-                buystg    = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
-                sellstg   = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
-                bl        = True if ui.dict_set['블랙리스트추가'] else False
+                endtime = ui.list_elineEdittttt[ui.back_scount].text()
+                betting = ui.list_blineEdittttt[ui.back_scount].text()
+                avgtime = ui.list_alineEdittttt[ui.back_scount].text()
+                buystg = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
+                sellstg = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
+                bl = True if ui.dict_set['블랙리스트추가'] else False
 
                 if int(avgtime) not in ui.avg_list:
                     ui.StopScheduler()
-                    QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                    QMessageBox.critical(ui.dialog_scheduler, '오류 알림',
+                                         '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
                     return
 
                 for q in ui.back_eques:
                     q.put(('백테유형', '백테스트'))
 
                 if bt_gubun == '주식':
-                    backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, ui.dict_cn, ui.back_count, bl, True, ui.df_kp, ui.df_kd, False, False))
+                    backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, ui.dict_cn,
+                               ui.back_count, bl, True, ui.df_kp, ui.df_kd, False, False))
                     gubun = 'S'
                 else:
-                    backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, ui.back_count, bl, True, None, None, False, False))
+                    backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None,
+                               ui.back_count, bl, True, None, None, False, False))
                     gubun = 'C' if ui.dict_set['거래소'] == '업비트' else 'CF'
 
-                ui.proc_backtester_bb = Process(target=BackTest, args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, back_name, gubun))
+                ui.proc_backtester_bb = Process(
+                    target=BackTest,
+                    args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, back_name, gubun)
+                )
                 ui.proc_backtester_bb.start()
 
                 if bt_gubun == '주식':
@@ -177,19 +192,19 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                     ui.csicon_alert = True
 
             elif '조건' in back_name:
-                starttime   = ui.list_slineEdittttt[ui.back_scount].text()
-                endtime     = ui.list_elineEdittttt[ui.back_scount].text()
-                betting     = ui.list_blineEdittttt[ui.back_scount].text()
-                avgtime     = ui.list_alineEdittttt[ui.back_scount].text()
-                buystg      = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
-                sellstg     = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
-                bcount      = ui.sd_oclineEdittt_01.text()
-                scount      = ui.sd_oclineEdittt_02.text()
-                rcount      = ui.sd_oclineEdittt_03.text()
-                optistd     = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
+                starttime = ui.list_slineEdittttt[ui.back_scount].text()
+                endtime = ui.list_elineEdittttt[ui.back_scount].text()
+                betting = ui.list_blineEdittttt[ui.back_scount].text()
+                avgtime = ui.list_alineEdittttt[ui.back_scount].text()
+                buystg = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
+                sellstg = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
+                bcount = ui.sd_oclineEdittt_01.text()
+                scount = ui.sd_oclineEdittt_02.text()
+                rcount = ui.sd_oclineEdittt_03.text()
+                optistd = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
                 weeks_train = ui.list_p1comboBoxxxx[ui.back_scount].currentText()
                 weeks_valid = ui.list_p2comboBoxxxx[ui.back_scount].currentText()
-                weeks_test  = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
+                weeks_test = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
                 benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
                 bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -198,7 +213,8 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
 
                 backQ.put((
                     betting, avgtime, starttime, endtime, buystg, sellstg, ui.dict_set['최적화기준값제한'], optistd,
-                    bcount, scount, rcount, ui.back_count, weeks_train, weeks_valid, weeks_test, benginesday, bengineeday
+                    bcount, scount, rcount, ui.back_count, weeks_train, weeks_valid, weeks_test, benginesday,
+                    bengineeday
                 ))
                 if bt_gubun == '주식':
                     gubun = 'S'
@@ -236,16 +252,16 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                     ui.csicon_alert = True
 
             elif 'GA' in back_name:
-                starttime   = ui.list_slineEdittttt[ui.back_scount].text()
-                endtime     = ui.list_elineEdittttt[ui.back_scount].text()
-                betting     = ui.list_blineEdittttt[ui.back_scount].text()
-                buystg      = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
-                sellstg     = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
-                optivars    = ui.list_vcomboBoxxxxx[ui.back_scount].currentText()
-                optistd     = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
+                starttime = ui.list_slineEdittttt[ui.back_scount].text()
+                endtime = ui.list_elineEdittttt[ui.back_scount].text()
+                betting = ui.list_blineEdittttt[ui.back_scount].text()
+                buystg = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
+                sellstg = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
+                optivars = ui.list_vcomboBoxxxxx[ui.back_scount].currentText()
+                optistd = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
                 weeks_train = ui.list_p1comboBoxxxx[ui.back_scount].currentText()
                 weeks_valid = ui.list_p2comboBoxxxx[ui.back_scount].currentText()
-                weeks_test  = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
+                weeks_test = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
                 benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
                 bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
 
@@ -294,23 +310,23 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                     ui.csicon_alert = True
 
             elif '전진분석' in back_name:
-                startday    = ui.list_sdateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
-                endday      = ui.list_edateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
-                starttime   = ui.list_slineEdittttt[ui.back_scount].text()
-                endtime     = ui.list_elineEdittttt[ui.back_scount].text()
-                betting     = ui.list_blineEdittttt[ui.back_scount].text()
-                buystg      = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
-                sellstg     = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
-                optivars    = ui.list_vcomboBoxxxxx[ui.back_scount].currentText()
+                startday = ui.list_sdateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
+                endday = ui.list_edateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
+                starttime = ui.list_slineEdittttt[ui.back_scount].text()
+                endtime = ui.list_elineEdittttt[ui.back_scount].text()
+                betting = ui.list_blineEdittttt[ui.back_scount].text()
+                buystg = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
+                sellstg = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
+                optivars = ui.list_vcomboBoxxxxx[ui.back_scount].currentText()
                 weeks_train = ui.list_p1comboBoxxxx[ui.back_scount].currentText()
                 weeks_valid = ui.list_p2comboBoxxxx[ui.back_scount].currentText()
-                weeks_test  = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
-                ccount      = ui.list_p4comboBoxxxx[ui.back_scount].currentText()
-                optistd     = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
+                weeks_test = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
+                ccount = ui.list_p4comboBoxxxx[ui.back_scount].currentText()
+                optistd = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
                 benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
                 bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
                 optunasampl = ui.op_comboBoxxxx_01.currentText()
-                optunafixv  = ui.op_lineEditttt_01.text()
+                optunafixv = ui.op_lineEditttt_01.text()
                 optunacount = ui.op_lineEditttt_02.text()
                 optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
@@ -337,37 +353,37 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 if back_name == '그리드 최적화 전진분석':
                     ui.proc_backtester_or = Process(
                         target=RollingWalkForwardTest,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '전진분석OR', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '전진분석OR', gubun)
                     )
                     ui.proc_backtester_or.start()
                 elif back_name == '그리드 검증 최적화 전진분석':
                     ui.proc_backtester_orv = Process(
                         target=RollingWalkForwardTest,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '전진분석ORV', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '전진분석ORV', gubun)
                     )
                     ui.proc_backtester_orv.start()
                 elif back_name == '그리드 교차검증 최적화 전진분석':
                     ui.proc_backtester_orvc = Process(
                         target=RollingWalkForwardTest,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '전진분석ORVC', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '전진분석ORVC', gubun)
                     )
                     ui.proc_backtester_orvc.start()
                 elif back_name == '베이지안 최적화 전진분석':
                     ui.proc_backtester_br = Process(
                         target=RollingWalkForwardTest,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '전진분석BR', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '전진분석BR', gubun)
                     )
                     ui.proc_backtester_br.start()
                 elif back_name == '베이지안 검증 최적화 전진분석':
                     ui.proc_backtester_brv = Process(
                         target=RollingWalkForwardTest,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '전진분석BRV', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '전진분석BRV', gubun)
                     )
                     ui.proc_backtester_brv.start()
                 elif back_name == '베이지안 교차검증 최적화 전진분석':
                     ui.proc_backtester_brvc = Process(
                         target=RollingWalkForwardTest,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '전진분석BRVC', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '전진분석BRVC', gubun)
                     )
                     ui.proc_backtester_brvc.start()
 
@@ -381,21 +397,21 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                     ui.csicon_alert = True
 
             elif '최적화' in back_name:
-                starttime   = ui.list_slineEdittttt[ui.back_scount].text()
-                endtime     = ui.list_elineEdittttt[ui.back_scount].text()
-                betting     = ui.list_blineEdittttt[ui.back_scount].text()
-                buystg      = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
-                sellstg     = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
-                optivars    = ui.list_vcomboBoxxxxx[ui.back_scount].currentText()
-                ccount      = ui.list_p4comboBoxxxx[ui.back_scount].currentText()
-                optistd     = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
+                starttime = ui.list_slineEdittttt[ui.back_scount].text()
+                endtime = ui.list_elineEdittttt[ui.back_scount].text()
+                betting = ui.list_blineEdittttt[ui.back_scount].text()
+                buystg = ui.list_bcomboBoxxxxx[ui.back_scount].currentText()
+                sellstg = ui.list_scomboBoxxxxx[ui.back_scount].currentText()
+                optivars = ui.list_vcomboBoxxxxx[ui.back_scount].currentText()
+                ccount = ui.list_p4comboBoxxxx[ui.back_scount].currentText()
+                optistd = ui.list_tcomboBoxxxxx[ui.back_scount].currentText()
                 weeks_train = ui.list_p1comboBoxxxx[ui.back_scount].currentText()
                 weeks_valid = ui.list_p2comboBoxxxx[ui.back_scount].currentText()
-                weeks_test  = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
+                weeks_test = ui.list_p3comboBoxxxx[ui.back_scount].currentText()
                 benginesday = ui.be_dateEdittttt_01.date().toString('yyyyMMdd')
                 bengineeday = ui.be_dateEdittttt_02.date().toString('yyyyMMdd')
                 optunasampl = ui.op_comboBoxxxx_01.currentText()
-                optunafixv  = ui.op_lineEditttt_01.text()
+                optunafixv = ui.op_lineEditttt_01.text()
                 optunacount = ui.op_lineEditttt_02.text()
                 optunaautos = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
 
@@ -422,73 +438,73 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
                 if back_name == '그리드 최적화':
                     ui.proc_backtester_o = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화O', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화O', gubun)
                     )
                     ui.proc_backtester_o.start()
                 elif back_name == '그리드 검증 최적화':
                     ui.proc_backtester_ov = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화OV', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화OV', gubun)
                     )
                     ui.proc_backtester_ov.start()
                 elif back_name == '그리드 교차검증 최적화':
                     ui.proc_backtester_ovc = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화OVC', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화OVC', gubun)
                     )
                     ui.proc_backtester_ovc.start()
                 elif back_name == '베이지안 최적화':
                     ui.proc_backtester_b = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화B', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화B', gubun)
                     )
                     ui.proc_backtester_b.start()
                 elif back_name == '베이지안 검증 최적화':
                     ui.proc_backtester_bv = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화BV', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화BV', gubun)
                     )
                     ui.proc_backtester_bv.start()
                 elif back_name == '베이지안 교차검증 최적화':
                     ui.proc_backtester_bvc = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화BVC', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화BVC', gubun)
                     )
                     ui.proc_backtester_bvc.start()
                 elif back_name == '그리드 최적화 테스트':
                     ui.proc_backtester_ot = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화OT', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화OT', gubun)
                     )
                     ui.proc_backtester_ot.start()
                 elif back_name == '그리드 검증 최적화 테스트':
                     ui.proc_backtester_ovt = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화OVT', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화OVT', gubun)
                     )
                     ui.proc_backtester_ovt.start()
                 elif back_name == '그리드 교차검증 최적화 테스트':
                     ui.proc_backtester_ovct = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화OVCT', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화OVCT', gubun)
                     )
                     ui.proc_backtester_ovct.start()
                 elif back_name == '베이지안 최적화 테스트':
                     ui.proc_backtester_bt = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화BT', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화BT', gubun)
                     )
                     ui.proc_backtester_bt.start()
                 elif back_name == '베이지안 검증 최적화 테스트':
                     ui.proc_backtester_bvt = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화BVT', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화BVT', gubun)
                     )
                     ui.proc_backtester_bvt.start()
                 elif back_name == '베이지안 교차검증 최적화 테스트':
                     ui.proc_backtester_bvct = Process(
                         target=Optimize,
-                        args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_cques, '최적화BVCT', gubun)
+                        args=(windowQ, backQ, soundQ, totalQ, liveQ, teleQ, ui.back_eques, ui.back_cques, '최적화BVCT', gubun)
                     )
                     ui.proc_backtester_bvct.start()
 
@@ -506,6 +522,7 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         else:
             StopScheduler(ui, True)
 
+
 def StopScheduler(ui, gubun=False):
     ui.back_scount = 0
     ui.back_schedul = False
@@ -515,6 +532,7 @@ def StopScheduler(ui, gubun=False):
         QTimer.singleShot(180 * 1000, ui.ProcessKill)
         os.system('shutdown /s /t 300')
 
+
 def sdbutton_clicked_03(ui):
     if ui.sd_pushButtonnn_01.text() == '주식':
         ui.ssButtonClicked_06()
@@ -522,6 +540,7 @@ def sdbutton_clicked_03(ui):
         ui.csButtonClicked_06()
     for progressBar in ui.list_progressBarrr:
         progressBar.setValue(0)
+
 
 def sdbutton_clicked_04(ui):
     con = sqlite3.connect(DB_STRATEGY)
@@ -537,6 +556,7 @@ def sdbutton_clicked_04(ui):
             ui.sd_dcomboBoxxxx_01.addItem(index)
             if i == 0:
                 ui.sd_dlineEditttt_01.setText(index)
+
 
 def sdbutton_clicked_05(ui, proc_query, queryQ):
     schedule_name = ui.sd_dlineEditttt_01.text()

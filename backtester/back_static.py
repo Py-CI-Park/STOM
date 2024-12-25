@@ -4,15 +4,15 @@ import random
 import pyupbit
 import sqlite3
 import operator
-import telegram
 import numpy as np
 import pandas as pd
+from numba import jit
 from traceback import print_exc
 from matplotlib import pyplot as plt
 from optuna_dashboard import run_server
 from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time, thread_decorator
-from utility.setting import ui_num, GRAPH_PATH, columns_btf, columns_bt, DICT_SET, DB_SETTING, DB_OPTUNA
+from utility.setting import ui_num, GRAPH_PATH, DB_SETTING, DB_OPTUNA
 
 
 @thread_decorator
@@ -21,6 +21,7 @@ def RunOptunaServer():
         run_server(DB_OPTUNA)
     except:
         pass
+
 
 def GetTradeInfo(gubun):
     if gubun == 1:
@@ -70,8 +71,9 @@ def GetTradeInfo(gubun):
         }
     return v
 
+
 def GetBackloadCodeQuery(code, days, starttime, endtime):
-    last      = len(days) - 1
+    last = len(days) - 1
     like_text = '( '
     for i, day in enumerate(days):
         if i != last:
@@ -83,12 +85,14 @@ def GetBackloadCodeQuery(code, days, starttime, endtime):
             f"`index` % 1000000 <= {endtime}"
     return query
 
+
 def GetBackloadDayQuery(day, code, starttime, endtime):
     query = f"SELECT * FROM '{code}' WHERE " \
             f"`index` LIKE '{day}%' and " \
             f"`index` % 1000000 >= {starttime} and " \
             f"`index` % 1000000 <= {endtime}"
     return query
+
 
 def GetMoneytopQuery(gubun, startday, endday, starttime, endtime):
     if gubun == 'S' and starttime < 90030:
@@ -104,6 +108,7 @@ def GetMoneytopQuery(gubun, startday, endday, starttime, endtime):
                 f"`index` % 1000000 >= {starttime} and " \
                 f"`index` % 1000000 <= {endtime}"
     return query
+
 
 def AddAvgData(df, r, avg_list):
     df['이평60'] = df['현재가'].rolling(window=60).mean().round(r)
@@ -139,35 +144,38 @@ def AddAvgData(df, r, avg_list):
             df2[f'당일거래대금N{avg}'] = df2['당일거래대금'].shift(avg - 1)
             df2['당일거래대금차이'] = df2['당일거래대금'] - df2[f'당일거래대금N{avg}']
             df['등락율각도'] = df2['등락율차이'].apply(lambda x: round(math.atan2(x * 10, avg) / (2 * math.pi) * 360, 2))
-            df['당일거래대금각도'] = df2['당일거래대금차이'].apply(lambda x: round(math.atan2(x / 100_000_000, avg) / (2 * math.pi) * 360, 2))
+            df['당일거래대금각도'] = df2['당일거래대금차이'].apply(
+                lambda x: round(math.atan2(x / 100_000_000, avg) / (2 * math.pi) * 360, 2))
     return df
+
 
 def AddTalib(arry_tick, k):
     arry_tick = np.r_['1', arry_tick, np.zeros((len(arry_tick), 14))]
-    bbu, bbm, bbl      = talib.BBANDS(   arry_tick[:, 1], timeperiod=k[0], nbdevup=k[1], nbdevdn=k[2], matype=k[3])
-    macd, macds, macdh = talib.MACD(     arry_tick[:, 1], fastperiod=k[4], slowperiod=k[5], signalperiod=k[6])
-    apo                = talib.APO(      arry_tick[:, 1], fastperiod=k[7], slowperiod=k[8], matype=k[9])
-    kama               = talib.KAMA(     arry_tick[:, 1], timeperiod=k[10])
-    rsi                = talib.RSI(      arry_tick[:, 1], timeperiod=k[11])
-    htsine, htlsine    = talib.HT_SINE(  arry_tick[:, 1])
-    htphase, htqudra   = talib.HT_PHASOR(arry_tick[:, 1])
-    obv                = talib.OBV(      arry_tick[:, 1], arry_tick[:, 10])
+    bbu, bbm, bbl = talib.BBANDS(arry_tick[:, 1], timeperiod=k[0], nbdevup=k[1], nbdevdn=k[2], matype=k[3])
+    macd, macds, macdh = talib.MACD(arry_tick[:, 1], fastperiod=k[4], slowperiod=k[5], signalperiod=k[6])
+    apo = talib.APO(arry_tick[:, 1], fastperiod=k[7], slowperiod=k[8], matype=k[9])
+    kama = talib.KAMA(arry_tick[:, 1], timeperiod=k[10])
+    rsi = talib.RSI(arry_tick[:, 1], timeperiod=k[11])
+    htsine, htlsine = talib.HT_SINE(arry_tick[:, 1])
+    htphase, htqudra = talib.HT_PHASOR(arry_tick[:, 1])
+    obv = talib.OBV(arry_tick[:, 1], arry_tick[:, 10])
     arry_tick[:, -14] = bbu
     arry_tick[:, -13] = bbm
     arry_tick[:, -12] = bbl
     arry_tick[:, -11] = macd
     arry_tick[:, -10] = macds
-    arry_tick[:, -9]  = macdh
-    arry_tick[:, -8]  = apo
-    arry_tick[:, -7]  = kama
-    arry_tick[:, -6]  = rsi
-    arry_tick[:, -5]  = htsine
-    arry_tick[:, -4]  = htlsine
-    arry_tick[:, -3]  = htphase
-    arry_tick[:, -2]  = htqudra
-    arry_tick[:, -1]  = obv
+    arry_tick[:, -9] = macdh
+    arry_tick[:, -8] = apo
+    arry_tick[:, -7] = kama
+    arry_tick[:, -6] = rsi
+    arry_tick[:, -5] = htsine
+    arry_tick[:, -4] = htlsine
+    arry_tick[:, -3] = htphase
+    arry_tick[:, -2] = htqudra
+    arry_tick[:, -1] = obv
     arry_tick = np.nan_to_num(arry_tick)
     return arry_tick
+
 
 def LoadOrderSetting(gubun):
     con = sqlite3.connect(DB_SETTING)
@@ -178,9 +186,10 @@ def LoadOrderSetting(gubun):
         df1 = pd.read_sql('SELECT * FROM coinbuyorder', con).set_index('index')
         df2 = pd.read_sql('SELECT * FROM coinsellorder', con).set_index('index')
     con.close()
-    buy_setting  = str(list(df1.iloc[0]))
+    buy_setting = str(list(df1.iloc[0]))
     sell_setting = str(list(df2.iloc[0]))
     return buy_setting, sell_setting
+
 
 def GetBuyStg(buystg, gubun):
     buystg = buystg.split('if 매수:')[0] + 'if 매수:\n    self.Buy(vars_turn, vars_key)'
@@ -190,6 +199,7 @@ def GetBuyStg(buystg, gubun):
         buystg = None
         if gubun == 0: print_exc()
     return buystg
+
 
 def GetSellStg(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split('if 매도:')[0] + 'if 매도:\n    self.Sell(vars_turn, vars_key, sell_cond)'
@@ -201,8 +211,10 @@ def GetSellStg(sellstg, gubun):
         if gubun == 0: print_exc()
     return sellstg, dict_cond
 
+
 def GetBuyConds(buy_conds, gubun):
-    buy_conds = 'if ' + ':\n    매수 = False\nelif '.join(buy_conds) + ':\n    매수 = False\nif 매수:\n    self.Buy(vars_turn, vars_key)'
+    buy_conds = 'if ' + ':\n    매수 = False\nelif '.join(
+        buy_conds) + ':\n    매수 = False\nif 매수:\n    self.Buy(vars_turn, vars_key)'
     try:
         buy_conds = compile(buy_conds, '<string>', 'exec')
     except:
@@ -210,8 +222,10 @@ def GetBuyConds(buy_conds, gubun):
         if gubun == 0: print_exc()
     return buy_conds
 
+
 def GetSellConds(sell_conds, gubun):
-    sell_conds = 'sell_cond = 0\nif ' + ':\n    매도 = True\nelif '.join(sell_conds) + ':\n    매도 = True\nif 매도:\n    self.Sell(vars_turn, vars_key, sell_cond)'
+    sell_conds = 'sell_cond = 0\nif ' + ':\n    매도 = True\nelif '.join(
+        sell_conds) + ':\n    매도 = True\nif 매도:\n    self.Sell(vars_turn, vars_key, sell_cond)'
     sell_conds, dict_cond = SetSellCond(sell_conds.split('\n'))
     try:
         sell_conds = compile(sell_conds, '<string>', 'exec')
@@ -220,21 +234,24 @@ def GetSellConds(sell_conds, gubun):
         if gubun == 0: print_exc()
     return sell_conds, dict_cond
 
+
 def SetSellCond(selllist):
-    count     = 1
-    sellstg   = ''
+    count = 1
+    sellstg = ''
     dict_cond = {0: '전략종료청산', 100: '분할매도', 200: '손절청산', 300: '패턴매도'}
     for i, text in enumerate(selllist):
         if '#' not in text and ('매도 = True' in text or '매도= True' in text or '매도 =True' in text or '매도=True' in text):
             dict_cond[count] = selllist[i - 1]
             sellstg = f"{sellstg}{text.split('매도')[0]}sell_cond = {count}\n"
-            count  += 1
+            count += 1
         if text != '':
             sellstg = f"{sellstg}{text}\n"
     return sellstg, dict_cond
 
+
 def GetBuyStgFuture(buystg, gubun):
-    buystg = buystg.split('if BUY_LONG or SELL_SHORT:')[0] + 'if BUY_LONG:\n    self.Buy(vars_turn, vars_key, "LONG")\nelif SELL_SHORT:\n    self.Buy(vars_turn, vars_key, "SHORT")'
+    buystg = buystg.split('if BUY_LONG or SELL_SHORT:')[
+                 0] + 'if BUY_LONG:\n    self.Buy(vars_turn, vars_key, "LONG")\nelif SELL_SHORT:\n    self.Buy(vars_turn, vars_key, "SHORT")'
     try:
         buystg = compile(buystg, '<string>', 'exec')
     except:
@@ -242,8 +259,10 @@ def GetBuyStgFuture(buystg, gubun):
         if gubun == 0: print_exc()
     return buystg
 
+
 def GetSellStgFuture(sellstg, gubun):
-    sellstg = 'sell_cond = 0\n' + sellstg.split("if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):")[0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell(vars_turn, vars_key, 'LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell(vars_turn, vars_key, 'SHORT', sell_cond)"
+    sellstg = 'sell_cond = 0\n' + sellstg.split("if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):")[
+        0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell(vars_turn, vars_key, 'LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell(vars_turn, vars_key, 'SHORT', sell_cond)"
     sellstg, dict_cond = SetSellCondFuture(sellstg.split('\n'))
     try:
         sellstg = compile(sellstg, '<string>', 'exec')
@@ -252,11 +271,14 @@ def GetSellStgFuture(sellstg, gubun):
         if gubun == 0: print_exc()
     return sellstg, dict_cond
 
+
 def GetBuyCondsFuture(is_long, buy_conds, gubun):
     if is_long:
-        buy_conds = 'if ' + ':\n    BUY_LONG = False\nelif '.join(buy_conds) + ':\n    BUY_LONG = False\nif BUY_LONG:\n    self.Buy(vars_turn, vars_key, "LONG")'
+        buy_conds = 'if ' + ':\n    BUY_LONG = False\nelif '.join(
+            buy_conds) + ':\n    BUY_LONG = False\nif BUY_LONG:\n    self.Buy(vars_turn, vars_key, "LONG")'
     else:
-        buy_conds = 'if ' + ':\n    SELL_SHORT = False\nelif '.join(buy_conds) + ':\n    SELL_SHORT = False\nif SELL_SHORT:\n    self.Buy(vars_turn, vars_key, "SHORT")'
+        buy_conds = 'if ' + ':\n    SELL_SHORT = False\nelif '.join(
+            buy_conds) + ':\n    SELL_SHORT = False\nif SELL_SHORT:\n    self.Buy(vars_turn, vars_key, "SHORT")'
     try:
         buy_conds = compile(buy_conds, '<string>', 'exec')
     except:
@@ -264,11 +286,14 @@ def GetBuyCondsFuture(is_long, buy_conds, gubun):
         if gubun == 0: print_exc()
     return buy_conds
 
+
 def GetSellCondsFuture(is_long, sell_conds, gubun):
     if is_long:
-        sell_conds = 'sell_cond = 0\nif ' + ':\n    SELL_LONG = True\nelif '.join(sell_conds) + ':\n    SELL_LONG = True\nif SELL_LONG:\n    self.Sell(vars_turn, vars_key, "SELL_LONG", sell_cond)'
+        sell_conds = 'sell_cond = 0\nif ' + ':\n    SELL_LONG = True\nelif '.join(
+            sell_conds) + ':\n    SELL_LONG = True\nif SELL_LONG:\n    self.Sell(vars_turn, vars_key, "SELL_LONG", sell_cond)'
     else:
-        sell_conds = 'sell_cond = 0\nif ' + ':\n    BUY_SHORT = True\nelif '.join(sell_conds) + ':\n    BUY_SHORT = True\nif BUY_SHORT:\n    self.Sell(vars_turn, vars_key, "BUY_SHORT", sell_cond)'
+        sell_conds = 'sell_cond = 0\nif ' + ':\n    BUY_SHORT = True\nelif '.join(
+            sell_conds) + ':\n    BUY_SHORT = True\nif BUY_SHORT:\n    self.Sell(vars_turn, vars_key, "BUY_SHORT", sell_cond)'
     sell_conds, dict_cond = SetSellCondFuture(sell_conds.split('\n'))
     try:
         sell_conds = compile(sell_conds, '<string>', 'exec')
@@ -277,23 +302,25 @@ def GetSellCondsFuture(is_long, sell_conds, gubun):
         if gubun == 0: print_exc()
     return sell_conds, dict_cond
 
+
 def SetSellCondFuture(selllist):
-    count     = 1
-    sellstg   = ''
+    count = 1
+    sellstg = ''
     dict_cond = {0: '전략종료청산', 100: '분할매도', 200: '손절청산', 300: '패턴매도'}
     for i, text in enumerate(selllist):
         if '#' not in text:
             if 'SELL_LONG = True' in text or 'SELL_LONG= True' in text or 'SELL_LONG =True' in text or 'SELL_LONG=True' in text:
                 dict_cond[count] = selllist[i - 1]
                 sellstg = f"{sellstg}{text.split('SELL_LONG')[0]}sell_cond = {count}\n"
-                count  += 1
+                count += 1
             elif 'BUY_SHORT = True' in text or 'BUY_SHORT= True' in text or 'BUY_SHORT =True' in text or 'BUY_SHORT=True' in text:
                 dict_cond[count] = selllist[i - 1]
                 sellstg = f"{sellstg}{text.split('BUY_SHORT')[0]}sell_cond = {count}\n"
-                count  += 1
+                count += 1
         if text != '':
             sellstg = f"{sellstg}{text}\n"
     return sellstg, dict_cond
+
 
 def SendTextAndStd(result, dict_train, dict_valid=None, exponential=False):
     gubun, ui_gubun, wq, mq, stdp, optistd, opti_turn, vars_turn, vars_key, vars_list, startday, endday, std_list, betting = result
@@ -337,18 +364,19 @@ def SendTextAndStd(result, dict_train, dict_valid=None, exponential=False):
             text2, std = GetText2('TEST', optistd, std_list, betting, dict_train)
             text3 = ''
         else:
-            text2, std   = GetText2('TOTAL', optistd, std_list, betting, dict_train)
+            text2, std = GetText2('TOTAL', optistd, std_list, betting, dict_train)
             text3, stdp_ = GetText3(False, std, stdp)
         wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'))
     else:
         stdp_ = stdp
-        std   = -2_147_483_648
+        std = -2_147_483_648
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'))
 
     if opti_turn != 2:
         mq.put((vars_turn, vars_key, std))
     return stdp_
+
 
 def GetText1(opti_turn, vars_turn, vars_list):
     prev_vars, curr_vars, next_vars = '', '', ''
@@ -363,6 +391,7 @@ def GetText1(opti_turn, vars_turn, vars_list):
         next_vars = f'<font color=white>{next_vars} </font>'
     return f'{prev_vars}{curr_vars}{next_vars}'
 
+
 def GetText2(gubun, optistd, std_list, betting, result):
     tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
     if tsp < 0 < tsg: tsg = -2_147_483_648
@@ -372,12 +401,14 @@ def GetText2(gubun, optistd, std_list, betting, result):
     text = f'<font color=white>{text}</font>' if tsg >= 0 else f'<font color=#96969b>{text}</font>'
     return text, std
 
+
 def GetText3(gubun, std, stdp):
     text = f'<font color=#f78645>MERGE[{std:,.2f}]</font>' if gubun else ''
     if std >= stdp:
         text = f'{text}<font color=#6eff6e>[기준값갱신]</font>' if std > stdp else f'{text}<font color=white>[기준값동일]</font>'
         stdp = std
     return text, stdp
+
 
 def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
     std = 0
@@ -394,28 +425,41 @@ def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
     2개  : 2.00, 1.0
     """
     for i in range(count):
-        ex   = (count - i) * 2 / count
+        ex = (count - i) * 2 / count
         std_ = train_data[i] * valid_data[i] * ex if exponential and count > 1 else train_data[i] * valid_data[i]
-        std  = std - std_ if train_data[i] < 0 and valid_data[i] < 0 else std + std_
-    if optistd == 'TP':     std = round(std / count, 2)
-    elif optistd == 'TG':   std = round(std / count / betting, 2)
-    elif optistd == 'TPI':  std = round(std / count, 2)
-    elif optistd == 'CAGR': std = round(std / count, 2)
-    elif optistd == 'PM':   std = round(std / count, 2)
-    elif optistd == 'P2M':  std = round(std / count, 2)
-    elif optistd == 'PAM':  std = round(std / count, 2)
-    elif optistd == 'PWM':  std = round(std / count, 2)
-    elif optistd == 'GM':   std = round(std / count, 2)
-    elif optistd == 'G2M':  std = round(std / count, 2)
-    elif optistd == 'GAM':  std = round(std / count, 2)
-    elif optistd == 'GWM':  std = round(std / count, 2)
+        std = std - std_ if train_data[i] < 0 and valid_data[i] < 0 else std + std_
+    if optistd == 'TP':
+        std = round(std / count, 2)
+    elif optistd == 'TG':
+        std = round(std / count / betting, 2)
+    elif optistd == 'TPI':
+        std = round(std / count, 2)
+    elif optistd == 'CAGR':
+        std = round(std / count, 2)
+    elif optistd == 'PM':
+        std = round(std / count, 2)
+    elif optistd == 'P2M':
+        std = round(std / count, 2)
+    elif optistd == 'PAM':
+        std = round(std / count, 2)
+    elif optistd == 'PWM':
+        std = round(std / count, 2)
+    elif optistd == 'GM':
+        std = round(std / count, 2)
+    elif optistd == 'G2M':
+        std = round(std / count, 2)
+    elif optistd == 'GAM':
+        std = round(std / count, 2)
+    elif optistd == 'GWM':
+        std = round(std / count, 2)
     return std
+
 
 def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     mdd_low, mdd_high, mhct_low, mhct_high, wr_low, wr_high, ap_low, ap_high, atc_low, atc_high, cagr_low, cagr_high, tpi_low, tpi_high = std_list
     tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
-    std_true = mdd_low <= mdd <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and \
-        ap_low <= ap <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high
+    std_true = (mdd_low <= mdd <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and
+                ap_low <= ap <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high)
     std, pm, p2m, pam, pwm, gm, g2m, gam, gwm, text = 0, 0, 0, 0, 0, 0, 0, 0, 0, ''
     std_false_point = -2_147_483_648
     if tc > 0:
@@ -474,74 +518,34 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
                 elif optistd == 'CAGR':
                     std = cagr
 
-    if optistd == 'TP':     text = pre_text
-    elif optistd == 'TG':   text = pre_text
-    elif optistd == 'TPI':  text = pre_text
-    elif optistd == 'CAGR': text = pre_text
-    elif optistd == 'PM':   text = f'{pre_text} PM[{pm:.2f}]'
-    elif optistd == 'P2M':  text = f'{pre_text} P2M[{p2m:.2f}]'
-    elif optistd == 'PAM':  text = f'{pre_text} PAM[{pam:.2f}]'
-    elif optistd == 'PWM':  text = f'{pre_text} PWM[{pwm:.2f}]'
-    elif optistd == 'GM':   text = f'{pre_text} GM[{gm:.2f}]'
-    elif optistd == 'G2M':  text = f'{pre_text} G2M[{g2m:.2f}]'
-    elif optistd == 'GAM':  text = f'{pre_text} GAM[{gam:.2f}]'
-    elif optistd == 'GWM':  text = f'{pre_text} GWM[{gwm:.2f}]'
+    if optistd == 'TP':
+        text = pre_text
+    elif optistd == 'TG':
+        text = pre_text
+    elif optistd == 'TPI':
+        text = pre_text
+    elif optistd == 'CAGR':
+        text = pre_text
+    elif optistd == 'PM':
+        text = f'{pre_text} PM[{pm:.2f}]'
+    elif optistd == 'P2M':
+        text = f'{pre_text} P2M[{p2m:.2f}]'
+    elif optistd == 'PAM':
+        text = f'{pre_text} PAM[{pam:.2f}]'
+    elif optistd == 'PWM':
+        text = f'{pre_text} PWM[{pwm:.2f}]'
+    elif optistd == 'GM':
+        text = f'{pre_text} GM[{gm:.2f}]'
+    elif optistd == 'G2M':
+        text = f'{pre_text} G2M[{g2m:.2f}]'
+    elif optistd == 'GAM':
+        text = f'{pre_text} GAM[{gam:.2f}]'
+    elif optistd == 'GWM':
+        text = f'{pre_text} GWM[{gwm:.2f}]'
     return std, text
 
-def GetBackResult2(df_tsg, df_bct, betting, day_count):
-    tc  = len(df_tsg)
-    if tc > 0:
-        atc  = round(tc / day_count, 1)
-        pc   = len(df_tsg[df_tsg['수익률'] >= 0])
-        mc   = len(df_tsg[df_tsg['수익률'] < 0])
-        wr   = round(pc / tc * 100, 2)
-        ah   = round(df_tsg['보유시간'].sum() / tc, 2)
-        ap   = round(df_tsg['수익률'].sum() / tc, 2)
-        tsg  = int(df_tsg['수익금'].sum())
-        df_p = df_tsg[df_tsg['수익률'] >= 0]
-        df_m = df_tsg[df_tsg['수익률'] < 0]
-        app  = df_p['수익률'].mean() if len(df_p) > 0 else 0
-        amp  = abs(df_m['수익률'].mean()) if len(df_m) > 0 else app
 
-        df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
-        try:
-            mhct  = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
-        except:
-            mhct  = 0
-        try:
-            onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
-        except:
-            onegm = betting
-        tsp    = round(tsg / onegm * 100, 2)
-        cname  = df_tsg['종목명'].iloc[0]
-        cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
-        tpi    = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
-
-        df_bct.index = df_bct.index.astype(str)
-        df_bct.sort_index(inplace=True)
-
-        df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
-        df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
-
-        columns = columns_btf if '포지션' in df_tsg.columns else columns_bt
-        df_tsg  = df_tsg[columns]
-
-        try:
-            array = np.array(df_tsg['수익금합계'], dtype=np.float64)
-            lower = np.argmax(np.maximum.accumulate(array) - array)
-            upper = np.argmax(array[:lower])
-            # noinspection PyTypeChecker
-            mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
-            mdd_  = int(abs(array[upper] - array[lower]))
-        except:
-            mdd   = abs(tsp)
-            mdd_  = abs(tsg)
-    else:
-        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-    return df_tsg, df_bct, [tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_]
-
-def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
+def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
             backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None):
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
@@ -648,15 +652,6 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
                 if len(df_tsg_) > 0:
                     endx_list.append(df_tsg_.index[-1])
 
-    telebot = None
-    try:
-        telebot = telegram.Bot(DICT_SET['텔레그램봇토큰'])
-    except:
-        pass
-
-    if telebot is not None and backname != '백테스트':
-        telebot.sendMessage(chat_id=DICT_SET['텔레그램사용자아이디'], text=f'{backname} 완료.')
-
     font_name = 'C:/Windows/Fonts/malgun.ttf'
     font_family = font_manager.FontProperties(fname=font_name).get_name()
     plt.rcParams['font.family'] = font_family
@@ -708,10 +703,6 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     plt.tight_layout()
     plt.savefig(f"{GRAPH_PATH}/{save_file_name}_.png")
 
-    if telebot is not None and backname != '백테스트':
-        with open(f"{GRAPH_PATH}/{save_file_name}_.png", 'rb') as image:
-            telebot.send_photo(chat_id=DICT_SET['텔레그램사용자아이디'], photo=image, caption=f'{save_file_name}_')
-
     if buy_vars is None:
         plt.figure(f'{backname} 결과', figsize=(12, 10))
     else:
@@ -748,9 +739,80 @@ def PltShow(gubun, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, startt
     plt.tight_layout()
     plt.savefig(f"{GRAPH_PATH}/{save_file_name}.png")
 
-    if telebot is not None and backname != '백테스트':
-        with open(f"{GRAPH_PATH}/{save_file_name}.png", 'rb') as image:
-            telebot.send_photo(chat_id=DICT_SET['텔레그램사용자아이디'], photo=image, caption=f'{save_file_name}')
+    teleQ.put(f'{backname} {save_file_name.split("_")[1]} 완료.')
+    teleQ.put(f"{GRAPH_PATH}/{save_file_name}_.png")
+    teleQ.put(f"{GRAPH_PATH}/{save_file_name}.png")
 
     if not schedul and not plotgraph:
         plt.show()
+
+
+def GetResultDataframe(ui_gubun, list_tsg, arry_bct):
+    columns1 = [
+        'index', '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+        '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간'
+    ]
+    columns2 = [
+        '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간', '매수가', '매도가',
+        '매수금액', '매도금액', '수익률', '수익금', '수익금합계', '매도조건', '추가매수시간'
+    ]
+    df_tsg = pd.DataFrame(list_tsg, columns=columns1)
+    df_tsg.set_index('index', inplace=True)
+    df_tsg.sort_index(inplace=True)
+    df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
+    df_tsg = df_tsg[columns2]
+    arry_bct = arry_bct[arry_bct[:, 1] > 0]
+    df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
+    df_bct.index = df_bct.index.astype(str)
+    return df_tsg, df_bct
+
+
+def AddMdd(arry_tsg, result):
+    """
+    보유시간, 매도시간, 수익률, 수익금, 수익금합계
+      0       1       2       3      4
+    """
+    try:
+        array = arry_tsg[:, 4]
+        lower = np.argmax(np.maximum.accumulate(array) - array)
+        upper = np.argmax(array[:lower])
+        # noinspection PyTypeChecker
+        mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + result[10]) * 100, 2)
+        mdd_  = int(abs(array[upper] - array[lower]))
+    except:
+        mdd   = abs(result[7])
+        mdd_  = abs(result[8])
+    result = result + (mdd, mdd_)
+    return result
+
+
+@jit(nopython=True, cache=True)
+def GetBackResult(arry_tsg, arry_bct, betting, day_count, ui_gubun):
+    """
+    보유시간, 매도시간, 수익률, 수익금, 수익금합계
+      0       1       2       3      4
+    """
+    tc = len(arry_tsg)
+    if tc > 0:
+        arry_p = arry_tsg[arry_tsg[:, 3] >= 0]
+        arry_m = arry_tsg[arry_tsg[:, 3] < 0]
+        atc    = round(tc / day_count, 1)
+        pc     = len(arry_p)
+        mc     = len(arry_m)
+        wr     = round(pc / tc * 100, 2)
+        ah     = round(arry_tsg[:, 0].sum() / tc, 2)
+        ap     = round(arry_tsg[:, 2].sum() / tc, 2)
+        tsg    = int(arry_tsg[:, 3].sum())
+        app    = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
+        amp    = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
+        try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max() if len(arry_bct) > 100 else arry_bct[:, 1].max()
+        except: mhct  = 0
+        try:    onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
+        except: onegm = betting
+        tsp  = round(tsg / onegm * 100, 2)
+        cagr = round(tsp / day_count * (250 if ui_gubun == 'S' else 365), 2)
+        tpi  = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
+    else:
+        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+    return tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi

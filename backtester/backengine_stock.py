@@ -1,18 +1,16 @@
 import gc
 import math
-# noinspection PyUnresolvedReferences
-import talib
 import sqlite3
 import datetime
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-# noinspection PyUnresolvedReferences
 from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, \
     GetBackloadDayQuery, AddAvgData, GetTradeInfo, AddTalib
 from utility.setting import DB_STOCK_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
 from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit
+
 
 # noinspection PyUnusedLocal
 class StockBackEngine:
@@ -81,8 +79,7 @@ class StockBackEngine:
         self.current_min  = []
         self.index        = 0
         self.indexn       = 0
-        self.dindex       = 0
-        self.mindex       = 0
+        self.indexb       = 0
         self.tick_count   = 0
         self.last         = 0
 
@@ -301,9 +298,9 @@ class StockBackEngine:
                 except:
                     pass
                 if gubun == '데이터크기':
-                    self.total_ticks += len_df_tick
                     self.bq.put((code, len_df_tick))
                 elif len_df_tick > 0:
+                    self.total_ticks += len_df_tick
                     df_tick = AddAvgData(df_tick, 3, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
@@ -325,7 +322,6 @@ class StockBackEngine:
                             len_df_tick += len(df_tick)
                         except:
                             pass
-                    self.total_ticks += len_df_tick
                     self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 code_list = []
@@ -342,6 +338,7 @@ class StockBackEngine:
                     except:
                         pass
                     if len_df_tick > 0:
+                        self.total_ticks += len_df_tick
                         df_tick = AddAvgData(df_tick, 3, avg_list)
                         arry_tick = np.array(df_tick)
                         if self.dict_set['보조지표사용']:
@@ -362,7 +359,6 @@ class StockBackEngine:
                         len_df_tick = len(df_tick)
                     except:
                         pass
-                    self.total_ticks += len_df_tick
                     self.bq.put((day, len_df_tick))
             elif gubun == '데이터로딩':
                 df_tick, len_df_tick = None, 0
@@ -372,6 +368,7 @@ class StockBackEngine:
                 except:
                     pass
                 if len_df_tick > 0:
+                    self.total_ticks += len_df_tick
                     df_tick = AddAvgData(df_tick, 3, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
@@ -405,6 +402,9 @@ class StockBackEngine:
                 self.wq.put((ui_num['S백테스트'], '학습된 패턴 데이터가 없어 백테스트를 중지합니다.'))
 
     def SetArrayTick(self, code, same_days, same_time):
+        if not self.dict_set['백테일괄로딩']:
+            self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
+
         if same_days and same_time:
             self.array_tick = self.dict_tik_ar[code]
         elif same_time:
@@ -440,12 +440,7 @@ class StockBackEngine:
             self.code = code
             self.name = self.dict_cn[self.code] if self.code in self.dict_cn.keys() else self.code
             self.total_count = 0
-
-            if not self.dict_set['백테일괄로딩']:
-                self.dict_tik_ar = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
-
             self.SetArrayTick(code, same_days, same_time)
-
             self.last = len(self.array_tick) - 1
             if self.last > 0:
                 for i, index in enumerate(self.array_tick[:, 0]):
@@ -475,7 +470,7 @@ class StockBackEngine:
             return strp_time('%Y%m%d%H%M%S', str(self.index))
 
         def Parameter_Previous(aindex, pre):
-            pindex = (self.indexn - pre) if pre != -1 else 매수틱번호
+            pindex = (self.indexn - pre) if pre != -1 else self.indexb
             return self.array_tick[pindex, aindex]
 
         def 현재가N(pre):
@@ -611,8 +606,8 @@ class StockBackEngine:
             elif tick == 1200:
                 return Parameter_Previous(48, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 return round(self.array_tick[sindex:eindex, 1].mean(), 3)
 
         def GetArrayIndex(aindex):
@@ -622,8 +617,8 @@ class StockBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 if gubun_ == 'max':
                     return self.array_tick[sindex:eindex, vindex].max()
                 elif gubun_ == 'min':
@@ -667,8 +662,8 @@ class StockBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else 매수틱번호 + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else 매수틱번호 + 1
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
                 dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -764,6 +759,7 @@ class StockBackEngine:
                     else:
                         _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
                             self.trade_info[vars_turn][vars_key].values()
+                        self.indexb = 매수틱번호
                         _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
                         if 수익률 > 최고수익률:
                             self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
@@ -797,6 +793,7 @@ class StockBackEngine:
                     else:
                         _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
                             self.trade_info[vars_turn][vars_key].values()
+                        self.indexb = 매수틱번호
                         _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
                         if 수익률 > 최고수익률:
                             self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
@@ -828,6 +825,7 @@ class StockBackEngine:
             else:
                 _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
                     self.trade_info[vars_turn][vars_key].values()
+                self.indexb = 매수틱번호
                 _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
                 if 수익률 > 최고수익률:
                     self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률

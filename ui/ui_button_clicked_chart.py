@@ -26,12 +26,12 @@ def ct_button_clicked_01(ui, wdzservQ, qlist):
                 return
 
         elif gubun == '업비트':
-            ui.proc_simulator_rv  = Process(target=ReceiverUpbit2, args=(qlist,), daemon=True)
-            ui.proc_simulator_td  = Process(target=TraderUpbit2, args=(qlist,), daemon=True)
+            ui.proc_simulator_rv = Process(target=ReceiverUpbit2, args=(qlist,), daemon=True)
+            ui.proc_simulator_td = Process(target=TraderUpbit2, args=(qlist,), daemon=True)
             ui.proc_strategy_coin = Process(target=StrategyUpbit, args=(qlist,), daemon=True)
         else:
-            ui.proc_simulator_rv  = Process(target=ReceiverBinanceFuture2, args=(qlist,), daemon=True)
-            ui.proc_simulator_td  = Process(target=TraderBinanceFuture2, args=(qlist,), daemon=True)
+            ui.proc_simulator_rv = Process(target=ReceiverBinanceFuture2, args=(qlist,), daemon=True)
+            ui.proc_simulator_td = Process(target=TraderBinanceFuture2, args=(qlist,), daemon=True)
             ui.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(qlist,), daemon=True)
 
         if gubun == '주식':
@@ -52,6 +52,7 @@ def ct_button_clicked_01(ui, wdzservQ, qlist):
             ui.ctButtonClicked_02()
             ui.ctButtonClicked_01()
 
+
 def ct_button_clicked_02(ui, wdzservQ):
     if ui.SimulatorProcessAlive():
         if ui.proc_simulator_rv is not None and ui.proc_simulator_rv.is_alive():
@@ -64,6 +65,7 @@ def ct_button_clicked_02(ui, wdzservQ):
         ui.stock_simulator_alive = False
     qtest_qwait(3)
     QMessageBox.information(ui.dialog_test, '알림', '시뮬레이터 엔진 종료 완료')
+
 
 def ct_button_clicked_03(ui, windowQ, wdzservQ, cstgQ):
     code = ui.ct_lineEdittttt_04.text()
@@ -80,10 +82,10 @@ def ct_button_clicked_03(ui, windowQ, wdzservQ, cstgQ):
         QMessageBox.critical(ui.dialog_test, '오류 알림', '시뮬레이터용 엔진이 미실행중입니다.\n')
         return
 
-    gubun      = '업비트' if 'KRW' in code else '바이낸스선물' if 'USDT' in code else '주식'
-    date       = ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
+    gubun = '업비트' if 'KRW' in code else '바이낸스선물' if 'USDT' in code else '주식'
+    date = ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
     start_time = int(ui.tt_lineEdittttt_01.text())
-    end_time   = int(ui.tt_lineEdittttt_02.text())
+    end_time = int(ui.tt_lineEdittttt_02.text())
     qtest_qwait(1)
 
     ui.ChartClear()
@@ -110,6 +112,7 @@ def ct_button_clicked_03(ui, windowQ, wdzservQ, cstgQ):
         ui.ct_test = 0
         ui.TickInput(code, gubun)
 
+
 def ct_button_clicked_04(ui):
     if not ui.test_pause:
         ui.test_pause = True
@@ -121,25 +124,31 @@ def ct_button_clicked_04(ui):
         gubun = '업비트' if 'KRW' in code else '바이낸스선물' if 'USDT' in code else '주식'
         ui.TickInput(code, gubun)
 
+
 def ct_button_clicked_05(ui):
     ui.df_test = None
+
 
 def ct_button_clicked_06(ui):
     ui.dialog_test.close()
 
+
 def ct_button_clicked_07(ui):
-    k = ['5', '2', '2', '0', '12', '26', '9', '12', '26', '0', '12', '26', '0', '5', '0.7', '0.5', '0.05', '30', '14', '10', '10']
+    k = ['5', '2', '2', '0', '12', '26', '9', '12', '26', '0', '12', '26', '0', '5', '0.7', '0.5', '0.05', '30', '14',
+         '10', '10']
     for i, linedit in enumerate(ui.factor_linedit_list):
         linedit.setText(k[i])
 
+
 def ct_button_clicked_08(ui):
     con = sqlite3.connect(DB_SETTING)
-    df  = pd.read_sql('SELECT * FROM back', con)
+    df = pd.read_sql('SELECT * FROM back', con)
     k_list = df['보조지표설정'][0]
     k_list = k_list.split(';')
     con.close()
     for i, linedit in enumerate(ui.factor_linedit_list):
         linedit.setText(k_list[i])
+
 
 def ct_button_clicked_09(ui, proc_query, queryQ):
     k_list = []
@@ -151,12 +160,14 @@ def ct_button_clicked_09(ui, proc_query, queryQ):
         queryQ.put(('설정디비', query))
     QMessageBox.information(ui.dialog_factor, '저장 완료', random.choice(famous_saying))
 
+
 def get_k_list(ui):
     k_list = []
     for linedit in ui.factor_linedit_list:
         k_list.append(linedit.text())
     k_list = [int(x) if '.' not in x else float(x) for x in k_list]
     return k_list
+
 
 def tick_put(ui, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ):
     try:
