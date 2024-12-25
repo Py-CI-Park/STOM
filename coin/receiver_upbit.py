@@ -29,7 +29,7 @@ class ZmqServ(Thread):
             self.sock.send_pyobj(data)
 
 
-class ReceiverUpbit:
+class UBReceiver:
     def __init__(self, qlist):
         """
         windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ

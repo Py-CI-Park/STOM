@@ -51,9 +51,6 @@ class SetMainMenu:
         self.ui.clv_tab = QWidget()
         self.ui.blv_tab = QWidget()
 
-        self.ui.ssd_tab = QWidget()
-        self.ui.sod_tab = QWidget()
-
         self.ui.progressBarrr = self.wc.setProgressBar(self.ui, vertical=True, style=style_pgbar)
         self.ui.at_pushButton = self.wc.setPushbutton('Alt')
         self.ui.tt_pushButton = self.wc.setPushbutton('T', color=6, click=self.ui.mnButtonClicked_02, shortcut='Alt+T', tip='수익집계')
@@ -125,6 +122,6 @@ class SetMainMenu:
         self.ui.od_pushButton.setGeometry(23, 505, 16, 15)
         self.ui.vv_pushButton.setGeometry(8, 525, 16, 15)
         self.ui.zz_pushButton.setGeometry(23, 525, 16, 15)
-        self.ui.progressBarrr.setGeometry(5, 548, 35, 209)
+        self.ui.progressBarrr.setGeometry(6, 545, 35, 212)
         self.ui.image_label1.setGeometry(1057, 478, 335, 105)
         self.ui.image_label2.setGeometry(1057, 756, 335, 602)

@@ -1,8 +1,8 @@
 import zmq
 import time
 from threading import Thread
-from utility.static import int_hms_utc, threading_timer
 from utility.setting import ui_num, DICT_SET
+from utility.static import int_hms_utc, threading_timer
 
 
 class ZmqRecv(Thread):
@@ -32,7 +32,7 @@ class ZmqRecv(Thread):
                 self.cstgQ.put(data)
 
 
-class ReceiverBinanceFutureClient:
+class BFReceiverClient:
     def __init__(self, qlist):
         """
         windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ

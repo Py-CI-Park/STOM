@@ -163,13 +163,15 @@ class WidgetCreater:
         return checkbox
 
     @staticmethod
-    def setLineedit(groupbox, enter=None, passhide=False, ltext=None, style=None, tip=None, font=None, aleft=False, visible=True, change=None):
+    def setLineedit(groupbox, enter=None, passhide=False, ltext=None, style=None, tip=None, font=None, aleft=False, acenter=False, visible=True, change=None):
         lineedit = QLineEdit(groupbox)
         lineedit.setVisible(visible)
         if aleft:
             lineedit.setAlignment(Qt.AlignLeft)
         else:
             lineedit.setAlignment(Qt.AlignRight)
+        if acenter:
+            lineedit.setAlignment(Qt.AlignCenter)
         if font is not None:
             lineedit.setFont(font)
         else:

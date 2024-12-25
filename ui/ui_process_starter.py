@@ -1,17 +1,16 @@
 import subprocess
 from multiprocessing import Process
-from coin.trader_binance_future import TraderBinanceFuture
-from coin.receiver_binance_future import ReceiverBinanceFuture
+from coin.trader_binance_future import BFTrader
+from coin.receiver_binance_future import BFReceiver
 from coin.strategy_binance_future import StrategyBinanceFuture
-from coin.receiver_binance_future_client import ReceiverBinanceFutureClient
-from coin.trader_upbit import TraderUpbit
-from coin.receiver_upbit import ReceiverUpbit
+from coin.receiver_binance_future_client import BFReceiverClient
+from coin.trader_upbit import UBTrader
+from coin.receiver_upbit import UBReceiver
 from coin.strategy_upbit import StrategyUpbit
-from coin.receiver_upbit_client import ReceiverUpbitClient
+from coin.receiver_upbit_client import UBReceiverClient
 from ui.set_logfile import SetLogFile
 from utility.setting import columns_tdf, columns_jgf, ui_num
 from utility.static import int_hms, int_hms_utc, now, strf_time
-from utility.stomlive import StomLiveClient
 
 
 def process_starter(ui, qlist):
@@ -53,10 +52,6 @@ def process_starter(ui, qlist):
     if ui.int_time < 90000 <= inthms:
         ui.time_sync = False
 
-    if ui.dict_set['스톰라이브'] and not ui.StomLiveProcessAlive():
-        ui.proc_stomlive = Process(target=StomLiveClient, args=(qlist,), daemon=True)
-        ui.proc_stomlive.start()
-
     if ui.dict_set['스톰라이브'] and ui.StomLiveProcessAlive():
         if ui.int_time < 93100 <= inthms:
             if ui.dict_set['주식트레이더']:   ui.StomliveScreenshot('S스톰라이브')
@@ -78,10 +73,10 @@ def CoinReceiverStart(ui, qlist):
     if not ui.CoinReceiverProcessAlive():
         if ui.dict_set['리시버공유'] < 2:
             ui.proc_receiver_coin = Process(
-                target=ReceiverUpbit if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFuture, args=(qlist,))
+                target=UBReceiver if ui.dict_set['거래소'] == '업비트' else BFReceiver, args=(qlist,))
         else:
             ui.proc_receiver_coin = Process(
-                target=ReceiverUpbitClient if ui.dict_set['거래소'] == '업비트' else ReceiverBinanceFutureClient,
+                target=UBReceiverClient if ui.dict_set['거래소'] == '업비트' else BFReceiverClient,
                 args=(qlist,))
         ui.proc_receiver_coin.start()
 
@@ -99,7 +94,7 @@ def CoinTraderStart(ui, qlist, windowQ):
                                         args=(qlist,), daemon=True)
         ui.proc_strategy_coin.start()
     if not ui.CoinTraderProcessAlive():
-        ui.proc_trader_coin = Process(target=TraderUpbit if ui.dict_set['거래소'] == '업비트' else TraderBinanceFuture,
+        ui.proc_trader_coin = Process(target=UBTrader if ui.dict_set['거래소'] == '업비트' else BFTrader,
                                       args=(qlist,))
         ui.proc_trader_coin.start()
         if ui.dict_set['거래소'] == '바이낸스선물':

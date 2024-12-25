@@ -39,7 +39,6 @@
           <option value="pandas.io.sql" />
           <option value="pythoncom.PumpWaitingMessages" />
           <option value="pywintypes.error" />
-          <option value="PyQt5.QtWidgets.currentChanged.*" />
         </list>
       </option>
     </inspection_tool>

@@ -2,11 +2,11 @@ import time
 import pyupbit
 import sqlite3
 import pandas as pd
-from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetUpbitHogaunit, GetUpbitPgSgSp, threading_timer
 from utility.setting import columns_cj, columns_tj, columns_jg, columns_td, columns_tt, ui_num, DB_TRADELIST, DICT_SET
+from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetUpbitHogaunit, GetUpbitPgSgSp, threading_timer
 
 
-class TraderUpbit:
+class UBTrader:
     def __init__(self, qlist):
         """
         windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ

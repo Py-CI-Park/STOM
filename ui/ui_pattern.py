@@ -5,7 +5,7 @@ import pandas as pd
 from PyQt5.QtWidgets import QMessageBox
 from ui.set_text import famous_saying
 from utility.setting import DB_STRATEGY, PATTERN_PATH
-from utility.static import pickle_read
+from utility.static import pickle_read, get_pattern_setup
 
 
 def pactivated_01(ui):
@@ -232,73 +232,3 @@ def get_pattern_text(ui):
     ]
     pattern_text = '^'.join(pattern_text)
     return pattern_text
-
-
-def get_pattern_setup(pattern_text):
-    pattern_setup = pattern_text.split('^')
-    dict_pattern = {
-        '패턴이름': pattern_setup[0],
-        '인식구간': int(pattern_setup[1]),
-        '조건구간': int(pattern_setup[2]),
-        '매수조건1': 1 if pattern_setup[3] == '1' else 0,
-        '매수조건2': float(pattern_setup[4]),
-        '매수조건3': 1 if pattern_setup[5] == '1' else 0,
-        '매도조건1': 1 if pattern_setup[6] == '1' else 0,
-        '매도조건2': float(pattern_setup[7]),
-        '매도조건3': 1 if pattern_setup[8] == '1' else 0
-    }
-    dict_pattern_buy = {}
-    if pattern_setup[9] == '1':
-        dict_pattern_buy['등락율'] = float(pattern_setup[22])
-    if pattern_setup[10] == '1':
-        dict_pattern_buy['당일거래대금'] = float(pattern_setup[23])
-    if pattern_setup[11] == '1':
-        dict_pattern_buy['체결강도'] = float(pattern_setup[24])
-    if pattern_setup[12] == '1':
-        dict_pattern_buy['초당매수금액'] = float(pattern_setup[25])
-    if pattern_setup[13] == '1':
-        dict_pattern_buy['초당매도금액'] = float(pattern_setup[26])
-    if pattern_setup[14] == '1':
-        dict_pattern_buy['순매수금액'] = float(pattern_setup[27])
-    if pattern_setup[15] == '1':
-        dict_pattern_buy['초당거래대금'] = float(pattern_setup[28])
-    if pattern_setup[16] == '1':
-        dict_pattern_buy['고저평균대비등락율'] = float(pattern_setup[29])
-    if pattern_setup[17] == '1':
-        dict_pattern_buy['매도1잔량금액'] = float(pattern_setup[30])
-    if pattern_setup[18] == '1':
-        dict_pattern_buy['매수1잔량금액'] = float(pattern_setup[31])
-    if pattern_setup[19] == '1':
-        dict_pattern_buy['매도총잔량금액'] = float(pattern_setup[32])
-    if pattern_setup[20] == '1':
-        dict_pattern_buy['매수총잔량금액'] = float(pattern_setup[33])
-    if pattern_setup[21] == '1':
-        dict_pattern_buy['매도수5호가총금액'] = float(pattern_setup[34])
-    dict_pattern_sell = {}
-    if pattern_setup[35] == '1':
-        dict_pattern_sell['등락율'] = float(pattern_setup[48])
-    if pattern_setup[36] == '1':
-        dict_pattern_sell['당일거래대금'] = float(pattern_setup[49])
-    if pattern_setup[37] == '1':
-        dict_pattern_sell['체결강도'] = float(pattern_setup[50])
-    if pattern_setup[38] == '1':
-        dict_pattern_sell['초당매수금액'] = float(pattern_setup[51])
-    if pattern_setup[39] == '1':
-        dict_pattern_sell['초당매도금액'] = float(pattern_setup[52])
-    if pattern_setup[40] == '1':
-        dict_pattern_sell['순매수금액'] = float(pattern_setup[53])
-    if pattern_setup[41] == '1':
-        dict_pattern_sell['초당거래대금'] = float(pattern_setup[54])
-    if pattern_setup[42] == '1':
-        dict_pattern_sell['고저평균대비등락율'] = float(pattern_setup[55])
-    if pattern_setup[43] == '1':
-        dict_pattern_sell['매도1잔량금액'] = float(pattern_setup[56])
-    if pattern_setup[44] == '1':
-        dict_pattern_sell['매수1잔량금액'] = float(pattern_setup[57])
-    if pattern_setup[45] == '1':
-        dict_pattern_sell['매도총잔량금액'] = float(pattern_setup[58])
-    if pattern_setup[46] == '1':
-        dict_pattern_sell['매수총잔량금액'] = float(pattern_setup[59])
-    if pattern_setup[47] == '1':
-        dict_pattern_sell['매도수5호가총금액'] = float(pattern_setup[60])
-    return dict_pattern, dict_pattern_buy, dict_pattern_sell

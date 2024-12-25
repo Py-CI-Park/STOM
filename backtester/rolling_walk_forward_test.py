@@ -279,7 +279,7 @@ class Total:
             tsg    = int(self.df_tsg['수익금'].sum())
             df_bct = self.df_bct.sort_values(by=['보유종목수'], ascending=False)
             mhct   = df_bct['보유종목수'].iloc[int(len(self.df_bct) * 0.01):].max()
-            onegm  = int(self.betting * mhct) if int(self.betting * mhct) > self.betting else self.betting
+            onegm  = df_bct['보유금액'].iloc[int(len(self.df_bct) * 0.01):].max()
             tsp    = round(tsg / onegm * 100, 2)
         else:
             wr     = 0
@@ -310,6 +310,10 @@ class Total:
             out_day_count = len(list(set(df_ttsg['index'].to_list())))
 
             df_tsg   = self.df_ttsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
+            df_tbc   = self.df_tbct.copy()
+            df_tbc['체결시간'] = df_tbc.index
+            df_tbc['체결시간'] = df_tbc['체결시간'].apply(lambda x: float(x))
+            arry_bct = np.array(df_tbc, dtype='float64')
             arry_tsg = np.array(df_tsg, dtype='float64')
             arry_bct = np.sort(arry_bct, axis=0)[::-1]
             result   = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, out_day_count)
@@ -481,7 +485,7 @@ class RollingWalkForwardTest:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 확인기간 {i + 1} : {test_days[0]} ~ {test_days[1]}'))
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 일자 추출 완료'))
 
-        arry_bct = np.zeros((len(df_mt), 3), dtype='int64')
+        arry_bct = np.zeros((len(df_mt), 3), dtype='float64')
         arry_bct[:, 0] = df_mt['index'].values
         data = ('백테정보', self.ui_gubun, list_days, None, arry_bct, betting, len(day_list))
         for q in self.bstq_list:

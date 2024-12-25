@@ -44,8 +44,8 @@ def cvjs_button_clicked_02(ui, proc_query, queryQ):
                 queryQ.put(('전략디비', f"DELETE FROM coinsell WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
                 queryQ.put(('전략디비', df, 'coinsell', 'append'))
+                QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
             ui.cvjs_pushButon_04.setStyleSheet(style_bc_st)
-            QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
 def cvjs_button_clicked_03(ui):

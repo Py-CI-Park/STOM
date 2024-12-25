@@ -102,7 +102,3 @@ def svo_button_clicked_04(ui, proc_query, queryQ):
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
                 queryQ.put(('전략디비', df, 'stocksellconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
-
-
-def svo_button_clicked_05(ui):
-    QMessageBox.critical(ui, '오류 알림', '범위 편집기 상태에서만 작동합니다.\n')

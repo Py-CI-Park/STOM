@@ -15,11 +15,11 @@ from backtester.backengine_stock import StockBackEngine
 from backtester.backengine_stock2 import StockBackEngine2
 from backtester.back_subtotal import BackSubTotal
 from ui.set_style import style_bc_dk
+from utility.static import thread_decorator, qtest_qwait
 from utility.setting import DB_STOCK_BACK, DB_COIN_BACK, ui_num, BACK_TEMP
-from utility.static import thread_decorator, timedelta_sec, now, qtest_qwait
 
 
-def backtest_engine_show(ui, gubun):
+def backengine_show(ui, gubun):
     table_list = []
     BACK_FILE = DB_STOCK_BACK if gubun == '주식' else DB_COIN_BACK
     con = sqlite3.connect(BACK_FILE)
@@ -46,7 +46,7 @@ def backtest_engine_show(ui, gubun):
 
 
 @thread_decorator
-def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
+def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
     ui.backtest_engine = True
     ui.startday   = int(ui.be_dateEdittttt_01.date().toString('yyyyMMdd'))
     ui.endday     = int(ui.be_dateEdittttt_02.date().toString('yyyyMMdd'))

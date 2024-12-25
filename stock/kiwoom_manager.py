@@ -6,10 +6,10 @@ import subprocess
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
 from multiprocessing import Process, Queue
-from trader_kiwoom import TraderKiwoom
-from receiver_kiwoom import ReceiverKiwoom
+from trader_kiwoom import KWTrader
+from receiver_kiwoom import KWReceiver
 from strategy_kiwoom import StrategyKiwoom
-from receiver_kiwoom_client import ReceiverKiwoomClient
+from receiver_kiwoom_client import KWReceiverClient
 from simulator_kiwoom import ReceiverKiwoom2, TraderKiwoom2
 from login_kiwoom.manuallogin import find_window
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
@@ -99,7 +99,7 @@ class ZmqServ(QThread):
         self.zctx.term()
 
 
-class KiwoomManager:
+class KWManager:
     def __init__(self):
         app = QApplication(sys.argv)
 
@@ -319,7 +319,7 @@ class KiwoomManager:
                 while True:
                     qtest_qwait(0.1)
                     if not self.StockReceiverProcessAlive():
-                        self.proc_receiver_stock = Process(target=ReceiverKiwoom, args=(self.qlist,), daemon=True)
+                        self.proc_receiver_stock = Process(target=KWReceiver, args=(self.qlist,), daemon=True)
                         self.proc_receiver_stock.start()
                         if self.OpenapiLoginWait():
                             with open('C:/OpenAPI/system/opcomms.ini') as file:
@@ -348,7 +348,7 @@ class KiwoomManager:
                 self.StockVersionUp()
 
             if not self.StockReceiverProcessAlive():
-                self.proc_receiver_stock = Process(target=ReceiverKiwoomClient, args=(self.qlist,), daemon=True)
+                self.proc_receiver_stock = Process(target=KWReceiverClient, args=(self.qlist,), daemon=True)
                 self.proc_receiver_stock.start()
 
     def StockTraderStart(self):
@@ -373,7 +373,7 @@ class KiwoomManager:
             while True:
                 qtest_qwait(1)
                 if not self.StockTraderProcessAlive():
-                    self.proc_trader_stock = Process(target=TraderKiwoom, args=(self.qlist,), daemon=True)
+                    self.proc_trader_stock = Process(target=KWTrader, args=(self.qlist,), daemon=True)
                     self.proc_trader_stock.start()
                     if self.OpenapiLoginWait():
                         break
@@ -392,8 +392,9 @@ class KiwoomManager:
         return self.proc_strategy_stock1 is not None and self.proc_strategy_stock1.is_alive()
 
     def SimulatorProcessAlive(self):
-        return self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and self.proc_simulator_td is not None and self.proc_simulator_td.is_alive()
+        return self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and \
+            self.proc_simulator_td is not None and self.proc_simulator_td.is_alive()
 
 
 if __name__ == '__main__':
-    KiwoomManager()
+    KWManager()

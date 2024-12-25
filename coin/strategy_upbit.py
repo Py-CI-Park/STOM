@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 from talib import stream
 from traceback import print_exc
-from ui.ui_pattern import get_pattern_setup
-# noinspection PyUnresolvedReferences
-from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetUpbitHogaunit, GetUpbitPgSgSp, pickle_read
 from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, PATTERN_PATH
+# noinspection PyUnresolvedReferences
+from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetUpbitHogaunit, GetUpbitPgSgSp, \
+    pickle_read, get_pattern_setup
 
 
 # noinspection PyUnusedLocal
@@ -727,10 +727,14 @@ class StrategyUpbit:
 
     def Buy(self, 종목코드, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이):
         if self.dict_set['코인장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None:
+            if self.indexn + 1 < self.dict_pattern1['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매수')
             if pattern not in self.pattern_buy1:
                 return
         elif self.dict_set['코인장중패턴인식'] and self.stg_change and self.pattern_buy2 is not None:
+            if self.indexn + 1 < self.dict_pattern2['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매수')
             if pattern not in self.pattern_buy2:
                 return
@@ -761,10 +765,14 @@ class StrategyUpbit:
 
     def Sell(self, 종목코드, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산):
         if self.dict_set['코인장초패턴인식'] and not self.stg_change and self.pattern_sell1 is not None:
+            if self.indexn + 1 < self.dict_pattern1['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매도')
             if pattern not in self.pattern_sell1:
                 return
         elif self.dict_set['코인장중패턴인식'] and self.stg_change and self.pattern_sell2 is not None:
+            if self.indexn + 1 < self.dict_pattern2['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매도')
             if pattern not in self.pattern_sell2:
                 return

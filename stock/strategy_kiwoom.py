@@ -8,10 +8,11 @@ import pandas as pd
 from talib import stream
 from traceback import print_exc
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from ui.ui_pattern import get_pattern_setup
-from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK, PATTERN_PATH
+from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jg, columns_gj, dict_order_ratio, DB_STOCK_TICK, \
+    PATTERN_PATH
 # noinspection PyUnresolvedReferences
-from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, GetHogaunit, pickle_read
+from utility.static import now, strf_time, strp_time, int_hms, timedelta_sec, GetUvilower5, GetKiwoomPgSgSp, \
+    GetHogaunit, pickle_read, get_pattern_setup
 
 
 # noinspection PyUnusedLocal
@@ -141,8 +142,6 @@ class StrategyKiwoom:
                     self.Strategy(data)
                 elif len(data) == 2:
                     self.UpdateTuple(data)
-                elif len(data) == 3:
-                    self.UpdateTriple(data)
             elif type(data) == str:
                 self.UpdateString(data)
                 if data == '프로세스종료':
@@ -201,15 +200,8 @@ class StrategyKiwoom:
             self.tuple_kosd = data
         elif gubun == '종목구분번호':
             self.dict_stgn = data
-            self.LoadDayMinData()
         elif gubun == '틱데이터저장':
             self.SaveTickData(data)
-
-    def LoadDayMinData(self):
-        pass
-
-    def UpdateTriple(self, data):
-        pass
 
     def UpdateString(self, data):
         if data == '매수전략중지':
@@ -226,9 +218,9 @@ class StrategyKiwoom:
 
     def Strategy(self, data):
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, \
-            라운드피겨위5호가이내, 초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량, \
-            매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
-            매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
+            라운드피겨위5호가이내, 초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, \
+            매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, \
+            매수호가5, 매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
             매도수5호가잔량합, 관심종목, 종목코드, 종목명, 틱수신시간 = data
 
         def Parameter_Previous(aindex, pre):
@@ -784,10 +776,14 @@ class StrategyKiwoom:
 
     def Buy(self, 종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이):
         if self.dict_set['주식장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None:
+            if self.indexn + 1 < self.dict_pattern1['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매수')
             if pattern not in self.pattern_buy1:
                 return
         elif self.dict_set['주식장중패턴인식'] and self.stg_change and self.pattern_buy2 is not None:
+            if self.indexn + 1 < self.dict_pattern2['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매수')
             if pattern not in self.pattern_buy2:
                 return
@@ -818,10 +814,14 @@ class StrategyKiwoom:
 
     def Sell(self, 종목코드, 종목명, 매도수량, 현재가, 매도호가1, 매수호가1, 강제청산):
         if self.dict_set['주식장초패턴인식'] and not self.stg_change and self.pattern_sell1 is not None:
+            if self.indexn + 1 < self.dict_pattern1['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매도')
             if pattern not in self.pattern_sell1:
                 return
         elif self.dict_set['주식장중패턴인식'] and self.stg_change and self.pattern_sell2 is not None:
+            if self.indexn + 1 < self.dict_pattern2['인식구간']:
+                return
             pattern = self.GetPattern(종목코드, '매도')
             if pattern not in self.pattern_sell2:
                 return

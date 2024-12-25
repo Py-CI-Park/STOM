@@ -7,12 +7,12 @@ import pyupbit
 import pandas as pd
 from multiprocessing import Process, Queue
 from binance import AsyncClient, BinanceSocketManager
+from utility.setting import columns_cj, columns_tj, columns_tdf, columns_jgf, columns_tt, ui_num, DB_TRADELIST, DICT_SET
 from utility.static import now, strf_time, timedelta_sec, int_hms_utc, GetBinanceShortPgSgSp, GetBinanceLongPgSgSp, \
     threading_timer
-from utility.setting import columns_cj, columns_tj, columns_tdf, columns_jgf, columns_tt, ui_num, DB_TRADELIST, DICT_SET
 
 
-class TraderBinanceFuture:
+class BFTrader:
     def __init__(self, qlist):
         """
         windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ

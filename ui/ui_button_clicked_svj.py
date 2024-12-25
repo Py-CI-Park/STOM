@@ -8,7 +8,8 @@ from backtester.pattern_modeling import PatternModeling
 from backtester.optimiz_conditions import OptimizeConditions
 from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from backtester.optimiz_genetic_algorithm import OptimizeGeneticAlgorithm
-from ui.ui_pattern import get_pattern_text, get_pattern_setup
+from ui.ui_pattern import get_pattern_text
+from utility.static import get_pattern_setup
 from ui.set_style import style_bc_by, style_bc_dk, style_bc_bs, style_bc_bd
 from ui.set_text import testtext, rwfttext, gaoptext, vedittxt, optitext, condtext, cedittxt, example_finder
 

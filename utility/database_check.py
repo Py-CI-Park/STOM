@@ -3,6 +3,10 @@ import sqlite3
 import pandas as pd
 from static import read_key, write_key
 
+os.makedirs('./_database', exist_ok=True)
+os.makedirs('./_pattern', exist_ok=True)
+os.makedirs('./_log', exist_ok=True)
+
 DB_SETTING   = './_database/setting.db'
 DB_TRADELIST = './_database/tradelist.db'
 DB_STRATEGY  = './_database/strategy.db'
@@ -33,6 +37,7 @@ delete_file_list = [
     './utility/db_update_20220713.py',
     './utility/db_update_20230126.py',
     './utility/db_update_gsjm_column.py',
+    './utility/stomlive.py',
     './db_update_20220529.bat',
     './db_update_20220713.bat',
     './db_update_20230126.bat',
@@ -48,6 +53,7 @@ delete_file_list = [
     './ui/ui_draw_chart_daymin.py',
     './ui/event_filter.py',
     './ui/ui_static.py',
+    './ui/ui_writer.py',
     './kiwoom_manager.py',
     './db_update_day_20240504.bat',
     './db_update_back_20240504.bat',

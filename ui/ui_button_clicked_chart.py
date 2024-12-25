@@ -157,7 +157,7 @@ def ct_button_clicked_09(ui, proc_query, queryQ):
     if proc_query.is_alive():
         query = f"UPDATE back SET 보조지표설정 = '{k_list}'"
         queryQ.put(('설정디비', query))
-    QMessageBox.information(ui.dialog_factor, '저장 완료', random.choice(famous_saying))
+        QMessageBox.information(ui.dialog_factor, '저장 완료', random.choice(famous_saying))
 
 
 def get_k_list(ui):

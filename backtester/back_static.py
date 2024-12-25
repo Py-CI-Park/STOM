@@ -812,7 +812,7 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
         tsg    = int(arry_tsg[:, 3].sum())
         app    = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
         amp    = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
-        try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max() if len(arry_bct) > 100 else arry_bct[:, 1].max()
+        try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max()
         except: mhct  = 0
         try:    onegm = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
         except: onegm = betting

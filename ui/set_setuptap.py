@@ -1,5 +1,5 @@
 from ui.set_style import style_bc_dk
-from PyQt5.QtWidgets import QGroupBox, QLabel, QTabWidget
+from PyQt5.QtWidgets import QGroupBox, QLabel, QTabWidget, QWidget
 
 
 class SetSetupTap:
@@ -10,6 +10,10 @@ class SetSetupTap:
 
     def set(self):
         self.ui.set_tapWidgett_01 = QTabWidget(self.ui.sj_tab)
+
+        self.ui.ssd_tab = QWidget()
+        self.ui.sod_tab = QWidget()
+        self.ui.cer_tab = QWidget()
 
         self.ui.sj_set_labelll_01 = QLabel('설정 관리', self.ui.sj_tab)
         self.ui.sj_set_comBoxx_01 = self.wc.setCombobox(self.ui.sj_tab, activated=self.ui.Activated_02)

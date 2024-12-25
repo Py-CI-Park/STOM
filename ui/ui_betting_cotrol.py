@@ -76,7 +76,7 @@ def bjs_button_clicked_02(ui, proc_query, queryQ):
     if proc_query.is_alive():
         query = f"UPDATE stockbuyorder SET 주식비중조절 = '{bjjj_text}'"
         queryQ.put(('설정디비', query))
-    QMessageBox.information(ui.dialog_bjjs, '저장 완료', random.choice(famous_saying))
+        QMessageBox.information(ui.dialog_bjjs, '저장 완료', random.choice(famous_saying))
     ui.dict_set['주식비중조절'] = [float(x) for x in bjjj_text.split(';')]
     ui.UpdateDictSet()
 
@@ -141,7 +141,7 @@ def bjc_button_clicked_02(ui, proc_query, queryQ):
     if proc_query.is_alive():
         query = f"UPDATE coinbuyorder SET 코인비중조절 = '{bjjj_text}'"
         queryQ.put(('설정디비', query))
-    QMessageBox.information(ui.dialog_bjjc, '저장 완료', random.choice(famous_saying))
+        QMessageBox.information(ui.dialog_bjjc, '저장 완료', random.choice(famous_saying))
     ui.dict_set['코인비중조절'] = [float(x) for x in bjjj_text.split(';')]
     ui.UpdateDictSet()
 

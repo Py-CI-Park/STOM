@@ -53,7 +53,7 @@ class Updater(QThread):
             self.signal.emit(data)
 
 
-class ReceiverKiwoomClient:
+class KWReceiverClient:
     def __init__(self, qlist):
         app = QApplication(sys.argv)
 

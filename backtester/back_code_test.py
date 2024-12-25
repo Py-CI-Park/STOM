@@ -56,7 +56,7 @@ class BackCodeTest:
                 _stg = stg.replace(factor, f'{factor};')
                 _stg_list = _stg.split(';')
                 for i, txt in enumerate(_stg_list):
-                    if factor in txt and _stg_list[i+1][0] != '(':
+                    if '#' not in txt and factor in txt and _stg_list[i+1][0] != '(':
                         print(f'{factor}(30), {factor}(30, 1) 형태로 사용하십시오.')
                         error = True
         if error:

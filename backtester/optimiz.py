@@ -491,7 +491,7 @@ class Optimize:
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
-        arry_bct = np.zeros((len(df_mt), 3), dtype='int64')
+        arry_bct = np.zeros((len(df_mt), 3), dtype='float64')
         arry_bct[:, 0] = df_mt['index'].values
         data = ('백테정보', self.ui_gubun, list_days, None, arry_bct, betting, len(day_list))
         for q in self.bstq_list:
@@ -805,8 +805,8 @@ class Optimize:
                 else:
                     trial_name = f'{j}'
 
-                fixed = ((only_buy and ((buy_first and k >= sell_num) or (not buy_first and k < buy_num))) or
-                         (only_sell and ((buy_first and k < sell_num) or (not buy_first and k >= buy_num))))
+                fixed = ((only_buy and ((buy_first and j >= sell_num) or (not buy_first and j < buy_num))) or
+                         (only_sell and ((buy_first and j < sell_num) or (not buy_first and j >= buy_num))))
                 varsint = type(var_[0][2]) == int
                 if not (var_[0][2] == 0 or j in optuna_fixvars or fixed):
                     if optuna_autostep:
