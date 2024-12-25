@@ -63,6 +63,7 @@ from ui.ui_button_clicked_cvjs import *
 from ui.ui_button_clicked_cvjb import *
 from ui.ui_button_clicked_svoa import *
 from ui.ui_button_clicked_zoom import *
+from ui.ui_button_clicked_etsj import *
 from ui.ui_button_clicked_ss_cs import *
 from ui.ui_button_clicked_chart import *
 
@@ -1085,6 +1086,8 @@ class MainWindow(QMainWindow):
     def sjButtonClicked_30(self): sj_button_cicked_30(self)
     def sjButtonClicked_31(self): sj_button_cicked_31(self)
     def sjButtonClicked_32(self): sj_button_cicked_32(self)
+    def sjButtonClicked_33(self): sj_button_cicked_33(self)
+    def sjButtonClicked_34(self): sj_button_cicked_34(self)
     # =================================================================================================================
     def bjsButtonClicked_01(self):       bjs_button_clicked_01(self)
     def bjsButtonClicked_02(self):       bjs_button_clicked_02(self)
@@ -1092,6 +1095,13 @@ class MainWindow(QMainWindow):
     def bjcButtonClicked_02(self):       bjc_button_clicked_02(self)
     def bjsCheckChanged_01(self, state): bjs_check_changed_01(self, state)
     def bjcCheckChanged_01(self, state): bjc_check_changed_01(self, state)
+    # =================================================================================================================
+    def setButtonClicked_01(self): set_button_clicked_01(self)
+    def setButtonClicked_02(self): set_button_clicked_02(self)
+    def setButtonClicked_03(self): set_button_clicked_03(self)
+    def cetButtonClicked_01(self): cet_button_clicked_01(self)
+    def cetButtonClicked_02(self): cet_button_clicked_02(self)
+    def cetButtonClicked_03(self): cet_button_clicked_03(self)
     # =================================================================================================================
     def StomLiveProcessAlive(self):     return stom_live_process_alive(self)
     def SimulatorProcessAlive(self):    return simulator_process_alive(self)

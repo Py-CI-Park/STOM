@@ -185,17 +185,17 @@ class CrossHair:
                         lymin, lymax = self.ui.ctpg_cvb[n].state['viewRange'][1]
                         if not real:
                             if mousePoint.x() < lxmin + (lxmax - lxmin) * 0.33:
-                                if self.ui.ct_checkBoxxxxx_31.isChecked():
+                                if self.ui.ct_checkBoxxxxx_01.isChecked():
                                     labell.setAnchor((1, 1))
                                     labell.setPos(lxmax, lymin)
-                                if self.ui.ct_checkBoxxxxx_22.isChecked():
+                                if self.ui.ct_checkBoxxxxx_02.isChecked():
                                     self.ui.ctpg_tik_legend[n].setAnchor((1, 0))
                                     self.ui.ctpg_tik_legend[n].setPos(lxmax, lymax)
                             else:
-                                if self.ui.ct_checkBoxxxxx_31.isChecked():
+                                if self.ui.ct_checkBoxxxxx_01.isChecked():
                                     labell.setAnchor((0, 1))
                                     labell.setPos(lxmin, lymin)
-                                if self.ui.ct_checkBoxxxxx_22.isChecked():
+                                if self.ui.ct_checkBoxxxxx_02.isChecked():
                                     self.ui.ctpg_tik_legend[n].setAnchor((0, 0))
                                     self.ui.ctpg_tik_legend[n].setPos(lxmin, lymax)
                         if n == len(self.ui.ctpg_tik_factors) - 1:

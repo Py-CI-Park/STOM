@@ -26,9 +26,9 @@ class Total:
         self.avgtime      = None
         self.df_back      = None
 
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         bc = 0
         index = 0
         start = now()
@@ -39,11 +39,13 @@ class Total:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], data))
                 self.df_back.loc[index] = data
                 index += 1
+
             elif data[0] == '백테완료':
                 bc += 1
                 self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
                 if bc == self.back_count:
                     break
+
             elif data[0] == '백테정보':
                 self.avgtime     = data[1]
                 self.startday    = data[2]
@@ -53,6 +55,7 @@ class Total:
                 self.buystg_name = data[6]
                 self.back_count  = data[7]
                 self.df_back     = pd.DataFrame(columns=['종목코드', '체결시간'] + data[8])
+
             elif data == '백테중지':
                 try:
                     self.bq.put('백테중지')

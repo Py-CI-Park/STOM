@@ -57,9 +57,9 @@ class Total:
         self.dict_v       = {}
         self.insertlist   = []
 
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         bc = 0
         sc = 0
         start = now()

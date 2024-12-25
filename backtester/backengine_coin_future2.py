@@ -64,7 +64,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
 
                 if self.opti_turn == 0: total_ticks += ticks
                 self.tq.put('백테완료')
-                exist_shm.close()
+                if exist_shm is not None: exist_shm.close()
             else:
                 break
 
@@ -262,6 +262,11 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         def 당일거래대금각도(tick, pre=0):
             return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
+        def 경과틱수(조건명):
+            if 조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
+                return self.indexn - self.dict_cond_indexn[종목코드][조건명]
+            return 0
+
         if self.dict_set['보조지표사용']:
             def BBU_N(pre):
                 return Parameter_Previous(-14, pre)
@@ -315,6 +320,12 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), self.dict_hg[self.code]
         self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
+
+        if self.dict_condition:
+            if 종목코드 not in self.dict_cond_indexn.keys():
+                self.dict_cond_indexn[종목코드] = {}
+            for k, v in self.dict_condition.items():
+                exec(v)
 
         if self.opti_turn == 1:
             for vturn in self.trade_info.keys():

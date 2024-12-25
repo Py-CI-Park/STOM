@@ -243,6 +243,8 @@ class SetSetupTap:
         self.ui.sj_save_Button_08 = self.wc.setPushbutton('저장하기', box=self.ui.sj_bs_groupBox_08, click=self.ui.sjButtonClicked_16)
 
         self.ui.sj_etc_pButton_01 = self.wc.setPushbutton('계정 텍스트 보기', box=self.ui.sj_bs_groupBox_02, click=self.ui.sjButtonClicked_17)
+        self.ui.sj_etc_pButton_02 = self.wc.setPushbutton('경과틱수 변수설정', box=self.ui.sj_bs_groupBox_05, click=self.ui.sjButtonClicked_33)
+        self.ui.sj_etc_pButton_03 = self.wc.setPushbutton('경과틱수 변수설정', box=self.ui.sj_bs_groupBox_06, click=self.ui.sjButtonClicked_34)
 
         self.ui.set_tapWidgett_01.setGeometry(7, 10, 1341, 740)
         self.ui.sj_set_labelll_01.setGeometry(847, 10, 50, 20)
@@ -438,3 +440,5 @@ class SetSetupTap:
         self.ui.sj_save_Button_08.setGeometry(1250, 25, 70, 20)
 
         self.ui.sj_etc_pButton_01.setGeometry(1175, 50, 145, 20)
+        self.ui.sj_etc_pButton_02.setGeometry(1175, 50, 145, 20)
+        self.ui.sj_etc_pButton_03.setGeometry(1175, 50, 145, 20)

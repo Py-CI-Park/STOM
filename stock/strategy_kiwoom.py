@@ -40,6 +40,8 @@ class StrategyKiwoom:
         self.dict_tik_ar   = {}
         self.dict_sgn_tik  = {}
         self.dict_buy_tik  = {}
+        self.dict_condition   = {}
+        self.dict_cond_indexn = {}
 
         self.UpdateStringategy()
 
@@ -130,6 +132,16 @@ class StrategyKiwoom:
                 self.pattern_buy2  = pickle_read(f'{file_name}_buy')
             if os.path.isfile(f'{file_name}_sell.pkl'):
                 self.pattern_sell2 = pickle_read(f'{file_name}_sell')
+
+        if self.dict_set['주식경과틱수설정'] != '':
+            def compile_condition(x):
+                return compile(f'if {x}:\n    self.dict_cond_indexn[종목코드][k] = self.indexn', '<string>', 'exec')
+            text_list  = self.dict_set['주식경과틱수설정'].split(';')
+            half_cnt   = int(len(text_list) / 2)
+            key_list   = text_list[:half_cnt]
+            value_list = text_list[half_cnt:]
+            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            self.dict_condition = dict(zip(key_list, value_list))
 
     def Start(self):
         if self.gubun == 7:
@@ -427,6 +439,11 @@ class StrategyKiwoom:
         def 전일비각도(tick, pre=0):
             return Parameter_Dgree(61, 9, tick, pre, 1)
 
+        def 경과틱수(조건명):
+            if 조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
+                return self.indexn - self.dict_cond_indexn[종목코드][조건명]
+            return 0
+
         if self.dict_set['보조지표사용']:
             def BBU_N(pre):
                 return Parameter_Previous(-14, pre)
@@ -576,6 +593,16 @@ class StrategyKiwoom:
 
         if 데이터길이 > 1800 and (self.dict_set['리시버공유'] == 2 or not self.dict_set['주식틱데이터저장']):
             self.dict_tik_ar[종목코드] = np.delete(self.dict_tik_ar[종목코드], 0, 0)
+
+        if self.dict_condition:
+            if 종목코드 not in self.dict_cond_indexn.keys():
+                self.dict_cond_indexn[종목코드] = {}
+            for k, v in self.dict_condition.items():
+                try:
+                    exec(v)
+                except:
+                    print_exc()
+                    self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - 경과틱수 연산오류')))
 
         if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0):
             if 종목코드 in self.df_jg.index:

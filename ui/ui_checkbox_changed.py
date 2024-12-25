@@ -123,8 +123,8 @@ def checkbox_changed_11(ui, state):
 
 def checkbox_changed_12(ui, state):
     if type(ui.focusWidget()) != QPushButton and state != Qt.Checked:
-        if ui.dialog_factor.focusWidget() == ui.ct_checkBoxxxxx_01:
-            ui.ct_checkBoxxxxx_01.nextCheckState()
+        if ui.dialog_factor.focusWidget() == ui.ft_checkBoxxxxx_01:
+            ui.ft_checkBoxxxxx_01.nextCheckState()
             QMessageBox.critical(ui.dialog_factor, '오류 알림', '현재가는 해제할 수 없습니다.\n')
 
 

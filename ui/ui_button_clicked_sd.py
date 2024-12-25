@@ -56,12 +56,14 @@ def backtest_engine_kill(ui):
         q.close()
     for q in ui.back_eques:
         q.close()
-    try:
-        for shm in ui.back_shm_list:
-            shm.close()
-            shm.unlink()
-    except:
-        pass
+    if ui.back_shm_list:
+        try:
+            ui.back_shm_list.reverse()
+            for shm in ui.back_shm_list:
+                shm.close()
+                shm.unlink()
+        except:
+            pass
     ui.back_eprocs = []
     ui.back_sprocs = []
     ui.back_eques = []

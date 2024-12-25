@@ -17,9 +17,9 @@ class Total:
         self.multi        = multi
         self.pattern_buy  = None
         self.pattern_sell = None
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         start = now()
         bc, tc, dbpc, dspc = 0, 0, 0, 0
         list_pattern_buy  = []
@@ -29,6 +29,7 @@ class Total:
             if data == '백테완료':
                 bc += 1
                 self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
+
             elif data[0] == '학습결과':
                 tc += 1
                 _, pattern_buy, pattern_sell = data

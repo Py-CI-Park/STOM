@@ -1546,6 +1546,14 @@ def sj_button_cicked_32(ui):
     ui.dialog_bjjc.show() if not ui.dialog_bjjc.isVisible() else ui.dialog_bjjc.close()
 
 
+def sj_button_cicked_33(ui):
+    ui.dialog_setsj.show() if not ui.dialog_setsj.isVisible() else ui.dialog_setsj.close()
+
+
+def sj_button_cicked_34(ui):
+    ui.dialog_cetsj.show() if not ui.dialog_cetsj.isVisible() else ui.dialog_cetsj.close()
+
+
 def LoadSettings(ui):
     ui.sj_set_comBoxx_01.clear()
     file_list = os.listdir(DB_PATH)

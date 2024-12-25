@@ -41,34 +41,34 @@ class DrawRealChart:
             self.ui.ctpg_tik_data    = {}
             self.ui.ctpg_tik_legend  = {}
             self.ui.ctpg_tik_factors = []
-            if self.ui.ct_checkBoxxxxx_01.isChecked():     self.ui.ctpg_tik_factors.append('현재가')
-            if self.ui.ct_checkBoxxxxx_02.isChecked():     self.ui.ctpg_tik_factors.append('체결강도')
-            if self.ui.ct_checkBoxxxxx_03.isChecked():     self.ui.ctpg_tik_factors.append('초당거래대금')
-            if self.ui.ct_checkBoxxxxx_04.isChecked():     self.ui.ctpg_tik_factors.append('초당체결수량')
-            if self.ui.ct_checkBoxxxxx_05.isChecked():     self.ui.ctpg_tik_factors.append('등락율')
-            if self.ui.ct_checkBoxxxxx_06.isChecked():     self.ui.ctpg_tik_factors.append('고저평균대비등락율')
-            if self.ui.ct_checkBoxxxxx_07.isChecked():     self.ui.ctpg_tik_factors.append('호가총잔량')
-            if self.ui.ct_checkBoxxxxx_08.isChecked():     self.ui.ctpg_tik_factors.append('1호가잔량')
-            if self.ui.ct_checkBoxxxxx_09.isChecked():     self.ui.ctpg_tik_factors.append('매도수5호가잔량합')
-            if self.ui.ct_checkBoxxxxx_10.isChecked():     self.ui.ctpg_tik_factors.append('당일거래대금')
-            if self.ui.ct_checkBoxxxxx_11.isChecked():     self.ui.ctpg_tik_factors.append('누적초당매도수수량')
-            if self.ui.ct_checkBoxxxxx_12.isChecked():     self.ui.ctpg_tik_factors.append('등락율각도')
-            if self.ui.ct_checkBoxxxxx_13.isChecked():     self.ui.ctpg_tik_factors.append('당일거래대금각도')
+            if self.ui.ft_checkBoxxxxx_01.isChecked():     self.ui.ctpg_tik_factors.append('현재가')
+            if self.ui.ft_checkBoxxxxx_02.isChecked():     self.ui.ctpg_tik_factors.append('체결강도')
+            if self.ui.ft_checkBoxxxxx_03.isChecked():     self.ui.ctpg_tik_factors.append('초당거래대금')
+            if self.ui.ft_checkBoxxxxx_04.isChecked():     self.ui.ctpg_tik_factors.append('초당체결수량')
+            if self.ui.ft_checkBoxxxxx_05.isChecked():     self.ui.ctpg_tik_factors.append('등락율')
+            if self.ui.ft_checkBoxxxxx_06.isChecked():     self.ui.ctpg_tik_factors.append('고저평균대비등락율')
+            if self.ui.ft_checkBoxxxxx_07.isChecked():     self.ui.ctpg_tik_factors.append('호가총잔량')
+            if self.ui.ft_checkBoxxxxx_08.isChecked():     self.ui.ctpg_tik_factors.append('1호가잔량')
+            if self.ui.ft_checkBoxxxxx_09.isChecked():     self.ui.ctpg_tik_factors.append('매도수5호가잔량합')
+            if self.ui.ft_checkBoxxxxx_10.isChecked():     self.ui.ctpg_tik_factors.append('당일거래대금')
+            if self.ui.ft_checkBoxxxxx_11.isChecked():     self.ui.ctpg_tik_factors.append('누적초당매도수수량')
+            if self.ui.ft_checkBoxxxxx_12.isChecked():     self.ui.ctpg_tik_factors.append('등락율각도')
+            if self.ui.ft_checkBoxxxxx_13.isChecked():     self.ui.ctpg_tik_factors.append('당일거래대금각도')
             if not coin:
-                if self.ui.ct_checkBoxxxxx_14.isChecked(): self.ui.ctpg_tik_factors.append('거래대금증감')
-                if self.ui.ct_checkBoxxxxx_15.isChecked(): self.ui.ctpg_tik_factors.append('전일비')
-                if self.ui.ct_checkBoxxxxx_16.isChecked(): self.ui.ctpg_tik_factors.append('회전율')
-                if self.ui.ct_checkBoxxxxx_17.isChecked(): self.ui.ctpg_tik_factors.append('전일동시간비')
-                if self.ui.ct_checkBoxxxxx_18.isChecked(): self.ui.ctpg_tik_factors.append('전일비각도')
+                if self.ui.ft_checkBoxxxxx_14.isChecked(): self.ui.ctpg_tik_factors.append('거래대금증감')
+                if self.ui.ft_checkBoxxxxx_15.isChecked(): self.ui.ctpg_tik_factors.append('전일비')
+                if self.ui.ft_checkBoxxxxx_16.isChecked(): self.ui.ctpg_tik_factors.append('회전율')
+                if self.ui.ft_checkBoxxxxx_17.isChecked(): self.ui.ctpg_tik_factors.append('전일동시간비')
+                if self.ui.ft_checkBoxxxxx_18.isChecked(): self.ui.ctpg_tik_factors.append('전일비각도')
         if self.ui.dict_set['보조지표사용']:
-            if self.ui.ct_checkBoxxxxx_19.isChecked():     self.ui.ctpg_tik_factors.append('BBAND')
-            if self.ui.ct_checkBoxxxxx_20.isChecked():     self.ui.ctpg_tik_factors.append('MACD')
-            if self.ui.ct_checkBoxxxxx_21.isChecked():     self.ui.ctpg_tik_factors.append('APO')
-            if self.ui.ct_checkBoxxxxx_22.isChecked():     self.ui.ctpg_tik_factors.append('KAMA')
-            if self.ui.ct_checkBoxxxxx_23.isChecked():     self.ui.ctpg_tik_factors.append('RSI')
-            if self.ui.ct_checkBoxxxxx_24.isChecked():     self.ui.ctpg_tik_factors.append('HT_SINE, HT_LSINE')
-            if self.ui.ct_checkBoxxxxx_25.isChecked():     self.ui.ctpg_tik_factors.append('HT_PHASE, HT_QUDRA')
-            if self.ui.ct_checkBoxxxxx_26.isChecked():     self.ui.ctpg_tik_factors.append('OBV')
+            if self.ui.ft_checkBoxxxxx_19.isChecked():     self.ui.ctpg_tik_factors.append('BBAND')
+            if self.ui.ft_checkBoxxxxx_20.isChecked():     self.ui.ctpg_tik_factors.append('MACD')
+            if self.ui.ft_checkBoxxxxx_21.isChecked():     self.ui.ctpg_tik_factors.append('APO')
+            if self.ui.ft_checkBoxxxxx_22.isChecked():     self.ui.ctpg_tik_factors.append('KAMA')
+            if self.ui.ft_checkBoxxxxx_23.isChecked():     self.ui.ctpg_tik_factors.append('RSI')
+            if self.ui.ft_checkBoxxxxx_24.isChecked():     self.ui.ctpg_tik_factors.append('HT_SINE, HT_LSINE')
+            if self.ui.ft_checkBoxxxxx_25.isChecked():     self.ui.ctpg_tik_factors.append('HT_PHASE, HT_QUDRA')
+            if self.ui.ft_checkBoxxxxx_26.isChecked():     self.ui.ctpg_tik_factors.append('OBV')
 
         if not coin:
             tuple_factor = (
@@ -177,7 +177,7 @@ class DrawRealChart:
                     ymin = self.ui.ctpg_tik_data[ci(factor)].min()
                     self.ui.ctpg_tik_item[cii()] = self.ui.ctpg[i].plot(x=self.ui.ctpg_tik_xticks[len_list[ci(factor)]:], y=self.ui.ctpg_tik_data[ci(factor)], pen=pen)
 
-                if self.ui.ct_checkBoxxxxx_22.isChecked():
+                if self.ui.ct_checkBoxxxxx_02.isChecked():
                     legend = pg.TextItem(anchor=(0, 0), color=color_fg_bt, border=color_bg_bt, fill=color_bg_ld)
                     legend.setFont(qfont12)
                     legend.setText(get_label_text(coin, self.ui.ctpg_tik_arry, -1, self.ui.ctpg_tik_factors[i], hms))
@@ -186,12 +186,12 @@ class DrawRealChart:
 
                 if i != 0: self.ui.ctpg[i].setXLink(self.ui.ctpg[0])
                 self.SetRangeCtpg(i, xmin, xmax, ymin, ymax)
-                if self.ui.ct_checkBoxxxxx_22.isChecked():
+                if self.ui.ct_checkBoxxxxx_02.isChecked():
                     self.ui.ctpg_tik_legend[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][0], self.ui.ctpg_cvb[i].state['viewRange'][1][1])
                 if i == chart_count - 1: break
 
             self.ui.ctpg_tik_name = name
-            if self.ui.ct_checkBoxxxxx_31.isChecked():
+            if self.ui.ct_checkBoxxxxx_01.isChecked():
                 if chart_count == 8:
                     self.crosshair.crosshair(True, coin, self.ui.ctpg[0], self.ui.ctpg[1], self.ui.ctpg[2],
                                              self.ui.ctpg[3], self.ui.ctpg[4], self.ui.ctpg[5], self.ui.ctpg[6],
@@ -291,8 +291,8 @@ class DrawRealChart:
         self.ui.ctpg[i].setRange(xRange=(xmin, xmax), yRange=(ymin, ymax))
 
     def SetPosLegendLabel(self, i, coin, hms):
-        if self.ui.ct_checkBoxxxxx_31.isChecked():
+        if self.ui.ct_checkBoxxxxx_01.isChecked():
             self.ui.ctpg_tik_labels[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][0], self.ui.ctpg_cvb[i].state['viewRange'][1][0])
-        if self.ui.ct_checkBoxxxxx_22.isChecked():
+        if self.ui.ct_checkBoxxxxx_02.isChecked():
             self.ui.ctpg_tik_legend[i].setPos(self.ui.ctpg_cvb[i].state['viewRange'][0][0], self.ui.ctpg_cvb[i].state['viewRange'][1][1])
             self.ui.ctpg_tik_legend[i].setText(get_label_text(coin, self.ui.ctpg_tik_arry, -1, self.ui.ctpg_tik_factors[i], hms))

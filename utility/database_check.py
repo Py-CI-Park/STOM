@@ -116,16 +116,21 @@ if 'stock' not in table_list:
         "주식장초전략종료시간", "주식장초잔고청산", "주식장초프로세스종료", "주식장초컴퓨터종료", "주식장중매수전략", "주식장중매도전략",
         "주식장중평균값계산틱수", "주식장중최대매수종목수", "주식장중전략종료시간", "주식장중잔고청산", "주식장중프로세스종료", "주식장중컴퓨터종료",
         "주식투자금고정", "주식장초투자금", "주식장중투자금", "주식손실중지", "주식손실중지수익률", "주식수익중지", "주식수익중지수익률",
-        "주식장초패턴인식", "주식장중패턴인식"
+        "주식장초패턴인식", "주식장중패턴인식", "주식경과틱수설정"
     ]
-    data = [0, 1, 1, '', '', 30, 10, 93000, 1, 1, 0, '', '', 30, 10, 152900, 1, 0, 0, 1, 20.0, 20.0, 0, 2.0, 0, 2.0, 0, 0]
+    data = [0, 1, 1, '', '', 30, 10, 93000, 1, 1, 0, '', '', 30, 10, 152900, 1, 0, 0, 1, 20.0, 20.0, 0, 2.0, 0, 2.0, 0, 0, '']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('stock', con)
 else:
     df = pd.read_sql('SELECT * FROM stock', con).set_index('index')
+    update = False
     if '주식장초패턴인식' not in df.columns:
         df['주식장초패턴인식'] = 0
         df['주식장중패턴인식'] = 0
+    if '주식경과틱수설정' not in df.columns:
+        df['주식경과틱수설정'] = ''
+        update = True
+    if update:
         df.to_sql('stock', con, if_exists='replace')
 
 if 'coin' not in table_list:
@@ -134,16 +139,22 @@ if 'coin' not in table_list:
         "코인장초전략종료시간", "코인장초잔고청산", "코인장초프로세스종료", "코인장초컴퓨터종료", "코인장중매수전략", "코인장중매도전략",
         "코인장중평균값계산틱수", "코인장중최대매수종목수", "코인장중전략종료시간", "코인장중잔고청산", "코인장중프로세스종료", "코인장중컴퓨터종료",
         "코인투자금고정", "코인장초투자금", "코인장중투자금", "코인손실중지", "코인손실중지수익률", "코인수익중지", "코인수익중지수익률",
-        "코인장초패턴인식", "코인장중패턴인식"
+        "코인장초패턴인식", "코인장중패턴인식", "코인경과틱수설정"
     ]
-    data = [0, 1, 1, '', '', 30, 10, 100000, 1, 0, 0, '', '', 30, 10, 234500, 1, 0, 0, 1, 1000.0, 1000.0, 0, 2.0, 0, 2.0, 0, 0]
+    data = [0, 1, 1, '', '', 30, 10, 100000, 1, 0, 0, '', '', 30, 10, 234500, 1, 0, 0, 1, 1000.0, 1000.0, 0, 2.0, 0, 2.0, 0, 0, '']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('coin', con)
 else:
     df = pd.read_sql('SELECT * FROM coin', con).set_index('index')
+    update = False
     if '코인장초패턴인식' not in df.columns:
         df['코인장초패턴인식'] = 0
         df['코인장중패턴인식'] = 0
+        update = True
+    if '코인경과틱수설정' not in df.columns:
+        df['코인경과틱수설정'] = ''
+        update = True
+    if update:
         df.to_sql('coin', con, if_exists='replace')
 
 if 'back' not in table_list:
@@ -161,6 +172,7 @@ if 'back' not in table_list:
     df.to_sql('back', con)
 else:
     df = pd.read_sql('SELECT * FROM back', con).set_index('index')
+    update = False
     if '옵튜나자동스탭' not in df.columns:
         df['백테엔진분류방법'] = '종목코드별 분류'
         df['백테스케쥴실행'] = 0
@@ -170,18 +182,24 @@ else:
         df['옵튜나고정변수'] = ''
         df['옵튜나실행횟수'] = 0
         df['옵튜나자동스탭'] = 0
+        update = True
     if '범위자동관리' not in df.columns:
         df['범위자동관리'] = 0
+        update = True
     if '주식일봉데이터' in df.columns:
         columns = ["주식일봉데이터", "주식분봉데이터", "주식분봉기간", "주식일봉데이터다운", "주식일봉다운컴종료", "일봉다운실행시간",
                    "코인일봉데이터", "코인분봉데이터", "코인분봉기간", "코인일봉데이터다운"]
         df.drop(columns=columns, inplace=True)
+        update = True
     if '보조지표사용' not in df.columns:
         df['보조지표사용'] = 0
         df['보조지표설정'] = '5;2;2;0;12;26;9;12;26;0;30;14'
+        update = True
     if '최적화로그기록안함' not in df.columns:
         df['최적화로그기록안함'] = 1
-    df.to_sql('back', con, if_exists='replace')
+        update = True
+    if update:
+        df.to_sql('back', con, if_exists='replace')
 
 if 'etc' not in table_list:
     columns = ["index", "테마", "인트로숨김", "저해상도", "휴무프로세스종료", "휴무컴퓨터종료", "창위치기억", "창위치", "스톰라이브", "프로그램종료", "팩터선택"]
@@ -190,15 +208,20 @@ if 'etc' not in table_list:
     df.to_sql('etc', con)
 else:
     df = pd.read_sql('SELECT * FROM etc', con).set_index('index')
+    update = False
     if '주식틱자동저장' in df.columns:
         df.drop(columns=['주식틱자동저장'], inplace=True)
+        update = True
     factor_text = df['팩터선택'][0]
     len_factor  = len(factor_text.split(';'))
     if len_factor < 26:
         df['팩터선택'] = '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1'
+        update = True
     if '인트로숨김' not in df.columns:
         df['인트로숨김'] = 0
-    df.to_sql('etc', con, if_exists='replace')
+        update = True
+    if update:
+        df.to_sql('etc', con, if_exists='replace')
 
 if 'stockbuyorder' not in table_list:
     columns = [
@@ -217,7 +240,7 @@ else:
     df = pd.read_sql('SELECT * FROM stockbuyorder', con).set_index('index')
     if '주식비중조절' not in df.columns:
         df['주식비중조절'] = '0;0;0;0;0;1;1;1;1;1'
-    df.to_sql('stockbuyorder', con, if_exists='replace')
+        df.to_sql('stockbuyorder', con, if_exists='replace')
 
 if 'stocksellorder' not in table_list:
     columns = [
@@ -249,7 +272,7 @@ else:
     df = pd.read_sql('SELECT * FROM coinbuyorder', con).set_index('index')
     if '코인비중조절' not in df.columns:
         df['코인비중조절'] = '0;0;0;0;0;1;1;1;1;1'
-    df.to_sql('coinbuyorder', con, if_exists='replace')
+        df.to_sql('coinbuyorder', con, if_exists='replace')
 
 if 'coinsellorder' not in table_list:
     columns = [

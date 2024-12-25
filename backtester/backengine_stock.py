@@ -80,7 +80,22 @@ class StockBackEngine:
         self.dict_pattern = {}
         self.dict_pattern_buy  = {}
         self.dict_pattern_sell = {}
+
+        self.dict_condition    = {}
+        self.dict_cond_indexn  = {}
+        self.SetDictCondition()
         self.MainLoop()
+
+    def SetDictCondition(self):
+        if self.dict_set['주식경과틱수설정'] != '':
+            def compile_condition(x):
+                return compile(f'if {x}:\n    self.dict_cond_indexn[종목코드][k] = self.indexn', '<string>', 'exec')
+            text_list  = self.dict_set['주식경과틱수설정'].split(';')
+            half_cnt   = int(len(text_list) / 2)
+            key_list   = text_list[:half_cnt]
+            value_list = text_list[half_cnt:]
+            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
         while True:
@@ -241,6 +256,7 @@ class StockBackEngine:
                 self.back_type = data[1]
             elif data[0] == '설정변경':
                 self.dict_set = data[1]
+                self.SetDictCondition()
             elif data[0] == '종목명':
                 self.dict_cn = data[1]
                 self.dict_kd = data[2]
@@ -434,7 +450,7 @@ class StockBackEngine:
             result, ticks, exist_shm = self.SetArrayTick(same_days, same_time)
             if result:
                 total_ticks += ticks
-                exist_shm.close()
+                if exist_shm is not None: exist_shm.close()
             else:
                 break
         self.tq.put(('전체틱수', int(total_ticks / 100)))
@@ -477,7 +493,7 @@ class StockBackEngine:
 
                 if self.opti_turn == 0: total_ticks += ticks
                 self.tq.put('백테완료')
-                exist_shm.close()
+                if exist_shm is not None: exist_shm.close()
             else:
                 break
 
@@ -696,6 +712,11 @@ class StockBackEngine:
         def 전일비각도(tick, pre=0):
             return Parameter_Dgree(61, 9, tick, pre, 1)
 
+        def 경과틱수(조건명):
+            if 조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
+                return self.indexn - self.dict_cond_indexn[종목코드][조건명]
+            return 0
+
         if self.dict_set['보조지표사용']:
             def BBU_N(pre):
                 return Parameter_Previous(-14, pre)
@@ -754,6 +775,12 @@ class StockBackEngine:
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         self.bhogainfo = bhogainfo[:self.dict_set['주식매수시장가잔량범위']]
         self.shogainfo = shogainfo[:self.dict_set['주식매도시장가잔량범위']]
+
+        if self.dict_condition:
+            if 종목코드 not in self.dict_cond_indexn.keys():
+                self.dict_cond_indexn[종목코드] = {}
+            for k, v in self.dict_condition.items():
+                exec(v)
 
         if self.opti_turn == 1:
             for vturn in self.trade_info.keys():

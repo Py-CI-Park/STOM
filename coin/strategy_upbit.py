@@ -38,6 +38,8 @@ class StrategyUpbit:
         self.dict_buyinfo  = {}
         self.dict_sgn_tik  = {}
         self.dict_buy_tik  = {}
+        self.dict_condition   = {}
+        self.dict_cond_indexn = {}
 
         self.tuple_gsjm  = ()
         self.list_buy    = []
@@ -125,6 +127,16 @@ class StrategyUpbit:
                 self.pattern_buy2  = pickle_read(f'{file_name}_buy')
             if os.path.isfile(f'{file_name}_sell.pkl'):
                 self.pattern_sell2 = pickle_read(f'{file_name}_sell')
+
+        if self.dict_set['코인경과틱수설정'] != '':
+            def compile_condition(x):
+                return compile(f'if {x}:\n    self.dict_cond_indexn[종목코드][k] = self.indexn', '<string>', 'exec')
+            text_list  = self.dict_set['코인경과틱수설정'].split(';')
+            half_cnt   = int(len(text_list) / 2)
+            key_list   = text_list[:half_cnt]
+            value_list = text_list[half_cnt:]
+            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
         self.windowQ.put((ui_num['C로그텍스트'], '시스템 명령 실행 알림 - 전략 연산 시작'))
@@ -389,6 +401,11 @@ class StrategyUpbit:
         def 당일거래대금각도(tick, pre=0):
             return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
+        def 경과틱수(조건명):
+            if 조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
+                return self.indexn - self.dict_cond_indexn[종목코드][조건명]
+            return 0
+
         if self.dict_set['보조지표사용']:
             def BBU_N(pre):
                 return Parameter_Previous(-14, pre)
@@ -529,6 +546,16 @@ class StrategyUpbit:
 
         데이터길이 = len(self.dict_tik_ar[종목코드])
         self.indexn = 데이터길이 - 1
+
+        if self.dict_condition:
+            if 종목코드 not in self.dict_cond_indexn.keys():
+                self.dict_cond_indexn[종목코드] = {}
+            for k, v in self.dict_condition.items():
+                try:
+                    exec(v)
+                except:
+                    print_exc()
+                    self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 경과틱수 연산오류'))
 
         if 체결강도평균_ != 0:
             if 종목코드 in self.df_jg.index:

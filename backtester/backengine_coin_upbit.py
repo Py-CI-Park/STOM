@@ -86,7 +86,22 @@ class CoinUpbitBackEngine:
         self.dict_pattern = {}
         self.dict_pattern_buy  = {}
         self.dict_pattern_sell = {}
+
+        self.dict_condition    = {}
+        self.dict_cond_indexn  = {}
+        self.SetDictCondition()
         self.MainLoop()
+
+    def SetDictCondition(self):
+        if self.dict_set['코인경과틱수설정'] != '':
+            def compile_condition(x):
+                return compile(f'if {x}:\n    self.dict_cond_indexn[종목코드][k] = self.indexn', '<string>', 'exec')
+            text_list  = self.dict_set['코인경과틱수설정'].split(';')
+            half_cnt   = int(len(text_list) / 2)
+            key_list   = text_list[:half_cnt]
+            value_list = text_list[half_cnt:]
+            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
         while True:
@@ -252,6 +267,7 @@ class CoinUpbitBackEngine:
                 self.tick_calcul = False
             elif data[0] == '설정변경':
                 self.dict_set = data[1]
+                self.SetDictCondition()
             elif data[0] == '데이터로딩':
                 self.DataLoad(data)
             elif data[0] == '백테데이터':
@@ -415,7 +431,7 @@ class CoinUpbitBackEngine:
                 self.lock.release()
                 array_tick = pickle_read(file_name)
 
-            self.name = self.dict_cn[self.code] if self.code in self.dict_cn.keys() else self.code
+            self.name = self.code
             if same_days and same_time:
                 self.array_tick = array_tick
             elif same_time:
@@ -442,7 +458,7 @@ class CoinUpbitBackEngine:
             result, ticks, exist_shm = self.SetArrayTick(same_days, same_time)
             if result:
                 total_ticks += ticks
-                exist_shm.close()
+                if exist_shm is not None: exist_shm.close()
             else:
                 break
         self.tq.put(('전체틱수', int(total_ticks / 100)))
@@ -485,7 +501,7 @@ class CoinUpbitBackEngine:
 
                 if self.opti_turn == 0: total_ticks += ticks
                 self.tq.put('백테완료')
-                exist_shm.close()
+                if exist_shm is not None: exist_shm.close()
             else:
                 break
 
@@ -683,6 +699,11 @@ class CoinUpbitBackEngine:
         def 당일거래대금각도(tick, pre=0):
             return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
+        def 경과틱수(조건명):
+            if 조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
+                return self.indexn - self.dict_cond_indexn[종목코드][조건명]
+            return 0
+
         if self.dict_set['보조지표사용']:
             def BBU_N(pre):
                 return Parameter_Previous(-14, pre)
@@ -738,6 +759,12 @@ class CoinUpbitBackEngine:
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
         self.shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
+
+        if self.dict_condition:
+            if 종목코드 not in self.dict_cond_indexn.keys():
+                self.dict_cond_indexn[종목코드] = {}
+            for k, v in self.dict_condition.items():
+                exec(v)
 
         if self.opti_turn == 1:
             for vturn in self.trade_info.keys():

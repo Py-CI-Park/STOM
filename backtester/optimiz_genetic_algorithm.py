@@ -44,9 +44,9 @@ class Total:
         self.total_count  = 0
         self.total_count2 = 0
 
-        self.Start()
+        self.MainLoop()
 
-    def Start(self):
+    def MainLoop(self):
         tt = 0
         sc = 0
         bc = 0
@@ -55,7 +55,11 @@ class Total:
         dict_dummy = {}
         while True:
             data = self.tq.get()
-            if data == '백테완료':
+            if data == '탐색완료':
+                tt += 1
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2, start))
+
+            elif data == '백테완료':
                 bc  += 1
                 if bc == self.back_count:
                     bc = 0
@@ -123,9 +127,6 @@ class Total:
                 self.back_count  = data[2]
             elif data[0] == '전체틱수':
                 self.total_count2 += data[1]
-            elif data == '탐색완료':
-                tt += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2, start))
             elif data == '백테중지':
                 self.mq.put('백테중지')
                 break
@@ -245,6 +246,8 @@ class OptimizeGeneticAlgorithm:
         if len(df_mt) == 0 or back_count == 0:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '날짜 지정이 잘못되었거나 데이터가 존재하지 않습니다.'))
             self.SysExit(True)
+
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '텍스트에디터 클리어'))
 
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
         day_list  = list(set(df_mt['일자'].to_list()))

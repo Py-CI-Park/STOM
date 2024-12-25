@@ -246,6 +246,9 @@ class BackCodeTest:
         def 초당거래대금평균(tick, pre=0):
             return 1
 
+        def 경과틱수(tick):
+            return 1
+
         def BBU_N(pre):
             return 1
 

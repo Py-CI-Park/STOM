@@ -57,6 +57,7 @@ class UpdateTextedit:
                     color = color_fg_dk
                 else:
                     color = color_fg_bt
+                if '텍스트에디터 클리어' in data[1]: self.ui.ss_textEditttt_09.clear()
                 self.ui.ss_textEditttt_09.setTextColor(color)
                 self.ui.ss_textEditttt_09.append(text)
                 if self.ui.dict_set['최적화로그기록안함']:
@@ -94,6 +95,7 @@ class UpdateTextedit:
                     color = color_fg_dk
                 else:
                     color = color_fg_bt
+                if '텍스트에디터 클리어' in data[1]: self.ui.cs_textEditttt_09.clear()
                 self.ui.cs_textEditttt_09.setTextColor(color)
                 self.ui.cs_textEditttt_09.append(text)
                 if self.ui.dict_set['최적화로그기록안함']:
