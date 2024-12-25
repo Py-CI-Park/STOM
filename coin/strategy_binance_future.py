@@ -382,7 +382,7 @@ class StrategyBinanceFuture:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (self.indexn - pre - tick) if pre != -1  else self.indexb - tick
+                sindex = (self.indexn - pre - tick - 1) if pre != -1  else self.indexb - tick - 1
                 eindex = (self.indexn - pre) if pre != -1  else self.indexb
                 dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)

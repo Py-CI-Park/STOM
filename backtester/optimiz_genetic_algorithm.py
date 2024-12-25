@@ -39,7 +39,7 @@ class Total:
         self.dict_v       = {}
 
         self.vars_lists   = None
-        self.stdp         = -2_147_483_648
+        self.stdp         = -2_000_000_000
         self.sub_total    = 0
         self.total_count  = 0
         self.total_count2 = 0
@@ -312,7 +312,7 @@ class OptimizeGeneticAlgorithm:
 
         k    = 1
         vc   = len(self.vars_list)
-        hstd = -2_147_483_648
+        hstd = -2_000_000_000
         goal = 2 ** int(round(vc / 2))
         self.opti_lists = []
         while self.total_count > goal:

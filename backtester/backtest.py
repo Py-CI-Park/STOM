@@ -62,7 +62,6 @@ class Total:
         self.Start()
 
     def Start(self):
-        tc = 0
         bc = 0
         sc = 0
         start = now()
@@ -70,18 +69,12 @@ class Total:
             data = self.tq.get()
             if data[0] == '백테완료':
                 bc += 1
-                tc += data[1]
                 self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
 
                 if bc == self.back_count:
                     bc = 0
-                    if tc > 0:
-                        tc = 0
-                        for q in self.bstq_list[:5]:
-                            q.put(('백테완료', '분리집계'))
-                    else:
-                        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'))
-                        self.mq.put('백테스트 완료')
+                    for q in self.bstq_list[:5]:
+                        q.put(('백테완료', '분리집계'))
 
             elif data == '집계완료':
                 sc += 1
@@ -156,6 +149,11 @@ class Total:
         if self.buystg_name == '벤치전략':
             self.mq.put('벤치테스트 완료')
         else:
+            if not list_tsg:
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'))
+                self.mq.put('백테스트 완료')
+                return
+
             self.df_tsg, self.df_bct = GetResultDataframe(self.ui_gubun, list_tsg, arry_bct)
             if self.blacklist: self.InsertBlacklist()
 

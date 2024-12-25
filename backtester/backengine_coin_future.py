@@ -28,7 +28,6 @@ class CoinFutureBackEngine:
 
         self.total_ticks  = 0
         self.total_secds  = 0
-        self.total_count  = 0
         self.sell_count   = 0
 
         self.pr           = None
@@ -461,7 +460,6 @@ class CoinFutureBackEngine:
         len_codes = len(self.code_list)
         for k, code in enumerate(self.code_list):
             self.code = self.name = code
-            self.total_count = 0
             self.SetArrayTick(code, same_days, same_time)
             self.last = len(self.array_tick) - 1
             if self.last > 0:
@@ -484,7 +482,7 @@ class CoinFutureBackEngine:
                     j += 1
                     if self.opti_turn in (1, 3) and j % 100 == 0: self.tq.put('탐색완료')
 
-            self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
+            self.tq.put(('백테완료', self.gubun, k+1, len_codes))
 
         if self.pattern: self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
         if self.profile: self.pr.print_stats(sort='cumulative')
@@ -668,7 +666,7 @@ class CoinFutureBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn - pre - tick) if pre != -1  else self.indexb - tick
+                sindex = (self.indexn - pre - tick - 1) if pre != -1  else self.indexb - tick - 1
                 eindex = (self.indexn - pre) if pre != -1  else self.indexb
                 dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
@@ -954,7 +952,6 @@ class CoinFutureBackEngine:
         보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vars_turn][vars_key].values()
         """
         if not self.pattern:
-            self.total_count += 1
             _, bp, sp, oc, _, _, _, bi, bdt = self.trade_info[vars_turn][vars_key].values()
             ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - bdt).total_seconds())
             bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp

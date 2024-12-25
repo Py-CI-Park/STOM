@@ -352,7 +352,8 @@ def SendTextAndStd(result, dict_train, dict_valid=None, exponential=False):
             valid_data.append(std)
 
         std = GetOptiValidStd(train_data, valid_data, optistd, betting, exponential)
-        text3, stdp_ = GetText3(True, std, stdp)
+        text3, stdp_ = GetText3(std, stdp)
+        if opti_turn == 2: text3 = ''
 
         wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text3}'))
         for text in train_text:
@@ -365,11 +366,11 @@ def SendTextAndStd(result, dict_train, dict_valid=None, exponential=False):
             text3 = ''
         else:
             text2, std = GetText2('TOTAL', optistd, std_list, betting, dict_train)
-            text3, stdp_ = GetText3(False, std, stdp)
+            text3, stdp_ = GetText3(std, stdp)
         wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}{text3}'))
     else:
         stdp_ = stdp
-        std = -2_147_483_648
+        std = -2_000_000_000
         text2 = '매수전략을 만족하는 경우가 없어 결과를 표시할 수 없습니다.'
         wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'))
 
@@ -402,8 +403,8 @@ def GetText2(gubun, optistd, std_list, betting, result):
     return text, std
 
 
-def GetText3(gubun, std, stdp):
-    text = f'<font color=#f78645>MERGE[{std:,.2f}]</font>' if gubun else ''
+def GetText3(std, stdp):
+    text = f'<font color=#f78645>MERGE[{std:,.2f}]</font>'
     if std >= stdp:
         text = f'{text}<font color=#6eff6e>[기준값갱신]</font>' if std > stdp else f'{text}<font color=white>[기준값동일]</font>'
         stdp = std
@@ -461,7 +462,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     std_true = (mdd_low <= mdd <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and
                 ap_low <= ap <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high)
     std, pm, p2m, pam, pwm, gm, g2m, gam, gwm, text = 0, 0, 0, 0, 0, 0, 0, 0, 0, ''
-    std_false_point = -2_147_483_648
+    std_false_point = -2_222_222_222
     if tc > 0:
         if 'TRAIN' in pre_text or 'TOTAL' in pre_text:
             if 'P' in optistd:

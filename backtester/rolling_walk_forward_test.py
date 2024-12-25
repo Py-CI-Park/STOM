@@ -70,7 +70,7 @@ class Total:
         self.vars_list    = None
         self.opti_turn    = None
         self.hstd_list    = None
-        self.stdp         = -2_147_483_648
+        self.stdp         = -2_000_000_000
         self.sub_total    = 0
         self.total_count  = 0
         self.total_count2 = 0
@@ -78,7 +78,6 @@ class Total:
         self.Start()
 
     def Start(self):
-        tc  = 0
         tt  = 0
         oc  = 0
         sc  = 0
@@ -97,11 +96,10 @@ class Total:
             if data[0] == '백테완료':
                 bc  += 1
                 tbc += 1
-                tc  += data[1]
                 if self.opti_turn == 1:
                     if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
                         if first_time is None: first_time = now()
-                        procn, cnt, total = data[2:]
+                        procn, cnt, total = data[1:]
                         if cnt == total:
                             fast_proc_list.append(procn)
                             if len(fast_proc_list) == divid_multi:
@@ -115,33 +113,29 @@ class Total:
 
                 if bc == self.back_count:
                     bc = 0
-                    if tc > 0:
-                        tc = 0
-                        if self.opti_turn == 1:
-                            if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
-                                time_90 = (divid_time - first_time).total_seconds()
-                                time_10 = (now() - divid_time).total_seconds()
-                                if time_90 * 5 / 90 < time_10:
-                                    k = 0
-                                    for procn, cnt in slow_proc_dict.items():
-                                        self.beq_list[procn].put(('데이터이동', cnt, fast_proc_list[k]))
-                                        k += 1
-                                first_time = None
-                                fast_proc_list = []
-                                slow_proc_dict = {}
-                            for q in self.bstq_list:
-                                q.put(('백테완료', '미분리집계'))
-                        else:
-                            for q in self.bstq_list[:5]:
-                                q.put(('백테완료', '분리집계'))
+                    if self.opti_turn == 1:
+                        if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
+                            time_90 = (divid_time - first_time).total_seconds()
+                            time_10 = (now() - divid_time).total_seconds()
+                            if time_90 * 5 / 90 < time_10:
+                                k = 0
+                                for procn, cnt in slow_proc_dict.items():
+                                    self.beq_list[procn].put(('데이터이동', cnt, fast_proc_list[k]))
+                                    k += 1
+                            first_time = None
+                            fast_proc_list = []
+                            slow_proc_dict = {}
+                        for q in self.bstq_list:
+                            q.put(('백테완료', '미분리집계'))
                     else:
-                        self.stdp = SendTextAndStd(self.GetSendData(), None)
+                        for q in self.bstq_list[:5]:
+                            q.put(('백테완료', '분리집계'))
 
             elif data == '집계완료':
                 sc += 1
                 if sc == 5:
                     sc = 0
-                    for q in self.bstq_list:
+                    for q in self.bstq_list[:5]:
                         q.put('결과분리')
 
             elif data == '분리완료':
@@ -150,13 +144,14 @@ class Total:
                     sc = 0
                     self.bstq_list[0].put('결과전송')
 
+            elif data[0] == '결과없음':
+                self.stdp = SendTextAndStd(self.GetSendData(), None)
+
             elif data[0] == '더미결과':
                 sc += 1
                 _, vars_key, _dict_dummy = data
                 if _dict_dummy:
                     for vars_turn in _dict_dummy.keys():
-                        if vars_turn not in dict_dummy.keys():
-                            dict_dummy[vars_turn] = {}
                         dict_dummy[vars_turn][vars_key] = 0
 
                 if sc == 20:
@@ -215,6 +210,7 @@ class Total:
                 self.vars_list = data[1]
                 self.opti_turn = data[2]
                 self.vars      = [var[1] for var in self.vars_list]
+                dict_dummy     = {i: {} for i, x in enumerate(self.vars_list) if len(x[0]) > 1}
                 if self.opti_turn != 4:
                     tt = 0
                     start = now()
@@ -224,7 +220,7 @@ class Total:
                 self.startday     = data[3]
                 self.endday       = data[4]
                 self.in_out_count = data[5]
-                self.stdp         = -2_147_483_648
+                self.stdp         = -2_000_000_000
                 self.total_count2 = 0
             elif data[0] == '횟수변경':
                 self.total_count = data[1]
@@ -273,12 +269,11 @@ class Total:
         return ['최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, self.opti_turn, vars_turn, vars_key, self.vars, self.startday, self.endday, self.std_list, self.betting]
 
     def Report(self, list_tsg, arry_bct, oc):
-        self.df_tsg, self.df_bct = GetResultDataframe(self.ui_gubun, list_tsg, arry_bct)
-        self.df_ttsg.append(self.df_tsg)
-        self.df_tbct.append(self.df_bct)
-
-        tc = len(self.df_tsg)
+        tc = len(list_tsg)
         if tc > 0:
+            self.df_tsg, self.df_bct = GetResultDataframe(self.ui_gubun, list_tsg, arry_bct)
+            self.df_ttsg.append(self.df_tsg)
+            self.df_tbct.append(self.df_bct)
             pc     = len(self.df_tsg[self.df_tsg['수익률'] >= 0])
             wr     = round(pc / tc * 100, 2)
             tsg    = int(self.df_tsg['수익금'].sum())
@@ -345,7 +340,6 @@ class Total:
             con.close()
             self.wq.put((ui_num[f'{self.ui_gubun.replace("F", "")}상세기록'], self.df_tsg))
 
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스트 완료'))
             self.sq.put(f'{self.backname} 백테스트를 완료하였습니다.')
             self.mq.put('백테스트 완료')
             PltShow('전진분석', self.teleQ, self.df_ttsg, self.df_tbct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
@@ -555,20 +549,15 @@ class RollingWalkForwardTest:
             hvar_list.append(vars_)
             hstd_list.append([startday, endday, hstd])
 
-        data = (ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 완료')
-        threading_timer(5, self.wq.put, data)
-        data = (ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스트 시작')
-        threading_timer(5, self.wq.put, data)
+        time.sleep(6)
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 완료'))
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스트 시작'))
 
         self.tq.put(('최적화정보', hstd_list))
         for i, days in enumerate(list_days):
             startday, endday = days[2]
             self.tq.put(('경우의수', total_count, back_count, startday, endday, out_count))
-            self.tq.put(('변수정보', hvar_list[i], 2))
-            for q in self.bstq_list:
-                q.put('백테시작', 2, i)
-            for q in self.beq_list:
-                q.put(('변수정보', hvar_list[i], 2, startday, endday))
+            self.PutData(('변수정보', hvar_list[i], 2, startday, endday, i))
             _ = mq.get()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 아웃샘플 백테스트 완료'))
 
@@ -583,7 +572,7 @@ class RollingWalkForwardTest:
         k = 0
         list_days_ = []
         dt_endday  = strp_time('%Y%m%d', str(endday))
-        startday_  = int(strf_time('%Y%m%d', timedelta_day(-(weeks_train + weeks_valid + weeks_test) * 7 + 1, dt_endday)))
+        startday_  = int(strf_time('%Y%m%d', timedelta_day(-(weeks_train + weeks_valid + weeks_test * (k + 1)) * 7 + 3, dt_endday)))
         while startday_ >= startday:
             train_days = [
                 startday_, int(strf_time('%Y%m%d', timedelta_day(-weeks_test * (k + 1) * 7, dt_endday)))
@@ -592,23 +581,23 @@ class RollingWalkForwardTest:
             if 'VC' in self.backname:
                 for i in range(int(weeks_train / weeks_valid) + 1):
                     valid_days_.append([
-                        int(strf_time('%Y%m%d', timedelta_day(-(weeks_valid * (i + 1) + weeks_test * (k + 1)) * 7 + 1, dt_endday))),
+                        int(strf_time('%Y%m%d', timedelta_day(-(weeks_valid * (i + 1) + weeks_test * (k + 1)) * 7 + 3, dt_endday))),
                         int(strf_time('%Y%m%d', timedelta_day(-(weeks_valid * i + weeks_test * (k + 1)) * 7, dt_endday)))
                     ])
             elif 'V' in self.backname:
                 valid_days_.append([
-                    int(strf_time('%Y%m%d', timedelta_day(-(weeks_valid + weeks_test * (k + 1)) * 7 + 1, dt_endday))),
+                    int(strf_time('%Y%m%d', timedelta_day(-(weeks_valid + weeks_test * (k + 1)) * 7 + 3, dt_endday))),
                     int(strf_time('%Y%m%d', timedelta_day(-(weeks_test * (k + 1)) * 7, dt_endday)))
                 ])
             else:
                 valid_days_ = None
             test_days = [
-                int(strf_time('%Y%m%d', timedelta_day(-(weeks_test * (k + 1)) * 7 + 1, dt_endday))),
+                int(strf_time('%Y%m%d', timedelta_day(-(weeks_test * (k + 1)) * 7 + 3, dt_endday))),
                 int(strf_time('%Y%m%d', timedelta_day(-(weeks_test * k) * 7, dt_endday)))
             ]
             list_days_.append([train_days, valid_days_, test_days])
             k += 1
-            startday_ = int(strf_time('%Y%m%d', timedelta_day(-(weeks_train + weeks_valid + weeks_test * (k + 1)) * 7 + 1)))
+            startday_ = int(strf_time('%Y%m%d', timedelta_day(-(weeks_train + weeks_valid + weeks_test * (k + 1)) * 7 + 3, dt_endday)))
 
         list_days = []
         for train_days_, valid_days_, test_days_ in list_days_:
@@ -674,11 +663,7 @@ class RollingWalkForwardTest:
 
     def OptimizeGrid(self, mq, total_count, back_count, ccount, vars_type, vars_, startday, endday, i):
         self.tq.put(('경우의수', total_count, back_count, startday, endday, i))
-        self.tq.put(('변수정보', vars_, 0))
-        for q in self.bstq_list:
-            q.put(('백테시작', 0, i))
-        for q in self.beq_list:
-            q.put(('변수정보', vars_, 0, startday, endday))
+        self.PutData(('변수정보', vars_, 0, startday, endday, i))
 
         hstd = 0
         data = mq.get()
@@ -698,11 +683,7 @@ class RollingWalkForwardTest:
             dict_turn_hstd = {i: hstd for i, x in enumerate(vars_) if len(x[0]) > 1}
             total_change   = 0
 
-            self.tq.put(('변수정보', vars_, 1))
-            for q in self.bstq_list:
-                q.put(('백테시작', 1, i))
-            for q in self.beq_list:
-                q.put(('변수정보', vars_, 1, startday, endday))
+            self.PutData(('변수정보', vars_, 1, startday, endday, i))
 
             for _ in range(receiv_count):
                 data = mq.get()
@@ -786,11 +767,7 @@ class RollingWalkForwardTest:
 
             str_simple_vars = str(simple_vars)
             if str_simple_vars not in self.dict_simple_vars.keys():
-                self.tq.put(('변수정보', optuna_vars, 4))
-                for qq in self.bstq_list:
-                    qq.put(('백테시작', 4, i))
-                for qq in self.beq_list:
-                    qq.put(('변수정보', optuna_vars, 4, startday, endday))
+                self.PutData(('변수정보', optuna_vars, 4, startday, endday, i))
                 data_ = mq.get()
                 if type(data_) == str:
                     ostd = 0
@@ -815,6 +792,13 @@ class RollingWalkForwardTest:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{k}]의 최적값 변경 [{var}]'))
 
         return vars_, self.study.best_value
+
+    def PutData(self, data):
+        self.tq.put(data[:3])
+        for q in self.bstq_list:
+            q.put(('백테시작', data[2], data[-1]))
+        for q in self.beq_list:
+            q.put(data[:5])
 
     def SysExit(self, cancel):
         for proc in self.bst_procs:

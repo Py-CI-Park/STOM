@@ -7,8 +7,8 @@ class BackSubTotal:
     def __init__(self, vk, tq, bctqs, buystd):
         self.vars_key   = vk
         self.tq         = tq
-        self.bctqs      = bctqs
-        self.bctq       = self.bctqs[self.vars_key]
+        self.bstqs      = bctqs
+        self.bstq       = self.bstqs[self.vars_key]
         self.buystd     = buystd
 
         self.opti_turn  = 0
@@ -33,7 +33,7 @@ class BackSubTotal:
 
     def MainLoop(self):
         while True:
-            data = self.bctq.get()
+            data = self.bstq.get()
             if data[0] == '백테결과':
                 self.CollectData(data)
             elif data[0] == '백테완료':
@@ -66,7 +66,7 @@ class BackSubTotal:
                     self.in_out_cnt = None
                 else:
                     self.in_out_cnt = data[2]
-            if self.complete1 and self.bctq.empty():
+            if self.complete1 and self.bstq.empty():
                 if self.separation == '분리집계':
                     self.tq.put('집계완료')
                 else:
@@ -74,7 +74,7 @@ class BackSubTotal:
                     self.SendSubTotal1()
                 self.complete1 = False
 
-            if self.complete2 and self.bctq.empty():
+            if self.complete2 and self.bstq.empty():
                 if self.opti_turn != 2:
                     self.SendSubTotal2()
                 else:
@@ -108,8 +108,10 @@ class BackSubTotal:
         self.ddict_bct[vars_turn][vars_key] = arry_bct
 
     def DivideData(self):
-        if self.ddict_tsg:
-            self.bctqs[0].put(('분리결과', self.ddict_tsg[0][0], self.ddict_bct[0][0]))
+        try:
+            self.bstqs[0].put(('분리결과', self.ddict_tsg[0][0], self.ddict_bct[0][0]))
+        except:
+            pass
         self.tq.put('분리완료')
 
     def ConcatData(self, data):
@@ -148,6 +150,10 @@ class BackSubTotal:
                         self.Result(0, data_)
 
     def SendSubTotal2(self):
+        if not self.list_tsg:
+            self.tq.put(('결과없음',))
+            return
+
         columns = ['index', '보유시간', '매도시간', '수익률', '수익금']
         data = (columns, self.list_tsg, self.arry_bct)
         if self.list_days is not None:

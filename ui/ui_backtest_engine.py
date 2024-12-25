@@ -428,10 +428,10 @@ def back_code_test_wait(gubun, testQ):
 def clear_backtestQ(backQ, totalQ):
     if not backQ.empty():
         while not backQ.empty():
-            _ = backQ.get()
+            backQ.get()
     if not totalQ.empty():
         while not totalQ.empty():
-            _ = totalQ.get()
+            totalQ.get()
 
 
 def backtest_process_kill(ui, gubun, totalQ):

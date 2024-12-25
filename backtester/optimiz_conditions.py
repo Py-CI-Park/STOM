@@ -36,7 +36,7 @@ class Total:
         self.dict_t       = {}
         self.dict_v       = {}
 
-        self.stdp         = -2_147_483_648
+        self.stdp         = -2_000_000_000
         self.sub_total    = 0
         self.total_count  = 0
         self.total_count2 = 0
@@ -306,7 +306,7 @@ class OptimizeConditions:
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 시작'))
 
         self.tq.put(('경우의수', rcount * back_count, back_count))
-        hstd = -2_147_483_648
+        hstd = -2_000_000_000
         for i in range(rcount):
             buy_conds, sell_conds = self.GetCondlist()
             if len(buy_conds) == 20:

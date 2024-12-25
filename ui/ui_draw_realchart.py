@@ -60,6 +60,7 @@ class DrawRealChart:
                 if self.ui.ct_checkBoxxxxx_16.isChecked(): self.ui.ctpg_tik_factors.append('회전율')
                 if self.ui.ct_checkBoxxxxx_17.isChecked(): self.ui.ctpg_tik_factors.append('전일동시간비')
                 if self.ui.ct_checkBoxxxxx_18.isChecked(): self.ui.ctpg_tik_factors.append('전일비각도')
+        if self.ui.dict_set['보조지표사용']:
             if self.ui.ct_checkBoxxxxx_19.isChecked():     self.ui.ctpg_tik_factors.append('BBAND')
             if self.ui.ct_checkBoxxxxx_20.isChecked():     self.ui.ctpg_tik_factors.append('MACD')
             if self.ui.ct_checkBoxxxxx_21.isChecked():     self.ui.ctpg_tik_factors.append('APO')
