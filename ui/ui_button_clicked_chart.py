@@ -134,8 +134,7 @@ def ct_button_clicked_06(ui):
 
 
 def ct_button_clicked_07(ui):
-    k = ['5', '2', '2', '0', '12', '26', '9', '12', '26', '0', '12', '26', '0', '5', '0.7', '0.5', '0.05', '30', '14',
-         '10', '10']
+    k = ['5', '2', '2', '0', '12', '26', '9', '12', '26', '0', '30', '14']
     for i, linedit in enumerate(ui.factor_linedit_list):
         linedit.setText(k[i])
 

@@ -416,21 +416,13 @@ def back_code_test3(gubun, conds_code, testQ):
 
 
 def back_code_test_wait(gubun, testQ):
-    test_ok = False
-    test_time = timedelta_sec(3)
-
-    while now() < test_time:
-        if not testQ.empty():
-            testQ.get()
-            print(f'{gubun} 코드 오류 테스트 완료')
-            test_ok = True
-            break
-        qtest_qwait(0.1)
-
-    if not test_ok:
+    data = testQ.get()
+    if data == '전략테스트오류':
         print(f'{gubun}에 오류가 있어 저장하지 못하였습니다.')
-
-    return test_ok
+        return False
+    else:
+        print(f'{gubun} 코드 오류 테스트 완료')
+        return True
 
 
 def clear_backtestQ(backQ, totalQ):

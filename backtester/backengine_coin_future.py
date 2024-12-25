@@ -476,12 +476,12 @@ class CoinFutureBackEngine:
                         except:
                             print_exc()
                             self.BackStop(1)
+                            return
                     else:
                         self.LastSell()
                         self.InitTradeInfo()
 
                     j += 1
-                    if self.back_type is None: break
                     if self.opti_turn in (1, 3) and j % 100 == 0: self.tq.put('탐색완료')
 
             self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
@@ -816,7 +816,7 @@ class CoinFutureBackEngine:
             betting = self.betting
         else:
             if self.dict_set['코인비중조절'][0] == 1:
-                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
             elif self.dict_set['코인비중조절'][0] == 2:
                 비중조절기준 = 등락율각도
             else:

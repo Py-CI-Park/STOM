@@ -125,6 +125,6 @@ class SetMainMenu:
         self.ui.od_pushButton.setGeometry(23, 505, 16, 15)
         self.ui.vv_pushButton.setGeometry(8, 525, 16, 15)
         self.ui.zz_pushButton.setGeometry(23, 525, 16, 15)
-        self.ui.progressBarrr.setGeometry(5, 548, 35, 208)
+        self.ui.progressBarrr.setGeometry(5, 548, 35, 209)
         self.ui.image_label1.setGeometry(1057, 478, 335, 105)
         self.ui.image_label2.setGeometry(1057, 756, 335, 602)

@@ -1,3 +1,5 @@
+import sys
+import time
 from traceback import print_exc
 # noinspection PyUnresolvedReferences
 from utility.static import now, now_utc, timedelta_sec
@@ -9,7 +11,6 @@ class BackCodeTest:
         self.testQ = testQ
         self.vars  = {0: []}
 
-        error = False
         if var is None:
             self.vars = {i: 1 for i in range(200)}
         else:
@@ -17,35 +18,61 @@ class BackCodeTest:
                 exec(compile(var, '<string>', 'exec'))
             except:
                 print_exc()
-                error = True
+                self.ErrorEnd()
 
             for i, var in enumerate(list(self.vars.values())):
                 if len(var) != 2:
                     print(f'self.vars[{i}]의 범위 설정 방법 오류')
-                    error = True
+                    self.ErrorEnd()
                 if not ga:
                     if len(var[0]) != 3:
                         print(f'self.vars[{i}]의 범위 설정 방법 오류')
-                        error = True
+                        self.ErrorEnd()
                     if var[0][2] != 0 and (var[0][1] - var[0][0]) / var[0][2] + 1 > 20:
                         print(f'self.vars[{i}]의 범위 설정 갯수 20개 초과')
-                        error = True
+                        self.ErrorEnd()
                     if (var[0][0] < var[0][1] and var[0][2] < 0) or (var[0][0] > var[0][1] and var[0][2] > 0):
                         print(f'self.vars[{i}]의 범위 간격 부호 오류')
+                        self.ErrorEnd()
+            self.noErrorEnd()
+
+        if not self.CheckFactor(stg): self.ErrorEnd()
+        try:
+            self.stg = compile(stg, '<string>', 'exec')
+        except:
+            print_exc()
+            self.ErrorEnd()
+        self.Test()
+
+    @staticmethod
+    def CheckFactor(stg):
+        error = False
+        gugan_factors = [
+            '이동평균', '최고현재가', '최저현재가', '초당거래대금평균', '체결강도평균', '최고체결강도', '최저체결강도',
+            '누적초당매수수량', '누적초당매도수량', '최고초당매수수량', '최고초당매도수량', '당일거래대금각도', '전일비각도'
+        ]
+        for factor in gugan_factors:
+            if factor in stg:
+                _stg = stg.replace(factor, f'{factor};')
+                _stg_list = _stg.split(';')
+                for i, txt in enumerate(_stg_list):
+                    if factor in txt and _stg_list[i+1][0] != '(':
+                        print(f'{factor}(30), {factor}(30, 1) 형태로 사용하십시오.')
                         error = True
+        if error:
+            return False
+        else:
+            return True
 
-        if not error:
-            try:
-                self.stg = compile(stg, '<string>', 'exec')
-            except:
-                print_exc()
-                error = True
+    def ErrorEnd(self):
+        self.testQ.put('전략테스트오류')
+        time.sleep(1)
+        sys.exit()
 
-            if not error:
-                if var is None:
-                    self.Test()
-                else:
-                    self.testQ.put('전략테스트완료')
+    def noErrorEnd(self):
+        self.testQ.put('전략테스트완료')
+        time.sleep(1)
+        sys.exit()
 
     def Buy(self, *args):
         pass
@@ -279,12 +306,13 @@ class BackCodeTest:
         시분초, VI아래5호가, 데이터길이, 호가단위, 포지션, 평균값계산틱수 = int(str(체결시간)[8:]), 1, 1800, 1, 'LONG', 30
         분봉시가, 분봉고가, 분봉저가, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240, 분봉거래대금 = 1, 1, 1, 1., 1., 1., 1., 1., 1., 1
         일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240 = 1., 1., 1., 1., 1., 1.
-        수익률, 매입가, 보유수량, 매도수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 1, 1, 1, 1, 1, 0, now(), 0, 1, 0
+        수익률, 매입가, 보유수량, 매도수량, 분할매수횟수, 분할매도횟수, 보유시간, 최고수익률, 최저수익률 = 1, 1, 1, 1, 1, 0, 0, 1, 0
         매수, 매도, BUY_LONG, SELL_LONG, SELL_SHORT, BUY_SHORT, 강제청산 = False, False, False, False, False, False, False
 
         try:
             exec(self.stg)
         except:
             print_exc()
+            self.ErrorEnd()
         else:
-            self.testQ.put('전략테스트완료')
+            self.noErrorEnd()

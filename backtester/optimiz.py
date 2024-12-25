@@ -529,18 +529,16 @@ class Optimize:
                   self.ui_gubun, self.gubun, self.multi, self.divid_mode)
         ).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
-
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,
                      dict_cn, std_text, optistandard, schedul, df_kp, df_kq, list_days, len(day_list), weeks_train,
                      weeks_valid, weeks_test))
 
+        time.sleep(1)
         data = ('백테정보', betting, avg_list, startday, endday, starttime, endtime, buystg, sellstg)
         for q in self.beq_list:
             q.put(data)
-
         if 'B' in self.backname:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'))
-
         if only_buy:
             add_text = ', 매수전략의 변수만 최적화합니다.'
         elif only_sell:

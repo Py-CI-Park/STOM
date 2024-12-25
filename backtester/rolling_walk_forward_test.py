@@ -526,22 +526,21 @@ class RollingWalkForwardTest:
         mq = Queue()
         Process(
             target=Total,
-            args=(self.wq, self.sq, self.tq, self.teleQ, self.teleQ, mq, self.beq_list, self.bstq_list, self.backname,
-                  self.ui_gubun, self.gubun, self.multi, self.divid_mode)
+            args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.beq_list, self.bstq_list, self.backname, self.ui_gubun,
+                  self.gubun, self.multi, self.divid_mode)
         ).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
-
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,
                      dict_cn, list_days, std_text, optistandard, schedul, df_kp, df_kd, weeks_train, weeks_valid, weeks_test))
 
+        time.sleep(1)
         data = ('백테정보', betting, avg_list, starttime, endtime, buystg, sellstg)
         for q in self.beq_list:
             q.put(data)
-
         if 'B' in self.backname:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'<font color=#45cdf7>OPTUNA Sampler : {optuna_sampler}</font>'))
-
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 최적화 시작'))
+
         hstd_list = []
         hvar_list = []
         for i, days in enumerate(list_days):

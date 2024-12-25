@@ -719,7 +719,7 @@ class StrategyKiwoom:
             betting = self.int_tujagm
         else:
             if self.dict_set['주식비중조절'][0] == 1:
-                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
             elif self.dict_set['주식비중조절'][0] == 2:
                 비중조절기준 = 등락율각도
             elif self.dict_set['주식비중조절'][0] == 3:
@@ -754,7 +754,7 @@ class StrategyKiwoom:
                 betting = self.int_tujagm
             else:
                 if self.dict_set['주식비중조절'][0] == 1:
-                    비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                    비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
                 elif self.dict_set['주식비중조절'][0] == 2:
                     비중조절기준 = 등락율각도
                 elif self.dict_set['주식비중조절'][0] == 3:

@@ -301,12 +301,13 @@ class OptimizeGeneticAlgorithm:
         mq = Queue()
         Process(target=Total, args=(self.wq, self.tq, mq, self.bstq_list, self.ui_gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
+        self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg, sellstg, dict_cn, std_text,
+                     optistandard, valid_days, len(day_list)))
 
-        self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg, sellstg, dict_cn, std_text, optistandard, valid_days, len(day_list)))
+        time.sleep(1)
         data = ('백테정보', betting, self.vars[0][0], startday, endday, starttime, endtime, buystg, sellstg)
         for q in self.beq_list:
             q.put(data)
-
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 시작'))
 
         k    = 1

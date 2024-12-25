@@ -67,12 +67,12 @@ class StockBackEngine2(StockBackEngine):
                         except:
                             print_exc()
                             self.BackStop(1)
+                            return
                     else:
                         self.LastSell()
                         self.InitTradeInfo()
 
                     j += 1
-                    if self.back_type is None: break
                     if self.opti_turn in (1, 3) and j % 100 == 0: self.tq.put('탐색완료')
 
             self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
@@ -576,7 +576,7 @@ class StockBackEngine2(StockBackEngine):
             betting = self.betting
         else:
             if self.dict_set['주식비중조절'][0] == 1:
-                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
             elif self.dict_set['주식비중조절'][0] == 2:
                 비중조절기준 = 등락율각도
             elif self.dict_set['주식비중조절'][0] == 3:
@@ -589,12 +589,12 @@ class StockBackEngine2(StockBackEngine):
                 비중조절기준 = 전일동시간비
 
             if 비중조절기준 < self.dict_set['주식비중조절'][1]:
-                betting = self.betting * self.dict_set['주식비중조절'][2]
-            elif 비중조절기준 < self.dict_set['주식비중조절'][3]:
-                betting = self.betting * self.dict_set['주식비중조절'][4]
-            elif 비중조절기준 < self.dict_set['주식비중조절'][5]:
+                betting = self.betting * self.dict_set['주식비중조절'][5]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][2]:
                 betting = self.betting * self.dict_set['주식비중조절'][6]
-            elif 비중조절기준 < self.dict_set['주식비중조절'][7]:
+            elif 비중조절기준 < self.dict_set['주식비중조절'][3]:
+                betting = self.betting * self.dict_set['주식비중조절'][7]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][4]:
                 betting = self.betting * self.dict_set['주식비중조절'][8]
             else:
                 betting = self.betting * self.dict_set['주식비중조절'][9]
@@ -654,7 +654,7 @@ class StockBackEngine2(StockBackEngine):
                 betting = self.betting
             else:
                 if self.dict_set['주식비중조절'][0] == 1:
-                    비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                    비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
                 elif self.dict_set['주식비중조절'][0] == 2:
                     비중조절기준 = 등락율각도
                 elif self.dict_set['주식비중조절'][0] == 3:

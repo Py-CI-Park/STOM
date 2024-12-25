@@ -105,10 +105,12 @@ class PatternModeling:
         mq = Queue()
         Process(target=Total, args=(mq, self.wq, self.tq, self.ui_gubun, self.back_cnt, self.multi)).start()
 
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 시작'))
-        data = ('학습정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern, dict_pattern_buy, dict_pattern_sell)
+        time.sleep(1)
+        data = ('학습정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
+                dict_pattern_buy, dict_pattern_sell)
         for q in self.beq_list:
             q.put(data)
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 학습 시작'))
 
         data = mq.get()
         if type(data) == tuple:
