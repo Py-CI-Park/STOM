@@ -526,7 +526,7 @@ class StrategyKiwoom:
 
             if self.dict_set['보조지표사용']:
                 k = self.dict_set['보조지표설정']
-                close, volume = self.dict_tik_ar[종목코드][:, 1], self.dict_tik_ar[종목코드][:, 10]
+                close, volume = self.dict_tik_ar[종목코드][:, 1], self.dict_tik_ar[종목코드][:, 19]
                 try:    BBU, BBM, BBL      = stream.BBANDS(   close, timeperiod=k[0], nbdevup=k[1],    nbdevdn=k[2], matype=k[3])
                 except: BBU, BBM, BBL      = 0, 0, 0
                 try:    MACD, MACDS, MACDH = stream.MACD(     close, fastperiod=k[4], slowperiod=k[5], signalperiod=k[6])

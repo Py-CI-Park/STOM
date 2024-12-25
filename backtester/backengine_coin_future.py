@@ -318,7 +318,7 @@ class CoinFutureBackEngine:
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
-                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
+                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], True)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -356,7 +356,7 @@ class CoinFutureBackEngine:
                         df_tick = AddAvgData(df_tick, 8, avg_list)
                         arry_tick = np.array(df_tick)
                         if self.dict_set['보조지표사용']:
-                            arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
+                            arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], True)
                         if self.dict_set['백테일괄로딩']:
                             self.dict_tik_ar[code] = arry_tick
                         else:
@@ -386,7 +386,7 @@ class CoinFutureBackEngine:
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
-                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'])
+                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], True)
                     if self.dict_set['백테일괄로딩']:
                         self.dict_tik_ar[code] = arry_tick
                     else:
@@ -961,36 +961,33 @@ class CoinFutureBackEngine:
     def PatternModeling(self, gubun):
         last_area_index = self.indexn + self.dict_pattern['조건구간']
         if last_area_index <= self.last and str(self.index)[:8] == str(self.array_tick[last_area_index, 0])[:8]:
-            self.PatternFind(gubun)
-
-    def PatternFind(self, gubun):
-        curr_price = self.array_tick[self.indexn, 1]
-        high_price = self.array_tick[self.indexn + 1:self.indexn + 1 + self.dict_pattern['조건구간'], 1].max()
-        low_price  = self.array_tick[self.indexn + 1:self.indexn + 1 + self.dict_pattern['조건구간'], 1].min()
-        high_price_per = round((high_price / curr_price - 1) * 100, 2)
-        low_price_per  = round((low_price / curr_price - 1) * 100, 2)
-        if gubun == '매수':
-            if self.dict_pattern['매수조건1'] and high_price_per >= self.dict_pattern['매수조건2']:
-                pattern = self.GetPattern('매수')
-                if pattern not in self.pattern_buy:
-                    self.pattern_buy.append(pattern)
-                    self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : {pattern}'))
-            elif self.dict_pattern['매수조건3'] and curr_price <= low_price:
-                pattern = self.GetPattern('매수')
-                if pattern not in self.pattern_buy:
-                    self.pattern_buy.append(pattern)
-                    self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : {pattern}'))
-        else:
-            if self.dict_pattern['매도조건1'] and low_price_per <= -self.dict_pattern['매도조건2']:
-                pattern = self.GetPattern('매도')
-                if pattern not in self.pattern_sell:
-                    self.pattern_sell.append(pattern)
-                    self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : {pattern}'))
-            elif self.dict_pattern['매도조건3'] and curr_price >= high_price:
-                pattern = self.GetPattern('매도')
-                if pattern not in self.pattern_sell:
-                    self.pattern_sell.append(pattern)
-                    self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : {pattern}'))
+            curr_price = self.array_tick[self.indexn, 1]
+            high_price = self.array_tick[self.indexn + 1:self.indexn + 1 + self.dict_pattern['조건구간'], 1].max()
+            low_price  = self.array_tick[self.indexn + 1:self.indexn + 1 + self.dict_pattern['조건구간'], 1].min()
+            high_price_per = round((high_price / curr_price - 1) * 100, 2)
+            low_price_per  = round((low_price / curr_price - 1) * 100, 2)
+            if gubun == '매수':
+                if self.dict_pattern['매수조건1'] and high_price_per >= self.dict_pattern['매수조건2']:
+                    pattern = self.GetPattern('매수')
+                    if pattern not in self.pattern_buy:
+                        self.pattern_buy.append(pattern)
+                        self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : {pattern}'))
+                elif self.dict_pattern['매수조건3'] and curr_price <= low_price:
+                    pattern = self.GetPattern('매수')
+                    if pattern not in self.pattern_buy:
+                        self.pattern_buy.append(pattern)
+                        self.wq.put((ui_num['S백테스트'], f'매수 패턴 추가 : {pattern}'))
+            else:
+                if self.dict_pattern['매도조건1'] and low_price_per <= -self.dict_pattern['매도조건2']:
+                    pattern = self.GetPattern('매도')
+                    if pattern not in self.pattern_sell:
+                        self.pattern_sell.append(pattern)
+                        self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : {pattern}'))
+                elif self.dict_pattern['매도조건3'] and curr_price >= high_price:
+                    pattern = self.GetPattern('매도')
+                    if pattern not in self.pattern_sell:
+                        self.pattern_sell.append(pattern)
+                        self.wq.put((ui_num['S백테스트'], f'매도 패턴 추가 : {pattern}'))
 
     def GetPattern(self, gubun):
         """

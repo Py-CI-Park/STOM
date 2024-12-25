@@ -1,5 +1,6 @@
 import zmq
 import socket
+import subprocess
 from PyQt5.QtWidgets import QCompleter
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
 
@@ -17,23 +18,15 @@ from ui.set_dialog_back import SetDialogBack
 from ui.set_mediaplayer import SetMediaPlayer
 from ui.set_dialog_chart import SetDialogChart
 
-from ui.ui_draw_chart import *
-from ui.ui_draw_treemap import *
-from ui.ui_extend_window import *
-from ui.ui_draw_realchart import *
-from ui.ui_draw_jisuchart import *
-from ui.ui_update_textedit import *
-from ui.ui_process_starter import *
-from ui.ui_update_tablewidget import *
-from ui.ui_update_progressbar import *
-
 from ui.ui_etc import *
 from ui.ui_pattern import *
+from ui.ui_draw_chart import *
 from ui.ui_activated_b import *
 from ui.ui_activated_c import *
 from ui.ui_activated_s import *
 from ui.ui_show_dialog import *
 from ui.ui_vars_change import *
+from ui.ui_draw_treemap import *
 from ui.ui_cell_clicked import *
 from ui.ui_text_changed import *
 from ui.ui_process_kill import *
@@ -41,7 +34,12 @@ from ui.ui_return_press import *
 from ui.ui_event_filter import *
 from ui.ui_activated_etc import *
 from ui.ui_process_alive import *
+from ui.ui_extend_window import *
+from ui.ui_draw_realchart import *
+from ui.ui_draw_jisuchart import *
 from ui.ui_betting_cotrol import *
+from ui.ui_update_textedit import *
+from ui.ui_process_starter import *
 from ui.ui_backtest_engine import *
 from ui.ui_key_press_event import *
 from ui.ui_checkbox_changed import *
@@ -50,6 +48,8 @@ from ui.ui_button_clicked_ob import *
 from ui.ui_button_clicked_sd import *
 from ui.ui_button_clicked_mn import *
 from ui.ui_button_clicked_sj import *
+from ui.ui_update_tablewidget import *
+from ui.ui_update_progressbar import *
 from ui.ui_button_clicked_etc import *
 from ui.ui_chart_count_change import *
 from ui.ui_button_clicked_svc import *

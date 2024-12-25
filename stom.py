@@ -1,17 +1,16 @@
 import sys
 import ctypes
-import subprocess
 from PyQt5.QtGui import QPalette
 from PyQt5.QtWidgets import QApplication
+from utility.timesync import timesync
 from ui.ui_mainwindow import MainWindow
 from ui.set_style import color_bg_bc, color_fg_bc, color_bg_dk, color_fg_bk, color_fg_hl, color_bg_bk
-
 
 if __name__ == '__main__':
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
     auto_run = 1 if len(sys.argv) > 1 and sys.argv[1] == 'stocklogin' else 0
-    subprocess.Popen('python64 ./utility/timesync.py')
+    timesync()
     app = QApplication(sys.argv)
     app.setStyle('fusion')
     palette = QPalette()

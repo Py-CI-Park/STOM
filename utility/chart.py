@@ -289,7 +289,7 @@ class Chart:
             df = df[columns]
             df.fillna(0, inplace=True)
             arry_tick = np.array(df)
-            arry_tick = AddTalib(arry_tick, k_list)
+            arry_tick = AddTalib(arry_tick, k_list, coin)
             if arry_tick is not None:
                 xticks = [strp_time('%Y%m%d%H%M%S', str(int(x))).timestamp() for x in df.index]
                 self.windowQ.put((ui_num['차트'], coin, xticks, arry_tick, buy_index, sell_index))

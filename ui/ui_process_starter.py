@@ -1,4 +1,3 @@
-import subprocess
 from multiprocessing import Process
 from coin.trader_binance_future import BFTrader
 from coin.receiver_binance_future import BFReceiver
@@ -9,6 +8,7 @@ from coin.receiver_upbit import UBReceiver
 from coin.strategy_upbit import StrategyUpbit
 from coin.receiver_upbit_client import UBReceiverClient
 from ui.set_logfile import SetLogFile
+from utility.timesync import timesync
 from utility.setting import columns_tdf, columns_jgf, ui_num
 from utility.static import int_hms, int_hms_utc, now, strf_time
 
@@ -37,7 +37,7 @@ def process_starter(ui):
             CoinTraderStart(ui, ui.qlist, ui.windowQ)
 
     if ui.dict_set['코인트레이더'] and A and D and not ui.time_sync:
-        subprocess.Popen('python64 ./utility/timesync.py')
+        timesync()
         ui.time_sync = True
 
     if ui.int_time < 90000 <= inthms:

@@ -149,7 +149,7 @@ def AddAvgData(df, r, avg_list):
     return df
 
 
-def AddTalib(arry_tick, k):
+def AddTalib(arry_tick, k, coin):
     arry_tick = np.r_['1', arry_tick, np.zeros((len(arry_tick), 14))]
     bbu, bbm, bbl = talib.BBANDS(arry_tick[:, 1], timeperiod=k[0], nbdevup=k[1], nbdevdn=k[2], matype=k[3])
     macd, macds, macdh = talib.MACD(arry_tick[:, 1], fastperiod=k[4], slowperiod=k[5], signalperiod=k[6])
@@ -158,7 +158,7 @@ def AddTalib(arry_tick, k):
     rsi = talib.RSI(arry_tick[:, 1], timeperiod=k[11])
     htsine, htlsine = talib.HT_SINE(arry_tick[:, 1])
     htphase, htqudra = talib.HT_PHASOR(arry_tick[:, 1])
-    obv = talib.OBV(arry_tick[:, 1], arry_tick[:, 10])
+    obv = talib.OBV(arry_tick[:, 1], arry_tick[:, 10 if coin else 19])
     arry_tick[:, -14] = bbu
     arry_tick[:, -13] = bbm
     arry_tick[:, -12] = bbl
@@ -778,7 +778,6 @@ def AddMdd(arry_tsg, result):
         array = arry_tsg[:, 4]
         lower = np.argmax(np.maximum.accumulate(array) - array)
         upper = np.argmax(array[:lower])
-        # noinspection PyTypeChecker
         mdd   = round(abs(array[upper] - array[lower]) / (array[upper] + result[10]) * 100, 2)
         mdd_  = int(abs(array[upper] - array[lower]))
     except:
@@ -812,9 +811,9 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
         tsg    = int(arry_tsg[:, 3].sum())
         appp   = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
         ampp   = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
-        try:    mhct = arry_bct[int(len(arry_bct) * 0.01):, 1].max()
+        try:    mhct = int(arry_bct[int(len(arry_bct) * 0.01):, 1].max())
         except: mhct = 0
-        try:    seed = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
+        try:    seed = int(arry_bct[int(len(arry_bct) * 0.01):, 2].max())
         except: seed = betting
         tpp    = round(tsg / (seed if seed != 0 else betting) * 100, 2)
         cagr   = round(tpp / day_count * (250 if ui_gubun == 'S' else 365), 2)
