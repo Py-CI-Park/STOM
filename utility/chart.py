@@ -16,8 +16,8 @@ from utility.setting import ui_num, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH,
 class Chart:
     def __init__(self, qlist):
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ
-           0        1       2      3       4      5      6      7       8         9         10     11    12      13
+        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
+           0        1       2      3       4      5      6      7       8         9         10     11    12      13       14
         """
         self.windowQ  = qlist[0]
         self.chartQ   = qlist[4]
@@ -101,11 +101,11 @@ class Chart:
             coin, code, tickcount, searchdate, starttime, endtime, k_list, detail, buytimes = data
 
         if coin:
-            db_name1 = DB_COIN_BACK
-            db_name2 = f'{DB_PATH}/coin_tick_{searchdate}.db'
+            db_name1 = f'{DB_PATH}/coin_tick_{searchdate}.db'
+            db_name2 = DB_COIN_BACK
         else:
-            db_name1 = DB_STOCK_BACK
-            db_name2 = f'{DB_PATH}/stock_tick_{searchdate}.db'
+            db_name1 = f'{DB_PATH}/stock_tick_{searchdate}.db'
+            db_name2 = DB_STOCK_BACK
 
         query1 = f"SELECT * FROM '{code}' WHERE `index` LIKE '{searchdate}%' and " \
                  f"`index` % 1000000 >= {starttime} and " \

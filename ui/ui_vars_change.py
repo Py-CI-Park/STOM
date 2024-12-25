@@ -72,6 +72,7 @@ def get_optivars_to_gavars(opti_vars_text):
     except:
         print_exc()
 
+    ga_vars_text = ga_vars_text.replace('vars_', 'self.vars')
     return ga_vars_text[:-1]
 
 
@@ -96,6 +97,7 @@ def get_gavars_to_optivars(ga_vars_text):
     except:
         print_exc()
 
+    opti_vars_text = opti_vars_text.replace('vars_', 'self.vars')
     return opti_vars_text[:-1]
 
 

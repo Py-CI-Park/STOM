@@ -48,6 +48,8 @@ def backtest_engine_kill(ui, windowQ):
         p.kill()
     for p in ui.back_eprocs:
         p.kill()
+    for q in ui.back_sques:
+        q.close()
     for q in ui.back_eques:
         q.close()
     ui.back_eprocs = []
@@ -281,19 +283,19 @@ def sdbutton_clicked_02(ui, windowQ, backQ, soundQ, totalQ, liveQ, teleQ):
                     ))
                     gubun = 'C' if ui.dict_set['거래소'] == '업비트' else 'CF'
 
-                if back_name == '그리드 GA 최적화':
+                if back_name == 'GA 최적화':
                     ui.proc_backtester_og = Process(
                         target=OptimizeGeneticAlgorithm,
                         args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_sques, '최적화OG', gubun)
                     )
                     ui.proc_backtester_og.start()
-                elif back_name == '그리드 검증 GA 최적화':
+                elif back_name == '검증 GA 최적화':
                     ui.proc_backtester_ogv = Process(
                         target=OptimizeGeneticAlgorithm,
                         args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_sques, '최적화OGV', gubun)
                     )
                     ui.proc_backtester_ogv.start()
-                elif back_name == '그리드 교차검증 GA 최적화':
+                elif back_name == '교차검증 GA 최적화':
                     ui.proc_backtester_ogvc = Process(
                         target=OptimizeGeneticAlgorithm,
                         args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, ui.back_sques, '최적화OGVC', gubun)

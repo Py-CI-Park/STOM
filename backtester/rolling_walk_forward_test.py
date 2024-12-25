@@ -197,7 +197,12 @@ class Total:
 
                 st[vars_turn][vars_key] += 1
                 if st[vars_turn][vars_key] == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), self.dict_t[vars_turn][vars_key], self.dict_v[vars_turn][vars_key], self.dict_set['교차검증가중치'])
+                    self.stdp = SendTextAndStd(
+                        self.GetSendData(vars_turn, vars_key),
+                        self.dict_t[vars_turn][vars_key],
+                        self.dict_v[vars_turn][vars_key],
+                        self.dict_set['교차검증가중치']
+                    )
                     st[vars_turn][vars_key] = 0
 
             elif data[0] == 'ALL':
@@ -712,7 +717,9 @@ class RollingWalkForwardTest:
                     curr_typ = vars_type[vars_turn]
                     curr_var = vars_[vars_turn][0][vars_key]
                     preh_var = vars_[vars_turn][1]
-                    if std > dict_turn_hstd[vars_turn] or (std == dict_turn_hstd[vars_turn] and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
+                    if std > dict_turn_hstd[vars_turn] or \
+                            (std == dict_turn_hstd[vars_turn] and
+                             ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
                         dict_turn_hstd[vars_turn] = std
                         dict_turn_hvar[vars_turn] = curr_var
                         if std > hstd: hstd = std
@@ -727,7 +734,8 @@ class RollingWalkForwardTest:
 
         return vars_, hstd
 
-    def OptimizeOptuna(self, mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name, sampler, vars_, startday, endday, i):
+    def OptimizeOptuna(self, mq, optuna_count, back_count, len_vars, optuna_fixvars, optuna_autostep, buystg_name,
+                       sampler, vars_, startday, endday, i):
         self.dict_simple_vars = {}
         if optuna_count == 0:
             total_count = back_count * (len_vars + 1)

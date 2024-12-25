@@ -122,7 +122,7 @@ class Window(QMainWindow):
 
         if len(df) < 10:
             print('setting.db 내에 codename 테이블이 갱신되지 않았습니다.')
-            print('주식 수동로그인을 한번 실행하면 codename 테이블이 갱신됩니다.')
+            print('주식로그인을 한번 실행하면 codename 테이블이 갱신됩니다.')
 
         con = sqlite3.connect(DB_COIN_TICK)
         df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
@@ -773,7 +773,7 @@ if __name__ == '__main__':
 
     windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, totalQ, testQ, kimpQ, wdzservQ = \
         Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue()
-    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdzservQ]
+    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdzservQ, totalQ]
 
     proc_tele  = Process(target=TelegramMsg, args=(qlist,), daemon=True)
     proc_webc  = Process(target=WebCrawling, args=(qlist,), daemon=True)

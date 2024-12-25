@@ -673,7 +673,8 @@ class Optimize:
         total_del_list = [[] for _ in range(len_vars)]
         for k in range(ccount if ccount != 0 else 100):
             if ccount == 0 and total_change == 0: break
-            data = (ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} [{k+1}]단계 그리드 최적화 시작, 최고 기준값[{hstd:,.2f}], 최적값 변경 개수 [{total_change}]')
+            data = (ui_num[f'{self.ui_gubun}백테스트'],
+                    f'{self.backname} [{k+1}]단계 그리드 최적화 시작, 최고 기준값[{hstd:,.2f}], 최적값 변경 개수 [{total_change}]')
             threading_timer(6, self.wq.put, data)
 
             receiv_count   = sum([len(x[0]) for x in vars_ if len(x[0]) > 1])
@@ -690,14 +691,17 @@ class Optimize:
                 data = mq.get()
                 if type(data) == str:
                     if not random_optivars:
-                        self.SaveOptiVars(optivars, optivars_, vars_, optivars_name, only_buy, only_sell, buy_first, buy_num, sell_num)
+                        self.SaveOptiVars(optivars, optivars_, vars_, optivars_name, only_buy, only_sell, buy_first,
+                                          buy_num, sell_num)
                     self.SysExit(True)
                 else:
                     vars_turn, vars_key, std = data
                     curr_typ = vars_type[vars_turn]
                     curr_var = vars_[vars_turn][0][vars_key]
                     preh_var = dict_turn_hvar[vars_turn]
-                    if std > dict_turn_hstd[vars_turn] or (std == dict_turn_hstd[vars_turn] and ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
+                    if std > dict_turn_hstd[vars_turn] or \
+                            (std == dict_turn_hstd[vars_turn] and
+                             ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
                         dict_turn_hstd[vars_turn] = std
                         dict_turn_hvar[vars_turn] = curr_var
                         if std > hstd: hstd = std

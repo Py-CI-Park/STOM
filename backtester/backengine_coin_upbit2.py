@@ -39,13 +39,14 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
             for code in self.code_list:
                 self.SetArrayTick(code, same_days, same_time)
                 total_ticks += len(self.array_tick)
-            self.tq.put(('전체틱수', total_ticks))
+            self.tq.put(('전체틱수', int(total_ticks / 100)))
             self.tick_calcul = True
 
+        j = 0
         len_codes = len(self.code_list)
         for k, code in enumerate(self.code_list):
             if self.dict_set['백테주문관리적용'] and self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
-                self.tq.put(('백테완료', 0))
+                self.tq.put(('백테완료', 0, self.gubun, k+1, len_codes))
                 continue
 
             self.code = self.name = code
@@ -67,8 +68,10 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
                     else:
                         self.LastSell()
                         self.InitTradeInfo()
+
+                    j += 1
                     if self.back_type is None: break
-                    if self.opti_turn in (1, 3): self.tq.put('탐색완료')
+                    if self.opti_turn in (1, 3) and j % 100 == 0: self.tq.put('탐색완료')
 
             self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
 
@@ -496,8 +499,8 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
 
         elif self.opti_turn == 3:
             vars_turns = range(50 if self.back_type == 'GA최적화' else 1)
+            vars_keys  = range(20)
             for vars_turn in vars_turns:
-                vars_keys = range(20)
                 for vars_key in vars_keys:
                     index = vars_turn * 20 + vars_key
                     if self.back_type != '조건최적화':

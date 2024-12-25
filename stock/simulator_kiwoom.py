@@ -3,7 +3,7 @@ import sys
 import sqlite3
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from utility.setting import ui_num, columns_cj, columns_tj, columns_jg, columns_td, columns_tt, DICT_SET, DB_STOCK_BACK
+from utility.setting import ui_num, columns_cj, columns_tj, columns_jg, columns_td, columns_tt, DICT_SET, DB_SETTING
 from utility.static import now, strf_time, strp_time, timedelta_sec, roundfigure_lower, roundfigure_upper, int_hms, GetKiwoomPgSgSp
 
 
@@ -30,7 +30,7 @@ class ReceiverKiwoom2:
                     self.UpdateTuple(data)
 
     def LoadCodename(self):
-        con = sqlite3.connect(DB_STOCK_BACK)
+        con = sqlite3.connect(DB_SETTING)
         df_cn = pd.read_sql('SELECT * FROM codename', con).set_index('index')
         con.close()
         self.dict_name = df_cn['종목명'].to_dict()
@@ -47,7 +47,7 @@ class ReceiverKiwoom2:
         data = tuple(data)
         hogadata = data[21:43]
         name = self.dict_name[code]
-        self.sstgQ.put(data + (code, name, 0))
+        self.sstgQ.put(data + (name, 0))
         if code in self.tuple_janng:
             self.straderQ.put((code, c))
         self.kwzservQ.put(('hoga', (name, c, per, sgta, uvi, o, h, low)))
@@ -114,7 +114,7 @@ class TraderKiwoom2:
                 self.dict_time['잔고목록전송'] = timedelta_sec(0.5)
 
     def LoadCodename(self):
-        con = sqlite3.connect(DB_STOCK_BACK)
+        con = sqlite3.connect(DB_SETTING)
         df_cn = pd.read_sql('SELECT * FROM codename', con).set_index('index')
         con.close()
         self.dict_name = df_cn['종목명'].to_dict()

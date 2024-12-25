@@ -36,7 +36,7 @@ def ct_button_clicked_01(ui, wdzservQ, qlist):
 
         if gubun == '주식':
             wdzservQ.put(('manager', '시뮬레이터구동'))
-            ui.stock_simulator_alive = False
+            ui.stock_simulator_alive = True
         else:
             ui.proc_strategy_coin.start()
             ui.proc_simulator_td.start()

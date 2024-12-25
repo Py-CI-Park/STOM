@@ -14,13 +14,13 @@ class SetMainMenu:
         self.ui.setWindowIcon(self.ui.icon_main)
         self.ui.geometry().center()
 
-        self.ui.pushButton_01 = self.wc.setPushbutton('', icon=self.ui.icon_stock,  color=0, click=self.ui.mnButtonClicked_01, cmd=0, shortcut='Alt+1', tip='주식 트레이더(Alt+1)')
-        self.ui.pushButton_02 = self.wc.setPushbutton('', icon=self.ui.icon_coin,   color=6, click=self.ui.mnButtonClicked_01, cmd=1, shortcut='Alt+2', tip='코인 트레이더(Alt+2)')
-        self.ui.pushButton_03 = self.wc.setPushbutton('', icon=self.ui.icon_stocks, color=6, click=self.ui.mnButtonClicked_01, cmd=2, shortcut='Alt+3', tip='주식 전략(Alt+3)')
-        self.ui.pushButton_04 = self.wc.setPushbutton('', icon=self.ui.icon_coins,  color=6, click=self.ui.mnButtonClicked_01, cmd=3, shortcut='Alt+4', tip='코인 전략(Alt+4)')
-        self.ui.pushButton_05 = self.wc.setPushbutton('', icon=self.ui.icon_live,   color=6, click=self.ui.mnButtonClicked_01, cmd=4, shortcut='Alt+5', tip='스톰 라이브(Alt+5)')
-        self.ui.pushButton_06 = self.wc.setPushbutton('', icon=self.ui.icon_log,    color=6, click=self.ui.mnButtonClicked_01, cmd=5, shortcut='Alt+6', tip='로그(Alt+6)')
-        self.ui.pushButton_07 = self.wc.setPushbutton('', icon=self.ui.icon_set,    color=6, click=self.ui.mnButtonClicked_01, cmd=6, shortcut='Alt+7', tip='설정(Alt+7)')
+        self.ui.pushButton_01 = self.wc.setPushbutton('', icon=self.ui.icon_stock,  color=0, click=self.ui.mnButtonClicked_01, cmd=0, shortcut='Ctrl+1', tip='주식 트레이더(Ctrl+1)')
+        self.ui.pushButton_02 = self.wc.setPushbutton('', icon=self.ui.icon_coin,   color=6, click=self.ui.mnButtonClicked_01, cmd=1, shortcut='Ctrl+2', tip='코인 트레이더(Ctrl+2)')
+        self.ui.pushButton_03 = self.wc.setPushbutton('', icon=self.ui.icon_stocks, color=6, click=self.ui.mnButtonClicked_01, cmd=2, shortcut='Ctrl+3', tip='주식 전략(Ctrl+3)')
+        self.ui.pushButton_04 = self.wc.setPushbutton('', icon=self.ui.icon_coins,  color=6, click=self.ui.mnButtonClicked_01, cmd=3, shortcut='Ctrl+4', tip='코인 전략(Ctrl+4)')
+        self.ui.pushButton_05 = self.wc.setPushbutton('', icon=self.ui.icon_live,   color=6, click=self.ui.mnButtonClicked_01, cmd=4, shortcut='Ctrl+5', tip='스톰 라이브(Ctrl+5)')
+        self.ui.pushButton_06 = self.wc.setPushbutton('', icon=self.ui.icon_log,    color=6, click=self.ui.mnButtonClicked_01, cmd=5, shortcut='Ctrl+6', tip='로그(Ctrl+6)')
+        self.ui.pushButton_07 = self.wc.setPushbutton('', icon=self.ui.icon_set,    color=6, click=self.ui.mnButtonClicked_01, cmd=6, shortcut='Ctrl+7', tip='설정(Ctrl+7)')
 
         self.ui.main_btn_list = [
             self.ui.pushButton_01, self.ui.pushButton_02, self.ui.pushButton_03, self.ui.pushButton_04,

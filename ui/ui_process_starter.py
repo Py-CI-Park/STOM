@@ -15,6 +15,10 @@ from utility.stomlive import StomLiveClient
 
 
 def process_starter(ui, qlist):
+    """
+    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
+       0        1       2      3       4      5      6      7       8         9         10     11    12      13       14
+    """
     windowQ = qlist[0]
     soundQ = qlist[1]
     queryQ = qlist[2]
@@ -23,6 +27,7 @@ def process_starter(ui, qlist):
     creceivQ = qlist[8]
     ctraderQ = qlist[9]
     cstgQ = qlist[10]
+    totalQ = qlist[14]
     inthms = int_hms()
     inthmsutc = int_hms_utc()
 
@@ -65,7 +70,7 @@ def process_starter(ui, qlist):
         ui.mnButtonClicked_03(stocklogin=True)
         ui.auto_run = 0
 
-    UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ)
+    UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ, totalQ)
     ui.int_time = inthms
 
 
@@ -124,7 +129,7 @@ def CoinTraderStart(ui, qlist, windowQ):
             ui.cjg_tableWidgettt.setColumnWidth(11, 90)
 
 
-def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ):
+def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ, totalQ):
     inthms = int_hms()
     inthmsutc = int_hms_utc()
     text = 'STOM'
@@ -146,7 +151,8 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
                f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
-               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backegQ[{beqsize}] | backstQ[{bstqsize}]'
+               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backegQ[{beqsize}] | backstQ[{bstqsize}] | ' \
+               f'backttQ[{totalQ.qsize()}]'
     else:
         if ui.dict_set['코인트레이더']:
             text = f'{text} | 모의' if ui.dict_set['코인모의투자'] else f'{text} | 실전'

@@ -269,7 +269,7 @@ class CoinUpbitBackEngine:
                 data = ('데이터전송', code, self.dict_tik_ar[code])
                 self.beq_list[procn].put(data)
                 del self.dict_tik_ar[code]
-                self.wq.put((ui_num['C백테스트'], f'백테엔진 데이터 재분배: 종목코드[{code}] 엔진번호[{self.gubun}->{procn}]'))
+                print(f'백테엔진 데이터 재분배: 종목코드[{code}] 엔진번호[{self.gubun}->{procn}]')
         self.code_list = self.code_list[:cnt]
 
     def RecvdData(self, data):
@@ -453,9 +453,10 @@ class CoinUpbitBackEngine:
             for code in self.code_list:
                 self.SetArrayTick(code, same_days, same_time)
                 total_ticks += len(self.array_tick)
-            self.tq.put(('전체틱수', total_ticks))
+            self.tq.put(('전체틱수', int(total_ticks / 100)))
             self.tick_calcul = True
 
+        j = 0
         len_codes = len(self.code_list)
         for k, code in enumerate(self.code_list):
             self.code = self.name = code
@@ -477,8 +478,10 @@ class CoinUpbitBackEngine:
                     else:
                         self.LastSell()
                         self.InitTradeInfo()
+
+                    j += 1
                     if self.back_type is None: break
-                    if self.opti_turn in (1, 3): self.tq.put('탐색완료')
+                    if self.opti_turn in (1, 3) and j % 100 == 0: self.tq.put('탐색완료')
 
             self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
 
@@ -767,8 +770,8 @@ class CoinUpbitBackEngine:
 
         elif self.opti_turn == 3:
             vars_turns = range(50 if self.back_type == 'GA최적화' else 1)
+            vars_keys  = range(20)
             for vars_turn in vars_turns:
-                vars_keys = range(20)
                 for vars_key in vars_keys:
                     index = vars_turn * 20 + vars_key
                     if self.back_type != '조건최적화':

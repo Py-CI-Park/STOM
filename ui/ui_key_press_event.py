@@ -103,7 +103,7 @@ def key_press_event(ui, event):
                 ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
                 ui.ShowDialogChart(False, coin, code, 30, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), detail, buytimes)
     elif event.key() in (Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0):
-        if QApplication.keyboardModifiers() & Qt.ControlModifier:
+        if QApplication.keyboardModifiers() & Qt.AltModifier:
             if ui.main_btn == 2:
                 if event.key() == Qt.Key_1:
                     ui.svjButtonClicked_09()

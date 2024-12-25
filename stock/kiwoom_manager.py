@@ -209,14 +209,17 @@ class KiwoomManager:
 
     def StockStrategyProcessKill(self):
         if self.StockStrategyProcessAlive():
-            self.proc_strategy_stock1.kill()
-            self.proc_strategy_stock2.kill()
-            self.proc_strategy_stock3.kill()
-            self.proc_strategy_stock4.kill()
-            self.proc_strategy_stock5.kill()
-            self.proc_strategy_stock6.kill()
-            self.proc_strategy_stock7.kill()
-            self.proc_strategy_stock8.kill()
+            try:
+                self.proc_strategy_stock1.kill()
+                self.proc_strategy_stock2.kill()
+                self.proc_strategy_stock3.kill()
+                self.proc_strategy_stock4.kill()
+                self.proc_strategy_stock5.kill()
+                self.proc_strategy_stock6.kill()
+                self.proc_strategy_stock7.kill()
+                self.proc_strategy_stock8.kill()
+            except:
+                pass
 
     def StockTraderProcessKill(self):
         if self.StockTraderProcessAlive():
