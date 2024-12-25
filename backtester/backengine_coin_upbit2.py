@@ -392,7 +392,6 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
                     elif self.tick_count < self.avgtime:
                         break
 
-                    수익금, 수익률 = 0, 0
                     보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, \
                         매도호가, 매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, \
                         매도분할횟수, 매수주문취소시간, 매도주문취소시간 = self.trade_info[vturn][vkey].values()
@@ -617,34 +616,31 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
 
     def SetSellCount2(self, vturn, vkey, 보유수량, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도, 매도분할횟수, 매도호가1,
                       매수호가1, 호가단위):
-        if self.dict_set['주식매도분할횟수'] == 1:
-            self.trade_info[vturn][vkey]['주문수량'] = 보유수량
+        if self.dict_set['코인비중조절'][0] == 0:
+            betting = self.betting
         else:
-            if self.dict_set['코인비중조절'][0] == 0:
-                betting = self.betting
+            if self.dict_set['코인비중조절'][0] == 1:
+                비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
+            elif self.dict_set['코인비중조절'][0] == 2:
+                비중조절기준 = 등락율각도
             else:
-                if self.dict_set['코인비중조절'][0] == 1:
-                    비중조절기준 = round((고가 / 저가 - 1) * 100, 2)
-                elif self.dict_set['코인비중조절'][0] == 2:
-                    비중조절기준 = 등락율각도
-                else:
-                    비중조절기준 = 당일거래대금각도
+                비중조절기준 = 당일거래대금각도
 
-                if 비중조절기준 < self.dict_set['코인비중조절'][1]:
-                    betting = self.betting * self.dict_set['코인비중조절'][5]
-                elif 비중조절기준 < self.dict_set['코인비중조절'][2]:
-                    betting = self.betting * self.dict_set['코인비중조절'][6]
-                elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
-                    betting = self.betting * self.dict_set['코인비중조절'][7]
-                elif 비중조절기준 < self.dict_set['코인비중조절'][4]:
-                    betting = self.betting * self.dict_set['코인비중조절'][8]
-                else:
-                    betting = self.betting * self.dict_set['코인비중조절'][9]
+            if 비중조절기준 < self.dict_set['코인비중조절'][1]:
+                betting = self.betting * self.dict_set['코인비중조절'][5]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][2]:
+                betting = self.betting * self.dict_set['코인비중조절'][6]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
+                betting = self.betting * self.dict_set['코인비중조절'][7]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][4]:
+                betting = self.betting * self.dict_set['코인비중조절'][8]
+            else:
+                betting = self.betting * self.dict_set['코인비중조절'][9]
 
-            oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][매도분할횟수]
-            self.trade_info[vturn][vkey]['주문수량'] = round(betting / self.trade_info[vturn][vkey]['매수가'] * oc_ratio / 100, 8)
-            if self.trade_info[vturn][vkey]['주문수량'] > 보유수량 or 매도분할횟수 + 1 == self.dict_set['코인매도분할횟수']:
-                self.trade_info[vturn][vkey]['주문수량'] = 보유수량
+        oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][매도분할횟수]
+        self.trade_info[vturn][vkey]['주문수량'] = round(betting / self.trade_info[vturn][vkey]['매수가'] * oc_ratio / 100, 8)
+        if self.trade_info[vturn][vkey]['주문수량'] > 보유수량 or 매도분할횟수 + 1 == self.dict_set['코인매도분할횟수']:
+            self.trade_info[vturn][vkey]['주문수량'] = 보유수량
 
         if self.dict_set['코인매도주문구분'] == '지정가':
             기준가격 = 현재가
