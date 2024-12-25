@@ -1,13 +1,10 @@
 import os
 import math
-# noinspection PyUnresolvedReferences
-import talib
 import sqlite3
 import numpy as np
 import pandas as pd
 from matplotlib import font_manager
 from matplotlib import pyplot as plt
-# noinspection PyUnresolvedReferences
 from backtester.back_static import AddTalib
 from utility.static import strp_time, timedelta_sec, strf_time, error_decorator
 from utility.setting import ui_num, DICT_SET, DB_TRADELIST, DB_SETTING, DB_PATH, DB_STOCK_BACK, DB_COIN_BACK, DB_BACKTEST

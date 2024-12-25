@@ -26,7 +26,6 @@ class SetTable:
         self.ui.s_calendarWidgett = QCalendarWidget(self.ui.st_tab)
         todayDate = QDate.currentDate()
         self.ui.s_calendarWidgett.setCurrentPage(todayDate.year(), todayDate.month())
-        # noinspection PyUnresolvedReferences
         self.ui.s_calendarWidgett.clicked.connect(lambda: self.ui.CalendarClicked('S'))
         self.ui.sdt_tableWidgettt = self.wc.setTablewidget(self.ui.st_tab, columns_dt, 1)
         self.ui.sds_tableWidgettt = self.wc.setTablewidget(self.ui.st_tab, columns_dd, 19, clicked=self.ui.CellClicked_04)
@@ -77,7 +76,6 @@ class SetTable:
 
         self.ui.c_calendarWidgett = QCalendarWidget(self.ui.ct_tab)
         self.ui.c_calendarWidgett.setCurrentPage(todayDate.year(), todayDate.month())
-        # noinspection PyUnresolvedReferences
         self.ui.c_calendarWidgett.clicked.connect(lambda: self.ui.CalendarClicked('C'))
         self.ui.cdt_tableWidgettt = self.wc.setTablewidget(self.ui.ct_tab, columns_dt, 1)
         self.ui.cds_tableWidgettt = self.wc.setTablewidget(self.ui.ct_tab, columns_dd, 19, clicked=self.ui.CellClicked_04)

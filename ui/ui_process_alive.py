@@ -1,5 +1,5 @@
 def stom_live_process_alive(ui):
-    return ui.proc_stomlive is not None and ui.proc_stomlive.is_alive()
+    return ui.proc_live is not None and ui.proc_live.is_alive()
 
 
 def simulator_process_alive(ui):

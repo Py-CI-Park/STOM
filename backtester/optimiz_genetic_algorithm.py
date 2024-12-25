@@ -171,7 +171,6 @@ class OptimizeGeneticAlgorithm:
         self.vars_list   = []
         self.opti_lists  = []
         self.high_vars   = []
-        self.bst_procs   = []
         self.result      = {}
         self.vars        = {}
         self.total_count = 0
@@ -355,6 +354,10 @@ class OptimizeGeneticAlgorithm:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 현재 경우의수[{self.total_count:,.0f}] 목표 경우의수[{goal:,.0f}]'))
             k += 1
 
+        time.sleep(6)
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 최적화 완료'))
+        time.sleep(1)
+
         self.SaveVarslist(100, optistandard, buystg, sellstg)
 
         exec(optivars_)
@@ -429,8 +432,6 @@ class OptimizeGeneticAlgorithm:
         threading_timer(5, self.wq.put, data)
 
     def SysExit(self, cancel):
-        for proc in self.bst_procs:
-            proc.kill()
         if cancel:
             self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         else:

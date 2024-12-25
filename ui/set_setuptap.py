@@ -192,6 +192,7 @@ class SetSetupTap:
 
         self.ui.sj_back_cheBox_13 = self.wc.setCheckBox('일반 백테스트 시 그래프 저장하지 않기', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_14)
         self.ui.sj_back_cheBox_14 = self.wc.setCheckBox('일반 백테스트 시 그래프 띄우지 않기', self.ui.sj_bs_groupBox_07, changed=self.ui.CheckboxChanged_15)
+        self.ui.sj_back_cheBox_21 = self.wc.setCheckBox('최적화 도중 로그 기록하지 않기', self.ui.sj_bs_groupBox_07)
         self.ui.sj_back_cheBox_12 = self.wc.setCheckBox('백테 및 전략연산에 보조지표 사용하기', self.ui.sj_bs_groupBox_07, tip='차트창(Alt+C) 팩터설정에서 보조지표의 세부설정이 가능합니다.')
 
         self.ui.sj_back_cheBox_15 = self.wc.setCheckBox('주식 DB 자동관리(일자DB분리, 백테DB추가)', self.ui.sj_bs_groupBox_07, tip='틱데이터 저장 후 일자별분리 및 백테디비추가가 자동실행됨')
@@ -392,6 +393,7 @@ class SetSetupTap:
 
         self.ui.sj_back_cheBox_13.setGeometry(835, 50, 400, 20)
         self.ui.sj_back_cheBox_14.setGeometry(835, 75, 400, 20)
+        self.ui.sj_back_cheBox_21.setGeometry(1060, 50, 300, 20)
         self.ui.sj_back_cheBox_12.setGeometry(1060, 75, 300, 20)
 
         self.ui.sj_back_cheBox_15.setGeometry(10, 100, 250, 20)

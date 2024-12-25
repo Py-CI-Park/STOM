@@ -58,7 +58,7 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
     if ui.dialog_tree.isVisible():      ui.dialog_tree.close()
     if ui.dialog_graph.isVisible():     ui.dialog_graph.close()
     if ui.dialog_kimp.isVisible():      ui.dialog_kimp.close()
-    if ui.StomLiveProcessAlive():       ui.proc_stomlive.kill()
+    if ui.StomLiveProcessAlive():       ui.proc_live.kill()
 
     if ui.CoinKimpProcessAlive():
         kimpQ.put('프로세스종료')

@@ -12,7 +12,6 @@ try:
         localtime = dt.astimezone(tz.tzlocal())
         offset = abs(response.offset)
         if offset >= 0.01:
-            # noinspection PyUnresolvedReferences
             win32api.SetSystemTime(
                 localtime.year,
                 localtime.month,

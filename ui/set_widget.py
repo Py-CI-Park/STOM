@@ -97,10 +97,8 @@ class WidgetCreater:
             pushbutton.setVisible(False)
         if click is not None:
             if cmd is not None:
-                # noinspection PyUnresolvedReferences
                 pushbutton.clicked.connect(lambda: click(cmd))
             else:
-                # noinspection PyUnresolvedReferences
                 pushbutton.clicked.connect(click)
         return pushbutton
 
@@ -143,7 +141,6 @@ class WidgetCreater:
         if not visible:
             combobox.setVisible(visible)
         if activated is not None:
-            # noinspection PyUnresolvedReferences
             combobox.currentTextChanged.connect(activated)
         return combobox
 
@@ -158,7 +155,6 @@ class WidgetCreater:
             checkbox.setFont(qfont12)
             checkbox.setStyleSheet(style)
         if changed is not None:
-            # noinspection PyUnresolvedReferences
             checkbox.stateChanged.connect(changed)
         return checkbox
 
@@ -185,10 +181,8 @@ class WidgetCreater:
         if tip is not None:
             lineedit.setToolTip(tip)
         if enter:
-            # noinspection PyUnresolvedReferences
             lineedit.returnPressed.connect(enter)
         if change:
-            # noinspection PyUnresolvedReferences
             lineedit.textChanged.connect(change)
         return lineedit
 
@@ -214,7 +208,6 @@ class WidgetCreater:
         dateEdit.setDate(qdate)
         dateEdit.setCalendarPopup(True)
         if changed is not None:
-            # noinspection PyUnresolvedReferences
             dateEdit.dateChanged.connect(changed)
         return dateEdit
 
@@ -272,15 +265,12 @@ class WidgetCreater:
         tableWidget.setRowCount(rowcount)
         tableWidget.setHorizontalHeaderLabels(columns)
         if valuechanged is not None:
-            # noinspection PyUnresolvedReferences
             tableWidget.verticalScrollBar().valueChanged.connect(valuechanged)
         if sortchanged is not None:
-            # noinspection PyUnresolvedReferences
             tableWidget.horizontalHeader().sortIndicatorChanged.connect(valuechanged)
         if not visible:
             tableWidget.setVisible(False)
         if clicked is not None:
-            # noinspection PyUnresolvedReferences
             tableWidget.cellClicked.connect(clicked)
         if columns[-1] == 'ch_high':
             if tab == self.ui.st_tab:

@@ -127,8 +127,8 @@ class TelegramMsg:
             tbg   = df['매입금액'].sum()
             tpg   = df['평가금액'].sum()
             tsg   = df['평가손익'].sum()
-            tsp   = round(tsg / tbg * 100, 2)
-            text += f'{tbg:,.0f}{m_unit} {tpg:,.0f}{m_unit} {tsp:.2f}% {tsg:,.0f}{m_unit}\n'
+            tpp   = round(tsg / tbg * 100, 2)
+            text += f'{tbg:,.0f}{m_unit} {tpg:,.0f}{m_unit} {tpp:.2f}% {tsg:,.0f}{m_unit}\n'
             self.SendMsg(text)
         elif df.columns[1] == '주문구분':
             text = ''

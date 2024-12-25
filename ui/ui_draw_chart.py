@@ -1,3 +1,4 @@
+import win32api
 import win32gui
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QMessageBox
@@ -299,7 +300,6 @@ class DrawChart:
             press_keys(int(date[5]))
             press_keys(int(date[6]))
             press_keys(int(date[7]))
-            # noinspection PyUnresolvedReferences
             win32api.Sleep(200)
 
             leftClick(15, 15, win32gui.GetDlgItem(hwnd_mid3, 0x838))

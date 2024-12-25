@@ -54,10 +54,8 @@ class ZmqRecv(QThread):
                         q.put(data)
             elif msg == 'manager':
                 if type(data) == str:
-                    # noinspection PyUnresolvedReferences
                     self.signal1.emit(data)
                 elif type(data) == tuple:
-                    # noinspection PyUnresolvedReferences
                     self.signal2.emit(data)
                 if data == '통신종료':
                     QThread.sleep(1)
@@ -130,15 +128,12 @@ class KWManager:
         self.zmqserv.start()
 
         self.zmqrecv = ZmqRecv(self, self.qlist, port_num)
-        # noinspection PyUnresolvedReferences
         self.zmqrecv.signal1.connect(self.UpdateString)
-        # noinspection PyUnresolvedReferences
         self.zmqrecv.signal2.connect(self.UpdateTuple)
         self.zmqrecv.start()
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.ProcessStarter)
         self.qtimer1.start()
 

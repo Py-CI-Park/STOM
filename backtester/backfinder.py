@@ -76,19 +76,17 @@ class Total:
 
 
 class BackFinder:
-    def __init__(self, wq, bq, sq, tq, lq, beq_list, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, beq_list, ui_gubun):
         self.wq       = wq
         self.bq       = bq
         self.sq       = sq
         self.tq       = tq
         self.lq       = lq
         self.beq_list = beq_list
-        self.backname = backname
         self.ui_gubun = ui_gubun
         self.dict_set = DICT_SET
         self.gubun    = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.tickcols = None
-        self.tickdata = None
         self.Start()
 
     def Start(self):

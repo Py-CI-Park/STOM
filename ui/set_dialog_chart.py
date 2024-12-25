@@ -47,6 +47,10 @@ class SetDialogChart:
         self.ui.ct_pushButtonnn_04 = self.wc.setPushbutton('CHART 8', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.ChartCountChange)
         self.ui.ct_pushButtonnn_05 = self.wc.setPushbutton('시뮬레이터', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.ShowDialogTest)
         self.ui.ct_pushButtonnn_06 = self.wc.setPushbutton('확장', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.ShowDialogChart2)
+        self.ui.ct_pushButtonnn_10 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_01, cmd='이전', shortcut='Alt+left')
+        self.ui.ct_pushButtonnn_11 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_01, cmd='다음', shortcut='Alt+right')
+        self.ui.ct_pushButtonnn_12 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_02, cmd='매수', shortcut='Alt+up')
+        self.ui.ct_pushButtonnn_13 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_02, cmd='매도', shortcut='Alt+down')
 
         self.ui.ct_dateEdittttt_02 = self.wc.setDateEdit(self.ui.dialog_chart, changed=self.ui.ChartMoneyTopList)
         self.ui.ct_tableWidgett_01 = self.wc.setTablewidget(self.ui.dialog_chart, ['종목명'], 100, vscroll=True, clicked=self.ui.CellClicked_07)
@@ -115,6 +119,10 @@ class SetDialogChart:
         self.ui.ct_pushButtonnn_04.setGeometry(1135, 25, 80, 30)
         self.ui.ct_pushButtonnn_05.setGeometry(1220, 25, 80, 30)
         self.ui.ct_pushButtonnn_06.setGeometry(1305, 25, 80, 30)
+        self.ui.ct_pushButtonnn_10.setGeometry(0, 0, 0, 0)
+        self.ui.ct_pushButtonnn_11.setGeometry(0, 0, 0, 0)
+        self.ui.ct_pushButtonnn_12.setGeometry(0, 0, 0, 0)
+        self.ui.ct_pushButtonnn_13.setGeometry(0, 0, 0, 0)
 
         self.ui.ct_dateEdittttt_02.setGeometry(1403, 15, 120, 30)
         self.ui.ct_tableWidgett_01.setGeometry(1403, 55, 120, 1310 if not DICT_SET['저해상도'] else 950)

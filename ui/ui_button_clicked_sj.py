@@ -283,6 +283,7 @@ def sj_button_cicked_07(ui):
         ui.sj_back_cheBox_14.setChecked(True) if df['그래프띄우지않기'][0] else ui.sj_back_cheBox_14.setChecked(False)
         ui.sj_back_cheBox_15.setChecked(True) if df['디비자동관리'][0] else ui.sj_back_cheBox_15.setChecked(False)
         ui.sj_back_cheBox_16.setChecked(True) if df['교차검증가중치'][0] else ui.sj_back_cheBox_16.setChecked(False)
+        ui.sj_back_cheBox_21.setChecked(True) if df['최적화로그기록안함'][0] else ui.sj_back_cheBox_21.setChecked(False)
         ui.sj_back_comBox_04.clear()
         ui.sj_back_cheBox_19.setChecked(True) if df['백테스케쥴실행'][0] else ui.sj_back_cheBox_19.setChecked(False)
         con = sqlite3.connect(DB_STRATEGY)
@@ -682,6 +683,7 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
     atd = 1 if ui.sj_back_cheBox_15.isChecked() else 0
     ext = 1 if ui.sj_back_cheBox_16.isChecked() else 0
     bdf = 1 if ui.sj_back_cheBox_18.isChecked() else 0
+    olx = 1 if ui.sj_back_cheBox_21.isChecked() else 0
     bwd = 0
     bss = 1 if ui.sj_back_cheBox_19.isChecked() else 0
     if ui.sj_back_comBox_05.currentText() == '금':
@@ -707,7 +709,7 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
             query = f"UPDATE back SET 블랙리스트추가 = {bl}, 백테주문관리적용 = {bbg}, 백테매수시간기준 = {bsg}, 백테일괄로딩 = {bld}, " \
                     f"그래프저장하지않기 = {gsv}, 그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴실행 = {bss}, " \
                     f"백테스케쥴요일 = {bwd}, 백테스케쥴시간 = {bst}, 백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', " \
-                    f"백테날짜고정 = {bdf}, 백테날짜 = '{bd}', 범위자동관리 = {aa}, 보조지표사용 = {bjj}"
+                    f"백테날짜고정 = {bdf}, 백테날짜 = '{bd}', 범위자동관리 = {aa}, 보조지표사용 = {bjj}, 최적화로그기록안함 = {olx}"
             queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
@@ -729,6 +731,7 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
         ui.dict_set['백테날짜'] = bd
         ui.dict_set['범위자동관리'] = aa
         ui.dict_set['보조지표사용'] = bjj
+        ui.dict_set['최적화로그기록안함'] = olx
         ui.UpdateDictSet()
         if pre_bbg != bbg:
             ui.BacktestEngineKill()

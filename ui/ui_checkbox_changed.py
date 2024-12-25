@@ -219,12 +219,6 @@ def checkbox_changed_21(ui, state):
             ui.sj_main_cheBox_09.nextCheckState()
 
 
-# def checkbox_changed_22(ui, state):
-#     if type(ui.focusWidget()) != QPushButton and state != Qt.Checked:
-#         if ui.focusWidget() == ui.sj_main_cheBox_09:
-#             if not ui.sj_main_cheBox_11.isChecked() and not ui.sj_main_cheBox_10.isChecked():
-#                 ui.sj_main_cheBox_09.nextCheckState()
-
 # noinspection PyUnusedLocal
 def checkbox_changed_23(ui, state):
     ui.ctpg_tik_name = None

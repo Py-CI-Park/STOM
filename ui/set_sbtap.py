@@ -160,7 +160,7 @@ class SetStockBack:
         self.ui.svc_pushButton_03 = self.wc.setPushbutton('최적화 변수범위 로딩(F9)', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_03, color=1)
         self.ui.svc_pushButton_04 = self.wc.setPushbutton('최적화 변수범위 저장(F12)', box=self.ui.ss_tab, click=self.ui.svcButtonClicked_04, color=1, tip='작성된 최적화 변수설정을 저장한다.\nCtrl 키와 함께 누르면 코드 테스트 과정을 생략한다.')
 
-        self.ui.svc_labellllll_01 = QLabel('▣ 분할은 학습기간, 검증은 검증기간, 테스트는 확인기간까지 선택', self.ui.ss_tab)
+        self.ui.svc_labellllll_01 = QLabel('▣ 일반은 학습기간, 검증은 검증기간, 테스트는 확인기간까지 선택', self.ui.ss_tab)
         self.ui.svc_labellllll_02 = QLabel('최적화 학습기간                   검증기간                   확인기간', self.ui.ss_tab)
         self.ui.svc_comboBoxxx_03 = self.wc.setCombobox(self.ui.ss_tab, items=train_period, tip='최적화 학습기간(주단위)을 선택하십시오.')
         self.ui.svc_comboBoxxx_04 = self.wc.setCombobox(self.ui.ss_tab, items=valid_period, tip='최적화 검증기간(주단위)을 선택하십시오.')

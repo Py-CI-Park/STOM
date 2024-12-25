@@ -14,7 +14,6 @@ class SetMediaPlayer:
         self.ui.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
         self.ui.mediaPlayer.setVideoOutput(self.ui.videoWidget)
         self.ui.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile('./ui/intro.mp4')))
-        # noinspection PyUnresolvedReferences
         self.ui.mediaPlayer.stateChanged.connect(self.ui.VideoWidgetClose)
         if self.ui.dict_set['인트로숨김']:
             self.ui.videoWidget.setVisible(False)

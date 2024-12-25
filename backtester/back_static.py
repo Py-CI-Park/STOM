@@ -394,10 +394,10 @@ def GetText1(opti_turn, vars_turn, vars_list):
 
 
 def GetText2(gubun, optistd, std_list, betting, result):
-    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
-    if tsp < 0 < tsg: tsg = -2_147_483_648
+    tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi, mdd, mdd_ = result
+    if tpp < 0 < tsg: tsg = -2_147_483_648
     mddt = f'{mdd_:,.0f}' if 'G' in optistd else f'{mdd:,.2f}%'
-    text = f'{gubun} TC[{tc:,.0f}] ATC[{atc:,.1f}] MH[{mhct}] WR[{wr:,.2f}%] MDD[{mddt}] CAGR[{cagr:,.2f}] TPI[{tpi:,.2f}] AP[{ap:,.2f}%] TP[{tsp:,.2f}%] TG[{tsg:,.0f}]'
+    text = f'{gubun} TC[{tc:,.0f}] ATC[{atc:,.1f}] MH[{mhct}] WR[{wr:,.2f}%] MDD[{mddt}] CAGR[{cagr:,.2f}] TPI[{tpi:,.2f}] AP[{app:,.2f}%] TP[{tpp:,.2f}%] TG[{tsg:,.0f}]'
     std, text = GetOptiStdText(optistd, std_list, betting, result, text)
     text = f'<font color=white>{text}</font>' if tsg >= 0 else f'<font color=#96969b>{text}</font>'
     return text, std
@@ -458,26 +458,26 @@ def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
 
 def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     mdd_low, mdd_high, mhct_low, mhct_high, wr_low, wr_high, ap_low, ap_high, atc_low, atc_high, cagr_low, cagr_high, tpi_low, tpi_high = std_list
-    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
+    tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi, mdd, mdd_ = result
     std_true = (mdd_low <= mdd <= mdd_high and mhct_low <= mhct <= mhct_high and wr_low <= wr <= wr_high and
-                ap_low <= ap <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high)
+                ap_low <= app <= ap_high and atc_low <= atc <= atc_high and cagr_low <= cagr <= cagr_high and tpi_low <= tpi <= tpi_high)
     std, pm, p2m, pam, pwm, gm, g2m, gam, gwm, text = 0, 0, 0, 0, 0, 0, 0, 0, 0, ''
     std_false_point = -2_222_222_222
     if tc > 0:
         if 'TRAIN' in pre_text or 'TOTAL' in pre_text:
             if 'P' in optistd:
                 if optistd == 'TP':
-                    std = tsp if std_true else std_false_point
+                    std = tpp if std_true else std_false_point
                 elif optistd == 'TPI':
                     std = tpi if std_true else std_false_point
                 elif optistd == 'PM':
-                    std = pm = round(tsp / mdd, 2) if std_true else std_false_point
+                    std = pm = round(tpp / mdd, 2) if std_true else std_false_point
                 elif optistd == 'P2M':
-                    std = p2m = round(tsp * tsp / mdd / 100, 2) if std_true else std_false_point
+                    std = p2m = round(tpp * tpp / mdd / 100, 2) if std_true else std_false_point
                 elif optistd == 'PAM':
-                    std = pam = round(tsp * ap / mdd, 2) if std_true else std_false_point
+                    std = pam = round(tpp * app / mdd, 2) if std_true else std_false_point
                 elif optistd == 'PWM':
-                    std = pwm = round(tsp * wr / mdd / 100, 2) if std_true else std_false_point
+                    std = pwm = round(tpp * wr / mdd / 100, 2) if std_true else std_false_point
             elif 'G' in optistd:
                 if optistd == 'TG':
                     std = tsg if std_true else std_false_point
@@ -486,7 +486,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
                 elif optistd == 'G2M':
                     std = g2m = round(tsg * tsg / mdd_ / betting, 2) if std_true else std_false_point
                 elif optistd == 'GAM':
-                    std = gam = round(tsg * ap / mdd_, 2) if std_true else std_false_point
+                    std = gam = round(tsg * app / mdd_, 2) if std_true else std_false_point
                 elif optistd == 'GWM':
                     std = gwm = round(tsg * wr / mdd_ / 100, 2) if std_true else std_false_point
                 elif optistd == 'CAGR':
@@ -494,17 +494,17 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
         else:
             if 'P' in optistd:
                 if optistd == 'TP':
-                    std = tsp
+                    std = tpp
                 elif optistd == 'TPI':
                     std = tpi
                 elif optistd == 'PM':
-                    std = pm = round(tsp / mdd, 2)
+                    std = pm = round(tpp / mdd, 2)
                 elif optistd == 'P2M':
-                    std = p2m = round(tsp * tsp / mdd / 100, 2)
+                    std = p2m = round(tpp * tpp / mdd / 100, 2)
                 elif optistd == 'PAM':
-                    std = pam = round(tsp * ap / mdd, 2)
+                    std = pam = round(tpp * app / mdd, 2)
                 elif optistd == 'PWM':
-                    std = pwm = round(tsp * wr / mdd / 100, 2)
+                    std = pwm = round(tpp * wr / mdd / 100, 2)
             elif 'G' in optistd:
                 if optistd == 'TG':
                     std = tsg
@@ -513,7 +513,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
                 elif optistd == 'G2M':
                     std = g2m = round(tsg * tsg / mdd_ / betting, 2)
                 elif optistd == 'GAM':
-                    std = gam = round(tsg * ap / mdd_, 2)
+                    std = gam = round(tsg * app / mdd_, 2)
                 elif optistd == 'GWM':
                     std = gwm = round(tsg * wr / mdd_ / 100, 2)
                 elif optistd == 'CAGR':
@@ -546,7 +546,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     return std, text
 
 
-def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
+def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
             backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None):
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
@@ -567,7 +567,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday,
             array = np.array(df_tsg[f'수익금합계{i}'], dtype=np.float64)
             lower = np.argmax(np.maximum.accumulate(array) - array)
             upper = np.argmax(array[:lower])
-            mdd_ = round(abs(array[upper] - array[lower]) / (array[upper] + onegm) * 100, 2)
+            mdd_ = round(abs(array[upper] - array[lower]) / (array[upper] + seed) * 100, 2)
         except:
             mdd_ = 0.
         mdd_list.append(mdd_)
@@ -579,7 +579,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday,
 
     df_ts = df_sg.resample('D').sum()
     df_ts['수익금합계'] = df_ts['수익금'].cumsum()
-    df_ts['수익금합계'] = ((df_ts['수익금합계'] + onegm) / onegm - 1) * 100
+    df_ts['수익금합계'] = ((df_ts['수익금합계'] + seed) / seed - 1) * 100
 
     df_kp, df_kd, df_bc = None, None, None
     if dict_cn is not None:
@@ -790,7 +790,7 @@ def AddMdd(arry_tsg, result):
 
 @jit(nopython=True, cache=True)
 def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
-    """
+    """ dtype = 'float64'
     arry_tsg
     보유시간, 매도시간, 수익률, 수익금, 수익금합계
       0       1       2       3      4
@@ -798,7 +798,7 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
     체결시간, 보유중목수, 보유금액
       0         1        2
     """
-    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     tc = len(arry_tsg)
     if tc > 0:
         arry_p = arry_tsg[arry_tsg[:, 3] >= 0]
@@ -808,16 +808,16 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
         mc     = len(arry_m)
         wr     = round(pc / tc * 100, 2)
         ah     = round(arry_tsg[:, 0].sum() / tc, 2)
-        ap     = round(arry_tsg[:, 2].sum() / tc, 2)
+        app    = round(arry_tsg[:, 2].sum() / tc, 2)
         tsg    = int(arry_tsg[:, 3].sum())
         app    = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
         amp    = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
         try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max()
         except: mhct  = 0
-        try:    onegm = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
-        except: onegm = betting
-        tsp    = round(tsg / onegm * 100, 2)
-        cagr   = round(tsp / day_count * (250 if ui_gubun == 'S' else 365), 2)
+        try:    seed = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
+        except: seed = betting
+        tpp    = round(tsg / seed * 100, 2)
+        cagr   = round(tpp / day_count * (250 if ui_gubun == 'S' else 365), 2)
         tpi    = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
 
-    return tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi
+    return tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi

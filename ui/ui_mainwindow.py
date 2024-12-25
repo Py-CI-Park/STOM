@@ -185,7 +185,7 @@ class LiveClient:
         if data5 is not None:
             data5 = [[self.back_text_conv(i, x) for x in d.split(';')] for i, d in enumerate(data5)]
             df7 = pd.DataFrame(dict(zip(columns_sd, data5)))
-            df7.sort_values(by=['cagr'], ascending=False, inplace=True)
+            df7.sort_values(by=['tsg', 'cagr'], ascending=False, inplace=True)
 
         if data6 is not None:
             df8 = pd.DataFrame(columns=['백테스트', '백파인더', '최적화', '최적화V', '최적화VC', '최적화T', '최적화VT', '최적화VCT',
@@ -292,8 +292,7 @@ class Writer(QThread):
     def __init__(self, _windowQ):
         super().__init__()
         self.windowQ = _windowQ
-        df           = pd.DataFrame
-        self.df_list = [df, df, df, df, df, df, df, df]
+        self.df_list = [None, None, None, None, None, None, None, None]
         self.test    = None
 
     def run(self):
@@ -303,7 +302,6 @@ class Writer(QThread):
                 data = self.windowQ.get()
                 if type(data[0]) != str:
                     if data[0] <= ui_num['DB관리'] or data[0] == ui_num['기업개요']:
-                        # noinspection PyUnresolvedReferences
                         self.signal1.emit(data)
                     elif ui_num['S실현손익'] <= data[0] <= ui_num['C상세기록']:
                         if data[0] == ui_num['S관심종목']:
@@ -313,38 +311,29 @@ class Writer(QThread):
                                 gsjm_count += 1
                                 if gsjm_count == 8:
                                     gsjm_count = 0
+                                    df_list = [x for x in self.df_list if x is not None]
                                     # noinspection PyTypeChecker
-                                    df = pd.concat(self.df_list)
+                                    df = pd.concat(df_list)
                                     df.sort_values(by=['d_money'], ascending=False, inplace=True)
-                                    # noinspection PyUnresolvedReferences
                                     self.signal2.emit((ui_num['S관심종목'], df))
                             else:
-                                # noinspection PyUnresolvedReferences
                                 self.signal2.emit((ui_num['S관심종목'], data[2]))
                         else:
-                            # noinspection PyUnresolvedReferences
                             self.signal2.emit(data)
                     elif data[0] == ui_num['차트']:
-                        # noinspection PyUnresolvedReferences
                         self.signal3.emit(data)
                     elif data[0] == ui_num['실시간차트']:
-                        # noinspection PyUnresolvedReferences
                         self.signal4.emit(data)
                     elif data[0] == ui_num['풍경사진']:
-                        # noinspection PyUnresolvedReferences
                         self.signal7.emit(data)
                     elif data[0] in (ui_num['코스피'], ui_num['코스닥']):
-                        # noinspection PyUnresolvedReferences
                         self.signal5.emit(data)
                     elif data[0] >= ui_num['트리맵']:
-                        # noinspection PyUnresolvedReferences
                         self.signal6.emit(data)
                 else:
                     if data[0] == 'qsize':
-                        # noinspection PyUnresolvedReferences
                         self.signal8.emit(data[1])
                     elif '라이브' in data:
-                        # noinspection PyUnresolvedReferences
                         self.signal9.emit(data)
                     elif data == '복기모드시작':
                         self.test = True
@@ -441,7 +430,7 @@ class MainWindow(QMainWindow):
         self.proc_query = Process(target=Query, args=(self.qlist,))
         self.proc_chart = Process(target=Chart, args=(self.qlist,), daemon=True)
         self.proc_hoga  = Process(target=Hoga, args=(self.qlist,), daemon=True)
-        self.proc_cert  = Process(target=LiveClient, args=(self.qlist,), daemon=True)
+        self.proc_live  = Process(target=LiveClient, args=(self.qlist,), daemon=True)
 
         self.proc_tele.start()
         self.proc_webc.start()
@@ -449,7 +438,7 @@ class MainWindow(QMainWindow):
         self.proc_query.start()
         self.proc_chart.start()
         self.proc_hoga.start()
-        self.proc_cert.start()
+        self.proc_live.start()
 
         self.auto_run = auto_run_
         self.dict_set = DICT_SET
@@ -571,7 +560,6 @@ class MainWindow(QMainWindow):
         self.proc_backtester_ocv   = None
         self.proc_backtester_ocvc  = None
 
-        self.proc_stomlive         = None
         self.proc_receiver_coin    = None
         self.proc_strategy_coin    = None
         self.proc_trader_coin      = None
@@ -621,19 +609,16 @@ class MainWindow(QMainWindow):
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.ProcessStarter)
         self.qtimer1.start()
 
         self.qtimer2 = QTimer()
         self.qtimer2.setInterval(500)
-        # noinspection PyUnresolvedReferences
         self.qtimer2.timeout.connect(self.UpdateProgressBar)
         self.qtimer2.start()
 
         self.qtimer3 = QTimer()
         self.qtimer3.setInterval(1 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer3.timeout.connect(self.UpdateCpuper)
         self.qtimer3.start()
 
@@ -645,23 +630,14 @@ class MainWindow(QMainWindow):
         self.draw_treemap       = DrawTremap(self, self.qlist)
 
         self.writer = Writer(self.windowQ)
-        # noinspection PyUnresolvedReferences
         self.writer.signal1.connect(self.update_textedit.update_texedit)
-        # noinspection PyUnresolvedReferences
         self.writer.signal2.connect(self.update_tablewidget.update_tablewidget)
-        # noinspection PyUnresolvedReferences
         self.writer.signal3.connect(self.draw_chart.draw_chart)
-        # noinspection PyUnresolvedReferences
         self.writer.signal4.connect(self.draw_realchart.draw_realchart)
-        # noinspection PyUnresolvedReferences
         self.writer.signal5.connect(self.draw_realjisuchart.draw_realjisuchart)
-        # noinspection PyUnresolvedReferences
         self.writer.signal6.connect(self.draw_treemap.draw_treemap)
-        # noinspection PyUnresolvedReferences
-        self.writer.signal7.connect(self.ImageUpdate)
-        # noinspection PyUnresolvedReferences
+        self.writer.signal7.connect(self.UpdateImage)
         self.writer.signal8.connect(self.UpdateSQsize)
-        # noinspection PyUnresolvedReferences
         self.writer.signal9.connect(self.StomliveScreenshot)
         self.writer.start()
 
@@ -672,9 +648,11 @@ class MainWindow(QMainWindow):
 
     # =================================================================================================================
     def ProcessStarter(self):              process_starter(self, self.qlist)
-    def UpdateProgressBar(self):           update_progressbar(self, self.soundQ, self.webcQ)
     # =================================================================================================================
-    def ImageUpdate(self, data):           update_image(self, data)
+    def ChartCountChange(self):            chart_count_change(self)
+    # =================================================================================================================
+    def UpdateProgressBar(self):           update_progressbar(self, self.soundQ, self.webcQ)
+    def UpdateImage(self, data):           update_image(self, data)
     def UpdateSQsize(self, data):          update_sqsize(self, data)
     def UpdateCpuper(self):                update_cpuper(self)
     def UpdateDictSet(self):               update_dictset(self, self.wdzservQ, self.creceivQ, self.ctraderQ, self.cstgQ, self.chartQ, self.proc_chart)
@@ -774,7 +752,6 @@ class MainWindow(QMainWindow):
     def PutHogaCode(self, coin, code): put_hoga_code(self, coin, code, self.wdzservQ, self.creceivQ)
     def ChartMoneyTopList(self): chart_moneytop_list(self)
     # =================================================================================================================
-    # =================================================================================================================
     def dbButtonClicked_01(self): dbbutton_clicked_01(self, self.windowQ, self.queryQ, self.proc_query)
     def dbButtonClicked_02(self): dbbutton_clicked_02(self, self.windowQ, self.queryQ, self.proc_query)
     def dbButtonClicked_03(self): dbbutton_clicked_03(self, self.windowQ, self.queryQ, self.proc_query)
@@ -795,7 +772,7 @@ class MainWindow(QMainWindow):
     def dbButtonClicked_18(self): dbbutton_clicked_18(self, self.windowQ, self.queryQ, self.proc_query)
     def dbButtonClicked_19(self): dbbutton_clicked_19(self, self.windowQ, self.queryQ, self.proc_query)
     # =================================================================================================================
-    def pActivated_01(self):      pactivated_01(self)
+    def ptActivated_01(self):     ptactivated_01(self)
     def ptButtonClicked_01(self): ptbutton_clicked_01(self)
     def ptButtonClicked_02(self): ptbutton_clicked_02(self, self.proc_query, self.queryQ)
     def ptButtonClicked_03(self): ptbutton_clicked_03(self)
@@ -809,13 +786,19 @@ class MainWindow(QMainWindow):
     def odButtonClicked_07(self): odbutton_clicked_07(self, self.ctraderQ, self.wdzservQ)
     def odButtonClicked_08(self): odbutton_clicked_08(self, self.ctraderQ, self.wdzservQ)
     # =================================================================================================================
-    def opButtonClicked_01(self): opbutton_clicked_01()
-    def cpButtonClicked_01(self): cpbutton_clicked_01(self, self.chartQ)
-    def ttButtonClicked_01(self, cmd): ttbutton_clicked_01(self, cmd)
-    def stButtonClicked_01(self): stbutton_clicked_01(self)
-    def stButtonClicked_02(self): stbutton_clicked_02(self, self.proc_query, self.queryQ)
-    def ChangeBacksDate(self):    change_back_sdate(self)
-    def ChangeBackeDate(self):    change_back_edate(self)
+    def opButtonClicked_01(self):        opbutton_clicked_01()
+    def cpButtonClicked_01(self):        cpbutton_clicked_01(self, self.chartQ)
+    def ttButtonClicked_01(self, cmd):   ttbutton_clicked_01(self, cmd)
+    def ChangeBacksDate(self):           change_back_sdate(self)
+    def ChangeBackeDate(self):           change_back_edate(self)
+    def stButtonClicked_01(self):        stbutton_clicked_01(self)
+    def stButtonClicked_02(self):        stbutton_clicked_02(self, self.proc_query, self.queryQ)
+    def lvButtonClicked_01(self):        lvbutton_clicked_01(self)
+    def lvButtonClicked_02(self):        lvbutton_clicked_02(self)
+    def lvButtonClicked_03(self):        lvbutton_clicked_03(self, self.proc_query, self.queryQ)
+    def lvCheckChanged_01(self, state):  lvcheck_changed_01(self, state)
+    def hgButtonClicked_01(self, gubun): hg_button_clicked_01(self, gubun, self.hogaQ)
+    def hgButtonClicked_02(self, gubun): hg_button_clicked_02(self, gubun)
     # =================================================================================================================
     def beButtonClicked_01(self): bebutton_clicked_01(self)
     def BacktestEngineKill(self): backtest_engine_kill(self, self.windowQ)
@@ -839,7 +822,6 @@ class MainWindow(QMainWindow):
     def ssButtonClicked_04(self): ssbutton_clicked_04(self)
     def ssButtonClicked_05(self): ssbutton_clicked_05(self)
     def ssButtonClicked_06(self): ssbutton_clicked_06(self)
-    # =================================================================================================================
     def csButtonClicked_01(self): csbutton_clicked_01(self)
     def csButtonClicked_02(self): csbutton_clicked_02(self)
     def csButtonClicked_03(self): csbutton_clicked_03(self)
@@ -851,7 +833,6 @@ class MainWindow(QMainWindow):
     def szooButtonClicked_02(self): szoo_button_clicked_02(self)
     def czooButtonClicked_01(self): czoo_button_clicked_01(self)
     def czooButtonClicked_02(self): czoo_button_clicked_02(self)
-    # =================================================================================================================
     # =================================================================================================================
     def Activated_01(self): activated_01(self)
     def Activated_02(self): activated_02(self)
@@ -966,11 +947,11 @@ class MainWindow(QMainWindow):
     # =================================================================================================================
     def svaButtonClicked_01(self): sva_button_clicked_01(self)
     def svaButtonClicked_02(self): sva_button_clicked_02(self, self.proc_query, self.queryQ)
+    # =================================================================================================================
     def svoButtonClicked_01(self): svo_button_clicked_01(self)
     def svoButtonClicked_02(self): svo_button_clicked_02(self, self.proc_query, self.queryQ)
     def svoButtonClicked_03(self): svo_button_clicked_03(self)
     def svoButtonClicked_04(self): svo_button_clicked_04(self, self.proc_query, self.queryQ)
-    # =================================================================================================================
     # =================================================================================================================
     def cvjbButtonClicked_01(self): cvjb_button_clicked_01(self)
     def cvjbButtonClicked_02(self): cvjb_button_clicked_02(self, self.proc_query, self.queryQ)
@@ -1045,20 +1026,13 @@ class MainWindow(QMainWindow):
     def cvoButtonClicked_03(self): cvo_button_clicked_03(self)
     def cvoButtonClicked_04(self): cvo_button_clicked_04(self, self.proc_query, self.queryQ)
     # =================================================================================================================
-    # =================================================================================================================
     def BackTestengineShow(self, gubun):                 backengine_show(self, gubun)
     def StartBacktestEngine(self, gubun):                start_backengine(self, gubun, self.windowQ, self.wdzservQ, self.backQ, self.totalQ, self.webcQ)
-    # =================================================================================================================
     def BackCodeTest1(self, stg_code):            return back_code_test1(stg_code, self.testQ)
     def BackCodeTest2(self, vars_code, ga=False): return back_code_test2(vars_code, self.testQ, ga)
     def BackCodeTest3(self, gubun, conds_code):   return back_code_test3(gubun, conds_code, self.testQ)
     def ClearBacktestQ(self):                            clear_backtestQ(self.backQ, self.totalQ)
     def BacktestProcessKill(self, gubun):                backtest_process_kill(self, gubun, self.totalQ)
-    # =================================================================================================================
-    def lvButtonClicked_01(self):       lvbutton_clicked_01(self)
-    def lvButtonClicked_02(self):       lvbutton_clicked_02(self)
-    def lvButtonClicked_03(self):       lvbutton_clicked_03(self, self.proc_query, self.queryQ)
-    def lvCheckChanged_01(self, state): lvcheck_changed_01(self, state)
     # =================================================================================================================
     def ctButtonClicked_01(self): ct_button_clicked_01(self, self.wdzservQ, self.qlist)
     def ctButtonClicked_02(self): ct_button_clicked_02(self, self.wdzservQ)
@@ -1069,10 +1043,8 @@ class MainWindow(QMainWindow):
     def ctButtonClicked_07(self): ct_button_clicked_07(self)
     def ctButtonClicked_08(self): ct_button_clicked_08(self)
     def ctButtonClicked_09(self): ct_button_clicked_09(self, self.proc_query, self.queryQ)
+    def GetKlist(self):    return get_k_list(self)
     def TickInput(self, code, gubun): tick_put(self, code, gubun, self.windowQ, self.wdzservQ, self.ctraderQ, self.creceivQ, self.cstgQ)
-    # =================================================================================================================
-    def hgButtonClicked_01(self, gubun): hg_button_clicked_01(self, gubun, self.hogaQ)
-    def hgButtonClicked_02(self, gubun): hg_button_clicked_02(self, gubun)
     # =================================================================================================================
     def sjButtonClicked_01(self): sj_button_cicked_01(self)
     def sjButtonClicked_02(self): sj_button_cicked_02(self)
@@ -1106,10 +1078,10 @@ class MainWindow(QMainWindow):
     def sjButtonClicked_31(self): sj_button_cicked_31(self)
     def sjButtonClicked_32(self): sj_button_cicked_32(self)
     # =================================================================================================================
-    def bjsButtonClicked_01(self): bjs_button_clicked_01(self)
-    def bjsButtonClicked_02(self): bjs_button_clicked_02(self, self.proc_query, self.queryQ)
-    def bjcButtonClicked_01(self): bjc_button_clicked_01(self)
-    def bjcButtonClicked_02(self): bjc_button_clicked_02(self, self.proc_query, self.queryQ)
+    def bjsButtonClicked_01(self):       bjs_button_clicked_01(self)
+    def bjsButtonClicked_02(self):       bjs_button_clicked_02(self, self.proc_query, self.queryQ)
+    def bjcButtonClicked_01(self):       bjc_button_clicked_01(self)
+    def bjcButtonClicked_02(self):       bjc_button_clicked_02(self, self.proc_query, self.queryQ)
     def bjsCheckChanged_01(self, state): bjs_check_changed_01(self, state)
     def bjcCheckChanged_01(self, state): bjc_check_changed_01(self, state)
     # =================================================================================================================
@@ -1121,9 +1093,9 @@ class MainWindow(QMainWindow):
     def CoinKimpProcessAlive(self):     return coinkimp_process_alive(self)
     def BacktestProcessAlive(self):     return backtest_process_alive(self)
     # =================================================================================================================
-    def ChartCountChange(self):                  chart_count_change(self)
-    def ProcessKill(self):                       process_kill(self, self.wdzservQ, self.queryQ, self.kimpQ, self.creceivQ, self.ctraderQ)
     def keyPressEvent(self, event):              key_press_event(self, event)
     def eventFilter(self, widget, event): return event_filter(self, widget, event)
     def closeEvent(self, a):                     close_event(self, a)
-    def GetKlist(self):                   return get_k_list(self)
+    # =================================================================================================================
+    def ProcessKill(self):                       process_kill(self, self.wdzservQ, self.queryQ, self.kimpQ, self.creceivQ, self.ctraderQ)
+    # =================================================================================================================

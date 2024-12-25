@@ -21,10 +21,8 @@ class Updater(QThread):
         while True:
             data = self.straderQ.get()
             if type(data) == tuple:
-                # noinspection PyUnresolvedReferences
                 self.signal1.emit(data)
             elif type(data) == str:
-                # noinspection PyUnresolvedReferences
                 self.signal2.emit(data)
 
 
@@ -89,21 +87,17 @@ class KWTrader:
         self.KiwoomLogin()
 
         self.updater = Updater(self.straderQ)
-        # noinspection PyUnresolvedReferences
         self.updater.signal1.connect(self.UpdateTuple)
-        # noinspection PyUnresolvedReferences
         self.updater.signal2.connect(self.UpdateString)
         self.updater.start()
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.Scheduler)
         self.qtimer1.start()
 
         self.qtimer2 = QTimer()
         self.qtimer2.setInterval(500)
-        # noinspection PyUnresolvedReferences
         self.qtimer2.timeout.connect(self.PutJangoDF)
         self.qtimer2.start()
 
@@ -412,11 +406,11 @@ class KWTrader:
                     self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], 0, 0, 0, 0, 0
                 else:
                     self.dict_intg['추정예탁자산'] = int(df['추정예탁자산'][0])
-                    tsp = float(int(df['총수익률(%)'][0]) / 100)
+                    tpp = float(int(df['총수익률(%)'][0]) / 100)
                     tsg = int(df['총평가손익금액'][0])
                     tbg = int(df['총매입금액'][0])
                     tpg = int(df['총평가금액'][0])
-                    self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], 0, tsp, tsg, tbg, tpg
+                    self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], 0, tpp, tsg, tbg, tpg
 
                 self.kwzservQ.put(('window', (ui_num['S잔고평가'], self.df_tj)))
                 break
@@ -816,9 +810,9 @@ class KWTrader:
             tbg = self.df_jg['매입금액'].sum()
             tpg = self.df_jg['평가금액'].sum()
             bct = len(self.df_jg)
-            tsp = round(tsg / tbg * 100, 2)
+            tpp = round(tsg / tbg * 100, 2)
             ttg = self.dict_intg['예수금'] + tpg
-            self.df_tj.loc[self.dict_strg['당일날짜']] = ttg, self.dict_intg['예수금'], bct, tsp, tsg, tbg, tpg
+            self.df_tj.loc[self.dict_strg['당일날짜']] = ttg, self.dict_intg['예수금'], bct, tpp, tsg, tbg, tpg
         else:
             self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['예수금'], self.dict_intg['예수금'], 0, 0.0, 0, 0, 0
 

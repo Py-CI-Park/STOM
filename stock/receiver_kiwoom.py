@@ -37,7 +37,6 @@ class Updater(QThread):
     def run(self):
         while True:
             data = self.sreceivQ.get()
-            # noinspection PyUnresolvedReferences
             self.signal.emit(data)
 
 
@@ -113,19 +112,16 @@ class KWReceiver:
             self.zmqserver.start()
 
         self.updater = Updater(self.sreceivQ)
-        # noinspection PyUnresolvedReferences
         self.updater.signal.connect(self.UpdateTuple)
         self.updater.start()
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.Scheduler)
         self.qtimer1.start()
 
         self.qtimer2 = QTimer()
         self.qtimer2.setInterval(10 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer2.timeout.connect(self.MoneyTopSearch)
 
         app.exec_()

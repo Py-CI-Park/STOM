@@ -58,12 +58,7 @@ class CoinUpbitBackEngine:
         self.vars         = []
         self.vars_list    = []
         self.vars_lists   = []
-        self.buy_info     = []
         self.dict_tik_ar  = {}
-        self.dict_day_ar  = {}
-        self.dict_min_ar  = {}
-        self.dict_dindex  = {}
-        self.dict_mindex  = {}
         self.bhogainfo    = {}
         self.shogainfo    = {}
         self.dict_buystg  = {}
@@ -76,7 +71,6 @@ class CoinUpbitBackEngine:
         self.name         = ''
         self.day_info     = {}
         self.trade_info   = {}
-        self.current_min  = []
         self.index        = 0
         self.indexn       = 0
         self.indexb       = 0

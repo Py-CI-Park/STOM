@@ -858,10 +858,10 @@ class BFTrader:
             tbg = self.df_jg['매입금액'].sum()
             tpg = self.df_jg['평가금액'].sum()
             bct = len(self.df_jg)
-            tsp = round(tsg / tbg * 100, 2)
+            tpp = round(tsg / tbg * 100, 2)
             if self.dict_set['코인모의투자']:
                 self.dict_intg['추정예탁자산'] = self.dict_intg['예수금'] + tpg
-            self.df_tj = pd.DataFrame([[self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], bct, tsp, tsg, tbg, tpg]], columns=columns_tj, index=[self.str_today])
+            self.df_tj = pd.DataFrame([[self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], bct, tpp, tsg, tbg, tpg]], columns=columns_tj, index=[self.str_today])
         else:
             self.df_tj = pd.DataFrame([[self.dict_intg['추정예탁자산'], self.dict_intg['예수금'], 0, 0.0, 0, 0, 0]], columns=columns_tj, index=[self.str_today])
 

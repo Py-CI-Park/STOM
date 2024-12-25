@@ -162,7 +162,7 @@ class Total:
             arry_bct  = np.sort(arry_bct, axis=0)[::-1]
             result    = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, self.day_count)
             result    = AddMdd(arry_tsg, result)
-            tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
+            tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi, mdd, mdd_ = result
             save_time = strf_time('%Y%m%d%H%M%S')
             startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
             startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
@@ -171,18 +171,18 @@ class Total:
             endtime   = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
             bet_unit  = '원' if self.ui_gubun != 'CF' else 'USDT'
             back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.avgtime}'
-            label_text = f'종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {onegm:,}{bet_unit}, '\
+            label_text = f'종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {seed:,}{bet_unit}, '\
                          f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
-                         f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {ap:.2f}%, 수익률합계 {tsp:.2f}%, '\
+                         f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '\
                          f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테스팅 결과\n' + label_text))
 
             if self.dict_set['스톰라이브']:
                 backlive_text = f'back;{startday}~{endday};{starttime}~{endtime};{self.day_count};{self.avgtime};{int(self.betting)};'\
-                                f'{onegm};{tc};{atc};{mhct};{ah:.2f};{pc};{mc};{wr:.2f};{ap:.2f};{tsp:.2f};{mdd:.2f};{tsg};{cagr:.2f}'
+                                f'{seed};{tc};{atc};{mhct};{ah:.2f};{pc};{mc};{wr:.2f};{app:.2f};{tpp:.2f};{mdd:.2f};{tsg};{cagr:.2f}'
                 self.lq.put(backlive_text)
 
-            data = [int(self.betting), onegm, tc, atc, mhct, ah, pc, mc, wr, ap, tsp, mdd, tsg, tpi, cagr, self.buystg, self.sellstg]
+            data = [int(self.betting), seed, tc, atc, mhct, ah, pc, mc, wr, app, tpp, mdd, tsg, tpi, cagr, self.buystg, self.sellstg]
             df = pd.DataFrame([data], columns=columns_vj, index=[save_time])
 
             save_file_name = f'{self.savename}_{self.buystg_name}_{save_time}'
@@ -219,11 +219,11 @@ class Total:
                     else:
                         sell_vars = f'{sell_vars}, {text}'
 
-                PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
+                PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
                         self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False, buy_vars=buy_vars, sell_vars=sell_vars)
             else:
                 if not self.dict_set['그래프저장하지않기']:
-                    PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, onegm, mdd, self.startday, self.endday, self.starttime, self.endtime,
+                    PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
                             self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'])
 
             self.mq.put(f'{self.backname} 완료')

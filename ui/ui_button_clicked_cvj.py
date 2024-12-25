@@ -729,8 +729,7 @@ def cvj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
         backQ.put((avgtime, startday, endday, starttime, endtime, buystg, ui.back_count))
         ui.proc_backtester_bf = Process(
             target=BackFinder,
-            args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, '백파인더',
-                  'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+            args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
         )
         ui.proc_backtester_bf.start()
         ui.cvjButtonClicked_07()
@@ -1242,8 +1241,7 @@ def cvj_button_clicked_23(ui, windowQ, backQ, totalQ):
         backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
                    dict_pattern_buy, dict_pattern_sell))
         ui.proc_backtester_bp = Process(
-            target=PatternModeling,
-            args=(windowQ, backQ, totalQ, ui.back_sques, ui.back_eques, 'C', ui.back_count, multi)
+            target=PatternModeling, args=(windowQ, backQ, totalQ, ui.back_eques, 'C', ui.back_count, multi)
         )
         ui.proc_backtester_bp.start()
         ui.cvjButtonClicked_07()

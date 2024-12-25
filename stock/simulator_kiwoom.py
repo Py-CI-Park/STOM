@@ -317,9 +317,9 @@ class TraderKiwoom2:
             tbg = self.df_jg['매입금액'].sum()
             tpg = self.df_jg['평가금액'].sum()
             bct = len(self.df_jg)
-            tsp = round(tsg / tbg * 100, 2)
+            tpp = round(tsg / tbg * 100, 2)
             ttg = self.dict_intg['예수금'] + tpg
-            self.df_tj.loc[self.dict_strg['당일날짜']] = ttg, self.dict_intg['예수금'], bct, tsp, tsg, tbg, tpg
+            self.df_tj.loc[self.dict_strg['당일날짜']] = ttg, self.dict_intg['예수금'], bct, tpp, tsg, tbg, tpg
         else:
             self.df_tj.loc[self.dict_strg['당일날짜']] = self.dict_intg['예수금'], self.dict_intg['예수금'], 0, 0.0, 0, 0, 0
 

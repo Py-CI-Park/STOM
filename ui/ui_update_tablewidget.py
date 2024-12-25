@@ -196,7 +196,7 @@ class UpdateTablewidget:
                                ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7'], ui_num['김프']):
                     value = str(arry[i, j])
                     if column in ('수익률', '누적수익률', 'per', 'hlml_per', 'ch', 'ch_avg', 'ch_high', '대비(원)',
-                                  '대비율(%)', 'aht', 'wr', 'asp', 'tsp', 'mdd', 'cagr'):
+                                  '대비율(%)', 'aht', 'wr', 'app', 'tpp', 'mdd', 'cagr'):
                         item = NumericItem(change_format(value))
                     elif (gubun == ui_num['C상세기록'] and column in ('매수가', '매도가')) or column == '바이낸스(달러)':
                         item = NumericItem(change_format(value, dotdown8=True))
@@ -353,6 +353,12 @@ class UpdateTablewidget:
             vhline.setPen(pg.mkPen(color_ct_hg, width=1))
             return vhline
 
+        x = strp_time('%Y%m%d%H%M%S', ymdhms).timestamp()
+        try:
+            xpoint = self.ui.ctpg_tik_xticks.index(x)
+        except:
+            return
+
         if self.ui.ctpg_tik_hline is None:
             vLine1  = setInfiniteLine()
             vLine2  = setInfiniteLine()
@@ -401,7 +407,6 @@ class UpdateTablewidget:
                 self.ui.ctpg[14].addItem(vLine15)
                 self.ui.ctpg[15].addItem(vLine16)
 
-        x = strp_time('%Y%m%d%H%M%S', ymdhms).timestamp()
         for vline in self.ui.ctpg_tik_hline:
             vline.setPos(x)
 
@@ -426,7 +431,6 @@ class UpdateTablewidget:
           62    63
         """
 
-        xpoint = self.ui.ctpg_tik_xticks.index(x)
         info = ['이평60', '이평300', '이평600', '이평1200', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도', '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량']
         if gubun == ui_num['S호가종목']:
             data = [

@@ -26,16 +26,13 @@ class ZmqRecv(QThread):
             msg  = self.sock.recv_string()
             data = self.sock.recv_pyobj()
             if msg == 'tickdata':
-                # noinspection PyUnresolvedReferences
                 self.signal1.emit(data)
             elif msg == 'focuscodes':
                 for q in self.sstgQs:
                     q.put(data)
             elif msg == 'logininfo':
-                # noinspection PyUnresolvedReferences
                 self.signal2.emit(data)
             elif msg == 'operation':
-                # noinspection PyUnresolvedReferences
                 self.signal3.emit(data)
 
 
@@ -49,7 +46,6 @@ class Updater(QThread):
     def run(self):
         while True:
             data = self.sreceivQ.get()
-            # noinspection PyUnresolvedReferences
             self.signal.emit(data)
 
 
@@ -81,22 +77,17 @@ class KWReceiverClient:
         self.dict_time = {'휴무종료': timedelta_sec(remaintime) if remaintime > 0 else None}
 
         self.updater = Updater(self.sreceivQ)
-        # noinspection PyUnresolvedReferences
         self.updater.signal.connect(self.UpdateTuple)
         self.updater.start()
 
         self.zmqrecv = ZmqRecv(self.sstgQs)
-        # noinspection PyUnresolvedReferences
         self.zmqrecv.signal1.connect(self.UpdateTickData)
-        # noinspection PyUnresolvedReferences
         self.zmqrecv.signal2.connect(self.UpdateLoginInfo)
-        # noinspection PyUnresolvedReferences
         self.zmqrecv.signal3.connect(self.UpdateOperation)
         self.zmqrecv.start()
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
-        # noinspection PyUnresolvedReferences
         self.qtimer1.timeout.connect(self.Scheduler)
         self.qtimer1.start()
 

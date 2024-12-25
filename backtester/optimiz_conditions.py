@@ -334,6 +334,10 @@ class OptimizeConditions:
             else:
                 break
 
+        time.sleep(2)
+        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 최적화 완료'))
+        time.sleep(1)
+
         if len(self.result) > 0:
             self.ShowTopCondlist(5)
             self.ShowTopConds()

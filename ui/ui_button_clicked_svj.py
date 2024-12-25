@@ -726,8 +726,7 @@ def svj_button_clicked_12(ui, windowQ, backQ, soundQ, totalQ, liveQ):
 
         backQ.put((avgtime, startday, endday, starttime, endtime, buystg, ui.back_count))
         ui.proc_backtester_bf = Process(
-            target=BackFinder,
-            args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, '백파인더', 'S')
+            target=BackFinder, args=(windowQ, backQ, soundQ, totalQ, liveQ, ui.back_eques, 'S')
         )
         ui.proc_backtester_bf.start()
         ui.svjButtonClicked_07()
@@ -1237,8 +1236,7 @@ def svj_button_clicked_23(ui, windowQ, backQ, totalQ):
         backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
                    dict_pattern_buy, dict_pattern_sell))
         ui.proc_backtester_bp = Process(
-            target=PatternModeling,
-            args=(windowQ, backQ, totalQ, ui.back_sques, ui.back_eques, 'S', ui.back_count, multi)
+            target=PatternModeling, args=(windowQ, backQ, totalQ, ui.back_eques, 'S', ui.back_count, multi)
         )
         ui.proc_backtester_bp.start()
         ui.svjButtonClicked_07()

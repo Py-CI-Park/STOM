@@ -4,7 +4,7 @@ import sqlite3
 import pandas as pd
 from multiprocessing import Process, Queue
 from utility.static import now, pickle_write
-from utility.setting import ui_num, DICT_SET, PATTERN_PATH, DB_STRATEGY
+from utility.setting import ui_num, PATTERN_PATH, DB_STRATEGY
 
 
 class Total:
@@ -63,16 +63,14 @@ class Total:
 
 
 class PatternModeling:
-    def __init__(self, wq, bq, tq, bstq_list, beq_list, ui_gubun, back_cnt, multi):
+    def __init__(self, wq, bq, tq, beq_list, ui_gubun, back_cnt, multi):
         self.wq        = wq
         self.bq        = bq
         self.tq        = tq
-        self.bstq_list = bstq_list
         self.beq_list  = beq_list
         self.ui_gubun  = ui_gubun
         self.back_cnt  = back_cnt
         self.multi     = multi
-        self.dict_set  = DICT_SET
         self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.Start()
 

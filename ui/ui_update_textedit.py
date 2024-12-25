@@ -16,6 +16,7 @@ class UpdateTextedit:
         self.soundQ   = qlist[1]
         self.teleQ    = qlist[3]
         self.wdzservQ = qlist[13]
+        self.logging  = True
 
     @error_decorator
     def update_texedit(self, data):
@@ -61,18 +62,25 @@ class UpdateTextedit:
                     color = color_fg_bt
                 self.ui.ss_textEditttt_09.setTextColor(color)
                 self.ui.ss_textEditttt_09.append(text)
-                self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
+                if self.ui.dict_set['최적화로그기록안함']:
+                    if '백테스트 시작' in data[1] or '인샘플 최적화 시작' in data[1]: self.logging = False
+                    elif '최적화 완료' in data[1] or '인샘플 최적화 완료' in data[1]: self.logging = True
+                if self.logging: self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
                 if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill(0)
-                if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
-                               '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
-                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
-                               '전진분석BR 완료', '전진분석BRV 완료', '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
-                    if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료'):
+                if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료',
+                               '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료',
+                               '최적화OVT 완료', '최적화OVCT 완료', '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료',
+                               '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료', '전진분석BR 완료', '전진분석BRV 완료',
+                               '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료',
+                               '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
+                    if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료',
+                                   '최적화BV 완료', '최적화BVC 완료'):
                         self.ui.sActivated_04()
                     if data[1] in ('최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료'):
                         self.ui.sActivated_06()
-                    if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
+                    if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in \
+                            ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
+                             '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
                         self.ui.svjButtonClicked_08()
                     self.ui.BacktestProcessKill(0)
                     self.ui.ssicon_alert = False
@@ -91,18 +99,25 @@ class UpdateTextedit:
                     color = color_fg_bt
                 self.ui.cs_textEditttt_09.setTextColor(color)
                 self.ui.cs_textEditttt_09.append(text)
-                self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
+                if self.ui.dict_set['최적화로그기록안함']:
+                    if '백테스트 시작' in data[1] or '인샘플 최적화 시작' in data[1]: self.logging = False
+                    elif '최적화 완료' in data[1] or '인샘플 최적화 완료' in data[1]: self.logging = True
+                if self.logging: self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
                 if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill(0)
-                if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료', '최적화OVC 완료',
-                               '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료', '최적화OVT 완료', '최적화OVCT 완료',
-                               '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료', '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료',
-                               '전진분석BR 완료', '전진분석BRV 완료', '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                               '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
-                    if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료'):
+                if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료',
+                               '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료',
+                               '최적화OVT 완료', '최적화OVCT 완료', '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료',
+                               '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료', '전진분석BR 완료', '전진분석BRV 완료',
+                               '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료',
+                               '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
+                    if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료',
+                                   '최적화BV 완료', '최적화BVC 완료'):
                         self.ui.cActivated_04()
                     if data[1] in ('최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료'):
                         self.ui.cActivated_06()
-                    if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
+                    if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in \
+                            ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
+                             '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
                         self.ui.cvjButtonClicked_08()
                     self.ui.BacktestProcessKill(0)
                     self.ui.csicon_alert = False
@@ -164,11 +179,13 @@ class UpdateTextedit:
                         self.ui.list_progressBarrr[self.ui.back_scount].setValue(data[1])
                         self.ui.list_progressBarrr[self.ui.back_scount].setRange(0, data[2])
                     if data[0] == ui_num['S백테바']:
-                        self.ui.ss_progressBar_01.setFormat(f'%p% | 경과 시간 {left_backtime} | 남은 시간 {remain_backtime}')
+                        self.ui.ss_progressBar_01.setFormat(
+                            f'%p% | 경과 시간 {left_backtime} | 남은 시간 {remain_backtime}')
                         self.ui.ss_progressBar_01.setValue(data[1])
                         self.ui.ss_progressBar_01.setRange(0, data[2])
                     elif data[0] in (ui_num['C백테바'], ui_num['CF백테바']):
-                        self.ui.cs_progressBar_01.setFormat(f'%p% | 경과 시간 {left_backtime} | 남은 시간 {remain_backtime}')
+                        self.ui.cs_progressBar_01.setFormat(
+                            f'%p% | 경과 시간 {left_backtime} | 남은 시간 {remain_backtime}')
                         self.ui.cs_progressBar_01.setValue(data[1])
                         self.ui.cs_progressBar_01.setRange(0, data[2])
 
@@ -199,7 +216,9 @@ class UpdateTextedit:
             if self.ui.dict_set['프로그램종료']:
                 QTimer.singleShot(180 * 1000, self.ui.ProcessKill)
             if self.ui.dict_set['리시버공유'] < 2:
-                if self.ui.dict_set['주식장초컴퓨터종료'] or self.ui.dict_set['주식장중컴퓨터종료'] or (90000 < int_hms() < 90500 and self.ui.dict_set['휴무컴퓨터종료']):
+                if self.ui.dict_set['주식장초컴퓨터종료'] or \
+                        self.ui.dict_set['주식장중컴퓨터종료'] or \
+                        (90000 < int_hms() < 90500 and self.ui.dict_set['휴무컴퓨터종료']):
                     os.system('shutdown /s /t 300')
         elif self.ui.dict_set['주식알림소리']:
             self.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')

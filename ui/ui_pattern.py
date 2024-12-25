@@ -8,7 +8,7 @@ from utility.setting import DB_STRATEGY, PATTERN_PATH
 from utility.static import pickle_read, get_pattern_setup
 
 
-def pactivated_01(ui):
+def ptactivated_01(ui):
     name = ui.pt_comboBoxxxxx_00.currentText()
     con = sqlite3.connect(DB_STRATEGY)
     if ui.main_btn == 2:
