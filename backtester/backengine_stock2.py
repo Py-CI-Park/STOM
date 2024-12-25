@@ -3,12 +3,13 @@ from traceback import print_exc
 from backtester.back_static import GetTradeInfo
 from backtester.backengine_stock import StockBackEngine
 from utility.setting import dict_order_ratio
-from utility.static import strp_time, timedelta_sec, roundfigure_upper, roundfigure_lower, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit
+from utility.static import strp_time, timedelta_sec, roundfigure_upper, roundfigure_lower, GetKiwoomPgSgSp, GetUvilower5
 
 
 # noinspection PyUnusedLocal
 class StockBackEngine2(StockBackEngine):
     def InitTradeInfo(self):
+        self.dict_cond_indexn = {}
         self.tick_count = 0
         v1 = GetTradeInfo(3)
         v2 = GetTradeInfo(2)
@@ -340,7 +341,7 @@ class StockBackEngine2(StockBackEngine):
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
             매도수5호가잔량합, 관심종목 = self.array_tick[self.indexn, 1:45]
-        호가단위 = GetHogaunit(self.dict_kd[종목코드] if 종목코드 in self.dict_kd.keys() else True, 현재가, self.index)
+        호가단위 = 매도호가2 - 매도호가1
         VI해제시간, VI아래5호가 = strp_time('%Y%m%d%H%M%S', str(int(VI해제시간))), GetUvilower5(VI가격, VI호가단위, self.index)
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -400,9 +401,9 @@ class StockBackEngine2(StockBackEngine):
         elif self.opti_turn == 3:
             for vturn in self.trade_info.keys():
                 for vkey in self.trade_info[vturn].keys():
-                    index = vturn * 20 + vkey
+                    index_ = vturn * 20 + vkey
                     if self.back_type != '조건최적화':
-                        self.vars = self.vars_lists[index]
+                        self.vars = self.vars_lists[index_]
                         if self.tick_count < self.vars[0]:
                             break
                     elif self.tick_count < self.avgtime:
@@ -427,13 +428,13 @@ class StockBackEngine2(StockBackEngine):
                             if self.back_type != '조건최적화':
                                 exec(self.buystg)
                             else:
-                                exec(self.dict_buystg[index])
+                                exec(self.dict_buystg[index_])
                         else:
                             if self.CheckDividSell(수익률, 매도분할횟수, vturn, vkey) and self.dict_set['주식매도분할시그널']:
                                 if self.back_type != '조건최적화':
                                     exec(self.buystg)
                                 else:
-                                    exec(self.dict_buystg[index])
+                                    exec(self.dict_buystg[index_])
 
                     if '매도' in gubun:
                         if self.CheckSonjeol(수익률, 수익금, vturn, vkey): continue
@@ -444,14 +445,14 @@ class StockBackEngine2(StockBackEngine):
                             if self.back_type != '조건최적화':
                                 exec(self.sellstg)
                             else:
-                                exec(self.dict_sellstg[index])
+                                exec(self.dict_sellstg[index_])
                         else:
                             divid = self.CheckDividSell(수익률, 매도분할횟수, vturn, vkey)
                             if not divid and self.dict_set['주식매도분할시그널']:
                                 if self.back_type != '조건최적화':
                                     exec(self.sellstg)
                                 else:
-                                    exec(self.dict_sellstg[index])
+                                    exec(self.dict_sellstg[index_])
 
         else:
             vturn, vkey = 0, 0
@@ -727,9 +728,8 @@ class StockBackEngine2(StockBackEngine):
                     self.UpdateBuyInfo(vturn, vkey, True if 매수가 == 0 else False)
             elif self.dict_set['주식매수주문구분'] == '지정가':
                 self.trade_info[vturn][vkey]['매수호가'] = self.trade_info[vturn][vkey]['매수호가_']
-                self.trade_info[vturn][vkey]['매수호가단위'] = (
-                    GetHogaunit(self.dict_kd[self.code] if self.code in self.dict_kd.keys() else True,
-                                self.array_tick[self.indexn, 1], self.index))
+                self.trade_info[vturn][vkey]['매수호가단위'] = \
+                    self.array_tick[self.indexn, 25] - self.array_tick[self.indexn, 26]
                 self.trade_info[vturn][vkey]['매수주문취소시간'] = \
                     timedelta_sec(self.dict_set['주식매수취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
 
@@ -749,9 +749,8 @@ class StockBackEngine2(StockBackEngine):
                 현재가 >= 매수호가 + 매수호가단위 * self.dict_set['주식매수정정호가차이']:
             self.trade_info[vturn][vkey]['매수호가'] = 현재가 - 매수호가단위 * self.dict_set['주식매수정정호가']
             self.trade_info[vturn][vkey]['매수정정횟수'] += 1
-            매수호가단위 = \
-                GetHogaunit(self.dict_kd[self.code] if self.code in self.dict_kd.keys() else True, 현재가, self.index)
-            self.trade_info[vturn][vkey]['매수호가단위'] = 매수호가단위
+            self.trade_info[vturn][vkey]['매수호가단위'] = \
+                self.array_tick[self.indexn, 25] - self.array_tick[self.indexn, 26]
         elif 현재가 < 매수호가:
             직전매수금액 = 매수가 * 보유수량
             매수금액 = 매수호가 * 주문수량
@@ -806,8 +805,8 @@ class StockBackEngine2(StockBackEngine):
             현재가 = self.array_tick[self.indexn, 1]
             self.sell_cond = sell_cond
             self.trade_info[vturn][vkey]['매도호가'] = self.trade_info[vturn][vkey]['매도호가_']
-            self.trade_info[vturn][vkey]['매도호가단위'] = (
-                GetHogaunit(self.dict_kd[self.code] if self.code in self.dict_kd.keys() else True, 현재가, self.index))
+            self.trade_info[vturn][vkey]['매도호가단위'] = \
+                self.array_tick[self.indexn, 25] - self.array_tick[self.indexn, 26]
             self.trade_info[vturn][vkey]['매도주문취소시간'] = \
                 timedelta_sec(self.dict_set['주식매도취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
 
@@ -826,8 +825,8 @@ class StockBackEngine2(StockBackEngine):
         elif 매도정정횟수 < self.dict_set['주식매도정정횟수'] and 현재가 <= 매도호가 - 매도호가단위 * self.dict_set['주식매도정정호가차이']:
             self.trade_info[vturn][vkey]['매도호가'] = 현재가 + 매도호가단위 * self.dict_set['주식매도정정호가']
             self.trade_info[vturn][vkey]['매도정정횟수'] += 1
-            매도호가단위 = GetHogaunit(self.dict_kd[self.code] if self.code in self.dict_kd.keys() else True, 현재가, self.index)
-            self.trade_info[vturn][vkey]['매도호가단위'] = 매도호가단위
+            self.trade_info[vturn][vkey]['매도호가단위'] = \
+                self.array_tick[self.indexn, 25] - self.array_tick[self.indexn, 26]
         elif 현재가 > 매도호가:
             self.trade_info[vturn][vkey]['매도가'] = 매도호가
             self.CalculationEyun(vturn, vkey)

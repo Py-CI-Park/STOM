@@ -9,6 +9,7 @@ from utility.static import strp_time, timedelta_sec, GetBinanceLongPgSgSp, GetBi
 # noinspection PyUnusedLocal
 class CoinFutureBackEngine2(CoinFutureBackEngine):
     def InitTradeInfo(self):
+        self.dict_cond_indexn = {}
         self.tick_count = 0
         v1 = GetTradeInfo(3)
         v2 = GetTradeInfo(2)
@@ -317,7 +318,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, \
             관심종목 = self.array_tick[self.indexn, 1:36]
-        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), self.dict_hg[self.code]
+        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), 매도호가2 - 매도호가1
         self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
@@ -375,9 +376,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         elif self.opti_turn == 3:
             for vturn in self.trade_info.keys():
                 for vkey in self.trade_info[vturn].keys():
-                    index = vturn * 20 + vkey
+                    index_ = vturn * 20 + vkey
                     if self.back_type != '조건최적화':
-                        self.vars = self.vars_lists[index]
+                        self.vars = self.vars_lists[index_]
                         if self.tick_count < self.vars[0]:
                             break
                     elif self.tick_count < self.avgtime:
@@ -404,13 +405,13 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                             if self.back_type != '조건최적화':
                                 exec(self.buystg)
                             else:
-                                exec(self.dict_buystg[index])
+                                exec(self.dict_buystg[index_])
                         else:
                             if self.CheckDividBuy(포지션, 현재가, 추가매수가, 수익률, vturn, vkey) and self.dict_set['코인매수분할시그널']:
                                 if self.back_type != '조건최적화':
                                     exec(self.buystg)
                                 else:
-                                    exec(self.dict_buystg[index])
+                                    exec(self.dict_buystg[index_])
 
                     if '매도' in gubun:
                         if self.CheckSonjeol(수익률, 수익금, vturn, vkey): continue
@@ -421,13 +422,13 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
                             if self.back_type != '조건최적화':
                                 exec(self.sellstg)
                             else:
-                                exec(self.dict_sellstg[index])
+                                exec(self.dict_sellstg[index_])
                         else:
                             if self.CheckDividSell(포지션, 수익률, 매도분할횟수, vturn, vkey) and self.dict_set['코인매도분할시그널']:
                                 if self.back_type != '조건최적화':
                                     exec(self.sellstg)
                                 else:
-                                    exec(self.dict_sellstg[index])
+                                    exec(self.dict_sellstg[index_])
         else:
             vturn, vkey = 0, 0
             if self.back_type in ('최적화', '전진분석'):
@@ -715,7 +716,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             elif self.dict_set['코인매수주문구분'] == '지정가':
                 self.trade_info[vturn][vkey]['포지션'] = gubun
                 self.trade_info[vturn][vkey]['매수호가'] = self.trade_info[vturn][vkey]['매수호가_']
-                self.trade_info[vturn][vkey]['매수호가단위'] = self.dict_hg[self.code]
+                self.trade_info[vturn][vkey]['매수호가단위'] = \
+                    self.array_tick[self.indexn, 16] - self.array_tick[self.indexn, 17]
                 self.trade_info[vturn][vkey]['매수주문취소시간'] = \
                     timedelta_sec(self.dict_set['코인매수취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
 
@@ -798,7 +800,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             self.sell_cond = sell_cond
             self.trade_info[vturn][vkey]['포지션'] = gubun
             self.trade_info[vturn][vkey]['매도호가'] = self.trade_info[vturn][vkey]['매도호가_']
-            self.trade_info[vturn][vkey]['매도호가단위'] = self.dict_hg[self.code]
+            self.trade_info[vturn][vkey]['매도호가단위'] = \
+                self.array_tick[self.indexn, 16] - self.array_tick[self.indexn, 17]
             self.trade_info[vturn][vkey]['매도주문취소시간'] = \
                 timedelta_sec(self.dict_set['코인매도취소시간초'], strp_time('%Y%m%d%H%M%S', str(self.index)))
 

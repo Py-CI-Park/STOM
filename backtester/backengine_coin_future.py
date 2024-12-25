@@ -43,11 +43,9 @@ class CoinFutureBackEngine:
         self.buystg       = None
         self.sellstg      = None
         self.dict_cn      = None
-        self.dict_kd      = None
         self.array_tick   = None
 
         self.is_long      = None
-        self.dict_hg      = None
 
         self.shm_list     = []
         self.code_list    = []
@@ -99,7 +97,7 @@ class CoinFutureBackEngine:
             half_cnt   = int(len(text_list) / 2)
             key_list   = text_list[:half_cnt]
             value_list = text_list[half_cnt:]
-            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            value_list = [compile_condition(x) for x in value_list]
             self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
@@ -264,8 +262,6 @@ class CoinFutureBackEngine:
             elif data[0] == '설정변경':
                 self.dict_set = data[1]
                 self.SetDictCondition()
-            elif data[0] == '호가단위':
-                self.dict_hg = data[1]
             elif data[0] == '데이터로딩':
                 self.DataLoad(data)
             elif data[0] == '백테데이터':
@@ -293,6 +289,7 @@ class CoinFutureBackEngine:
             self.lock.release()
 
     def InitTradeInfo(self):
+        self.dict_cond_indexn = {}
         self.tick_count = 0
         v = GetTradeInfo(1)
         if self.opti_turn == 1:
@@ -752,7 +749,7 @@ class CoinFutureBackEngine:
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, \
             관심종목 = self.array_tick[self.indexn, 1:36]
-        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), self.dict_hg[self.code]
+        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), 매도호가2 - 매도호가1
         self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
@@ -787,9 +784,9 @@ class CoinFutureBackEngine:
         elif self.opti_turn == 3:
             for vturn in self.trade_info.keys():
                 for vkey in self.trade_info[vturn].keys():
-                    index = vturn * 20 + vkey
+                    index_ = vturn * 20 + vkey
                     if self.back_type != '조건최적화':
-                        self.vars = self.vars_lists[index]
+                        self.vars = self.vars_lists[index_]
                         if self.tick_count < self.vars[0]:
                             break
                     elif self.tick_count < self.avgtime:
@@ -803,14 +800,14 @@ class CoinFutureBackEngine:
                         if self.back_type != '조건최적화':
                             exec(self.buystg)
                         else:
-                            exec(self.dict_buystg[index])
+                            exec(self.dict_buystg[index_])
                     else:
                         수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vturn, vkey, 현재가, now_utc())
                         포지션 = 'LONG' if self.trade_info[vturn][vkey]['보유중'] == 1 else 'SHORT'
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
                         else:
-                            exec(self.dict_sellstg[index])
+                            exec(self.dict_sellstg[index_])
         else:
             vturn, vkey = 0, 0
             if self.back_type in ('최적화', '전진분석'):

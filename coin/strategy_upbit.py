@@ -135,7 +135,7 @@ class StrategyUpbit:
             half_cnt   = int(len(text_list) / 2)
             key_list   = text_list[:half_cnt]
             value_list = text_list[half_cnt:]
-            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            value_list = [compile_condition(x) for x in value_list]
             self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
@@ -402,8 +402,8 @@ class StrategyUpbit:
             return Parameter_Dgree(51, 6, tick, pre, 0.00000001)
 
         def 경과틱수(조건명):
-            if 조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
-                return self.indexn - self.dict_cond_indexn[종목코드][조건명]
+            if 조건명 in self.dict_cond_indexn.keys() and self.dict_cond_indexn[조건명] != 0:
+                return self.indexn - self.dict_cond_indexn[조건명]
             return 0
 
         if self.dict_set['보조지표사용']:

@@ -1,7 +1,5 @@
 import os
-import re
 import sqlite3
-import binance
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue, Lock, shared_memory
@@ -141,18 +139,11 @@ def start_backengine(ui, gubun):
             os.remove(f'{BACK_TEMP}/{file}')
         ui.windowQ.put((ui_num['백테엔진'], '이전 임시파일 삭제 완료'))
 
-    dict_kd = None
     try:
         con = sqlite3.connect(DB_STOCK_BACK) if gubun == '주식' else sqlite3.connect(DB_COIN_BACK)
         if gubun == '주식':
             df_cn = pd.read_sql('SELECT * FROM codename', con).set_index('index')
             ui.dict_cn = df_cn['종목명'].to_dict()
-            dict_kd = df_cn['코스닥'].to_dict()
-        elif ui.dict_set['거래소'] == '바이낸스선물':
-            binan = binance.Client()
-            datas = binan.futures_exchange_info()
-            datas = [x for x in datas['symbols'] if re.search('USDT$', x['symbol']) is not None]
-            dict_kd = {x['symbol']: float(x['filters'][0]['tickSize']) for x in datas}
         gubun_ = 'S' if gubun == '주식' else 'CF' if gubun == '코인' and ui.dict_set['거래소'] == '바이낸스선물' else 'C'
         query = GetMoneytopQuery(gubun_, ui.startday, ui.endday, ui.starttime, ui.endtime)
         df_mt = pd.read_sql(query, con)
@@ -165,8 +156,6 @@ def start_backengine(ui, gubun):
                 ui.windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
             elif len(ui.dict_cn) < 100:
                 ui.windowQ.put((ui_num['백테엔진'], '종목명 테이블이 갱신되지 않았습니다. 수동로그인(Alt + S)을 1회 실행하시오.'))
-            elif dict_kd is None:
-                ui.windowQ.put((ui_num['백테엔진'], '종목명 테이블에 코스닥 구분 칼럼이 존재하지 않습니다. 수동로그인(Alt + S)을 1회 실행하시오.'))
             else:
                 ui.windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
         else:
@@ -216,9 +205,7 @@ def start_backengine(ui, gubun):
 
     for i in range(multi):
         if gubun == '주식':
-            ui.back_eques[i].put(('종목명', ui.dict_cn, dict_kd))
-        elif ui.dict_set['거래소'] == '바이낸스선물':
-            ui.back_eques[i].put(('호가단위', dict_kd))
+            ui.back_eques[i].put(('종목명', ui.dict_cn))
     ui.windowQ.put((ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'))
 
     if divid_mode == '종목코드별 분류':

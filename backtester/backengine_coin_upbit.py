@@ -8,7 +8,7 @@ from traceback import print_exc
 from multiprocessing import shared_memory
 from utility.setting import DB_COIN_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
-from utility.static import strp_time, timedelta_sec, GetUpbitHogaunit, pickle_read, pickle_write, GetUpbitPgSgSp, strf_time
+from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, GetUpbitPgSgSp, strf_time
 from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, AddAvgData, GetTradeInfo, AddTalib
 
 
@@ -44,11 +44,9 @@ class CoinUpbitBackEngine:
         self.buystg       = None
         self.sellstg      = None
         self.dict_cn      = None
-        self.dict_kd      = None
         self.array_tick   = None
 
         self.is_long      = None
-        self.dict_hg      = None
 
         self.shm_list     = []
         self.code_list    = []
@@ -100,7 +98,7 @@ class CoinUpbitBackEngine:
             half_cnt   = int(len(text_list) / 2)
             key_list   = text_list[:half_cnt]
             value_list = text_list[half_cnt:]
-            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            value_list = [compile_condition(x) for x in value_list]
             self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
@@ -295,6 +293,7 @@ class CoinUpbitBackEngine:
             self.lock.release()
 
     def InitTradeInfo(self):
+        self.dict_cond_indexn = {}
         self.tick_count = 0
         v = GetTradeInfo(1)
         if self.opti_turn == 1:
@@ -754,7 +753,7 @@ class CoinUpbitBackEngine:
             매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, \
             관심종목 = self.array_tick[self.indexn, 1:36]
-        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), GetUpbitHogaunit(현재가)
+        종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:]), 매도호가2 - 매도호가1
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
@@ -789,9 +788,9 @@ class CoinUpbitBackEngine:
         elif self.opti_turn == 3:
             for vturn in self.trade_info.keys():
                 for vkey in self.trade_info[vturn].keys():
-                    index = vturn * 20 + vkey
+                    index_ = vturn * 20 + vkey
                     if self.back_type != '조건최적화':
-                        self.vars = self.vars_lists[index]
+                        self.vars = self.vars_lists[index_]
                         if self.tick_count < self.vars[0]:
                             break
                     elif self.tick_count < self.avgtime:
@@ -804,13 +803,13 @@ class CoinUpbitBackEngine:
                         if self.back_type != '조건최적화':
                             exec(self.buystg)
                         else:
-                            exec(self.dict_buystg[index])
+                            exec(self.dict_buystg[index_])
                     else:
                         수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vturn, vkey, 현재가, now_utc())
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
                         else:
-                            exec(self.dict_sellstg[index])
+                            exec(self.dict_sellstg[index_])
 
         else:
             vturn, vkey = 0, 0

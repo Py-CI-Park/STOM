@@ -7,7 +7,7 @@ from traceback import print_exc
 from multiprocessing import shared_memory
 from utility.setting import DB_STOCK_BACK, BACK_TEMP, ui_num, DICT_SET
 # noinspection PyUnresolvedReferences
-from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, GetKiwoomPgSgSp, GetUvilower5, GetHogaunit, strf_time
+from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, GetKiwoomPgSgSp, GetUvilower5, strf_time
 from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, AddAvgData, GetTradeInfo, AddTalib
 
 
@@ -43,11 +43,9 @@ class StockBackEngine:
         self.buystg       = None
         self.sellstg      = None
         self.dict_cn      = None
-        self.dict_kd      = None
         self.array_tick   = None
 
         self.is_long      = None
-        self.dict_hg      = None
 
         self.shm_list     = []
         self.vars         = []
@@ -94,7 +92,7 @@ class StockBackEngine:
             half_cnt   = int(len(text_list) / 2)
             key_list   = text_list[:half_cnt]
             value_list = text_list[half_cnt:]
-            value_list = [compile_condition(x) for i, x in enumerate(value_list)]
+            value_list = [compile_condition(x) for x in value_list]
             self.dict_condition = dict(zip(key_list, value_list))
 
     def MainLoop(self):
@@ -259,7 +257,6 @@ class StockBackEngine:
                 self.SetDictCondition()
             elif data[0] == '종목명':
                 self.dict_cn = data[1]
-                self.dict_kd = data[2]
             elif data[0] == '데이터로딩':
                 self.DataLoad(data)
             elif data[0] == '백테데이터':
@@ -287,6 +284,7 @@ class StockBackEngine:
             self.lock.release()
 
     def InitTradeInfo(self):
+        self.dict_cond_indexn = {}
         self.tick_count = 0
         v = GetTradeInfo(1)
         if self.opti_turn == 1:
@@ -769,7 +767,7 @@ class StockBackEngine:
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, \
             매도수5호가잔량합, 관심종목 = self.array_tick[self.indexn, 1:45]
-        호가단위 = GetHogaunit(self.dict_kd[종목코드] if 종목코드 in self.dict_kd.keys() else True, 현재가, self.index)
+        호가단위 = 매도호가2 - 매도호가1
         VI해제시간, VI아래5호가 = strp_time('%Y%m%d%H%M%S', str(int(VI해제시간))), GetUvilower5(VI가격, VI호가단위, self.index)
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
@@ -805,9 +803,9 @@ class StockBackEngine:
         elif self.opti_turn == 3:
             for vturn in self.trade_info.keys():
                 for vkey in self.trade_info[vturn].keys():
-                    index = vturn * 20 + vkey
+                    index_ = vturn * 20 + vkey
                     if self.back_type != '조건최적화':
-                        self.vars = self.vars_lists[index]
+                        self.vars = self.vars_lists[index_]
                         if self.tick_count < self.vars[0]:
                             break
                     elif self.tick_count < self.avgtime:
@@ -820,13 +818,13 @@ class StockBackEngine:
                         if self.back_type != '조건최적화':
                             exec(self.buystg)
                         else:
-                            exec(self.dict_buystg[index])
+                            exec(self.dict_buystg[index_])
                     else:
                         수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vturn, vkey, 현재가, now())
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
                         else:
-                            exec(self.dict_sellstg[index])
+                            exec(self.dict_sellstg[index_])
 
         else:
             vturn, vkey = 0, 0
