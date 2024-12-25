@@ -13,7 +13,7 @@ from backtester.backengine_coin_upbit import CoinUpbitBackEngine
 from backtester.backengine_coin_upbit2 import CoinUpbitBackEngine2
 from backtester.backengine_stock import StockBackEngine
 from backtester.backengine_stock2 import StockBackEngine2
-from backtester.back_collector import BackCollector
+from backtester.back_subtotal import BackSubTotal
 from ui.set_style import style_bc_dk
 from utility.setting import DB_STOCK_BACK, DB_COIN_BACK, ui_num, BACK_TEMP
 from utility.static import thread_decorator, timedelta_sec, now, qtest_qwait
@@ -62,7 +62,7 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         bctq = Queue()
         ui.back_cques.append(bctq)
     for i in range(20):
-        proc = Process(target=BackCollector, args=(i, totalQ, ui.back_cques, ui.dict_set['백테매수시간기준']), daemon=True)
+        proc = Process(target=BackSubTotal, args=(i, totalQ, ui.back_cques, ui.dict_set['백테매수시간기준']), daemon=True)
         proc.start()
         ui.back_cprocs.append(proc)
         windowQ.put((ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'))

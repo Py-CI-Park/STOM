@@ -488,23 +488,26 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     elif optistd == 'GWM':  text = f'{pre_text} GWM[{gwm:.2f}]'
     return std, text
 
-def GetBackResult(df_tsg, df_bct, betting, day_count):
+def GetBackResult2(df_tsg, df_bct, betting, day_count):
     tc  = len(df_tsg)
     if tc > 0:
-        atc = round(tc / day_count, 1)
-        pc  = len(df_tsg[df_tsg['수익률'] >= 0])
-        mc  = len(df_tsg[df_tsg['수익률'] < 0])
-        wr  = round(pc / tc * 100, 2)
-        ah  = round(df_tsg['보유시간'].sum() / tc, 2)
-        ap  = round(df_tsg['수익률'].sum() / tc, 2)
-        tsg = int(df_tsg['수익금'].sum())
-        df_plus  = df_tsg[df_tsg['수익률'] >= 0]
-        df_minus = df_tsg[df_tsg['수익률'] < 0]
-        tpg = df_plus['수익률'].mean()
-        tmg = abs(df_minus['수익률'].mean()) if len(df_minus) > 0 else tpg
+        atc  = round(tc / day_count, 1)
+        pc   = len(df_tsg[df_tsg['수익률'] >= 0])
+        mc   = len(df_tsg[df_tsg['수익률'] < 0])
+        wr   = round(pc / tc * 100, 2)
+        ah   = round(df_tsg['보유시간'].sum() / tc, 2)
+        ap   = round(df_tsg['수익률'].sum() / tc, 2)
+        tsg  = int(df_tsg['수익금'].sum())
+        df_p = df_tsg[df_tsg['수익률'] >= 0]
+        df_m = df_tsg[df_tsg['수익률'] < 0]
+        app  = df_p['수익률'].mean() if len(df_p) > 0 else 0
+        amp  = abs(df_m['수익률'].mean()) if len(df_m) > 0 else app
 
         df_bct = df_bct.sort_values(by=['보유종목수'], ascending=False)
-        mhct   = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
+        try:
+            mhct  = df_bct['보유종목수'].iloc[int(len(df_bct) * 0.01):].max()
+        except:
+            mhct  = 0
         try:
             onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
         except:
@@ -512,15 +515,16 @@ def GetBackResult(df_tsg, df_bct, betting, day_count):
         tsp    = round(tsg / onegm * 100, 2)
         cname  = df_tsg['종목명'].iloc[0]
         cagr   = round(tsp / day_count * (365 if 'KRW' in cname or 'USDT' in cname else 250), 2)
-        tpi    = round(wr / 100 * (1 + tpg / tmg), 2) if tmg != 0 else 1.0
+        tpi    = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
 
         df_bct.index = df_bct.index.astype(str)
         df_bct.sort_index(inplace=True)
+
         df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
         df_tsg[['수익금합계']] = df_tsg[['수익금합계']].astype(float)
 
         columns = columns_btf if '포지션' in df_tsg.columns else columns_bt
-        df_tsg = df_tsg[columns]
+        df_tsg  = df_tsg[columns]
 
         try:
             array = np.array(df_tsg['수익금합계'], dtype=np.float64)

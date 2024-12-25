@@ -63,11 +63,11 @@ class Total:
 
 
 class PatternModeling:
-    def __init__(self, wq, bq, tq, bctq_list, beq_list, ui_gubun, back_cnt, multi):
+    def __init__(self, wq, bq, tq, bstq_list, beq_list, ui_gubun, back_cnt, multi):
         self.wq        = wq
         self.bq        = bq
         self.tq        = tq
-        self.bctq_list = bctq_list
+        self.bstq_list = bstq_list
         self.beq_list  = beq_list
         self.ui_gubun  = ui_gubun
         self.back_cnt  = back_cnt

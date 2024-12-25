@@ -154,15 +154,12 @@ class UpdateTextedit:
             if data[1] <= data[2]:
                 curr_time = now()
                 try:
-                    if data[3] != 0:
-                        left_backtime  = curr_time - data[3]
-                        left_total_sec = left_backtime.total_seconds()
-                    else:
-                        left_backtime  = curr_time - curr_time
-                        left_total_sec = 0
+                    left_backtime  = curr_time - data[3]
+                    left_total_sec = left_backtime.total_seconds()
                     remain_backtime = timedelta_sec(left_total_sec / data[1] * (data[2] - data[1])) - curr_time
                 except:
-                    pass
+                    self.ui.ss_progressBar_01.setFormat('%p%')
+                    self.ui.ss_progressBar_01.setValue(0)
                 else:
                     if self.ui.back_schedul:
                         self.ui.list_progressBarrr[self.ui.back_scount].setFormat('%p%')

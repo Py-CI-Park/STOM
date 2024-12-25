@@ -16,14 +16,14 @@ from utility.static import strp_time, timedelta_sec, pickle_read, pickle_write, 
 
 # noinspection PyUnusedLocal
 class StockBackEngine:
-    def __init__(self, gubun, wq, pq, tq, bq, bctq_list, profile=False):
+    def __init__(self, gubun, wq, pq, tq, bq, bstq_list, profile=False):
         gc.disable()
         self.gubun        = gubun
         self.wq           = wq
         self.pq           = pq
         self.tq           = tq
         self.bq           = bq
-        self.bctq_list    = bctq_list
+        self.bstq_list    = bstq_list
         self.profile      = profile
         self.dict_set     = DICT_SET
 
@@ -937,8 +937,8 @@ class StockBackEngine:
             sg, pg, pp = GetKiwoomPgSgSp(bg, oc * sp)
             sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[vars_key][self.sell_cond]
             abt, bcx = '', True
-            data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_turn, vars_key)
-            self.bctq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
+            data = ['백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_turn, vars_key]
+            self.bstq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
             self.sell_count += 1
         self.trade_info[vars_turn][vars_key] = GetTradeInfo(1)
 

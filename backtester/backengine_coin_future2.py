@@ -1067,8 +1067,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - bdt).total_seconds())
             sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[vars_key][self.sell_cond]
             abt, bcx = '^'.join(abt), bc - oc == 0
-            data = ('백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_turn, vars_key)
-            self.bctq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
+            data = ['백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_turn, vars_key]
+            self.bstq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
             self.sell_count += 1
 
         if pp < 0:

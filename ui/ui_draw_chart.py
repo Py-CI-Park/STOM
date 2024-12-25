@@ -73,16 +73,16 @@ class DrawChart:
 
         for i in range(len(self.ui.ctpg_tik_arry[0, :])):
             tick_arry = self.ui.ctpg_tik_arry[:, i]
-            if i in (ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금평균'),
-                     ci('등락율각도'), ci('당일거래대금각도'), ci('전일비각도'), ci('관심종목'), ci('APO'), ci('HT_SINE'),
-                     ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')):
+            if i in (ci('등락율'), ci('초당매수수량'), ci('초당매도수량'), ci('고저평균대비등락율'), ci('초당거래대금'),
+                     ci('초당거래대금평균'), ci('등락율각도'), ci('당일거래대금각도'), ci('전일비각도'), ci('관심종목'),
+                     ci('APO'), ci('HT_SINE'), ci('HT_LSINE'), ci('HT_PHASE'), ci('HT_QUDRA'), ci('OBV')):
                 self.ui.ctpg_tik_data[i] = tick_arry
             else:
                 self.ui.ctpg_tik_data[i] = tick_arry[tick_arry != 0]
 
         len_list = []
         tlen = len(self.ui.ctpg_tik_xticks)
-        for data in self.ui.ctpg_tik_data.values():
+        for data in list(self.ui.ctpg_tik_data.values()):
             len_list.append(tlen - len(data))
         gsjm_arry   = self.ui.ctpg_tik_arry[:, ci('관심종목')]
         chuse_exist = True if len(gsjm_arry[gsjm_arry > 0]) > 0 else False
