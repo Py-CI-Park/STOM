@@ -314,7 +314,7 @@ class CoinUpbitBackEngine:
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
-                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], False)
+                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], True)
                     if self.dict_set['백테일괄로딩']:
                         shm  = shared_memory.SharedMemory(create=True, size=arry_tick.nbytes)
                         shm_arry = np.ndarray(arry_tick.shape, dtype=arry_tick.dtype, buffer=shm.buf)
@@ -344,7 +344,7 @@ class CoinUpbitBackEngine:
                     df_tick = AddAvgData(df_tick, 8, avg_list)
                     arry_tick = np.array(df_tick)
                     if self.dict_set['보조지표사용']:
-                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], False)
+                        arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], True)
                     if self.dict_set['백테일괄로딩']:
                         shm  = shared_memory.SharedMemory(create=True, size=arry_tick.nbytes)
                         shm_arry = np.ndarray(arry_tick.shape, dtype=arry_tick.dtype, buffer=shm.buf)
@@ -367,7 +367,7 @@ class CoinUpbitBackEngine:
                 df_tick = AddAvgData(df_tick, 8, avg_list)
                 arry_tick = np.array(df_tick)
                 if self.dict_set['보조지표사용']:
-                    arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], False)
+                    arry_tick = AddTalib(arry_tick, self.dict_set['보조지표설정'], True)
                 if self.dict_set['백테일괄로딩']:
                     shm  = shared_memory.SharedMemory(create=True, size=arry_tick.nbytes)
                     shm_arry = np.ndarray(arry_tick.shape, dtype=arry_tick.dtype, buffer=shm.buf)
