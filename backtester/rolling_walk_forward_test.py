@@ -310,7 +310,7 @@ class Total:
             df_tbc   = self.df_tbct.copy()
             df_tbc['체결시간'] = df_tbc.index
             df_tbc['체결시간'] = df_tbc['체결시간'].apply(lambda x: float(x))
-            df_tbc = df_tbc['체결시간', '보유종목수', '보유금액']
+            df_tbc = df_tbc[['체결시간', '보유종목수', '보유금액']]
             arry_tsg = np.array(df_tsg, dtype='float64')
             arry_bct = np.array(df_tbc, dtype='float64')
             arry_bct = np.sort(arry_bct, axis=0)[::-1]

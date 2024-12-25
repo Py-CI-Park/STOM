@@ -355,7 +355,7 @@ class StrategyBinanceFuture:
             return Parameter_Area(41, 1, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
-            return Parameter_Area(42, 7, tick, pre, 'mean')
+            return round(Parameter_Area(42, 7, tick, pre, 'mean'), 3)
 
         def 최고체결강도(tick, pre=0):
             return Parameter_Area(43, 7, tick, pre, 'max')
@@ -376,7 +376,7 @@ class StrategyBinanceFuture:
             return Parameter_Area(48, 15, tick, pre, 'sum')
 
         def 초당거래대금평균(tick, pre=0):
-            return Parameter_Area(49, 19, tick, pre, 'mean')
+            return int(Parameter_Area(49, 19, tick, pre, 'mean'))
 
         def Parameter_Dgree(aindex, vindex, tick, pre, cf):
             if tick == 평균값계산틱수:

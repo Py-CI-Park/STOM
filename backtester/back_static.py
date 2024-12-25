@@ -810,14 +810,14 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
         ah     = round(arry_tsg[:, 0].sum() / tc, 2)
         app    = round(arry_tsg[:, 2].sum() / tc, 2)
         tsg    = int(arry_tsg[:, 3].sum())
-        app    = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
-        amp    = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
+        appp   = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
+        ampp   = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
         try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max()
         except: mhct  = 0
         try:    seed = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
         except: seed = betting
         tpp    = round(tsg / seed * 100, 2)
         cagr   = round(tpp / day_count * (250 if ui_gubun == 'S' else 365), 2)
-        tpi    = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
+        tpi    = round(wr / 100 * (1 + appp / ampp), 2) if ampp != 0 else 1.0
 
     return tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi
