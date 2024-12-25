@@ -52,8 +52,6 @@ class BackSubTotal:
                 self.arry_bct_  = data[4]
                 self.betting    = data[5]
                 self.day_count  = data[6]
-            elif data[0] == '인아웃카운터':
-                self.in_out_cnt = data[1]
             elif data[0] == '백테시작':
                 self.opti_turn  = data[1]
                 self.dummy_tsg  = {}
@@ -61,11 +59,13 @@ class BackSubTotal:
                 self.ddict_bct  = {}
                 self.list_tsg   = []
                 self.arry_bct   = None
-                self.in_out_cnt = None
                 self.separation = None
                 self.complete1  = False
                 self.complete2  = False
-
+                if len(data) == 2:
+                    self.in_out_cnt = None
+                else:
+                    self.in_out_cnt = data[2]
             if self.complete1 and self.bctq.empty():
                 if self.separation == '분리집계':
                     self.tq.put('집계완료')
@@ -181,38 +181,33 @@ class BackSubTotal:
         df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
         arry_tsg = np.array(df_tsg, dtype='float64')
         arry_bct = arry_bct[arry_bct[:, 1] > 0]
+        arry_bct = np.sort(arry_bct, axis=0)[::-1]
         if len(data) == 11:
             vsday, veday, tsday, tdaycnt, vdaycnt, index, vars_turn, vars_key = data[3:]
             if gubun:
                 arry_tsg = arry_tsg[(arry_tsg[:, 1] < vsday * 1000000) | ((veday * 1000000 + 240000 < arry_tsg[:, 1]) & (arry_tsg[:, 1] < tsday * 1000000))]
                 arry_bct = arry_bct[(arry_bct[:, 0] < vsday * 1000000) | ((veday * 1000000 + 240000 < arry_bct[:, 0]) & (arry_bct[:, 0] < tsday * 1000000))]
-                arry_bct = np.sort(arry_bct, axis=0)[::-1]
-                result   = GetBackResult(arry_tsg, arry_bct, self.betting, tdaycnt, self.ui_gubun)
-                result   = AddMdd(arry_tsg, result)
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, tdaycnt)
             else:
                 arry_tsg = arry_tsg[(vsday * 1000000 <= arry_tsg[:, 1]) & (arry_tsg[:, 1] <= veday * 1000000 + 240000)]
                 arry_bct = arry_bct[(vsday * 1000000 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= veday * 1000000 + 240000)]
-                arry_bct = np.sort(arry_bct, axis=0)[::-1]
-                result   = GetBackResult(arry_tsg, arry_bct, self.betting, vdaycnt, self.ui_gubun)
-                result   = AddMdd(arry_tsg, result)
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, vdaycnt)
+            result = AddMdd(arry_tsg, result)
             self.tq.put(('TRAIN' if gubun else 'VALID', index, result, vars_turn, vars_key))
         elif len(data) == 10:
             vsday, veday, tdaycnt, vdaycnt, index, vars_turn, vars_key = data[3:]
             if gubun:
                 arry_tsg = arry_tsg[(arry_tsg[:, 1] < vsday * 1000000) | (veday * 1000000 + 240000 < arry_tsg[:, 1])]
                 arry_bct = arry_bct[(vsday * 1000000 < arry_bct[:, 0]) | (arry_bct[:, 0] > veday * 1000000 + 240000)]
-                arry_bct = np.sort(arry_bct, axis=0)[::-1]
-                result   = GetBackResult(arry_tsg, arry_bct, self.betting, tdaycnt, self.ui_gubun)
-                result   = AddMdd(arry_tsg, result)
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, tdaycnt)
             else:
                 arry_tsg = arry_tsg[(vsday * 1000000 <= arry_tsg[:, 1]) & (arry_tsg[:, 1] <= veday * 1000000 + 240000)]
                 arry_bct = arry_bct[(vsday * 1000000 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= veday * 1000000 + 240000)]
-                arry_bct = np.sort(arry_bct, axis=0)[::-1]
-                result   = GetBackResult(arry_tsg, arry_bct, self.betting, vdaycnt, self.ui_gubun)
-                result   = AddMdd(arry_tsg, result)
+                result   = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, vdaycnt)
+            result = AddMdd(arry_tsg, result)
             self.tq.put(('TRAIN' if gubun else 'VALID', index, result, vars_turn, vars_key))
         else:
             daycnt, vars_turn, vars_key = data[3:]
-            result = GetBackResult(arry_tsg, arry_bct, self.betting, daycnt, self.ui_gubun)
+            result = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, daycnt)
             result = AddMdd(arry_tsg, result)
             self.tq.put(('ALL', 0, result, vars_turn, vars_key))

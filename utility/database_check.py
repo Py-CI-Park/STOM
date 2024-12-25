@@ -49,7 +49,8 @@ delete_file_list = [
     './kiwoom_manager.py',
     './db_update_day_20240504.bat',
     './db_update_back_20240504.bat',
-    './db_distinct.bat'
+    './db_distinct.bat',
+    './lecture/study.py'
 ]
 
 for file in delete_file_list:

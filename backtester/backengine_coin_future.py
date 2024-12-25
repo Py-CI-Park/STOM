@@ -668,8 +668,8 @@ class CoinFutureBackEngine:
             if tick in self.avg_list:
                 return Parameter_Previous(GetArrayIndex(aindex), pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                sindex = (self.indexn - pre - tick) if pre != -1  else self.indexb - tick
+                eindex = (self.indexn - pre) if pre != -1  else self.indexb
                 dmp_gap = self.array_tick[eindex, vindex] - self.array_tick[sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 

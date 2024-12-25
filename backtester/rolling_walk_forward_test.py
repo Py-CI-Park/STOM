@@ -317,7 +317,7 @@ class Total:
             df_tsg   = self.df_ttsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
             arry_tsg = np.array(df_tsg, dtype='float64')
             arry_bct = np.sort(arry_bct, axis=0)[::-1]
-            result   = GetBackResult(arry_tsg, arry_bct, self.betting, out_day_count, self.ui_gubun)
+            result   = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, out_day_count)
             result   = AddMdd(arry_tsg, result)
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
 
@@ -566,9 +566,7 @@ class RollingWalkForwardTest:
             self.tq.put(('경우의수', total_count, back_count, startday, endday, out_count))
             self.tq.put(('변수정보', hvar_list[i], 2))
             for q in self.bstq_list:
-                q.put('백테시작')
-            for q in self.bstq_list:
-                q.put(('인아웃카운터', i))
+                q.put('백테시작', 2, i)
             for q in self.beq_list:
                 q.put(('변수정보', hvar_list[i], 2, startday, endday))
             _ = mq.get()
@@ -678,9 +676,7 @@ class RollingWalkForwardTest:
         self.tq.put(('경우의수', total_count, back_count, startday, endday, i))
         self.tq.put(('변수정보', vars_, 0))
         for q in self.bstq_list:
-            q.put(('백테시작', 0))
-        for bstq in self.bstq_list:
-            bstq.put(('인아웃카운터', i))
+            q.put(('백테시작', 0, i))
         for q in self.beq_list:
             q.put(('변수정보', vars_, 0, startday, endday))
 
@@ -704,7 +700,7 @@ class RollingWalkForwardTest:
 
             self.tq.put(('변수정보', vars_, 1))
             for q in self.bstq_list:
-                q.put(('백테시작', 1))
+                q.put(('백테시작', 1, i))
             for q in self.beq_list:
                 q.put(('변수정보', vars_, 1, startday, endday))
 
@@ -741,11 +737,7 @@ class RollingWalkForwardTest:
             total_count = back_count * (len_vars + 1)
         else:
             total_count = back_count * optuna_count
-
         self.tq.put(('경우의수', total_count, back_count, startday, endday, i))
-        for bstq in self.bstq_list:
-            bstq.put(('인아웃카운터', i))
-
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 인샘플 [{i+1}]구간 OPTUNA 최적화 시작'))
 
         def objective(trial):
@@ -796,7 +788,7 @@ class RollingWalkForwardTest:
             if str_simple_vars not in self.dict_simple_vars.keys():
                 self.tq.put(('변수정보', optuna_vars, 4))
                 for qq in self.bstq_list:
-                    qq.put(('백테시작', 4))
+                    qq.put(('백테시작', 4, i))
                 for qq in self.beq_list:
                     qq.put(('변수정보', optuna_vars, 4, startday, endday))
                 data_ = mq.get()

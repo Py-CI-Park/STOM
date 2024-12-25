@@ -162,7 +162,7 @@ class Total:
             _df_tsg   = self.df_tsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
             arry_tsg  = np.array(_df_tsg, dtype='float64')
             arry_bct  = np.sort(arry_bct, axis=0)[::-1]
-            result    = GetBackResult(arry_tsg, arry_bct, self.betting, self.day_count, self.ui_gubun)
+            result    = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, self.day_count)
             result    = AddMdd(arry_tsg, result)
             tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi, mdd, mdd_ = result
             save_time = strf_time('%Y%m%d%H%M%S')

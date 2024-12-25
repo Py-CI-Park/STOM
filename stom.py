@@ -1,12 +1,6 @@
-import ctypes
-import subprocess
-from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QCompleter
-from matplotlib import font_manager
-from matplotlib import pyplot as plt
 
-from ui.set_style import *
 from ui.set_icon import SetIcon
 from ui.set_table import SetTable
 from ui.set_logtap import SetLogTap
@@ -20,18 +14,19 @@ from ui.set_dialog_etc import SetDialogEtc
 from ui.set_dialog_back import SetDialogBack
 from ui.set_mediaplayer import SetMediaPlayer
 from ui.set_dialog_chart import SetDialogChart
+from ui.set_style import color_bg_bc, color_fg_bk, color_fg_hl
 
-from ui.ui_writer import Writer
-from ui.ui_zmq import ZmqServ, ZmqRecv
-from ui.ui_draw_chart import DrawChart
-from ui.ui_draw_treemap import DrawTremap
-from ui.ui_extend_window import extend_window
-from ui.ui_draw_realchart import DrawRealChart
-from ui.ui_update_textedit import UpdateTextedit
-from ui.ui_process_starter import process_starter
-from ui.ui_draw_jisuchart import DrawRealJisuChart
-from ui.ui_update_tablewidget import UpdateTablewidget
-from ui.ui_update_progressbar import update_progressbar
+from ui.ui_zmq import *
+from ui.ui_writer import *
+from ui.ui_draw_chart import *
+from ui.ui_draw_treemap import *
+from ui.ui_extend_window import *
+from ui.ui_draw_realchart import *
+from ui.ui_draw_jisuchart import *
+from ui.ui_update_textedit import *
+from ui.ui_process_starter import *
+from ui.ui_update_tablewidget import *
+from ui.ui_update_progressbar import *
 
 from ui.ui_etc import *
 from ui.ui_pattern import *
@@ -72,15 +67,15 @@ from ui.ui_button_clicked_zoom import *
 from ui.ui_button_clicked_ss_cs import *
 from ui.ui_button_clicked_chart import *
 
+from utility.hoga import *
+from utility.chart import *
+from utility.sound import *
+from utility.query import *
 from utility.static import *
 from utility.setting import *
-from utility.hoga import Hoga
-from utility.chart import Chart
-from utility.sound import Sound
-from utility.query import Query
 from utility.chart_items import *
-from utility.webcrawling import WebCrawling
-from utility.telegram_msg import TelegramMsg
+from utility.webcrawling import *
+from utility.telegram_msg import *
 
 
 class Window(QMainWindow):
@@ -775,15 +770,21 @@ class Window(QMainWindow):
 
 
 if __name__ == '__main__':
+    import ctypes
+    from PyQt5.QtGui import QPalette
+
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
     auto_run = 1 if len(sys.argv) > 1 and sys.argv[1] == 'stocklogin' else 0
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--blink-settings=forceDarkModeEnabled=true"
     subprocess.Popen('python64 ./utility/timesync.py')
 
-    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, totalQ, testQ, kimpQ, wdzservQ = \
-        Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue()
-    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdzservQ, totalQ]
+    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, totalQ, testQ, \
+        kimpQ, wdzservQ = Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), Queue(), \
+        Queue(), Queue(), Queue(), Queue(), Queue(), Queue()
+
+    qlist = [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ, cstgQ, liveQ, kimpQ,
+             wdzservQ, totalQ]
 
     proc_tele  = Process(target=TelegramMsg, args=(qlist,), daemon=True)
     proc_webc  = Process(target=WebCrawling, args=(qlist,), daemon=True)

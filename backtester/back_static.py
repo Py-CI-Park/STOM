@@ -463,7 +463,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
     std, pm, p2m, pam, pwm, gm, g2m, gam, gwm, text = 0, 0, 0, 0, 0, 0, 0, 0, 0, ''
     std_false_point = -2_147_483_648
     if tc > 0:
-        if 'TRAIN' in pre_text:
+        if 'TRAIN' in pre_text or 'TOTAL' in pre_text:
             if 'P' in optistd:
                 if optistd == 'TP':
                     std = tsp if std_true else std_false_point
@@ -769,6 +769,7 @@ def GetResultDataframe(ui_gubun, list_tsg, arry_bct):
 
 def AddMdd(arry_tsg, result):
     """
+    arry_tsg
     보유시간, 매도시간, 수익률, 수익금, 수익금합계
       0       1       2       3      4
     """
@@ -787,11 +788,16 @@ def AddMdd(arry_tsg, result):
 
 
 @jit(nopython=True, cache=True)
-def GetBackResult(arry_tsg, arry_bct, betting, day_count, ui_gubun):
+def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
     """
+    arry_tsg
     보유시간, 매도시간, 수익률, 수익금, 수익금합계
       0       1       2       3      4
+    arry_bct
+    체결시간, 보유중목수, 보유금액
+      0         1        2
     """
+    tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     tc = len(arry_tsg)
     if tc > 0:
         arry_p = arry_tsg[arry_tsg[:, 3] >= 0]
@@ -809,10 +815,8 @@ def GetBackResult(arry_tsg, arry_bct, betting, day_count, ui_gubun):
         except: mhct  = 0
         try:    onegm = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
         except: onegm = betting
-        tsp  = round(tsg / onegm * 100, 2)
-        cagr = round(tsp / day_count * (250 if ui_gubun == 'S' else 365), 2)
-        tpi  = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
-    else:
-        tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        tsp    = round(tsg / onegm * 100, 2)
+        cagr   = round(tsp / day_count * (250 if ui_gubun == 'S' else 365), 2)
+        tpi    = round(wr / 100 * (1 + app / amp), 2) if amp != 0 else 1.0
 
     return tc, atc, pc, mc, wr, ah, ap, tsp, tsg, mhct, onegm, cagr, tpi

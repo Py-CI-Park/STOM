@@ -382,8 +382,8 @@ class StrategyBinanceFuture:
             if tick == 평균값계산틱수:
                 return Parameter_Previous(aindex, pre)
             else:
-                sindex = (self.indexn + 1 - pre - tick) if pre != -1  else self.indexb + 1 - tick
-                eindex = (self.indexn + 1 - pre) if pre != -1  else self.indexb + 1
+                sindex = (self.indexn - pre - tick) if pre != -1  else self.indexb - tick
+                eindex = (self.indexn - pre) if pre != -1  else self.indexb
                 dmp_gap = self.dict_tik_ar[종목코드][eindex, vindex] - self.dict_tik_ar[종목코드][sindex, vindex]
                 return round(math.atan2(dmp_gap * cf, tick) / (2 * math.pi) * 360, 2)
 
@@ -716,12 +716,12 @@ class StrategyBinanceFuture:
                 비중조절기준 = 당일거래대금각도
 
             if 비중조절기준 < self.dict_set['코인비중조절'][1]:
-                betting = self.int_tujagm * self.dict_set['코인비중조절'][2]
-            elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
-                betting = self.int_tujagm * self.dict_set['코인비중조절'][4]
-            elif 비중조절기준 < self.dict_set['코인비중조절'][5]:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][5]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][2]:
                 betting = self.int_tujagm * self.dict_set['코인비중조절'][6]
-            elif 비중조절기준 < self.dict_set['코인비중조절'][7]:
+            elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][7]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][4]:
                 betting = self.int_tujagm * self.dict_set['코인비중조절'][8]
             else:
                 betting = self.int_tujagm * self.dict_set['코인비중조절'][9]
@@ -745,12 +745,12 @@ class StrategyBinanceFuture:
                     비중조절기준 = 당일거래대금각도
 
                 if 비중조절기준 < self.dict_set['코인비중조절'][1]:
-                    betting = self.int_tujagm * self.dict_set['코인비중조절'][2]
-                elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
-                    betting = self.int_tujagm * self.dict_set['코인비중조절'][4]
-                elif 비중조절기준 < self.dict_set['코인비중조절'][5]:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][5]
+                elif 비중조절기준 < self.dict_set['코인비중조절'][2]:
                     betting = self.int_tujagm * self.dict_set['코인비중조절'][6]
-                elif 비중조절기준 < self.dict_set['코인비중조절'][7]:
+                elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][7]
+                elif 비중조절기준 < self.dict_set['코인비중조절'][4]:
                     betting = self.int_tujagm * self.dict_set['코인비중조절'][8]
                 else:
                     betting = self.int_tujagm * self.dict_set['코인비중조절'][9]
