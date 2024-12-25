@@ -12,7 +12,7 @@ from utility.setting import DB_PATH, DB_SETTING
 from utility.static import qtest_qwait, threading_timer
 
 
-def ct_button_clicked_01(ui, wdzservQ, qlist):
+def ct_button_clicked_01(ui):
     if not ui.SimulatorProcessAlive():
         code = ui.ct_lineEdittttt_04.text()
         gubun = '업비트' if 'KRW' in code else '바이낸스선물' if 'USDT' in code else '주식'
@@ -26,16 +26,16 @@ def ct_button_clicked_01(ui, wdzservQ, qlist):
                 return
 
         elif gubun == '업비트':
-            ui.proc_simulator_rv = Process(target=ReceiverUpbit2, args=(qlist,), daemon=True)
-            ui.proc_simulator_td = Process(target=TraderUpbit2, args=(qlist,), daemon=True)
-            ui.proc_strategy_coin = Process(target=StrategyUpbit, args=(qlist,), daemon=True)
+            ui.proc_simulator_rv = Process(target=ReceiverUpbit2, args=(ui.qlist,), daemon=True)
+            ui.proc_simulator_td = Process(target=TraderUpbit2, args=(ui.qlist,), daemon=True)
+            ui.proc_strategy_coin = Process(target=StrategyUpbit, args=(ui.qlist,), daemon=True)
         else:
-            ui.proc_simulator_rv = Process(target=ReceiverBinanceFuture2, args=(qlist,), daemon=True)
-            ui.proc_simulator_td = Process(target=TraderBinanceFuture2, args=(qlist,), daemon=True)
-            ui.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(qlist,), daemon=True)
+            ui.proc_simulator_rv = Process(target=ReceiverBinanceFuture2, args=(ui.qlist,), daemon=True)
+            ui.proc_simulator_td = Process(target=TraderBinanceFuture2, args=(ui.qlist,), daemon=True)
+            ui.proc_strategy_coin = Process(target=StrategyBinanceFuture, args=(ui.qlist,), daemon=True)
 
         if gubun == '주식':
-            wdzservQ.put(('manager', '시뮬레이터구동'))
+            ui.wdzservQ.put(('manager', '시뮬레이터구동'))
             ui.stock_simulator_alive = True
         else:
             ui.proc_strategy_coin.start()
@@ -53,7 +53,7 @@ def ct_button_clicked_01(ui, wdzservQ, qlist):
             ui.ctButtonClicked_01()
 
 
-def ct_button_clicked_02(ui, wdzservQ):
+def ct_button_clicked_02(ui):
     if ui.SimulatorProcessAlive():
         if ui.proc_simulator_rv is not None and ui.proc_simulator_rv.is_alive():
             ui.proc_simulator_rv.kill()
@@ -61,13 +61,13 @@ def ct_button_clicked_02(ui, wdzservQ):
             ui.proc_simulator_td.kill()
         if ui.CoinStrategyProcessAlive():
             ui.proc_strategy_coin.kill()
-        wdzservQ.put(('manager', '시뮬레이터종료'))
+        ui.wdzservQ.put(('manager', '시뮬레이터종료'))
         ui.stock_simulator_alive = False
     qtest_qwait(3)
     QMessageBox.information(ui.dialog_test, '알림', '시뮬레이터 엔진 종료 완료')
 
 
-def ct_button_clicked_03(ui, windowQ, wdzservQ, cstgQ):
+def ct_button_clicked_03(ui):
     code = ui.ct_lineEdittttt_04.text()
     if code == '':
         QMessageBox.critical(ui.dialog_test, '오류 알림', '종목코드가 입력되지 않았습니다.\n')
@@ -90,12 +90,12 @@ def ct_button_clicked_03(ui, windowQ, wdzservQ, cstgQ):
 
     ui.ChartClear()
     if gubun == '주식':
-        wdzservQ.put(('simul_strategy', ('차트종목코드', code)))
-        wdzservQ.put(('simul_strategy', ('관심목록', (code,))))
+        ui.wdzservQ.put(('simul_strategy', ('차트종목코드', code)))
+        ui.wdzservQ.put(('simul_strategy', ('관심목록', (code,))))
     else:
-        cstgQ.put(('차트종목코드', code))
-        cstgQ.put(('관심목록', (code,), (code,)))
-    windowQ.put('복기모드시작')
+        ui.cstgQ.put(('차트종목코드', code))
+        ui.cstgQ.put(('관심목록', (code,), (code,)))
+    ui.windowQ.put('복기모드시작')
 
     try:
         file_first_name = 'stock_tick_' if gubun == '주식' else 'coin_tick_'
@@ -149,14 +149,14 @@ def ct_button_clicked_08(ui):
         linedit.setText(k_list[i])
 
 
-def ct_button_clicked_09(ui, proc_query, queryQ):
+def ct_button_clicked_09(ui):
     k_list = []
     for linedit in ui.factor_linedit_list:
         k_list.append(linedit.text())
     k_list = ';'.join(k_list)
-    if proc_query.is_alive():
+    if ui.proc_query.is_alive():
         query = f"UPDATE back SET 보조지표설정 = '{k_list}'"
-        queryQ.put(('설정디비', query))
+        ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui.dialog_factor, '저장 완료', random.choice(famous_saying))
 
 
@@ -168,29 +168,29 @@ def get_k_list(ui):
     return k_list
 
 
-def tick_put(ui, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ):
+def tick_put(ui, code, gubun):
     try:
         dt = ui.df_test.index[ui.ct_test]
         data = tuple(ui.df_test.iloc[ui.ct_test])
         if gubun == '주식':
-            wdzservQ.put(('trader', ('복기모드시간', str(dt))))
-            wdzservQ.put(('receiver', (dt,) + data + (code,)))
+            ui.wdzservQ.put(('trader', ('복기모드시간', str(dt))))
+            ui.wdzservQ.put(('receiver', (dt,) + data + (code,)))
         else:
-            ctraderQ.put(('복기모드시간', str(dt)))
-            creceivQ.put((dt,) + data + (code,))
+            ui.ctraderQ.put(('복기모드시간', str(dt)))
+            ui.creceivQ.put((dt,) + data + (code,))
         ui.ct_test += 1
         speed = int(ui.tt_comboBoxxxxx_01.currentText())
         if not ui.test_pause:
-            data = [ui, code, gubun, windowQ, wdzservQ, ctraderQ, creceivQ, cstgQ]
+            data = [ui, code, gubun, ui.windowQ, ui.wdzservQ, ui.ctraderQ, ui.creceivQ, ui.cstgQ]
             threading_timer(round(1 / speed, 2), tick_put, data)
     except:
         if gubun == '주식':
-            wdzservQ.put(('simul_strategy', ('관심목록', ())))
-            wdzservQ.put(('simul_strategy', '복기모드종료'))
+            ui.wdzservQ.put(('simul_strategy', ('관심목록', ())))
+            ui.wdzservQ.put(('simul_strategy', '복기모드종료'))
         else:
-            cstgQ.put(('관심목록', ()))
-            cstgQ.put('복기모드종료')
-        windowQ.put('복기모드종료')
+            ui.cstgQ.put(('관심목록', ()))
+            ui.cstgQ.put('복기모드종료')
+        ui.windowQ.put('복기모드종료')
         ui.ct_test = 0
         ui.test_pause = False
         qtest_qwait(2)

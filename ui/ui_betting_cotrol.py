@@ -38,7 +38,7 @@ def bjs_button_clicked_01(ui):
     ui.bjs_lineEdittt_09.setText(bjjj_list[9])
 
 
-def bjs_button_clicked_02(ui, proc_query, queryQ):
+def bjs_button_clicked_02(ui):
     bjjj_list = []
     if ui.bjs_checkBoxxx_01.isChecked():   bjjj_list.append('0')
     elif ui.bjs_checkBoxxx_02.isChecked(): bjjj_list.append('1')
@@ -73,9 +73,9 @@ def bjs_button_clicked_02(ui, proc_query, queryQ):
     bjjj_list.append(ui.bjs_lineEdittt_08.text())
     bjjj_list.append(ui.bjs_lineEdittt_09.text())
     bjjj_text = ';'.join(bjjj_list)
-    if proc_query.is_alive():
+    if ui.proc_query.is_alive():
         query = f"UPDATE stockbuyorder SET 주식비중조절 = '{bjjj_text}'"
-        queryQ.put(('설정디비', query))
+        ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui.dialog_bjjs, '저장 완료', random.choice(famous_saying))
     ui.dict_set['주식비중조절'] = [float(x) for x in bjjj_text.split(';')]
     ui.UpdateDictSet()
@@ -106,7 +106,7 @@ def bjc_button_clicked_01(ui):
     ui.bjc_lineEdittt_09.setText(bjjj_list[9])
 
 
-def bjc_button_clicked_02(ui, proc_query, queryQ):
+def bjc_button_clicked_02(ui):
     bjjj_list = []
     if ui.bjc_checkBoxxx_01.isChecked():   bjjj_list.append('0')
     elif ui.bjc_checkBoxxx_02.isChecked(): bjjj_list.append('1')
@@ -138,9 +138,9 @@ def bjc_button_clicked_02(ui, proc_query, queryQ):
     bjjj_list.append(ui.bjc_lineEdittt_08.text())
     bjjj_list.append(ui.bjc_lineEdittt_09.text())
     bjjj_text = ';'.join(bjjj_list)
-    if proc_query.is_alive():
+    if ui.proc_query.is_alive():
         query = f"UPDATE coinbuyorder SET 코인비중조절 = '{bjjj_text}'"
-        queryQ.put(('설정디비', query))
+        ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui.dialog_bjjc, '저장 완료', random.choice(famous_saying))
     ui.dict_set['코인비중조절'] = [float(x) for x in bjjj_text.split(';')]
     ui.UpdateDictSet()

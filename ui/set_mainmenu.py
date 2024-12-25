@@ -74,6 +74,7 @@ class SetMainMenu:
         self.ui.od_pushButton = self.wc.setPushbutton('O', color=6, click=self.ui.ShowOrder, shortcut='Ctrl+Shift+O', tip='수동주문창')
         self.ui.vv_pushButton = self.wc.setPushbutton('V', color=6, click=self.ui.ShowVideo, shortcut='Ctrl+Shift+V', tip='인트로영상재생')
         self.ui.zz_pushButton = self.wc.setPushbutton('E', color=6, click=self.ui.ExtendWindow, shortcut='Ctrl+Shift+E', tip='전략탭확장')
+        self.ui.cs_pushButton = self.wc.setPushbutton('', color=6, click=self.ui.ChartScreenShot, shortcut='Shift+S')
 
         self.ui.image_label1 = QLabel(self.ui)
         self.ui.image_label2 = QLabel(self.ui)

@@ -2,30 +2,30 @@ import sys
 from utility.static import qtest_qwait
 
 
-def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
+def process_kill(ui):
     if ui.dict_set['리시버프로파일링']:
-        wdzservQ.put(('receiver', '프로파일링결과'))
+        ui.wdzservQ.put(('receiver', '프로파일링결과'))
         qtest_qwait(3)
     if ui.dict_set['트레이더프로파일링']:
-        wdzservQ.put(('trader', '프로파일링결과'))
+        ui.wdzservQ.put(('trader', '프로파일링결과'))
         qtest_qwait(3)
     if ui.dict_set['전략연산프로파일링']:
-        wdzservQ.put(('strategy', '프로파일링결과'))
+        ui.wdzservQ.put(('strategy', '프로파일링결과'))
         qtest_qwait(3)
 
-    wdzservQ.put(('manager', '통신종료'))
+    ui.wdzservQ.put(('manager', '통신종료'))
     factor_choice = ''
     for checkbox in ui.factor_checkbox_list:
         factor_choice = f"{factor_choice}{'1' if checkbox.isChecked() else '0'};"
     query = f"UPDATE etc SET 팩터선택 = '{factor_choice[:-1]}'"
-    queryQ.put(('설정디비', query))
+    ui.queryQ.put(('설정디비', query))
     divid_mode = ui.be_comboBoxxxxx_01.currentText()
     optuna_sampler = ui.op_comboBoxxxx_01.currentText()
     optuna_fixvars = ui.op_lineEditttt_01.text()
     optuna_count = int(ui.op_lineEditttt_02.text())
     optuna_autostep = 1 if ui.op_checkBoxxxx_01.isChecked() else 0
     query = f"UPDATE back SET 백테엔진분류방법 = '{divid_mode}', '옵튜나샘플러' = '{optuna_sampler}', '옵튜나고정변수' = '{optuna_fixvars}', '옵튜나실행횟수' = {optuna_count}, '옵튜나자동스탭' = {optuna_autostep}"
-    queryQ.put(('설정디비', query))
+    ui.queryQ.put(('설정디비', query))
 
     if ui.dict_set['창위치기억']:
         geo_len = len(ui.dict_set['창위치']) if ui.dict_set['창위치'] is not None else 0
@@ -42,8 +42,8 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
         geometry += f"{ui.dialog_order.x()};{ui.dialog_order.y() - 31 if geo_len > 21 and ui.dict_set['창위치'][21] + 31 == ui.dialog_order.y() else ui.dialog_order.y()};"
         geometry += f"{ui.dialog_pattern.x()};{ui.dialog_pattern.y() - 31 if geo_len > 23 and ui.dict_set['창위치'][23] + 31 == ui.dialog_pattern.y() else ui.dialog_pattern.y()}"
         query = f"UPDATE etc SET 창위치 = '{geometry}'"
-        queryQ.put(('설정디비', query))
-    queryQ.put('프로세스종료')
+        ui.queryQ.put(('설정디비', query))
+    ui.queryQ.put('프로세스종료')
 
     if ui.writer.isRunning(): ui.writer.terminate()
     if ui.qtimer1.isActive(): ui.qtimer1.stop()
@@ -61,13 +61,13 @@ def process_kill(ui, wdzservQ, queryQ, kimpQ, creceivQ, ctraderQ):
     if ui.StomLiveProcessAlive():       ui.proc_live.kill()
 
     if ui.CoinKimpProcessAlive():
-        kimpQ.put('프로세스종료')
+        ui.kimpQ.put('프로세스종료')
     if ui.CoinReceiverProcessAlive():
-        creceivQ.put('프로세스종료')
+        ui.creceivQ.put('프로세스종료')
         ui.proc_receiver_coin.kill()
     if ui.CoinTraderProcessAlive():
         if ui.dict_set['거래소'] == '바이낸스선물':
-            ctraderQ.put('프로세스종료')
+            ui.ctraderQ.put('프로세스종료')
         ui.proc_trader_coin.kill()
     if ui.CoinStrategyProcessAlive():
         ui.proc_strategy_coin.kill()

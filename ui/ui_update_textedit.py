@@ -7,15 +7,12 @@ from utility.static import error_decorator, now, qtest_qwait, timedelta_sec, int
 
 
 class UpdateTextedit:
-    def __init__(self, ui, qlist):
+    def __init__(self, ui):
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
+        windowQ, soundQ, ui.queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13       14
         """
         self.ui       = ui
-        self.soundQ   = qlist[1]
-        self.teleQ    = qlist[3]
-        self.wdzservQ = qlist[13]
         self.logging  = True
 
     @error_decorator
@@ -130,15 +127,15 @@ class UpdateTextedit:
                 self.ui.gg_textEdittttt_01.append(data[1])
     
             if data[0] == ui_num['S단순텍스트'] and '리시버 종료' in data[1]:
-                self.wdzservQ.put(('manager', '리시버 종료'))
+                self.ui.wdzservQ.put(('manager', '리시버 종료'))
             elif data[0] == ui_num['S로그텍스트'] and '전략연산 종료' in data[1]:
-                self.wdzservQ.put(('manager', '전략연산 종료'))
+                self.ui.wdzservQ.put(('manager', '전략연산 종료'))
                 if self.ui.tickdata_save and self.ui.dict_set['디비자동관리']:
                     self.AutoDataBase(1)
                 else:
                     self.StockShutDownCheck()
             elif data[0] == ui_num['S로그텍스트'] and '트레이더 종료' in data[1]:
-                self.wdzservQ.put(('manager', '트레이더 종료'))
+                self.ui.wdzservQ.put(('manager', '트레이더 종료'))
             elif data[0] == ui_num['C단순텍스트'] and '리시버 종료' in data[1]:
                 if self.ui.CoinReceiverProcessAlive():
                     self.ui.proc_receiver_coin.kill()
@@ -193,7 +190,7 @@ class UpdateTextedit:
         if gubun == 1:
             self.ui.auto_mode = True
             if self.ui.dict_set['주식알림소리'] or self.ui.dict_set['코인알림소리']:
-                self.soundQ.put('데이터베이스 자동관리를 시작합니다.')
+                self.ui.soundQ.put('데이터베이스 자동관리를 시작합니다.')
             if not self.ui.dialog_db.isVisible():
                 self.ui.dialog_db.show()
             qtest_qwait(2)
@@ -206,7 +203,7 @@ class UpdateTextedit:
         elif gubun == 3:
             if self.ui.dialog_db.isVisible():
                 self.ui.dialog_db.close()
-            self.teleQ.put('데이터베이스 자동관리 완료')
+            self.ui.teleQ.put('데이터베이스 자동관리 완료')
             qtest_qwait(2)
             self.ui.auto_mode = False
             self.StockShutDownCheck()
@@ -221,7 +218,7 @@ class UpdateTextedit:
                         (90000 < int_hms() < 90500 and self.ui.dict_set['휴무컴퓨터종료']):
                     os.system('shutdown /s /t 300')
         elif self.ui.dict_set['주식알림소리']:
-            self.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
+            self.ui.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
 
     def CoinShutDownCheck(self):
         if not self.ui.dict_set['백테스케쥴실행'] or now().weekday() != self.ui.dict_set['백테스케쥴요일']:
@@ -231,4 +228,4 @@ class UpdateTextedit:
                 if self.ui.dict_set['코인장초컴퓨터종료'] or self.ui.dict_set['코인장중컴퓨터종료']:
                     os.system('shutdown /s /t 300')
         elif self.ui.dict_set['코인알림소리']:
-            self.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
+            self.ui.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')

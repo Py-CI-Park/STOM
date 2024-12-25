@@ -94,7 +94,7 @@ def ptbutton_clicked_01(ui):
             ui.pt_comboBoxxxxx_00.addItem(pattern_name)
 
 
-def ptbutton_clicked_02(ui, proc_query, queryQ):
+def ptbutton_clicked_02(ui):
     if ui.main_btn == 2:
         name = ui.svjb_comboBoxx_01.currentText()
     else:
@@ -127,13 +127,13 @@ def ptbutton_clicked_02(ui, proc_query, queryQ):
 
     pattern_text = get_pattern_text(ui)
     df = pd.DataFrame({'패턴설정': [pattern_text]}, index=[name])
-    if proc_query.is_alive():
+    if ui.proc_query.is_alive():
         if ui.main_btn == 2:
-            queryQ.put(('전략디비', f"DELETE FROM stockpattern WHERE `index` = '{name}'"))
-            queryQ.put(('전략디비', df, 'stockpattern', 'append'))
+            ui.queryQ.put(('전략디비', f"DELETE FROM stockpattern WHERE `index` = '{name}'"))
+            ui.queryQ.put(('전략디비', df, 'stockpattern', 'append'))
         else:
-            queryQ.put(('전략디비', f"DELETE FROM coinpattern WHERE `index` = '{name}'"))
-            queryQ.put(('전략디비', df, 'coinpattern', 'append'))
+            ui.queryQ.put(('전략디비', f"DELETE FROM coinpattern WHERE `index` = '{name}'"))
+            ui.queryQ.put(('전략디비', df, 'coinpattern', 'append'))
         QMessageBox.information(ui.dialog_pattern, '저장 완료', random.choice(famous_saying))
 
 

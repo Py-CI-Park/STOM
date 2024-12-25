@@ -13,21 +13,12 @@ from utility.setting import columns_tdf, columns_jgf, ui_num
 from utility.static import int_hms, int_hms_utc, now, strf_time
 
 
-def process_starter(ui, qlist):
+def process_starter(ui):
     """
-    windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
+    windowQ, soundQ, ui.queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
        0        1       2      3       4      5      6      7       8         9         10     11    12      13       14
     """
-    windowQ = qlist[0]
-    soundQ = qlist[1]
-    queryQ = qlist[2]
-    chartQ = qlist[4]
-    hogaQ = qlist[5]
-    creceivQ = qlist[8]
-    ctraderQ = qlist[9]
-    cstgQ = qlist[10]
-    totalQ = qlist[14]
-    inthms = int_hms()
+    inthms    = int_hms()
     inthmsutc = int_hms_utc()
 
     if ui.int_time < 80000 <= inthms:
@@ -41,9 +32,9 @@ def process_starter(ui, qlist):
 
     if A or B or C or D:
         if ui.dict_set['코인리시버']:
-            CoinReceiverStart(ui, qlist)
+            CoinReceiverStart(ui, ui.qlist)
         if ui.dict_set['코인트레이더']:
-            CoinTraderStart(ui, qlist, windowQ)
+            CoinTraderStart(ui, ui.qlist, ui.windowQ)
 
     if ui.dict_set['코인트레이더'] and A and D and not ui.time_sync:
         subprocess.Popen('python64 ./utility/timesync.py')
@@ -52,7 +43,7 @@ def process_starter(ui, qlist):
     if ui.int_time < 90000 <= inthms:
         ui.time_sync = False
 
-    if ui.dict_set['스톰라이브'] and ui.StomLiveProcessAlive():
+    if not ui.backtest_engine and ui.dict_set['스톰라이브'] and ui.StomLiveProcessAlive():
         if ui.int_time < 93100 <= inthms:
             if ui.dict_set['주식트레이더']:   ui.StomliveScreenshot('S스톰라이브')
             elif ui.dict_set['코인트레이더']: ui.StomliveScreenshot('C스톰라이브')
@@ -65,7 +56,7 @@ def process_starter(ui, qlist):
         ui.mnButtonClicked_03(stocklogin=True)
         ui.auto_run = 0
 
-    UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ, totalQ)
+    UpdateWindowTitle(ui)
     ui.int_time = inthms
 
 
@@ -124,7 +115,7 @@ def CoinTraderStart(ui, qlist, windowQ):
             ui.cjg_tableWidgettt.setColumnWidth(11, 90)
 
 
-def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctraderQ, cstgQ, totalQ):
+def UpdateWindowTitle(ui):
     inthms = int_hms()
     inthmsutc = int_hms_utc()
     text = 'STOM'
@@ -144,10 +135,10 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
         beqsize = sum((stq.qsize() for stq in ui.back_eques)) if ui.back_eques else 0
         bstqsize = sum((ctq.qsize() for ctq in ui.back_sques)) if ui.back_sques else 0
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
-               f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
-               f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \
-               f'hogaQ[{hogaQ.qsize()}] | soundQ[{soundQ.qsize()} | backegQ[{beqsize}] | backstQ[{bstqsize}] | ' \
-               f'backttQ[{totalQ.qsize()}]'
+               f'creceivQ[{ui.creceivQ.qsize()}] | ctraderQ[{ui.ctraderQ.qsize()}] | cstrateyQ[{ui.cstgQ.qsize()}] | ' \
+               f'windowQ[{ui.windowQ.qsize()}] | ui.queryQ[{ui.queryQ.qsize()}] | chartQ[{ui.chartQ.qsize()}] | ' \
+               f'hogaQ[{ui.hogaQ.qsize()}] | soundQ[{ui.soundQ.qsize()} | backegQ[{beqsize}] | backstQ[{bstqsize}] | ' \
+               f'backttQ[{ui.totalQ.qsize()}]'
     else:
         if ui.dict_set['코인트레이더']:
             text = f'{text} | 모의' if ui.dict_set['코인모의투자'] else f'{text} | 실전'

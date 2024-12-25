@@ -812,8 +812,8 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
         tsg    = int(arry_tsg[:, 3].sum())
         appp   = arry_p[:, 2].mean() if len(arry_p) > 0 else 0
         ampp   = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
-        try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max()
-        except: mhct  = 0
+        try:    mhct = arry_bct[int(len(arry_bct) * 0.01):, 1].max()
+        except: mhct = 0
         try:    seed = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
         except: seed = betting
         tpp    = round(tsg / seed * 100, 2)

@@ -4,18 +4,17 @@ from utility.static import error_decorator
 
 
 class DrawTremap:
-    def __init__(self, ui, qlist):
+    def __init__(self, ui):
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
+        windowQ, soundQ, ui.queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13       14
         """
         self.ui = ui
-        self.webcQ = qlist[6]
 
     @error_decorator
     def draw_treemap(self, data):
         if not self.ui.dialog_tree.isVisible():
-            self.webcQ.put(('트리맵중단', ''))
+            self.ui.webcQ.put(('트리맵중단', ''))
             return
 
         gubun, df1, df2, cl1, cl2 = data
@@ -31,7 +30,7 @@ class DrawTremap:
                     if len(df_) == 1:
                         self.ui.tm_dt = True
                         url = df_['url'].iloc[0]
-                        self.webcQ.put(('트리맵1', url))
+                        self.ui.webcQ.put(('트리맵1', url))
                 elif event.button == 3 and event.button != self.ui.tm_mc1:
                     self.ui.tm_mc1 = 3
                     self.ui.tm_dt = False
@@ -51,7 +50,7 @@ class DrawTremap:
                     if len(df_) == 1:
                         self.ui.tm_dt = True
                         url = df_['url'].iloc[0]
-                        self.webcQ.put(('트리맵2', url))
+                        self.ui.webcQ.put(('트리맵2', url))
                 elif event.button == 3 and event.button != self.ui.tm_mc2:
                     self.ui.tm_mc2 = 3
                     self.ui.tm_dt = False

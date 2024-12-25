@@ -462,7 +462,7 @@ class StrategyBinanceFuture:
                 최고체결강도_    = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].max(), 체결강도)
                 최저체결강도_    = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
                 최고초당매수수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 8].max(), 초당매수수량)
-                최고초당매도수량_ = min(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].min(), 초당매도수량)
+                최고초당매도수량_ = max(self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].max(), 초당매도수량)
                 누적초당매수수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 8].sum() + 초당매수수량
                 누적초당매도수량_ =     self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 9].sum() + 초당매도수량
                 초당거래대금평균_ = int((self.dict_tik_ar[종목코드][-(평균값계산틱수 - 1):, 10].sum() + 초당거래대금) / 평균값계산틱수)
@@ -689,7 +689,7 @@ class StrategyBinanceFuture:
         if len(self.dict_tik_ar[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:
             self.windowQ.put((ui_num['실시간차트'], 종목코드, self.dict_tik_ar[종목코드]))
 
-        if self.dict_set['코인틱데이터저장'] and 종목코드 in self.tuple_gsjm:
+        if self.dict_set['코인틱데이터저장'] and (종목코드 in self.tuple_gsjm or 종목코드 in ('BTCUSDT', 'ETHUSDT')):
             if 종목코드 not in self.dict_tik_ar2.keys():
                 self.dict_tik_ar2[종목코드] = np.array([new_data_tick[:36]])
             else:

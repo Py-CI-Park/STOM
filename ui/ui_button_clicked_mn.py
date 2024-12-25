@@ -77,7 +77,7 @@ def mnbutton_c_clicked_02(ui):
         QMessageBox.warning(ui, '오류 알림', '해당 버튼은 트레이더탭에서만 작동합니다.\n')
 
 
-def mnbutton_c_clicked_03(ui, wdzservQ, soundQ, stocklogin=False):
+def mnbutton_c_clicked_03(ui, stocklogin=False):
     if stocklogin:
         buttonReply = QMessageBox.Yes
     else:
@@ -93,9 +93,9 @@ def mnbutton_c_clicked_03(ui, wdzservQ, soundQ, stocklogin=False):
         )
 
     if buttonReply == QMessageBox.Yes:
-        wdzservQ.put(('manager', '리시버 종료'))
-        wdzservQ.put(('manager', '전략연산 종료'))
-        wdzservQ.put(('manager', '트레이더 종료'))
+        ui.wdzservQ.put(('manager', '리시버 종료'))
+        ui.wdzservQ.put(('manager', '전략연산 종료'))
+        ui.wdzservQ.put(('manager', '트레이더 종료'))
         qtest_qwait(3)
         if ui.dict_set['리시버공유'] < 2 and ui.dict_set['아이디2'] is None:
             QMessageBox.critical(ui, '오류 알림', '두번째 계정이 설정되지 않아\n리시버를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
@@ -103,8 +103,8 @@ def mnbutton_c_clicked_03(ui, wdzservQ, soundQ, stocklogin=False):
             QMessageBox.critical(ui, '오류 알림', '첫번째 계정이 설정되지 않아\n트레이더를 시작할 수 없습니다.\n계정 설정 후 다시 시작하십시오.\n')
         if ui.dict_set['주식리시버'] and ui.dict_set['주식트레이더']:
             if ui.dict_set['주식알림소리']:
-                soundQ.put('키움증권 OPEN API에 로그인을 시작합니다.')
-            wdzservQ.put(('manager', '주식수동시작'))
+                ui.soundQ.put('키움증권 OPEN API에 로그인을 시작합니다.')
+            ui.wdzservQ.put(('manager', '주식수동시작'))
     ui.ms_pushButton.setStyleSheet(style_bc_bt)
 
 
@@ -117,7 +117,7 @@ def mnbutton_c_clicked_04(ui):
         ui.zo_pushButton.setStyleSheet(style_bc_bb)
 
 
-def mnbutton_c_clicked_05(ui, proc_query, queryQ):
+def mnbutton_c_clicked_05(ui):
     buttonReply = QMessageBox.warning(
         ui, '백테기록삭제', '백테 그래프 및 기록 DB가 삭제됩니다.\n계속하시겠습니까?\n',
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
@@ -126,41 +126,41 @@ def mnbutton_c_clicked_05(ui, proc_query, queryQ):
         file_list = os.listdir(GRAPH_PATH)
         for file_name in file_list:
             os.remove(f'{GRAPH_PATH}/{file_name}')
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             con = sqlite3.connect(DB_BACKTEST)
             df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
             con.close()
             table_list = df['name'].to_list()
             for table_name in table_list:
-                queryQ.put(('백테디비', f'DROP TABLE {table_name}'))
-            queryQ.put(('백테디비', 'VACUUM'))
+                ui.queryQ.put(('백테디비', f'DROP TABLE {table_name}'))
+            ui.queryQ.put(('백테디비', 'VACUUM'))
         QMessageBox.information(ui, '알림', '백테그래프 및 기록DB가 삭제되었습니다.')
 
 
-def mnbutton_c_clicked_06(ui, proc_query, queryQ):
+def mnbutton_c_clicked_06(ui):
     buttonReply = QMessageBox.warning(
         ui, '계정 설정 초기화', '계정 설정 항목이 모두 초기화됩니다.\n계속하시겠습니까?\n',
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
     )
     if buttonReply == QMessageBox.Yes:
-        if proc_query.is_alive():
-            queryQ.put(('설정디비', 'DELETE FROM sacc'))
-            queryQ.put(('설정디비', 'DELETE FROM cacc'))
-            queryQ.put(('설정디비', 'DELETE FROM telegram'))
+        if ui.proc_query.is_alive():
+            ui.queryQ.put(('설정디비', 'DELETE FROM sacc'))
+            ui.queryQ.put(('설정디비', 'DELETE FROM cacc'))
+            ui.queryQ.put(('설정디비', 'DELETE FROM telegram'))
             columns = [
                 "index", "아이디1", "비밀번호1", "인증서비밀번호1", "계좌비밀번호1", "아이디2", "비밀번호2", "인증서비밀번호2", "계좌비밀번호2",
                 "아이디3", "비밀번호3", "인증서비밀번호3", "계좌비밀번호3", "아이디4", "비밀번호4", "인증서비밀번호4", "계좌비밀번호4"
             ]
             data = [0, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
             df = pd.DataFrame([data], columns=columns).set_index('index')
-            queryQ.put((df, 'sacc', 'append'))
+            ui.queryQ.put((df, 'sacc', 'append'))
             columns = ["index", "Access_key1", "Secret_key1", "Access_key2", "Secret_key2"]
             data = [0, '', '', '', '']
             df = pd.DataFrame([data], columns=columns).set_index('index')
-            queryQ.put((df, 'cacc', 'append'))
+            ui.queryQ.put((df, 'cacc', 'append'))
             columns = ["index", "str_bot", "int_id"]
             data = [0, '', '']
             df = pd.DataFrame([data], columns=columns).set_index('index')
-            queryQ.put((df, 'telegram', 'append'))
-            queryQ.put(('설정디비', 'VACUUM'))
+            ui.queryQ.put((df, 'telegram', 'append'))
+            ui.queryQ.put(('설정디비', 'VACUUM'))
         QMessageBox.information(ui, '알림', '계정 설정 항목이 모두 초기화되었습니다.')

@@ -1,10 +1,12 @@
 import psutil
+import random
 import sqlite3
 import pandas as pd
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtMultimedia import QMediaPlayer
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
+from ui.set_text import famous_saying
 from utility.setting import DB_TRADELIST
 from utility.setting import columns_dt, columns_dd, ui_num
 from utility.static import thread_decorator, qtest_qwait, strf_time
@@ -32,11 +34,11 @@ def update_cpuper(ui):
     ui.cpu_per = int(psutil.cpu_percent(interval=1))
 
 
-def auto_back_schedule(ui, gubun, soundQ, teleQ):
+def auto_back_schedule(ui, gubun):
     if gubun == 1:
         ui.auto_mode = True
         if ui.dict_set['주식알림소리'] or ui.dict_set['코인알림소리']:
-            soundQ.put('예약된 백테스트 스케쥴러를 시작합니다.')
+            ui.soundQ.put('예약된 백테스트 스케쥴러를 시작합니다.')
         if not ui.dialog_backengine.isVisible():
             ui.BackTestengineShow(ui.dict_set['백테스케쥴구분'])
         qtest_qwait(2)
@@ -56,16 +58,16 @@ def auto_back_schedule(ui, gubun, soundQ, teleQ):
     elif gubun == 3:
         if ui.dialog_scheduler.isVisible():
             ui.dialog_scheduler.close()
-        teleQ.put('백테스트 스케쥴러 완료')
+        ui.teleQ.put('백테스트 스케쥴러 완료')
         ui.auto_mode = False
 
 
-def update_dictset(ui, wdzservQ, creceivQ, ctraderQ, cstgQ, chartQ, proc_chart):
-    wdzservQ.put(('manager', ('설정변경', ui.dict_set)))
-    if ui.CoinReceiverProcessAlive(): creceivQ.put(('설정변경', ui.dict_set))
-    if ui.CoinTraderProcessAlive():   ctraderQ.put(('설정변경', ui.dict_set))
-    if ui.CoinStrategyProcessAlive(): cstgQ.put(('설정변경', ui.dict_set))
-    if proc_chart.is_alive():         chartQ.put(('설정변경', ui.dict_set))
+def update_dictset(ui):
+    ui.wdzservQ.put(('manager', ('설정변경', ui.dict_set)))
+    if ui.CoinReceiverProcessAlive(): ui.creceivQ.put(('설정변경', ui.dict_set))
+    if ui.CoinTraderProcessAlive():   ui.ctraderQ.put(('설정변경', ui.dict_set))
+    if ui.CoinStrategyProcessAlive(): ui.cstgQ.put(('설정변경', ui.dict_set))
+    if ui.proc_chart.is_alive():      ui.chartQ.put(('설정변경', ui.dict_set))
     if ui.backtest_engine:
         for bpq in ui.back_eques:
             bpq.put(('설정변경', ui.dict_set))
@@ -139,7 +141,7 @@ def video_widget_close(ui, state):
         ui.videoWidget.setVisible(False)
 
 
-def stom_live_screenshot(ui, cmd, teleQ):
+def stom_live_screenshot(ui, cmd):
     ui.mnButtonClicked_01(4)
     qtest_qwait(1)
     if cmd == 'S스톰라이브':
@@ -156,5 +158,25 @@ def stom_live_screenshot(ui, cmd, teleQ):
     screen = QApplication.primaryScreen()
     screenshot = screen.grabWindow(ui.winId())
     screenshot.save(file_name, 'png')
-    teleQ.put(file_name)
+    ui.teleQ.put(file_name)
     ui.mnButtonClicked_01(0)
+
+
+def chart_screenshot(ui):
+    if ui.dialog_chart.isVisible():
+        file_name = f'./_log/chart_{strf_time("%Y%m%d%H%M%S%f")}.png'
+        screen = QApplication.primaryScreen()
+        screenshot = screen.grabWindow(ui.dialog_chart.winId())
+        screenshot.save(file_name, 'png')
+        ui.teleQ.put(file_name)
+        QMessageBox.information(ui, '차트 스샷 전송 완료', random.choice(famous_saying))
+
+
+def chart_screenshot2(ui):
+    if ui.dialog_chart.isVisible():
+        file_name = f'./_log/chart_{strf_time("%Y%m%d%H%M%S%f")}.png'
+        screen = QApplication.primaryScreen()
+        screenshot = screen.grabWindow(ui.dialog_chart.winId())
+        screenshot.save(file_name, 'png')
+        ui.teleQ.put(file_name)
+        QMessageBox.information(ui.dialog_chart, '차트 스샷 전송 완료', random.choice(famous_saying))

@@ -10,12 +10,12 @@ def extend_window(ui):
         ui.extend_window = True
         ui.setFixedSize(1403, 1368)
         ui.image_label2.setVisible(True)
-        ui.progressBarrr.setGeometry(5, 568, 35, 793)
+        ui.progressBarrr.setGeometry(5, 545, 35, 817)
     else:
         ui.extend_window = False
         ui.setFixedSize(1403, 763)
         ui.image_label2.setVisible(False)
-        ui.progressBarrr.setGeometry(5, 568, 35, 188)
+        ui.progressBarrr.setGeometry(5, 545, 35, 212)
 
     if ui.main_btn == 2:
         ui.ss_tab.setGeometry(45, 0, 1353, 1362 if ui.extend_window else 757)

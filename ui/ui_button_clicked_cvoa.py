@@ -22,7 +22,7 @@ def cva_button_clicked_01(ui):
                 ui.cva_lineEdittt_01.setText(index)
 
 
-def cva_button_clicked_02(ui, proc_query, queryQ):
+def cva_button_clicked_02(ui):
     strategy_name = ui.cva_lineEdittt_01.text()
     strategy = ui.cs_textEditttt_06.toPlainText()
     if strategy_name == '':
@@ -33,10 +33,10 @@ def cva_button_clicked_02(ui, proc_query, queryQ):
         QMessageBox.critical(ui, '오류 알림', 'GA범위의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
         if (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest2(strategy, ga=True):
-            if proc_query.is_alive():
-                queryQ.put(('전략디비', f"DELETE FROM coinvars WHERE `index` = '{strategy_name}'"))
+            if ui.proc_query.is_alive():
+                ui.queryQ.put(('전략디비', f"DELETE FROM coinvars WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
-                queryQ.put(('전략디비', df, 'coinvars', 'append'))
+                ui.queryQ.put(('전략디비', df, 'coinvars', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
@@ -54,7 +54,7 @@ def cvo_button_clicked_01(ui):
                 ui.cvo_lineEdittt_01.setText(index)
 
 
-def cvo_button_clicked_02(ui, proc_query, queryQ):
+def cvo_button_clicked_02(ui):
     strategy_name = ui.cvo_lineEdittt_01.text()
     strategy = ui.cs_textEditttt_07.toPlainText()
     if strategy_name == '':
@@ -65,10 +65,10 @@ def cvo_button_clicked_02(ui, proc_query, queryQ):
         QMessageBox.critical(ui, '오류 알림', '매수조건의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
         if ui.BackCodeTest3('매수', strategy):
-            if proc_query.is_alive():
-                queryQ.put(('전략디비', f"DELETE FROM coinbuyconds WHERE `index` = '{strategy_name}'"))
+            if ui.proc_query.is_alive():
+                ui.queryQ.put(('전략디비', f"DELETE FROM coinbuyconds WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
-                queryQ.put(('전략디비', df, 'coinbuyconds', 'append'))
+                ui.queryQ.put(('전략디비', df, 'coinbuyconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
@@ -86,7 +86,7 @@ def cvo_button_clicked_03(ui):
                 ui.cvo_lineEdittt_02.setText(index)
 
 
-def cvo_button_clicked_04(ui, proc_query, queryQ):
+def cvo_button_clicked_04(ui):
     strategy_name = ui.cvo_lineEdittt_02.text()
     strategy = ui.cs_textEditttt_08.toPlainText()
     if strategy_name == '':
@@ -97,8 +97,8 @@ def cvo_button_clicked_04(ui, proc_query, queryQ):
         QMessageBox.critical(ui, '오류 알림', '매도조건의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
     else:
         if ui.BackCodeTest3('매도', strategy):
-            if proc_query.is_alive():
-                queryQ.put(('전략디비', f"DELETE FROM coinsellconds WHERE `index` = '{strategy_name}'"))
+            if ui.proc_query.is_alive():
+                ui.queryQ.put(('전략디비', f"DELETE FROM coinsellconds WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
-                queryQ.put(('전략디비', df, 'coinsellconds', 'append'))
+                ui.queryQ.put(('전략디비', df, 'coinsellconds', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))

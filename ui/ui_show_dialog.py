@@ -80,7 +80,7 @@ def show_dialog(ui, code_or_name, tickcount, searchdate, col):
                            ui.ct_lineEdittttt_02.text())
 
 
-def show_dialog_web(ui, show, code, webcQ):
+def show_dialog_web(ui, show, code):
     if ui.webEngineView is None:
         ui.webEngineView = QWebEngineView()
         p = QuietPage(ui.webEngineView)
@@ -94,7 +94,7 @@ def show_dialog_web(ui, show, code, webcQ):
         ui.dialog_info.show()
     if ui.dialog_web.isVisible() and ui.dialog_info.isVisible():
         ui.webEngineView.load(QUrl(f'https://finance.naver.com/item/main.naver?code={code}'))
-        webcQ.put(('기업정보', code))
+        ui.webcQ.put(('기업정보', code))
 
 
 def show_dialog_hoga(ui, show, coin, code):
@@ -138,8 +138,7 @@ def show_dialog_hoga(ui, show, coin, code):
             ui.od_lineEdittttt_02.setText('')
 
 
-def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ, tickcount, searchdate, starttime,
-                      endtime, detail, buytimes):
+def show_dialog_chart(ui, real, coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes):
     if not ui.dialog_chart.isVisible():
         if ui.main_btn in (1, 3):
             ui.ct_lineEdittttt_01.setText('0')
@@ -148,19 +147,19 @@ def show_dialog_chart(ui, real, coin, code, proc_chart, cstgQ, wdzservQ, chartQ,
             ui.ct_lineEdittttt_01.setText('90000')
             ui.ct_lineEdittttt_02.setText('93000')
         ui.dialog_chart.show()
-    if ui.dialog_chart.isVisible() and proc_chart.is_alive():
+    if ui.dialog_chart.isVisible() and ui.proc_chart.is_alive():
         if real:
             ui.ChartClear()
             if coin:
-                if ui.CoinStrategyProcessAlive(): cstgQ.put(('차트종목코드', code))
+                if ui.CoinStrategyProcessAlive(): ui.cstgQ.put(('차트종목코드', code))
             else:
-                wdzservQ.put(('strategy', ('차트종목코드', code, ui.dict_sgbn[code])))
+                ui.wdzservQ.put(('strategy', ('차트종목코드', code, ui.dict_sgbn[code])))
         else:
             ui.ChartClear()
             if detail is None:
-                chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist()))
+                ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist()))
             else:
-                chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(), detail, buytimes))
+                ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(), detail, buytimes))
 
 
 def show_dialog_chart2(ui):
@@ -261,10 +260,10 @@ def show_giup(ui):
     ui.dialog_info.show() if not ui.dialog_info.isVisible() else ui.dialog_info.close()
 
 
-def show_treemap(ui, webcQ):
+def show_treemap(ui):
     if not ui.dialog_tree.isVisible():
         ui.dialog_tree.show()
-        webcQ.put(('트리맵', ''))
+        ui.webcQ.put(('트리맵', ''))
     else:
         ui.dialog_tree.close()
 
@@ -369,11 +368,11 @@ def show_backscheduler(ui):
     ui.dialog_scheduler.show() if not ui.dialog_scheduler.isVisible() else ui.dialog_scheduler.close()
 
 
-def show_kimp(ui, qlist):
+def show_kimp(ui):
     if not ui.dialog_kimp.isVisible():
         ui.dialog_kimp.show()
         if not ui.CoinKimpProcessAlive():
-            ui.proc_coin_kimp = Process(target=Kimp, args=(qlist,))
+            ui.proc_coin_kimp = Process(target=Kimp, args=(ui.qlist,))
             ui.proc_coin_kimp.start()
     else:
         ui.dialog_kimp.close()
@@ -411,13 +410,13 @@ def show_video(ui):
     ui.mediaPlayer.play()
 
 
-def put_hoga_code(ui, coin, code, wdzservQ, creceivQ):
+def put_hoga_code(ui, coin, code):
     if coin:
-        wdzservQ.put(('receiver', ('호가종목코드', '000000')))
-        if ui.CoinReceiverProcessAlive():  creceivQ.put(('호가종목코드', code))
+        ui.wdzservQ.put(('receiver', ('호가종목코드', '000000')))
+        if ui.CoinReceiverProcessAlive(): ui.creceivQ.put(('호가종목코드', code))
     else:
-        if ui.CoinReceiverProcessAlive():  creceivQ.put(('호가종목코드', '000000'))
-        wdzservQ.put(('receiver', ('호가종목코드', code)))
+        if ui.CoinReceiverProcessAlive(): ui.creceivQ.put(('호가종목코드', '000000'))
+        ui.wdzservQ.put(('receiver', ('호가종목코드', code)))
 
 
 def chart_moneytop_list(ui):

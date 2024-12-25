@@ -51,6 +51,7 @@ class SetDialogChart:
         self.ui.ct_pushButtonnn_11 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_01, cmd='다음', shortcut='Alt+right')
         self.ui.ct_pushButtonnn_12 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_02, cmd='매수', shortcut='Alt+up')
         self.ui.ct_pushButtonnn_13 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.hgButtonClicked_02, cmd='매도', shortcut='Alt+down')
+        self.ui.ct_pushButtonnn_14 = self.wc.setPushbutton('', box=self.ui.ct_groupBoxxxxx_01, click=self.ui.ChartScreenShot2, shortcut='Shift+S')
 
         self.ui.ct_dateEdittttt_02 = self.wc.setDateEdit(self.ui.dialog_chart, changed=self.ui.ChartMoneyTopList)
         self.ui.ct_tableWidgett_01 = self.wc.setTablewidget(self.ui.dialog_chart, ['종목명'], 100, vscroll=True, clicked=self.ui.CellClicked_07)
@@ -123,6 +124,7 @@ class SetDialogChart:
         self.ui.ct_pushButtonnn_11.setGeometry(0, 0, 0, 0)
         self.ui.ct_pushButtonnn_12.setGeometry(0, 0, 0, 0)
         self.ui.ct_pushButtonnn_13.setGeometry(0, 0, 0, 0)
+        self.ui.ct_pushButtonnn_14.setGeometry(0, 0, 0, 0)
 
         self.ui.ct_dateEdittttt_02.setGeometry(1403, 15, 120, 30)
         self.ui.ct_tableWidgett_01.setGeometry(1403, 55, 120, 1310 if not DICT_SET['저해상도'] else 950)

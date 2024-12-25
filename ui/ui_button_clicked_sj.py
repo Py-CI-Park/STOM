@@ -330,7 +330,7 @@ def sj_button_cicked_08(ui):
         QMessageBox.critical(ui, '오류 알림', '기타 설정값이\n존재하지 않습니다.\n')
 
 
-def sj_button_cicked_09(ui, proc_query, queryQ):
+def sj_button_cicked_09(ui):
     sg = ui.sj_main_comBox_01.currentText()
     sr = 1 if ui.sj_main_cheBox_01.isChecked() else 0
     st = 1 if ui.sj_main_cheBox_02.isChecked() else 0
@@ -355,18 +355,18 @@ def sj_button_cicked_09(ui, proc_query, queryQ):
         rg = 2
     else:
         rg = 0
-    if int(cmd) < 10:
-        QMessageBox.critical(ui, '오류 알림', '코인순위선정은 10이상의 수만 입력하십시오.\n')
-    elif '' in (smt, smd, cmt, cmd, rdt, tdt):
+    if '' in (smt, smd, cmt, cmd, rdt, tdt):
         QMessageBox.critical(ui, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
+    elif int(cmd) < 10:
+        QMessageBox.critical(ui, '오류 알림', '코인순위선정은 10이상의 수만 입력하십시오.\n')
     else:
         smt, smd, cmt, cmd, rdt, tdt = int(smt), int(smd), int(cmt), int(cmd), int(rdt), int(tdt)
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE main SET 증권사 = '{sg}', 주식리시버 = {sr}, 주식트레이더 = {st}, 주식틱데이터저장 = {ss}, " \
                     f"거래소 = '{cg}', 코인리시버 = {cr}, 코인트레이더 = {ct}, 코인틱데이터저장 = {cs}, 장중전략조건검색식사용 = {jj}, " \
                     f"주식순위시간 = {smt}, 주식순위선정 = {smd}, 코인순위시간 = {cmt}, 코인순위선정 = {cmd}, 리시버실행시간 = {rdt}, " \
                     f"트레이더실행시간 = {tdt}, 바이낸스선물마진타입 = '{mt}', 바이낸스선물포지션 = '{pt}', '버전업' = {vu}, '리시버공유' = {rg}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         ui.dict_set['증권사'] = sg
@@ -399,7 +399,7 @@ def sj_button_cicked_09(ui, proc_query, queryQ):
         SetLogFile(ui)
 
 
-def sj_button_cicked_10(ui, proc_query, queryQ):
+def sj_button_cicked_10(ui):
     id1 = ui.sj_sacc_liEdit_01.text()
     ps1 = ui.sj_sacc_liEdit_02.text()
     cp1 = ui.sj_sacc_liEdit_03.text()
@@ -421,11 +421,11 @@ def sj_button_cicked_10(ui, proc_query, queryQ):
         en_cp2 = en_text(ui.dict_set['키'], cp2)
         en_ap2 = en_text(ui.dict_set['키'], ap2)
         if comob_name == '키움증권1':
-            if proc_query.is_alive():
+            if ui.proc_query.is_alive():
                 query = f"UPDATE sacc SET " \
                         f"아이디1 = '{en_id1}', 비밀번호1 = '{en_ps1}', 인증서비밀번호1 = '{en_cp1}', 계좌비밀번호1 = '{en_ap1}', " \
                         f"아이디2 = '{en_id2}', 비밀번호2 = '{en_ps2}', 인증서비밀번호2 = '{en_cp2}', 계좌비밀번호2 = '{en_ap2}'"
-                queryQ.put(('설정디비', query))
+                ui.queryQ.put(('설정디비', query))
             ui.dict_set['아이디1'] = id1
             ui.dict_set['비밀번호1'] = ps1
             ui.dict_set['인증서비밀번호1'] = cp1
@@ -435,11 +435,11 @@ def sj_button_cicked_10(ui, proc_query, queryQ):
             ui.dict_set['인증서비밀번호2'] = cp2
             ui.dict_set['계좌비밀번호2'] = ap2
         else:
-            if proc_query.is_alive():
+            if ui.proc_query.is_alive():
                 query = f"UPDATE sacc SET " \
                         f"아이디3 = '{en_id1}', 비밀번호3 = '{en_ps1}', 인증서비밀번호3 = '{en_cp1}', 계좌비밀번호3 = '{en_ap1}', " \
                         f"아이디4 = '{en_id2}', 비밀번호4 = '{en_ps2}', 인증서비밀번호4 = '{en_cp2}', 계좌비밀번호4 = '{en_ap2}'"
-                queryQ.put(('설정디비', query))
+                ui.queryQ.put(('설정디비', query))
             ui.dict_set['아이디3'] = id1
             ui.dict_set['비밀번호3'] = ps1
             ui.dict_set['인증서비밀번호3'] = cp1
@@ -451,21 +451,21 @@ def sj_button_cicked_10(ui, proc_query, queryQ):
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
-def sj_button_cicked_11(ui, proc_query, queryQ):
+def sj_button_cicked_11(ui):
     access_key = ui.sj_cacc_liEdit_01.text()
     secret_key = ui.sj_cacc_liEdit_02.text()
     if '' in (access_key, secret_key):
         QMessageBox.critical(ui, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
     else:
         combo_name = ui.sj_main_comBox_02.currentText()
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             en_access_key = en_text(ui.dict_set['키'], access_key)
             en_secret_key = en_text(ui.dict_set['키'], secret_key)
             if combo_name == '업비트':
                 query = f"UPDATE cacc SET Access_key1 = '{en_access_key}', Secret_key1 = '{en_secret_key}'"
             else:
                 query = f"UPDATE cacc SET Access_key2 = '{en_access_key}', Secret_key2 = '{en_secret_key}'"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
 
         if combo_name == '업비트':
             ui.dict_set['Access_key1'] = access_key
@@ -476,25 +476,25 @@ def sj_button_cicked_11(ui, proc_query, queryQ):
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
-def sj_button_cicked_12(ui, proc_query, queryQ, teleQ):
+def sj_button_cicked_12(ui):
     str_bot = ui.sj_tele_liEdit_01.text()
     int_id = ui.sj_tele_liEdit_02.text()
     if '' in (str_bot, int_id):
         QMessageBox.critical(ui, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
     else:
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             en_str_bot = en_text(ui.dict_set['키'], str_bot)
             en_int_id = en_text(ui.dict_set['키'], int_id)
             df = pd.DataFrame([[en_str_bot, en_int_id]], columns=['str_bot', 'int_id'], index=[0])
-            queryQ.put(('설정디비', df, 'telegram', 'replace'))
+            ui.queryQ.put(('설정디비', df, 'telegram', 'replace'))
 
         ui.dict_set['텔레그램봇토큰'] = str_bot
         ui.dict_set['텔레그램사용자아이디'] = int(int_id)
-        teleQ.put(('설정변경', ui.dict_set))
+        ui.teleQ.put(('설정변경', ui.dict_set))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
-def sj_button_cicked_13(ui, proc_query, queryQ):
+def sj_button_cicked_13(ui):
     me = 1 if ui.sj_stock_ckBox_01.isChecked() else 0
     sd = 1 if ui.sj_stock_ckBox_02.isChecked() else 0
     cs1 = 1 if ui.sj_stock_ckBox_03.isChecked() else 0
@@ -539,7 +539,7 @@ def sj_button_cicked_13(ui, proc_query, queryQ):
         if sl2 == '사용안함':
             sl2 = ''
 
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE stock SET 주식모의투자 = {me}, 주식알림소리 = {sd}, 주식장초매수전략 = '{by1}', 주식장초매도전략 = '{sl1}', " \
                     f"주식장초평균값계산틱수 = {at1}, 주식장초최대매수종목수 = {bc1}, 주식장초전략종료시간 = {se1}, 주식장초잔고청산 = {cs1}, " \
                     f"주식장초프로세스종료 = {pc1}, 주식장초컴퓨터종료 = {ce1}, 주식장중매수전략 = '{by2}', 주식장중매도전략 = '{sl2}', " \
@@ -547,7 +547,7 @@ def sj_button_cicked_13(ui, proc_query, queryQ):
                     f"주식장중프로세스종료 = {pc2}, 주식장중컴퓨터종료 = {ce2}, 주식투자금고정 = {ts}, 주식장초투자금 = {sc}, " \
                     f"주식장중투자금 = {sj}, 주식손실중지 = {cm}, 주식손실중지수익률 = {cmp}, 주식수익중지 = {cp}, 주식수익중지수익률 = {cpp}, " \
                     f"주식장초패턴인식 = {p1}, 주식장중패턴인식 = {p2}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         ui.dict_set['주식모의투자'] = me
@@ -580,7 +580,7 @@ def sj_button_cicked_13(ui, proc_query, queryQ):
         ui.UpdateDictSet()
 
 
-def sj_button_cicked_14(ui, proc_query, queryQ):
+def sj_button_cicked_14(ui):
     me = 1 if ui.sj_coin_cheBox_01.isChecked() else 0
     sd = 1 if ui.sj_coin_cheBox_02.isChecked() else 0
     cs1 = 1 if ui.sj_coin_cheBox_03.isChecked() else 0
@@ -631,7 +631,7 @@ def sj_button_cicked_14(ui, proc_query, queryQ):
             if sl2 == '사용안함':
                 sl2 = ''
 
-            if proc_query.is_alive():
+            if ui.proc_query.is_alive():
                 query = f"UPDATE coin SET 코인모의투자 = {me}, 코인알림소리 = {sd}, 코인장초매수전략 = '{by1}', 코인장초매도전략 = '{sl1}', " \
                         f"코인장초평균값계산틱수 = {at1}, 코인장초최대매수종목수 = {bc1}, 코인장초전략종료시간 = {se1}, 코인장초잔고청산 = {cs1}, " \
                         f"코인장초프로세스종료 = {pc1}, 코인장초컴퓨터종료 = {ce1}, 코인장중매수전략 = '{by2}', 코인장중매도전략 = '{sl2}', " \
@@ -639,7 +639,7 @@ def sj_button_cicked_14(ui, proc_query, queryQ):
                         f"코인장중프로세스종료 = {pc2}, 코인장중컴퓨터종료 = {ce2}, 코인투자금고정 = {tc}, 코인장초투자금 = {sc}, " \
                         f"코인장중투자금 = {sj}, 코인손실중지 = {cm}, 코인손실중지수익률 = {cmp}, 코인수익중지 = {cp}, 코인수익중지수익률 = {cpp}, " \
                         f"코인장초패턴인식 = {p1}, 코인장중패턴인식 = {p2}"
-                queryQ.put(('설정디비', query))
+                ui.queryQ.put(('설정디비', query))
             QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
             ui.dict_set['코인모의투자'] = me
@@ -672,7 +672,7 @@ def sj_button_cicked_14(ui, proc_query, queryQ):
             ui.UpdateDictSet()
 
 
-def sj_button_cicked_15(ui, proc_query, queryQ):
+def sj_button_cicked_15(ui):
     bl = 1 if ui.sj_back_cheBox_01.isChecked() else 0
     bbg = 1 if ui.sj_back_cheBox_02.isChecked() else 0
     bsg = 1 if ui.sj_back_cheBox_03.isChecked() else 0
@@ -705,12 +705,12 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
         QMessageBox.critical(ui, '오류 알림', '일부 설정값이 입력되지 않았습니다.\n')
     else:
         bst = int(bst)
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE back SET 블랙리스트추가 = {bl}, 백테주문관리적용 = {bbg}, 백테매수시간기준 = {bsg}, 백테일괄로딩 = {bld}, " \
                     f"그래프저장하지않기 = {gsv}, 그래프띄우지않기 = {gpl}, 디비자동관리 = {atd}, 교차검증가중치 = {ext}, 백테스케쥴실행 = {bss}, " \
                     f"백테스케쥴요일 = {bwd}, 백테스케쥴시간 = {bst}, 백테스케쥴구분 = '{abd}', 백테스케쥴명 = '{abn}', " \
                     f"백테날짜고정 = {bdf}, 백테날짜 = '{bd}', 범위자동관리 = {aa}, 보조지표사용 = {bjj}, 최적화로그기록안함 = {olx}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         pre_bbg = ui.dict_set['백테주문관리적용']
@@ -737,7 +737,7 @@ def sj_button_cicked_15(ui, proc_query, queryQ):
             ui.BacktestEngineKill()
 
 
-def sj_button_cicked_16(ui, proc_query, queryQ):
+def sj_button_cicked_16(ui):
     the = ui.sj_etc_comBoxx_01.currentText()
     inr = 1 if ui.sj_etc_checBox_01.isChecked() else 0
     ldp = 1 if ui.sj_etc_checBox_02.isChecked() else 0
@@ -747,10 +747,10 @@ def sj_button_cicked_16(ui, proc_query, queryQ):
     slv = 1 if ui.sj_etc_checBox_06.isChecked() else 0
     pex = 1 if ui.sj_etc_checBox_07.isChecked() else 0
 
-    if proc_query.is_alive():
+    if ui.proc_query.is_alive():
         query = f"UPDATE etc SET 테마 = '{the}', 인트로숨김 = {inr}, 저해상도 = {ldp}, 창위치기억 = {cgo}, " \
                 f"휴무프로세스종료 = {pe}, 휴무컴퓨터종료 = {ce}, 스톰라이브 = {slv}, 프로그램종료 = {pex}"
-        queryQ.put(('설정디비', query))
+        ui.queryQ.put(('설정디비', query))
     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
     ui.dict_set['테마'] = the
@@ -1038,7 +1038,7 @@ def sj_button_cicked_22(ui):
         QMessageBox.critical(ui, '오류 알림', '주문관리 코인매도 설정값이\n존재하지 않습니다.\n')
 
 
-def sj_button_cicked_23(ui, proc_query, queryQ):
+def sj_button_cicked_23(ui):
     od = ''
     if ui.sj_sodb_checkBox_01.isChecked(): od = '시장가'
     if ui.sj_sodb_checkBox_02.isChecked(): od = '지정가'
@@ -1103,7 +1103,7 @@ def sj_button_cicked_23(ui, proc_query, queryQ):
         if dc > 5:
             QMessageBox.critical(ui, '오류 알림', '매수분할횟수는 5을 초과할 수 없습니다.\n')
             return
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE stockbuyorder SET 주식매수주문구분 = '{od}', 주식매수분할횟수 = {dc}, 주식매수분할방법 = {ds}, 주식매수분할시그널 = {ds1}, " \
                     f"주식매수분할하방 = {ds2}, 주식매수분할상방 = {ds3}, 주식매수분할하방수익률 = {ds2c}, 주식매수분할상방수익률 = {ds3c}, " \
                     f"주식매수분할고정수익률 = {bf}, 주식매수지정가기준가격 = '{bp}', 주식매수지정가호가번호 = {ju}, 주식매수시장가잔량범위 = {su}, " \
@@ -1113,7 +1113,7 @@ def sj_button_cicked_23(ui, proc_query, queryQ):
                     f"주식매수금지시작시간 = {bb5s}, 주식매수금지종료시간 = {bb5e}, 주식매수금지간격 = {bb6}, 주식매수금지간격초 = {bb6s}, " \
                     f"주식매수금지손절간격 = {bb7}, 주식매수금지손절간격초 = {bb7s}, 주식매수정정횟수 = {bb8}, 주식매수정정호가차이 = {bb8c}, " \
                     f"주식매수정정호가 = {bb8h}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         ui.dict_set['주식매수주문구분'] = od
@@ -1152,7 +1152,7 @@ def sj_button_cicked_23(ui, proc_query, queryQ):
         ui.UpdateDictSet()
 
 
-def sj_button_cicked_24(ui, proc_query, queryQ):
+def sj_button_cicked_24(ui):
     od = ''
     if ui.sj_sods_checkBox_01.isChecked(): od = '시장가'
     if ui.sj_sods_checkBox_02.isChecked(): od = '지정가'
@@ -1218,7 +1218,7 @@ def sj_button_cicked_24(ui, proc_query, queryQ):
         if bb1c > 4:
             QMessageBox.critical(ui, '오류 알림', '매도금지 매수횟수는 5미만으로 입력하십시오.\n')
             return
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE stocksellorder SET 주식매도주문구분 = '{od}', 주식매도분할횟수 = {dc}, 주식매도분할방법 = {ds}, " \
                     f"주식매도분할시그널 = {ds1}, 주식매도분할하방 = {ds2}, 주식매도분할상방 = {ds3}, 주식매도분할하방수익률 = {ds2c}, " \
                     f"주식매도분할상방수익률 = {ds3c}, 주식매도지정가기준가격 = '{bp}', 주식매도지정가호가번호 = {ju}, 주식매도시장가잔량범위 = {su}, " \
@@ -1227,7 +1227,7 @@ def sj_button_cicked_24(ui, proc_query, queryQ):
                     f"주식매도금지매수횟수 = {bb1}, 주식매도금지매수횟수값 = {bb1c}, 주식매도금지라운드피겨 = {bb2}, 주식매도금지라운드호가 = {bb2c}, " \
                     f"주식매도금지시간 = {bb3}, 주식매도금지시작시간 = {bb3s}, 주식매도금지종료시간 = {bb3e}, 주식매도금지간격 = {bb4}, " \
                     f"주식매도금지간격초 = {bb4s}, 주식매도정정횟수 = {bb5}, 주식매도정정호가차이 = {bb5c}, 주식매도정정호가 = {bb5h}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         ui.dict_set['주식매도주문구분'] = od
@@ -1264,7 +1264,7 @@ def sj_button_cicked_24(ui, proc_query, queryQ):
         ui.UpdateDictSet()
 
 
-def sj_button_cicked_25(ui, proc_query, queryQ):
+def sj_button_cicked_25(ui):
     od = ''
     if ui.sj_codb_checkBox_01.isChecked(): od = '시장가'
     if ui.sj_codb_checkBox_02.isChecked(): od = '지정가'
@@ -1322,7 +1322,7 @@ def sj_button_cicked_25(ui, proc_query, queryQ):
         if dc > 5:
             QMessageBox.critical(ui, '오류 알림', '매수분할횟수는 5를 초과할 수 없습니다.\n')
             return
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE coinbuyorder SET 코인매수주문구분 = '{od}', 코인매수분할횟수 = {dc}, 코인매수분할방법 = {ds}, 코인매수분할시그널 = {ds1}, " \
                     f"코인매수분할하방 = {ds2}, 코인매수분할상방 = {ds3}, 코인매수분할하방수익률 = {ds2c}, 코인매수분할상방수익률 = {ds3c}, " \
                     f"코인매수분할고정수익률 = {bf}, 코인매수지정가기준가격 = '{bp}', 코인매수지정가호가번호 = {ju}, 코인매수시장가잔량범위 = {su}, " \
@@ -1331,7 +1331,7 @@ def sj_button_cicked_25(ui, proc_query, queryQ):
                     f"코인매수금지거래횟수 = {bb4}, 코인매수금지거래횟수값 = {bb4c}, 코인매수금지시간 = {bb5}, 코인매수금지시작시간 = {bb5s}, " \
                     f"코인매수금지종료시간 = {bb5e}, 코인매수금지간격 = {bb6}, 코인매수금지간격초 = {bb6s}, 코인매수금지손절간격 = {bb7}, " \
                     f"코인매수금지손절간격초 = {bb7s}, 코인매수정정횟수 = {bb8}, 코인매수정정호가차이 = {bb8c}, 코인매수정정호가 = {bb8h}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         ui.dict_set['코인매수주문구분'] = od
@@ -1369,7 +1369,7 @@ def sj_button_cicked_25(ui, proc_query, queryQ):
         ui.UpdateDictSet()
 
 
-def sj_button_cicked_26(ui, proc_query, queryQ):
+def sj_button_cicked_26(ui):
     od = ''
     if ui.sj_cods_checkBox_01.isChecked(): od = '시장가'
     if ui.sj_cods_checkBox_02.isChecked(): od = '지정가'
@@ -1427,7 +1427,7 @@ def sj_button_cicked_26(ui, proc_query, queryQ):
         if bb1c > 4:
             QMessageBox.critical(ui, '오류 알림', '매도금지 매수횟수는 5미만으로 입력하십시오.\n')
             return
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             query = f"UPDATE coinsellorder SET 코인매도주문구분 = '{od}', 코인매도분할횟수 = {dc}, 코인매도분할방법 = {ds}, " \
                     f"코인매도분할시그널 = {ds1}, 코인매도분할하방 = {ds2}, 코인매도분할상방 = {ds3}, 코인매도분할하방수익률 = {ds2c}, " \
                     f"코인매도분할상방수익률 = {ds3c}, 코인매도지정가기준가격 = '{bp}', 코인매도지정가호가번호 = {ju}, 코인매도시장가잔량범위 = {su}, " \
@@ -1436,7 +1436,7 @@ def sj_button_cicked_26(ui, proc_query, queryQ):
                     f"코인매도금지매수횟수 = {bb1}, 코인매도금지매수횟수값 = {bb1c}, 코인매도금지시간 = {bb3}, 코인매도금지시작시간 = {bb3s}, " \
                     f"코인매도금지종료시간 = {bb3e}, 코인매도금지간격 = {bb4}, 코인매도금지간격초 = {bb4s}, 코인매도정정횟수 = {bb5}, " \
                     f"코인매도정정호가차이 = {bb5c}, 코인매도정정호가 = {bb5h}"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
         ui.dict_set['코인매도주문구분'] = od
@@ -1474,7 +1474,7 @@ def sj_button_cicked_27(ui):
     LoadSettings(ui)
 
 
-def sj_button_cicked_28(ui, proc_query, queryQ):
+def sj_button_cicked_28(ui):
     name = ui.sj_set_comBoxx_01.currentText()
     if name == '':
         QMessageBox.critical(ui, '오류 알림', '설정이름이 선택되지 않았습니다.\n')
@@ -1485,8 +1485,8 @@ def sj_button_cicked_28(ui, proc_query, queryQ):
     if f'setting_{name}.db' not in file_list:
         QMessageBox.critical(ui, '오류 알림', '설정파일이 존재하지 않았습니다.\n')
         return
-    if proc_query.is_alive():
-        queryQ.put(('설정변경', origin_file, copy_file))
+    if ui.proc_query.is_alive():
+        ui.queryQ.put(('설정변경', origin_file, copy_file))
         qtest_qwait(2)
         ui.sjButtonClicked_01()
         ui.sjButtonClicked_02()

@@ -25,7 +25,7 @@ def svc_button_clicked_01(ui):
                     ui.svc_lineEdittt_01.setText(index)
 
 
-def svc_button_clicked_02(ui, proc_query, queryQ):
+def svc_button_clicked_02(ui):
     if ui.ss_textEditttt_03.isVisible():
         strategy_name = ui.svc_lineEdittt_01.text()
         strategy = ui.ss_textEditttt_03.toPlainText()
@@ -43,10 +43,10 @@ def svc_button_clicked_02(ui, proc_query, queryQ):
                 con = sqlite3.connect(DB_STRATEGY)
                 df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con)
                 con.close()
-                if proc_query.is_alive():
+                if ui.proc_query.is_alive():
                     if len(df) > 0:
                         query = f"UPDATE stockoptibuy SET 전략코드 = '{strategy}' WHERE `index` = '{strategy_name}'"
-                        queryQ.put(('전략디비', query))
+                        ui.queryQ.put(('전략디비', query))
                     else:
                         data = [
                             strategy,
@@ -95,7 +95,7 @@ def svc_button_clicked_02(ui, proc_query, queryQ):
                             '변수190', '변수191', '변수192', '변수193', '변수194', '변수195', '변수196', '변수197', '변수198', '변수199'
                         ]
                         df = pd.DataFrame([data], columns=columns, index=[strategy_name])
-                        queryQ.put(('전략디비', df, 'stockoptibuy', 'append'))
+                        ui.queryQ.put(('전략디비', df, 'stockoptibuy', 'append'))
                     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
@@ -114,7 +114,7 @@ def svc_button_clicked_03(ui):
                     ui.svc_lineEdittt_02.setText(index)
 
 
-def svc_button_clicked_04(ui, proc_query, queryQ):
+def svc_button_clicked_04(ui):
     if ui.ss_textEditttt_05.isVisible():
         strategy_name = ui.svc_lineEdittt_02.text()
         strategy = ui.ss_textEditttt_05.toPlainText()
@@ -126,10 +126,10 @@ def svc_button_clicked_04(ui, proc_query, queryQ):
             QMessageBox.critical(ui, '오류 알림', '변수범위의 코드가 공백 상태입니다.\n코드를 작성하십시오.\n')
         else:
             if (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest2(strategy):
-                if proc_query.is_alive():
-                    queryQ.put(('전략디비', f"DELETE FROM stockoptivars WHERE `index` = '{strategy_name}'"))
+                if ui.proc_query.is_alive():
+                    ui.queryQ.put(('전략디비', f"DELETE FROM stockoptivars WHERE `index` = '{strategy_name}'"))
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
-                    queryQ.put(('전략디비', df, 'stockoptivars', 'append'))
+                    ui.queryQ.put(('전략디비', df, 'stockoptivars', 'append'))
                     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
@@ -148,7 +148,7 @@ def svc_button_clicked_05(ui):
                     ui.svc_lineEdittt_03.setText(index)
 
 
-def svc_button_clicked_06(ui, proc_query, queryQ):
+def svc_button_clicked_06(ui):
     if ui.ss_textEditttt_04.isVisible():
         strategy_name = ui.svc_lineEdittt_03.text()
         strategy = ui.ss_textEditttt_04.toPlainText()
@@ -163,10 +163,10 @@ def svc_button_clicked_06(ui, proc_query, queryQ):
         else:
             if 'self.tickcols' in strategy or (
                     QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(strategy):
-                if proc_query.is_alive():
-                    queryQ.put(('전략디비', f"DELETE FROM stockoptisell WHERE `index` = '{strategy_name}'"))
+                if ui.proc_query.is_alive():
+                    ui.queryQ.put(('전략디비', f"DELETE FROM stockoptisell WHERE `index` = '{strategy_name}'"))
                     df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
-                    queryQ.put(('전략디비', df, 'stockoptisell', 'append'))
+                    ui.queryQ.put(('전략디비', df, 'stockoptisell', 'append'))
                     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
@@ -203,7 +203,7 @@ def svc_button_clicked_07(ui):
         ui.ss_textEditttt_08.append(example_sellconds)
 
 
-def svc_button_clicked_08(ui, proc_query, queryQ):
+def svc_button_clicked_08(ui):
     tabl = 'stockoptivars' if not ui.sva_pushButton_01.isVisible() else 'stockvars'
     stgy = ui.svc_comboBoxxx_01.currentText()
     opti = ui.svc_comboBoxxx_02.currentText() if not ui.sva_pushButton_01.isVisible() else ui.sva_comboBoxxx_01.currentText()
@@ -232,14 +232,14 @@ def svc_button_clicked_08(ui, proc_query, queryQ):
         QMessageBox.critical(ui, '오류 알림', f'{e}')
         return
 
-    if proc_query.is_alive():
-        queryQ.put(('전략디비', f"DELETE FROM stockbuy WHERE `index` = '{name}'"))
+    if ui.proc_query.is_alive():
+        ui.queryQ.put(('전략디비', f"DELETE FROM stockbuy WHERE `index` = '{name}'"))
         df = pd.DataFrame({'전략코드': [stg]}, index=[name])
-        queryQ.put(('전략디비', df, 'stockbuy', 'append'))
+        ui.queryQ.put(('전략디비', df, 'stockbuy', 'append'))
         QMessageBox.information(ui, '저장 알림', '최적값으로 매수전략을 저장하였습니다.\n')
 
 
-def svc_button_clicked_09(ui, proc_query, queryQ):
+def svc_button_clicked_09(ui):
     tabl = 'stockoptivars' if not ui.sva_pushButton_01.isVisible() else 'stockvars'
     stgy = ui.svc_comboBoxxx_08.currentText()
     opti = ui.svc_comboBoxxx_02.currentText() if not ui.sva_pushButton_01.isVisible() else ui.sva_comboBoxxx_01.currentText()
@@ -268,10 +268,10 @@ def svc_button_clicked_09(ui, proc_query, queryQ):
         QMessageBox.critical(ui, '오류 알림', f'{e}')
         return
 
-    if proc_query.is_alive():
-        queryQ.put(('전략디비', f"DELETE FROM stocksell WHERE `index` = '{name}'"))
+    if ui.proc_query.is_alive():
+        ui.queryQ.put(('전략디비', f"DELETE FROM stocksell WHERE `index` = '{name}'"))
         df = pd.DataFrame({'전략코드': [stg]}, index=[name])
-        queryQ.put(('전략디비', df, 'stocksell', 'append'))
+        ui.queryQ.put(('전략디비', df, 'stocksell', 'append'))
         QMessageBox.information(ui, '저장 알림', '최적값으로 매도전략을 저장하였습니다.\n')
 
 

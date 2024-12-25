@@ -26,7 +26,7 @@ def cvjb_button_clicked_01(ui):
             ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
 
 
-def cvjb_button_clicked_02(ui, proc_query, queryQ):
+def cvjb_button_clicked_02(ui):
     strategy_name = ui.cvjb_lineEditt_01.text()
     strategy = ui.cs_textEditttt_01.toPlainText()
     if 'self.tickcols' not in strategy:
@@ -41,10 +41,10 @@ def cvjb_button_clicked_02(ui, proc_query, queryQ):
     else:
         if 'self.tickcols' in strategy or (QApplication.keyboardModifiers() & Qt.ControlModifier) or ui.BackCodeTest1(
                 strategy):
-            if proc_query.is_alive():
-                queryQ.put(('전략디비', f"DELETE FROM coinbuy WHERE `index` = '{strategy_name}'"))
+            if ui.proc_query.is_alive():
+                ui.queryQ.put(('전략디비', f"DELETE FROM coinbuy WHERE `index` = '{strategy_name}'"))
                 df = pd.DataFrame({'전략코드': [strategy]}, index=[strategy_name])
-                queryQ.put(('전략디비', df, 'coinbuy', 'append'))
+                ui.queryQ.put(('전략디비', df, 'coinbuy', 'append'))
                 QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
             ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
 
@@ -55,7 +55,7 @@ def cvjb_button_clicked_03(ui):
     ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)
 
 
-def cvjb_button_clicked_04(ui, cstgQ):
+def cvjb_button_clicked_04(ui):
     strategy = ui.cs_textEditttt_01.toPlainText()
     if strategy == '':
         QMessageBox.critical(ui, '오류 알림', '매수전략의 코드가 공백 상태입니다.\n')
@@ -66,7 +66,7 @@ def cvjb_button_clicked_04(ui, cstgQ):
         )
         if buttonReply == QMessageBox.Yes:
             if ui.CoinStrategyProcessAlive():
-                cstgQ.put(('매수전략', strategy))
+                ui.cstgQ.put(('매수전략', strategy))
             ui.cvjb_pushButon_04.setStyleSheet(style_bc_dk)
             ui.cvjb_pushButon_12.setStyleSheet(style_bc_st)
 
@@ -99,8 +99,8 @@ def cvjb_button_clicked_11(ui):
     ui.cs_textEditttt_01.append(coin_buy_signal if ui.dict_set['거래소'] == '업비트' else coin_future_buy_signal)
 
 
-def cvjb_button_clicked_12(ui, cstgQ):
+def cvjb_button_clicked_12(ui):
     if ui.CoinStrategyProcessAlive():
-        cstgQ.put('매수전략중지')
+        ui.cstgQ.put('매수전략중지')
     ui.cvjb_pushButon_12.setStyleSheet(style_bc_dk)
     ui.cvjb_pushButon_04.setStyleSheet(style_bc_st)

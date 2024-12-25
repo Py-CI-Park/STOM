@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QLineEdit
 from ui.set_style import style_bc_dk
 
 
-def return_press_01(ui, chartQ):
+def return_press_01(ui):
     if ui.dialog_chart.focusWidget() in (ui.ct_lineEdittttt_04, ui.ct_lineEdittttt_05, ui.ct_pushButtonnn_01):
         searchdate = ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
         linetext = ui.ct_lineEdittttt_03.text()
@@ -34,11 +34,11 @@ def return_press_01(ui, chartQ):
         ui.ct_lineEdittttt_04.setText(code)
         ui.ct_lineEdittttt_05.setText(name)
         ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-        chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(),
-                    ui.GetKlist()))
+        ui.chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(),
+                       ui.GetKlist()))
 
 
-def return_press_02(ui, teleQ):
+def return_press_02(ui):
     if ui.pa_lineEditttt_01.text() == ui.dict_set['계좌비밀번호1'] or \
             (ui.pa_lineEditttt_01.text() == '' and ui.dict_set['계좌비밀번호1'] is None):
         ui.sj_sacc_liEdit_01.setEchoMode(QLineEdit.Normal)
@@ -57,4 +57,4 @@ def return_press_02(ui, teleQ):
         ui.sj_etc_pButton_01.setStyleSheet(style_bc_dk)
         ui.dialog_pass.close()
     else:
-        teleQ.put('경고!! 계정 텍스트 보기 비밀번호 입력 오류가 발생하였습니다.')
+        ui.teleQ.put('경고!! 계정 텍스트 보기 비밀번호 입력 오류가 발생하였습니다.')

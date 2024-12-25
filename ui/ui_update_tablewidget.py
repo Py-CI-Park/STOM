@@ -15,15 +15,12 @@ class NumericItem(QTableWidgetItem):
 
 
 class UpdateTablewidget:
-    def __init__(self, ui, qlist):
+    def __init__(self, ui):
         """
-        windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
+        windowQ, soundQ, ui.queryQ, teleQ, chartQ, hogaQ, webcQ, backQ, creceivQ, ctraderQ,  cstgQ, liveQ, kimpQ, wdzservQ, totalQ
            0        1       2      3       4      5      6      7       8         9         10     11    12      13       14
         """
-        self.ui       = ui
-        self.windowQ  = qlist[0]
-        self.creceivQ = qlist[8]
-        self.wdzservQ = qlist[13]
+        self.ui = ui
 
     @error_decorator
     def update_tablewidget(self, data):
@@ -108,8 +105,8 @@ class UpdateTablewidget:
             tableWidget = self.ui.hj_tableWidgett_01
         elif gubun in (ui_num['C호가체결'], ui_num['S호가체결']):
             if not self.ui.dialog_hoga.isVisible():
-                self.wdzservQ.put(('receiver', ('호가종목코드', '000000')))
-                if self.ui.CoinReceiverProcessAlive():  self.creceivQ.put('000000')
+                self.ui.wdzservQ.put(('receiver', ('호가종목코드', '000000')))
+                if self.ui.CoinReceiverProcessAlive():  self.ui.creceivQ.put('000000')
                 return
             tableWidget = self.ui.hc_tableWidgett_01
         elif gubun in (ui_num['C호가체결2'], ui_num['S호가체결2']):
@@ -449,8 +446,8 @@ class UpdateTablewidget:
             ]
             df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
             coin = False
-            self.windowQ.put((ui_num['S호가체결'], df1))
-            self.windowQ.put((ui_num['S호가체결2'], df2))
+            self.ui.windowQ.put((ui_num['S호가체결'], df1))
+            self.ui.windowQ.put((ui_num['S호가체결2'], df2))
         else:
             data = [
                 self.ui.ctpg_tik_arry[xpoint, 36], self.ui.ctpg_tik_arry[xpoint, 37], self.ui.ctpg_tik_arry[xpoint, 38],
@@ -467,8 +464,8 @@ class UpdateTablewidget:
             ]
             df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
             coin = True
-            self.windowQ.put((ui_num['C호가체결'], df1))
-            self.windowQ.put((ui_num['C호가체결2'], df2))
+            self.ui.windowQ.put((ui_num['C호가체결'], df1))
+            self.ui.windowQ.put((ui_num['C호가체결2'], df2))
 
         """ 코인
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,

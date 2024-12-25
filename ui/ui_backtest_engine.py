@@ -425,18 +425,18 @@ def back_code_test_wait(gubun, testQ):
         return True
 
 
-def clear_backtestQ(backQ, totalQ):
-    if not backQ.empty():
-        while not backQ.empty():
-            backQ.get()
-    if not totalQ.empty():
-        while not totalQ.empty():
-            totalQ.get()
+def clear_backtestQ(ui):
+    if not ui.backQ.empty():
+        while not ui.backQ.empty():
+            ui.backQ.get()
+    if not ui.totalQ.empty():
+        while not ui.totalQ.empty():
+            ui.totalQ.get()
 
 
-def backtest_process_kill(ui, gubun, totalQ):
+def backtest_process_kill(ui, gubun):
     ui.back_condition = False
-    totalQ.put('백테중지')
+    ui.totalQ.put('백테중지')
     qtest_qwait(3)
     if ui.proc_backtester_bb is not None and ui.proc_backtester_bb.is_alive():   ui.proc_backtester_bb.kill()
     if ui.proc_backtester_bf is not None and ui.proc_backtester_bf.is_alive():   ui.proc_backtester_bf.kill()

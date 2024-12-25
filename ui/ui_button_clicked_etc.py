@@ -16,14 +16,14 @@ def opbutton_clicked_01():
     webbrowser.open_new('http://localhost:8080/')
 
 
-def cpbutton_clicked_01(ui, chartQ):
+def cpbutton_clicked_01(ui):
     backdetail_list = []
     for i, checkbox in enumerate(ui.backcheckbox_list):
         if checkbox.isChecked():
             backdetail_list.append(ui.backdetail_list[i])
 
     if len(backdetail_list) >= 2:
-        chartQ.put(('그래프비교', backdetail_list))
+        ui.chartQ.put(('그래프비교', backdetail_list))
     else:
         QMessageBox.critical(ui.dialog_comp, '오류 알림', '두개 이상의 상세기록을 선택하십시오.\n')
 
@@ -125,7 +125,7 @@ def stbutton_clicked_01(ui):
     ui.st_lineEditttt_14.setText(std_text[13])
 
 
-def stbutton_clicked_02(ui, proc_query, queryQ):
+def stbutton_clicked_02(ui):
     std_text1 = ui.st_lineEditttt_01.text()
     std_text2 = ui.st_lineEditttt_02.text()
     std_text3 = ui.st_lineEditttt_03.text()
@@ -145,10 +145,10 @@ def stbutton_clicked_02(ui, proc_query, queryQ):
     if '' in std_list:
         QMessageBox.critical(ui.dialog_std, '오류 알림', '일부 제한값이 공백상태입니다.\n')
     else:
-        if proc_query.is_alive():
+        if ui.proc_query.is_alive():
             std_list = ';'.join(std_list)
             query = f"UPDATE back SET 최적화기준값제한 = '{std_list}'"
-            queryQ.put(('설정디비', query))
+            ui.queryQ.put(('설정디비', query))
         ui.dict_set['최적화기준값제한'] = std_list
         QMessageBox.information(ui.dialog_std, '저장 완료', random.choice(famous_saying))
 
@@ -188,7 +188,7 @@ def lvbutton_clicked_02(ui):
         QMessageBox.critical(ui.dialog_leverage, '오류 알림', '기본 설정값이\n존재하지 않습니다.\n')
 
 
-def lvbutton_clicked_03(ui, proc_query, queryQ):
+def lvbutton_clicked_03(ui):
     lv0 = 1 if ui.lv_checkBoxxxx_01.isChecked() else 0
     lv1 = ui.lv_lineEditttt_01.text()
     lv2 = ui.lv_lineEditttt_02.text()
@@ -217,10 +217,10 @@ def lvbutton_clicked_03(ui, proc_query, queryQ):
             QMessageBox.critical(ui, '오류 알림', '레버리지 설정을 1부터 125사이로 입력하십시오.\n')
             return
         else:
-            if proc_query.is_alive():
+            if ui.proc_query.is_alive():
                 lvrg_text = f'{lv2};{lv3};{lv4}^{lv5};{lv6};{lv7}^{lv8};{lv9};{lv10}^{lv11};{lv12};{lv13}^{lv14};{lv15};{lv16}'
                 query = f"UPDATE main SET 바이낸스선물고정레버리지 = {lv0}, 바이낸스선물고정레버리지값 = {lv1}, 바이낸스선물변동레버리지값 = '{lvrg_text}'"
-                queryQ.put(('설정디비', query))
+                ui.queryQ.put(('설정디비', query))
             ui.dict_set['바이낸스선물고정레버리지'] = lv0
             ui.dict_set['바이낸스선물고정레버리지값'] = lv1
             ui.dict_set['바이낸스선물변동레버리지값'] = [[lv2, lv3, lv4], [lv5, lv6, lv7], [lv8, lv9, lv10], [lv11, lv12, lv13],
@@ -237,14 +237,14 @@ def lvcheck_changed_01(ui, state):
                     widget.nextCheckState()
 
 
-def hg_button_clicked_01(ui, gubun, hogaQ):
+def hg_button_clicked_01(ui, gubun):
     if not ui.dialog_hoga.isVisible(): return
     index = ui.hg_labellllllll_01.text()
     if index == '': return
     code = ui.ct_lineEdittttt_04.text()
     name = ui.ct_lineEdittttt_05.text()
     index = index.replace('-', '').replace(' ', '').replace(':', '')
-    hogaQ.put(('이전호가정보요청' if gubun == '이전' else '다음호가정보요청', code, name, index))
+    ui.hogaQ.put(('이전호가정보요청' if gubun == '이전' else '다음호가정보요청', code, name, index))
 
 
 def hg_button_clicked_02(ui, gubun):

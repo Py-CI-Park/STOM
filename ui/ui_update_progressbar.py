@@ -1,7 +1,7 @@
 from ui.set_style import style_bc_bb, style_bc_bt, style_bc_by, style_bc_sl
 
 
-def update_progressbar(ui, soundQ, webcQ):
+def update_progressbar(ui):
     ui.progressBarrr.setValue(ui.cpu_per)
     ui.counter = 0 if ui.counter == 599 else ui.counter + 1
 
@@ -146,8 +146,8 @@ def update_progressbar(ui, soundQ, webcQ):
         icon = ui.icon_log if ui.counter % 2 == 0 else ui.icon_log2
         ui.main_btn_list[5].setIcon(icon)
         if ui.counter % 5 == 0 and (ui.dict_set['주식알림소리'] or ui.dict_set['코인알림소리']):
-            soundQ.put('오류가 발생하였습니다. 로그탭을 확인하십시오.')
+            ui.soundQ.put('오류가 발생하였습니다. 로그탭을 확인하십시오.')
 
     if not ui.image_search or (ui.counter % 600 == 0 and (ui.image_label1.isVisible() or ui.image_label2.isVisible())):
         if not ui.image_search: ui.image_search = True
-        webcQ.put(('풍경사진요청', ''))
+        ui.webcQ.put(('풍경사진요청', ''))

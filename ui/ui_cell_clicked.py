@@ -23,7 +23,7 @@ def cell_clicked_01(ui, row, col):
     ui.ShowDialog(name, tickcount, searchdate, col)
 
 
-def cell_clicked_02(ui, row, wdzservQ):
+def cell_clicked_02(ui, row):
     item = ui.sjg_tableWidgettt.item(row, 0)
     if item is None:
         return
@@ -35,10 +35,10 @@ def cell_clicked_02(ui, row, wdzservQ):
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
     )
     if buttonReply == QMessageBox.Yes:
-        wdzservQ.put(('trader', ('매도', ui.dict_code[name], name, c, oc, now(), True)))
+        ui.wdzservQ.put(('trader', ('매도', ui.dict_code[name], name, c, oc, now(), True)))
 
 
-def cell_clicked_03(ui, row, ctraderQ):
+def cell_clicked_03(ui, row):
     item = ui.cjg_tableWidgettt.item(row, 0)
     if item is None:
         return
@@ -53,11 +53,11 @@ def cell_clicked_03(ui, row, ctraderQ):
     if buttonReply == QMessageBox.Yes:
         if ui.CoinTraderProcessAlive():
             if 'KRW' in code:
-                ctraderQ.put(('매도', code, c, oc, now(), True))
+                ui.ctraderQ.put(('매도', code, c, oc, now(), True))
             else:
                 p = ui.cjg_tableWidgettt.item(row, columns_jgf.index('포지션')).text()
                 p = 'SELL_LONG' if p == 'LONG' else 'BUY_SHORT'
-                ctraderQ.put((p, code, c, oc, now(), True))
+                ui.ctraderQ.put((p, code, c, oc, now(), True))
 
 
 def cell_clicked_04(ui, row):
@@ -138,7 +138,7 @@ def cell_clicked_06(ui, row):
                        ui.ct_lineEdittttt_02.text(), detail, buytimes)
 
 
-def cell_clicked_07(ui, row, chartQ):
+def cell_clicked_07(ui, row):
     item = ui.ct_tableWidgett_01.item(row, 0)
     if item is None:
         return
@@ -151,8 +151,8 @@ def cell_clicked_07(ui, row, chartQ):
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-    chartQ.put(
-        (coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), ui.GetKlist()))
+    ui.chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(),
+                   ui.GetKlist()))
 
 
 def cell_clicked_08(ui, row):
@@ -163,7 +163,7 @@ def cell_clicked_08(ui, row):
         ui.webEngineView.load(QUrl(item.text()))
 
 
-def cell_clicked_09(ui, row, col, windowQ):
+def cell_clicked_09(ui, row, col):
     if ui.dialog_db.focusWidget() == ui.db_tableWidgett_01:
         item = ui.db_tableWidgett_01.item(row, col)
         if item is None:
@@ -187,7 +187,7 @@ def cell_clicked_09(ui, row, col, windowQ):
             cur.execute(query)
             con.commit()
             con.close()
-            windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 주식전략 "{stg_name}" 삭제 완료'))
+            ui.windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 주식전략 "{stg_name}" 삭제 완료'))
     elif ui.dialog_db.focusWidget() == ui.db_tableWidgett_02:
         item = ui.db_tableWidgett_02.item(row, col)
         if item is None:
@@ -211,7 +211,7 @@ def cell_clicked_09(ui, row, col, windowQ):
             cur.execute(query)
             con.commit()
             con.close()
-            windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 주식 범위 또는 조건 "{stg_name}" 삭제 완료'))
+            ui.windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 주식 범위 또는 조건 "{stg_name}" 삭제 완료'))
     elif ui.dialog_db.focusWidget() == ui.db_tableWidgett_03:
         item = ui.db_tableWidgett_03.item(row, col)
         if item is None:
@@ -235,7 +235,7 @@ def cell_clicked_09(ui, row, col, windowQ):
             cur.execute(query)
             con.commit()
             con.close()
-            windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 코인전략 "{stg_name}" 삭제 완료'))
+            ui.windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 코인전략 "{stg_name}" 삭제 완료'))
     elif ui.dialog_db.focusWidget() == ui.db_tableWidgett_04:
         item = ui.db_tableWidgett_04.item(row, col)
         if item is None:
@@ -259,7 +259,7 @@ def cell_clicked_09(ui, row, col, windowQ):
             cur.execute(query)
             con.commit()
             con.close()
-            windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 코인 범위 또는 조건 "{stg_name}" 삭제 완료'))
+            ui.windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 코인 범위 또는 조건 "{stg_name}" 삭제 완료'))
     elif ui.dialog_db.focusWidget() == ui.db_tableWidgett_05:
         item = ui.db_tableWidgett_05.item(row, col)
         if item is None:
@@ -276,7 +276,7 @@ def cell_clicked_09(ui, row, col, windowQ):
             cur.execute(query)
             con.commit()
             con.close()
-            windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 스케쥴 "{stg_name}" 삭제 완료'))
+            ui.windowQ.put((ui_num['DB관리'], f'DB 명령 실행 알림 - 스케쥴 "{stg_name}" 삭제 완료'))
 
     ui.ShowDB()
 
