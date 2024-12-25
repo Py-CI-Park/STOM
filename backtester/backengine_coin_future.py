@@ -885,9 +885,9 @@ class CoinFutureBackEngine:
         매수금액 = 0
         주문수량 = 미체결수량 = self.trade_info[vturn][vkey]['주문수량']
         if 주문수량 > 0:
-            hogainfo = self.bhogainfo if gubun == 'LONG' else self.shogainfo
-            hogainfo = hogainfo[:self.dict_set['코인매수시장가잔량범위']]
-            for 호가, 잔량 in hogainfo:
+            호가정보 = self.bhogainfo if gubun == 'LONG' else self.shogainfo
+            호가정보 = 호가정보[:self.dict_set['코인매수시장가잔량범위']]
+            for 호가, 잔량 in 호가정보:
                 if 미체결수량 - 잔량 <= 0:
                     매수금액 += 호가 * 미체결수량
                     미체결수량 -= 잔량
@@ -919,9 +919,9 @@ class CoinFutureBackEngine:
 
         매도금액 = 0
         주문수량 = 미체결수량 = self.trade_info[vturn][vkey]['주문수량']
-        hogainfo = self.shogainfo if gubun == 'LONG' else self.bhogainfo
-        hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
-        for 호가, 잔량 in hogainfo:
+        호가정보 = self.shogainfo if gubun == 'LONG' else self.bhogainfo
+        호가정보 = 호가정보[:self.dict_set['코인매도시장가잔량범위']]
+        for 호가, 잔량 in 호가정보:
             if 미체결수량 - 잔량 <= 0:
                 매도금액 += 호가 * 미체결수량
                 미체결수량 -= 잔량
@@ -940,13 +940,16 @@ class CoinFutureBackEngine:
             self.array_tick[self.indexn, 14:34]
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
+        bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
+        bhogainfo = bhogainfo[:self.dict_set['코인매도시장가잔량범위']]
 
         for vturn in self.trade_info.keys():
             for vkey in self.trade_info[vturn].keys():
-                if self.trade_info[vturn][vkey]['보유중']:
+                if self.trade_info[vturn][vkey]['보유중'] > 0:
                     매도금액 = 0
                     보유수량 = 미체결수량 = self.trade_info[vturn][vkey]['보유수량']
-                    for 매수호가, 매수잔량 in shogainfo:
+                    호가정보 = shogainfo if self.trade_info[vturn][vkey]['보유중'] == 1 else bhogainfo
+                    for 매수호가, 매수잔량 in 호가정보:
                         if 미체결수량 - 매수잔량 <= 0:
                             매도금액 += 매수호가 * 미체결수량
                             미체결수량 -= 매수잔량

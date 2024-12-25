@@ -702,9 +702,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         if 주문수량 > 0:
             if self.dict_set['코인매수주문구분'] == '시장가':
                 매수금액 = 0
-                hogainfo = self.bhogainfo if gubun == 'LONG' else self.shogainfo
-                hogainfo = hogainfo[:self.dict_set['코인매수시장가잔량범위']]
-                for 호가, 잔량 in hogainfo:
+                호가정보 = self.bhogainfo if gubun == 'LONG' else self.shogainfo
+                호가정보 = 호가정보[:self.dict_set['코인매수시장가잔량범위']]
+                for 호가, 잔량 in 호가정보:
                     if 미체결수량 - 잔량 <= 0:
                         매수금액 += 호가 * 미체결수량
                         미체결수량 -= 잔량
@@ -790,9 +790,9 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         if self.dict_set['코인매도주문구분'] == '시장가':
             매도금액 = 0
             주문수량 = 미체결수량 = self.trade_info[vturn][vkey]['주문수량']
-            hogainfo = self.shogainfo if gubun == 'LONG' else self.bhogainfo
-            hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
-            for 호가, 잔량 in hogainfo:
+            호가정보 = self.shogainfo if gubun == 'LONG' else self.bhogainfo
+            호가정보 = 호가정보[:self.dict_set['코인매도시장가잔량범위']]
+            for 호가, 잔량 in 호가정보:
                 if 미체결수량 - 잔량 <= 0:
                     매도금액 += 호가 * 미체결수량
                     미체결수량 -= 잔량
