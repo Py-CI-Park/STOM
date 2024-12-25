@@ -147,20 +147,20 @@ class Total:
 
             elif data[0] == '더미결과':
                 sc += 1
-                _, vars_key, _dict_dummy = data
+                _, vkey, _dict_dummy = data
                 if _dict_dummy:
-                    for vars_turn in _dict_dummy.keys():
-                        dict_dummy[vars_turn][vars_key] = 0
+                    for vturn in _dict_dummy.keys():
+                        dict_dummy[vturn][vkey] = 0
 
                 if sc == 20:
                     sc = 0
-                    for vars_turn in list(dict_dummy.keys()):
-                        curr_vars_count = len(self.vars_list[vars_turn][0])
-                        key_list = list(dict_dummy[vars_turn].keys())
+                    for vturn in list(dict_dummy.keys()):
+                        curr_vars_count = len(self.vars_list[vturn][0])
+                        key_list = list(dict_dummy[vturn].keys())
                         zero_key_list = [x for x in range(curr_vars_count) if x not in key_list]
                         if zero_key_list:
-                            for vars_key in zero_key_list:
-                                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), None)
+                            for vkey in zero_key_list:
+                                self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), None)
                     dict_dummy = {}
 
             elif data[0] == '백테결과':
@@ -168,38 +168,38 @@ class Total:
                 self.Report(list_tsg, arry_bct)
 
             elif data[0] in ('TRAIN', 'VALID'):
-                gubun, num, data, vars_turn, vars_key = data
-                if vars_turn not in self.dict_t.keys():
-                    self.dict_t[vars_turn] = {}
-                if vars_key not in self.dict_t[vars_turn].keys():
-                    self.dict_t[vars_turn][vars_key] = {}
-                if vars_turn not in self.dict_v.keys():
-                    self.dict_v[vars_turn] = {}
-                if vars_key not in self.dict_v[vars_turn].keys():
-                    self.dict_v[vars_turn][vars_key] = {}
-                if vars_turn not in st.keys():
-                    st[vars_turn] = {}
-                if vars_key not in st[vars_turn].keys():
-                    st[vars_turn][vars_key] = 0
+                gubun, num, data, vturn, vkey = data
+                if vturn not in self.dict_t.keys():
+                    self.dict_t[vturn] = {}
+                if vkey not in self.dict_t[vturn].keys():
+                    self.dict_t[vturn][vkey] = {}
+                if vturn not in self.dict_v.keys():
+                    self.dict_v[vturn] = {}
+                if vkey not in self.dict_v[vturn].keys():
+                    self.dict_v[vturn][vkey] = {}
+                if vturn not in st.keys():
+                    st[vturn] = {}
+                if vkey not in st[vturn].keys():
+                    st[vturn][vkey] = 0
 
                 if gubun == 'TRAIN':
-                    self.dict_t[vars_turn][vars_key][num] = data
+                    self.dict_t[vturn][vkey][num] = data
                 else:
-                    self.dict_v[vars_turn][vars_key][num] = data
+                    self.dict_v[vturn][vkey][num] = data
 
-                st[vars_turn][vars_key] += 1
-                if st[vars_turn][vars_key] == self.sub_total:
+                st[vturn][vkey] += 1
+                if st[vturn][vkey] == self.sub_total:
                     self.stdp = SendTextAndStd(
-                        self.GetSendData(vars_turn, vars_key),
-                        self.dict_t[vars_turn][vars_key],
-                        self.dict_v[vars_turn][vars_key],
+                        self.GetSendData(vturn, vkey),
+                        self.dict_t[vturn][vkey],
+                        self.dict_v[vturn][vkey],
                         self.dict_set['교차검증가중치']
                     )
-                    st[vars_turn][vars_key] = 0
+                    st[vturn][vkey] = 0
 
             elif data[0] == 'ALL':
-                _, _, data, vars_turn, vars_key = data
-                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), data)
+                _, _, data, vturn, vkey = data
+                self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), data)
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
@@ -254,10 +254,10 @@ class Total:
         else:
             self.sub_total = 2
 
-    def GetSendData(self, vars_turn=0, vars_key=0):
+    def GetSendData(self, vturn=0, vkey=0):
         if self.opti_turn == 1:
-            self.vars[vars_turn] = self.vars_list[vars_turn][0][vars_key]
-        return ['최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, self.opti_turn, vars_turn, vars_key, self.vars, self.startday, self.endday, self.std_list, self.betting]
+            self.vars[vturn] = self.vars_list[vturn][0][vkey]
+        return ['최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, self.opti_turn, vturn, vkey, self.vars, self.startday, self.endday, self.std_list, self.betting]
 
     def Report(self, list_tsg, arry_bct):
         if not list_tsg:
@@ -701,35 +701,35 @@ class Optimize:
                                           buy_num, sell_num)
                     self.SysExit(True)
                 else:
-                    vars_turn, vars_key, std = data
-                    curr_typ = vars_type[vars_turn]
-                    curr_var = vars_[vars_turn][0][vars_key]
-                    preh_var = dict_turn_hvar[vars_turn]
-                    if std > dict_turn_hstd[vars_turn] or \
-                            (std == dict_turn_hstd[vars_turn] and
+                    vturn, vkey, std = data
+                    curr_typ = vars_type[vturn]
+                    curr_var = vars_[vturn][0][vkey]
+                    preh_var = dict_turn_hvar[vturn]
+                    if std > dict_turn_hstd[vturn] or \
+                            (std == dict_turn_hstd[vturn] and
                              ((curr_typ and curr_var > preh_var) or (not curr_typ and curr_var < preh_var))):
-                        dict_turn_hstd[vars_turn] = std
-                        dict_turn_hvar[vars_turn] = curr_var
+                        dict_turn_hstd[vturn] = std
+                        dict_turn_hvar[vturn] = curr_var
                         if std > hstd: hstd = std
 
                     if self.dict_set['범위자동관리']:
-                        turn_var_std[vars_turn][curr_var] = std
+                        turn_var_std[vturn][curr_var] = std
                     elif std == -2_000_000_000:
-                        del_vars_list[vars_turn].append(curr_var)
+                        del_vars_list[vturn].append(curr_var)
 
             list_turn_hvar = sorted(dict_turn_hvar.items(), key=operator.itemgetter(0))
-            for vars_turn, high_var in list_turn_hvar:
-                if high_var != vars_[vars_turn][1]:
+            for vturn, high_var in list_turn_hvar:
+                if high_var != vars_[vturn][1]:
                     total_change += 1
-                    vars_[vars_turn][1] = high_var
-                    data = (ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{vars_turn}]의 최적값 변경 [{high_var}]')
+                    vars_[vturn][1] = high_var
+                    data = (ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{vturn}]의 최적값 변경 [{high_var}]')
                     threading_timer(5, self.wq.put, data)
 
             if self.dict_set['범위자동관리'] and hstd > 0:
-                for vars_turn, var_std in turn_var_std.items():
+                for vturn, var_std in turn_var_std.items():
                     set_std = len(set(list(var_std.values())))
                     if set_std <= 2:
-                        fix_vars_list.append(vars_turn)
+                        fix_vars_list.append(vturn)
                     elif len(var_std) > 5:
                         del_list = []
                         for var, std in var_std.items():
@@ -737,7 +737,7 @@ class Optimize:
                                 del_list.append(var)
                         if del_list:
                             del_list.sort()
-                        del_vars_list[vars_turn] = del_list
+                        del_vars_list[vturn] = del_list
 
             for i, del_list in enumerate(del_vars_list):
                 if del_list:
@@ -755,8 +755,8 @@ class Optimize:
 
             if self.dict_set['범위자동관리']:
                 for i in range(len_vars):
-                    len_vars_turn = len(vars_[i][0])
-                    if len_vars_turn >= 7:
+                    len_vturn = len(vars_[i][0])
+                    if len_vturn >= 7:
                         first  = vars_[i][0][0]
                         second = vars_[i][0][1]
                         last   = vars_[i][0][-1]
@@ -765,14 +765,14 @@ class Optimize:
                         if high == first:
                             new = (first - gap) if type(gap) == int else round(first - gap, 2)
                             if new not in total_del_list[i]:
-                                prev_list = vars_[i][0] if len_vars_turn < 20 else vars_[i][0][:-1]
+                                prev_list = vars_[i][0] if len_vturn < 20 else vars_[i][0][:-1]
                                 vars_[i][0] = [new] + prev_list
                                 data = (ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 추가 [{new}]')
                                 threading_timer(5, self.wq.put, data)
                         elif high == last:
                             new = (last + gap) if type(gap) == int else round(first + gap, 2)
                             if new not in total_del_list[i]:
-                                prev_list = vars_[i][0] if len_vars_turn < 20 else vars_[i][0][1:]
+                                prev_list = vars_[i][0] if len_vturn < 20 else vars_[i][0][1:]
                                 vars_[i][0] = prev_list + [new]
                                 data = (ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{i}]의 범위 추가 [{new}]')
                                 threading_timer(5, self.wq.put, data)

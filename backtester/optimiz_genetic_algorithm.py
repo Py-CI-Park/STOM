@@ -64,53 +64,53 @@ class Total:
 
             elif data[0] == '더미결과':
                 sc += 1
-                _, vars_key, _dict_dummy = data
+                _, vkey, _dict_dummy = data
                 if _dict_dummy:
-                    for vars_turn in _dict_dummy.keys():
-                        if vars_turn not in dict_dummy.keys():
-                            dict_dummy[vars_turn] = {}
-                        dict_dummy[vars_turn][vars_key] = 0
+                    for vturn in _dict_dummy.keys():
+                        if vturn not in dict_dummy.keys():
+                            dict_dummy[vturn] = {}
+                        dict_dummy[vturn][vkey] = 0
 
                 if sc == 20:
                     sc = 0
-                    for vars_turn in range(50):
-                        if vars_turn not in dict_dummy.keys():
-                            for vars_key in range(20):
-                                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), None)
+                    for vturn in range(50):
+                        if vturn not in dict_dummy.keys():
+                            for vkey in range(20):
+                                self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), None)
                         else:
-                            for vars_key in range(20):
-                                if vars_key not in dict_dummy[vars_turn].keys():
-                                    self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), None)
+                            for vkey in range(20):
+                                if vkey not in dict_dummy[vturn].keys():
+                                    self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), None)
                     dict_dummy = {}
 
             elif data[0] in ('TRAIN', 'VALID'):
-                gubun, num, data, vars_turn, vars_key = data
-                if vars_turn not in self.dict_t.keys():
-                    self.dict_t[vars_turn] = {}
-                if vars_key not in self.dict_t[vars_turn].keys():
-                    self.dict_t[vars_turn][vars_key] = {}
-                if vars_turn not in self.dict_v.keys():
-                    self.dict_v[vars_turn] = {}
-                if vars_key not in self.dict_v[vars_turn].keys():
-                    self.dict_v[vars_turn][vars_key] = {}
-                if vars_turn not in st.keys():
-                    st[vars_turn] = {}
-                if vars_key not in st[vars_turn].keys():
-                    st[vars_turn][vars_key] = 0
+                gubun, num, data, vturn, vkey = data
+                if vturn not in self.dict_t.keys():
+                    self.dict_t[vturn] = {}
+                if vkey not in self.dict_t[vturn].keys():
+                    self.dict_t[vturn][vkey] = {}
+                if vturn not in self.dict_v.keys():
+                    self.dict_v[vturn] = {}
+                if vkey not in self.dict_v[vturn].keys():
+                    self.dict_v[vturn][vkey] = {}
+                if vturn not in st.keys():
+                    st[vturn] = {}
+                if vkey not in st[vturn].keys():
+                    st[vturn][vkey] = 0
 
                 if gubun == 'TRAIN':
-                    self.dict_t[vars_turn][vars_key][num] = data
+                    self.dict_t[vturn][vkey][num] = data
                 else:
-                    self.dict_v[vars_turn][vars_key][num] = data
+                    self.dict_v[vturn][vkey][num] = data
 
-                st[vars_turn][vars_key] += 1
-                if st[vars_turn][vars_key] == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), self.dict_t[vars_turn][vars_key], self.dict_v[vars_turn][vars_key], self.dict_set['교차검증가중치'])
-                    st[vars_turn][vars_key] = 0
+                st[vturn][vkey] += 1
+                if st[vturn][vkey] == self.sub_total:
+                    self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), self.dict_t[vturn][vkey], self.dict_v[vturn][vkey], self.dict_set['교차검증가중치'])
+                    st[vturn][vkey] = 0
 
             elif data[0] == 'ALL':
-                _, _, data, vars_turn, vars_key = data
-                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), data)
+                _, _, data, vturn, vkey = data
+                self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), data)
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
@@ -151,9 +151,9 @@ class Total:
         else:
             self.sub_total = 2
 
-    def GetSendData(self, vars_turn, vars_key):
-        index = vars_turn * 20 + vars_key
-        return ['GA최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vars_turn, vars_key, self.vars_lists[index], self.startday, self.endday, self.std_list, self.betting]
+    def GetSendData(self, vturn, vkey):
+        index = vturn * 20 + vkey
+        return ['GA최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vturn, vkey, self.vars_lists[index], self.startday, self.endday, self.std_list, self.betting]
 
 
 class OptimizeGeneticAlgorithm:
@@ -338,8 +338,8 @@ class OptimizeGeneticAlgorithm:
                                 self.SaveVarslist(100, optistandard, buystg, sellstg)
                             self.SysExit(True)
                         else:
-                            vars_turn, vars_key, std = data
-                            index = vars_turn * 20 + vars_key
+                            vturn, vkey, std = data
+                            index = vturn * 20 + vkey
                             self.result[std] = vars_lists[index]
                             if std > hstd: hstd = std
                 else:

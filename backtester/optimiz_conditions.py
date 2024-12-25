@@ -62,48 +62,48 @@ class Total:
 
             elif data[0] == '더미결과':
                 sc += 1
-                _, vars_key, _dict_dummy = data
+                _, vkey, _dict_dummy = data
                 if _dict_dummy:
-                    for vars_turn in _dict_dummy.keys():
-                        if vars_turn not in dict_dummy.keys():
-                            dict_dummy[vars_turn] = {}
-                        dict_dummy[vars_turn][vars_key] = 0
+                    for vturn in _dict_dummy.keys():
+                        if vturn not in dict_dummy.keys():
+                            dict_dummy[vturn] = {}
+                        dict_dummy[vturn][vkey] = 0
 
                 if sc == 20:
                     sc = 0
-                    for vars_key in range(20):
-                        if vars_key not in dict_dummy[0].keys():
+                    for vkey in range(20):
+                        if vkey not in dict_dummy[0].keys():
                             self.stdp = SendTextAndStd(self.GetSendData(), None)
                     dict_dummy = {}
 
             elif data[0] in ('TRAIN', 'VALID'):
-                gubun, num, data, vars_turn, vars_key = data
-                if vars_turn not in self.dict_t.keys():
-                    self.dict_t[vars_turn] = {}
-                if vars_key not in self.dict_t[vars_turn].keys():
-                    self.dict_t[vars_turn][vars_key] = {}
-                if vars_turn not in self.dict_v.keys():
-                    self.dict_v[vars_turn] = {}
-                if vars_key not in self.dict_v[vars_turn].keys():
-                    self.dict_v[vars_turn][vars_key] = {}
-                if vars_turn not in st.keys():
-                    st[vars_turn] = {}
-                if vars_key not in st[vars_turn].keys():
-                    st[vars_turn][vars_key] = 0
+                gubun, num, data, vturn, vkey = data
+                if vturn not in self.dict_t.keys():
+                    self.dict_t[vturn] = {}
+                if vkey not in self.dict_t[vturn].keys():
+                    self.dict_t[vturn][vkey] = {}
+                if vturn not in self.dict_v.keys():
+                    self.dict_v[vturn] = {}
+                if vkey not in self.dict_v[vturn].keys():
+                    self.dict_v[vturn][vkey] = {}
+                if vturn not in st.keys():
+                    st[vturn] = {}
+                if vkey not in st[vturn].keys():
+                    st[vturn][vkey] = 0
 
                 if gubun == 'TRAIN':
-                    self.dict_t[vars_turn][vars_key][num] = data
+                    self.dict_t[vturn][vkey][num] = data
                 else:
-                    self.dict_v[vars_turn][vars_key][num] = data
+                    self.dict_v[vturn][vkey][num] = data
 
-                st[vars_turn][vars_key] += 1
-                if st[vars_turn][vars_key] == self.sub_total:
-                    self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), self.dict_t[vars_turn][vars_key], self.dict_v[vars_turn][vars_key], self.dict_set['교차검증가중치'])
-                    st[vars_turn][vars_key] = 0
+                st[vturn][vkey] += 1
+                if st[vturn][vkey] == self.sub_total:
+                    self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), self.dict_t[vturn][vkey], self.dict_v[vturn][vkey], self.dict_set['교차검증가중치'])
+                    st[vturn][vkey] = 0
 
             elif data[0] == 'ALL':
-                _, _, data, vars_turn, vars_key = data
-                self.stdp = SendTextAndStd(self.GetSendData(vars_turn, vars_key), data)
+                _, _, data, vturn, vkey = data
+                self.stdp = SendTextAndStd(self.GetSendData(vturn, vkey), data)
 
             elif data[0] == '백테정보':
                 self.BackInfo(data)
@@ -139,8 +139,8 @@ class Total:
         else:
             self.sub_total = 2
 
-    def GetSendData(self, vars_turn=0, vars_key=0):
-        return ['조건최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vars_turn, vars_key, None, self.startday, self.endday, self.std_list, self.betting]
+    def GetSendData(self, vturn=0, vkey=0):
+        return ['조건최적화', self.ui_gubun, self.wq, self.mq, self.stdp, self.optistandard, 0, vturn, vkey, None, self.startday, self.endday, self.std_list, self.betting]
 
 
 class OptimizeConditions:
@@ -328,9 +328,9 @@ class OptimizeConditions:
                             self.ShowTopConds()
                         self.SysExit(True)
                     else:
-                        _, vars_key, std = data
+                        _, vkey, std = data
                         if std > hstd: hstd = std
-                        if std > 0: self.result[std] = [buy_conds[vars_key], sell_conds[vars_key]]
+                        if std > 0: self.result[std] = [buy_conds[vkey], sell_conds[vkey]]
             else:
                 break
 

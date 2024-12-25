@@ -192,7 +192,7 @@ def LoadOrderSetting(gubun):
 
 
 def GetBuyStg(buystg, gubun):
-    buystg = buystg.split('if 매수:')[0] + 'if 매수:\n    self.Buy(vars_turn, vars_key)'
+    buystg = buystg.split('if 매수:')[0] + 'if 매수:\n    self.Buy(vturn, vkey)'
     try:
         buystg = compile(buystg, '<string>', 'exec')
     except:
@@ -202,7 +202,7 @@ def GetBuyStg(buystg, gubun):
 
 
 def GetSellStg(sellstg, gubun):
-    sellstg = 'sell_cond = 0\n' + sellstg.split('if 매도:')[0] + 'if 매도:\n    self.Sell(vars_turn, vars_key, sell_cond)'
+    sellstg = 'sell_cond = 0\n' + sellstg.split('if 매도:')[0] + 'if 매도:\n    self.Sell(vturn, vkey, sell_cond)'
     sellstg, dict_cond = SetSellCond(sellstg.split('\n'))
     try:
         sellstg = compile(sellstg, '<string>', 'exec')
@@ -214,7 +214,7 @@ def GetSellStg(sellstg, gubun):
 
 def GetBuyConds(buy_conds, gubun):
     buy_conds = 'if ' + ':\n    매수 = False\nelif '.join(
-        buy_conds) + ':\n    매수 = False\nif 매수:\n    self.Buy(vars_turn, vars_key)'
+        buy_conds) + ':\n    매수 = False\nif 매수:\n    self.Buy(vturn, vkey)'
     try:
         buy_conds = compile(buy_conds, '<string>', 'exec')
     except:
@@ -225,7 +225,7 @@ def GetBuyConds(buy_conds, gubun):
 
 def GetSellConds(sell_conds, gubun):
     sell_conds = 'sell_cond = 0\nif ' + ':\n    매도 = True\nelif '.join(
-        sell_conds) + ':\n    매도 = True\nif 매도:\n    self.Sell(vars_turn, vars_key, sell_cond)'
+        sell_conds) + ':\n    매도 = True\nif 매도:\n    self.Sell(vturn, vkey, sell_cond)'
     sell_conds, dict_cond = SetSellCond(sell_conds.split('\n'))
     try:
         sell_conds = compile(sell_conds, '<string>', 'exec')
@@ -251,7 +251,7 @@ def SetSellCond(selllist):
 
 def GetBuyStgFuture(buystg, gubun):
     buystg = buystg.split('if BUY_LONG or SELL_SHORT:')[
-                 0] + 'if BUY_LONG:\n    self.Buy(vars_turn, vars_key, "LONG")\nelif SELL_SHORT:\n    self.Buy(vars_turn, vars_key, "SHORT")'
+                 0] + 'if BUY_LONG:\n    self.Buy(vturn, vkey, "LONG")\nelif SELL_SHORT:\n    self.Buy(vturn, vkey, "SHORT")'
     try:
         buystg = compile(buystg, '<string>', 'exec')
     except:
@@ -262,7 +262,7 @@ def GetBuyStgFuture(buystg, gubun):
 
 def GetSellStgFuture(sellstg, gubun):
     sellstg = 'sell_cond = 0\n' + sellstg.split("if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):")[
-        0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell(vars_turn, vars_key, 'LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell(vars_turn, vars_key, 'SHORT', sell_cond)"
+        0] + "if 포지션 == 'LONG' and SELL_LONG:\n    self.Sell(vturn, vkey, 'LONG', sell_cond)\nelif 포지션 == 'SHORT' and BUY_SHORT:\n    self.Sell(vturn, vkey, 'SHORT', sell_cond)"
     sellstg, dict_cond = SetSellCondFuture(sellstg.split('\n'))
     try:
         sellstg = compile(sellstg, '<string>', 'exec')
@@ -275,10 +275,10 @@ def GetSellStgFuture(sellstg, gubun):
 def GetBuyCondsFuture(is_long, buy_conds, gubun):
     if is_long:
         buy_conds = 'if ' + ':\n    BUY_LONG = False\nelif '.join(
-            buy_conds) + ':\n    BUY_LONG = False\nif BUY_LONG:\n    self.Buy(vars_turn, vars_key, "LONG")'
+            buy_conds) + ':\n    BUY_LONG = False\nif BUY_LONG:\n    self.Buy(vturn, vkey, "LONG")'
     else:
         buy_conds = 'if ' + ':\n    SELL_SHORT = False\nelif '.join(
-            buy_conds) + ':\n    SELL_SHORT = False\nif SELL_SHORT:\n    self.Buy(vars_turn, vars_key, "SHORT")'
+            buy_conds) + ':\n    SELL_SHORT = False\nif SELL_SHORT:\n    self.Buy(vturn, vkey, "SHORT")'
     try:
         buy_conds = compile(buy_conds, '<string>', 'exec')
     except:
@@ -290,10 +290,10 @@ def GetBuyCondsFuture(is_long, buy_conds, gubun):
 def GetSellCondsFuture(is_long, sell_conds, gubun):
     if is_long:
         sell_conds = 'sell_cond = 0\nif ' + ':\n    SELL_LONG = True\nelif '.join(
-            sell_conds) + ':\n    SELL_LONG = True\nif SELL_LONG:\n    self.Sell(vars_turn, vars_key, "SELL_LONG", sell_cond)'
+            sell_conds) + ':\n    SELL_LONG = True\nif SELL_LONG:\n    self.Sell(vturn, vkey, "SELL_LONG", sell_cond)'
     else:
         sell_conds = 'sell_cond = 0\nif ' + ':\n    BUY_SHORT = True\nelif '.join(
-            sell_conds) + ':\n    BUY_SHORT = True\nif BUY_SHORT:\n    self.Sell(vars_turn, vars_key, "BUY_SHORT", sell_cond)'
+            sell_conds) + ':\n    BUY_SHORT = True\nif BUY_SHORT:\n    self.Sell(vturn, vkey, "BUY_SHORT", sell_cond)'
     sell_conds, dict_cond = SetSellCondFuture(sell_conds.split('\n'))
     try:
         sell_conds = compile(sell_conds, '<string>', 'exec')
@@ -323,13 +323,13 @@ def SetSellCondFuture(selllist):
 
 
 def SendTextAndStd(result, dict_train, dict_valid=None, exponential=False):
-    gubun, ui_gubun, wq, mq, stdp, optistd, opti_turn, vars_turn, vars_key, vars_list, startday, endday, std_list, betting = result
+    gubun, ui_gubun, wq, mq, stdp, optistd, opti_turn, vturn, vkey, vars_list, startday, endday, std_list, betting = result
     if gubun in ('최적화', '최적화테스트'):
-        text1 = GetText1(opti_turn, vars_turn, vars_list)
+        text1 = GetText1(opti_turn, vturn, vars_list)
     elif gubun == 'GA최적화':
         text1 = f'<font color=white> V{vars_list} </font>'
     elif gubun == '전진분석':
-        text1 = f'<font color=#f78645>[IN] P[{startday}~{endday}]</font>{GetText1(opti_turn, vars_turn, vars_list)}'
+        text1 = f'<font color=#f78645>[IN] P[{startday}~{endday}]</font>{GetText1(opti_turn, vturn, vars_list)}'
     else:
         text1 = ''
 
@@ -375,19 +375,19 @@ def SendTextAndStd(result, dict_train, dict_valid=None, exponential=False):
         wq.put((ui_num[f'{ui_gubun}백테스트'], f'{text1}{text2}'))
 
     if opti_turn != 2:
-        mq.put((vars_turn, vars_key, std))
+        mq.put((vturn, vkey, std))
     return stdp_
 
 
-def GetText1(opti_turn, vars_turn, vars_list):
+def GetText1(opti_turn, vturn, vars_list):
     prev_vars, curr_vars, next_vars = '', '', ''
     if opti_turn != 1:
         next_vars = f'<font color=#6eff6e> V{vars_list} </font>'
     else:
-        prev_vars = f' V{vars_list[:vars_turn]}'.split(']')[0]
-        prev_vars = f'<font color=white>{prev_vars}</font>' if vars_turn == 0 else f'<font color=white>{prev_vars}, </font>'
-        curr_vars = f'<font color=#6eff6e>{vars_list[vars_turn]}</font>'
-        next_vars = f'{vars_list[vars_turn + 1:]}'.split('[')[1]
+        prev_vars = f' V{vars_list[:vturn]}'.split(']')[0]
+        prev_vars = f'<font color=white>{prev_vars}</font>' if vturn == 0 else f'<font color=white>{prev_vars}, </font>'
+        curr_vars = f'<font color=#6eff6e>{vars_list[vturn]}</font>'
+        next_vars = f'{vars_list[vturn + 1:]}'.split('[')[1]
         if next_vars != ']': next_vars = f', {next_vars}'
         next_vars = f'<font color=white>{next_vars} </font>'
     return f'{prev_vars}{curr_vars}{next_vars}'
@@ -816,7 +816,7 @@ def GetBackResult(arry_tsg, arry_bct, betting, ui_gubun, day_count):
         except: mhct = 0
         try:    seed = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
         except: seed = betting
-        tpp    = round(tsg / seed * 100, 2)
+        tpp    = round(tsg / (seed if seed != 0 else betting) * 100, 2)
         cagr   = round(tpp / day_count * (250 if ui_gubun == 'S' else 365), 2)
         tpi    = round(wr / 100 * (1 + appp / ampp), 2) if ampp != 0 else 1.0
 

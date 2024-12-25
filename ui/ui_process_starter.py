@@ -136,7 +136,7 @@ def UpdateWindowTitle(ui):
         bstqsize = sum((ctq.qsize() for ctq in ui.back_sques)) if ui.back_sques else 0
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{ui.creceivQ.qsize()}] | ctraderQ[{ui.ctraderQ.qsize()}] | cstrateyQ[{ui.cstgQ.qsize()}] | ' \
-               f'windowQ[{ui.windowQ.qsize()}] | ui.queryQ[{ui.queryQ.qsize()}] | chartQ[{ui.chartQ.qsize()}] | ' \
+               f'windowQ[{ui.windowQ.qsize()}] | queryQ[{ui.queryQ.qsize()}] | chartQ[{ui.chartQ.qsize()}] | ' \
                f'hogaQ[{ui.hogaQ.qsize()}] | soundQ[{ui.soundQ.qsize()} | backegQ[{beqsize}] | backstQ[{bstqsize}] | ' \
                f'backttQ[{ui.totalQ.qsize()}]'
     else:

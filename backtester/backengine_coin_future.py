@@ -291,9 +291,9 @@ class CoinFutureBackEngine:
         self.tick_count = 0
         v = GetTradeInfo(1)
         if self.opti_turn == 1:
-            self.trade_info = {vars_turn: {vars_key: v for vars_key in range(len(self.vars_list[vars_turn][0]))} for vars_turn in range(len(self.vars_list))}
+            self.trade_info = {t: {k: v for k in range(len(x[0]))} for t, x in enumerate(self.vars_list) if len(x[0]) > 1}
         elif self.opti_turn == 3:
-            self.trade_info = {vars_turn: {vars_key: v for vars_key in range(20)} for vars_turn in range(50 if self.back_type == 'GA최적화' else 1)}
+            self.trade_info = {t: {k: v for k in range(20)} for t in range(50 if self.back_type == 'GA최적화' else 1)}
         else:
             self.trade_info = {0: {0: v}}
 
@@ -726,38 +726,31 @@ class CoinFutureBackEngine:
         self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
         if self.opti_turn == 1:
-            vars_turns = range(len(self.vars_list))
-            for vars_turn in vars_turns:
-                len_vars_list = len(self.vars_list[vars_turn][0])
-                if len_vars_list < 2:
-                    continue
+            for vturn in self.trade_info.keys():
                 self.vars = [var[1] for var in self.vars_list]
-                if vars_turn != 0 and self.tick_count < self.vars[0]:
+                if vturn != 0 and self.tick_count < self.vars[0]:
                     break
 
-                vars_keys = range(len_vars_list)
-                for vars_key in vars_keys:
-                    self.vars[vars_turn] = self.vars_list[vars_turn][0][vars_key]
+                for vkey in self.trade_info[vturn].keys():
+                    self.vars[vturn] = self.vars_list[vturn][0][vkey]
                     if self.tick_count < self.vars[0]:
                         continue
 
                     BUY_LONG, SELL_SHORT = True, True
                     SELL_LONG, BUY_SHORT = False, False
-                    if not self.trade_info[vars_turn][vars_key]['보유중']:
+                    if not self.trade_info[vturn][vkey]['보유중']:
                         if not 관심종목: continue
-                        self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
+                        self.SetBuyCount(vturn, vkey, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
                         exec(self.buystg)
                     else:
-                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now_utc())
-                        포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
+                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vturn, vkey, 현재가, now_utc())
+                        포지션 = 'LONG' if self.trade_info[vturn][vkey]['보유중'] == 1 else 'SHORT'
                         exec(self.sellstg)
 
         elif self.opti_turn == 3:
-            vars_turns = range(50 if self.back_type == 'GA최적화' else 1)
-            vars_keys  = range(20)
-            for vars_turn in vars_turns:
-                for vars_key in vars_keys:
-                    index = vars_turn * 20 + vars_key
+            for vturn in self.trade_info.keys():
+                for vkey in self.trade_info[vturn].keys():
+                    index = vturn * 20 + vkey
                     if self.back_type != '조건최적화':
                         self.vars = self.vars_lists[index]
                         if self.tick_count < self.vars[0]:
@@ -767,22 +760,22 @@ class CoinFutureBackEngine:
 
                     BUY_LONG, SELL_SHORT = True, True
                     SELL_LONG, BUY_SHORT = False, False
-                    if not self.trade_info[vars_turn][vars_key]['보유중']:
+                    if not self.trade_info[vturn][vkey]['보유중']:
                         if not 관심종목: continue
-                        self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
+                        self.SetBuyCount(vturn, vkey, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
                         if self.back_type != '조건최적화':
                             exec(self.buystg)
                         else:
                             exec(self.dict_buystg[index])
                     else:
-                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now_utc())
-                        포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
+                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vturn, vkey, 현재가, now_utc())
+                        포지션 = 'LONG' if self.trade_info[vturn][vkey]['보유중'] == 1 else 'SHORT'
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
                         else:
                             exec(self.dict_sellstg[index])
         else:
-            vars_turn, vars_key = 0, 0
+            vturn, vkey = 0, 0
             if self.back_type in ('최적화', '전진분석'):
                 if self.tick_count < self.vars[0]:
                     return
@@ -794,16 +787,16 @@ class CoinFutureBackEngine:
 
             BUY_LONG, SELL_SHORT = True, True
             SELL_LONG, BUY_SHORT = False, False
-            if not self.trade_info[vars_turn][vars_key]['보유중']:
+            if not self.trade_info[vturn][vkey]['보유중']:
                 if not 관심종목: return
-                self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
+                self.SetBuyCount(vturn, vkey, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
                 exec(self.buystg)
             else:
-                수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now_utc())
-                포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
+                수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vturn, vkey, 현재가, now_utc())
+                포지션 = 'LONG' if self.trade_info[vturn][vkey]['보유중'] == 1 else 'SHORT'
                 exec(self.sellstg)
 
-    def SetBuyCount(self, vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도):
+    def SetBuyCount(self, vturn, vkey, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도):
         if self.dict_set['코인비중조절'][0] == 0:
             betting = self.betting
         else:
@@ -825,11 +818,11 @@ class CoinFutureBackEngine:
             else:
                 betting = self.betting * self.dict_set['코인비중조절'][9]
 
-        self.trade_info[vars_turn][vars_key]['주문수량'] = round(betting / 현재가, 8)
+        self.trade_info[vturn][vkey]['주문수량'] = round(betting / 현재가, 8)
 
-    def SetSellCount(self, vars_turn, vars_key, 현재가, now_time):
-        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vars_turn][vars_key].values()
-        if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
+    def SetSellCount(self, vturn, vkey, 현재가, now_time):
+        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vturn][vkey].values()
+        if self.trade_info[vturn][vkey]['보유중'] == 1:
             _, 수익금, 수익률 = GetBinanceLongPgSgSp(
                 보유수량 * 매수가, 보유수량 * 현재가,
                 '시장가' in self.dict_set['코인매수주문구분'],
@@ -840,15 +833,15 @@ class CoinFutureBackEngine:
                 '시장가' in self.dict_set['코인매수주문구분'],
                 '시장가' in self.dict_set['코인매도주문구분'])
         if 수익률 > 최고수익률:
-            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
+            self.trade_info[vturn][vkey]['최고수익률'] = 최고수익률 = 수익률
         elif 수익률 < 최저수익률:
-            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
+            self.trade_info[vturn][vkey]['최저수익률'] = 최저수익률 = 수익률
         보유시간 = (now_time - 매수시간).total_seconds()
         self.indexb = 매수틱번호
-        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+        self.trade_info[vturn][vkey]['주문수량'] = 보유수량
         return 수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호
 
-    def Buy(self, vars_turn, vars_key, gubun):
+    def Buy(self, vturn, vkey, gubun):
         if self.back_type == '백테스트':
             if self.pattern:
                 self.PatternModeling('매수' if gubun == 'LONG' else '매도')
@@ -858,7 +851,7 @@ class CoinFutureBackEngine:
                     return
 
         매수금액 = 0
-        주문수량 = 미체결수량 = self.trade_info[vars_turn][vars_key]['주문수량']
+        주문수량 = 미체결수량 = self.trade_info[vturn][vkey]['주문수량']
         if 주문수량 > 0:
             hogainfo = self.bhogainfo if gubun == 'LONG' else self.shogainfo
             hogainfo = hogainfo[:self.dict_set['코인매수시장가잔량범위']]
@@ -871,7 +864,7 @@ class CoinFutureBackEngine:
                     매수금액 += 호가 * 잔량
                     미체결수량 -= 잔량
             if 미체결수량 <= 0:
-                self.trade_info[vars_turn][vars_key] = {
+                self.trade_info[vturn][vkey] = {
                     '보유중': 1 if gubun == 'LONG' else 2,
                     '매수가': round(매수금액 / 주문수량, 4),
                     '매도가': 0,
@@ -883,7 +876,7 @@ class CoinFutureBackEngine:
                     '매수시간': strp_time('%Y%m%d%H%M%S', str(self.index))
                 }
 
-    def Sell(self, vars_turn, vars_key, gubun, sell_cond):
+    def Sell(self, vturn, vkey, gubun, sell_cond):
         if self.back_type == '백테스트':
             if self.pattern:
                 self.PatternModeling('매도' if gubun == 'LONG' else '매수')
@@ -893,7 +886,7 @@ class CoinFutureBackEngine:
                     return
 
         매도금액 = 0
-        주문수량 = 미체결수량 = self.trade_info[vars_turn][vars_key]['주문수량']
+        주문수량 = 미체결수량 = self.trade_info[vturn][vkey]['주문수량']
         hogainfo = self.shogainfo if gubun == 'LONG' else self.bhogainfo
         hogainfo = hogainfo[:self.dict_set['코인매도시장가잔량범위']]
         for 호가, 잔량 in hogainfo:
@@ -905,9 +898,9 @@ class CoinFutureBackEngine:
                 매도금액 += 호가 * 잔량
                 미체결수량 -= 잔량
         if 미체결수량 <= 0:
-            self.trade_info[vars_turn][vars_key]['매도가'] = round(매도금액 / 주문수량, 4)
+            self.trade_info[vturn][vkey]['매도가'] = round(매도금액 / 주문수량, 4)
             self.sell_cond = sell_cond
-            self.CalculationEyun(vars_turn, vars_key)
+            self.CalculationEyun(vturn, vkey)
 
     def LastSell(self):
         매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5, \
@@ -916,11 +909,11 @@ class CoinFutureBackEngine:
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
 
-        for vars_turn in list(self.trade_info.keys()):
-            for vars_key in list(self.trade_info[vars_turn].keys()):
-                if self.trade_info[vars_turn][vars_key]['보유중']:
+        for vturn in self.trade_info.keys():
+            for vkey in self.trade_info[vturn].keys():
+                if self.trade_info[vturn][vkey]['보유중']:
                     매도금액 = 0
-                    보유수량 = 미체결수량 = self.trade_info[vars_turn][vars_key]['보유수량']
+                    보유수량 = 미체결수량 = self.trade_info[vturn][vkey]['보유수량']
                     for 매수호가, 매수잔량 in shogainfo:
                         if 미체결수량 - 매수잔량 <= 0:
                             매도금액 += 매수호가 * 미체결수량
@@ -931,45 +924,44 @@ class CoinFutureBackEngine:
                             미체결수량 -= 매수잔량
 
                     if 미체결수량 <= 0:
-                        self.trade_info[vars_turn][vars_key]['매도가'] = round(매도금액 / 보유수량, 4)
+                        self.trade_info[vturn][vkey]['매도가'] = round(매도금액 / 보유수량, 4)
                     elif 매도금액 == 0:
-                        self.trade_info[vars_turn][vars_key]['매도가'] = self.array_tick[self.indexn, 1]
+                        self.trade_info[vturn][vkey]['매도가'] = self.array_tick[self.indexn, 1]
                     else:
-                        self.trade_info[vars_turn][vars_key]['매도가'] = round(매도금액 / (보유수량 - 미체결수량), 4)
+                        self.trade_info[vturn][vkey]['매도가'] = round(매도금액 / (보유수량 - 미체결수량), 4)
 
-                    self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+                    self.trade_info[vturn][vkey]['주문수량'] = 보유수량
                     self.sell_cond = 0
-                    self.CalculationEyun(vars_turn, vars_key)
+                    self.CalculationEyun(vturn, vkey)
 
-    def CalculationEyun(self, vars_turn, vars_key):
+    def CalculationEyun(self, vturn, vkey):
         """
-        보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vars_turn][vars_key].values()
+        보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vturn][vkey].values()
         """
         if not self.pattern:
-            _, bp, sp, oc, _, _, _, bi, bdt = self.trade_info[vars_turn][vars_key].values()
+            _, bp, sp, oc, _, _, _, bi, bdt = self.trade_info[vturn][vkey].values()
             ht = int((strp_time('%Y%m%d%H%M%S', str(self.index)) - bdt).total_seconds())
             bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
-            if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
+            if self.trade_info[vturn][vkey]['보유중'] == 1:
                 ps = 'LONG'
-                sg, pg, pp = GetBinanceLongPgSgSp(
+                pg, sg, pp = GetBinanceLongPgSgSp(
                     bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
             else:
                 ps = 'SHORT'
-                sg, pg, pp = GetBinanceShortPgSgSp(
+                pg, sg, pp = GetBinanceShortPgSgSp(
                     bg, oc * sp, '시장가' in self.dict_set['코인매수주문구분'], '시장가' in self.dict_set['코인매도주문구분'])
             sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else \
-                self.dict_sconds[vars_key][self.sell_cond]
+                self.dict_sconds[vkey][self.sell_cond]
             abt, bcx = '', True
-            data = ['백테결과', self.name, ps, bt, st, ht, bp, sp, bg, sg, pp, pg, sc, abt, bcx, vars_turn, vars_key]
-            self.bstq_list[vars_key if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
+            data = ('백테결과', self.name, ps, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey)
+            self.bstq_list[vkey if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
             self.sell_count += 1
-        self.trade_info[vars_turn][vars_key] = GetTradeInfo(1)
+        self.trade_info[vturn][vkey] = GetTradeInfo(1)
 
     def PatternModeling(self, gubun):
-        if self.tick_count > self.dict_pattern['인식구간']:
-            last_area_index = self.indexn + self.dict_pattern['조건구간']
-            if last_area_index <= self.last and str(self.index)[:8] == str(self.array_tick[last_area_index, 0])[:8]:
-                self.PatternFind(gubun)
+        last_area_index = self.indexn + self.dict_pattern['조건구간']
+        if last_area_index <= self.last and str(self.index)[:8] == str(self.array_tick[last_area_index, 0])[:8]:
+            self.PatternFind(gubun)
 
     def PatternFind(self, gubun):
         curr_price = self.array_tick[self.indexn, 1]

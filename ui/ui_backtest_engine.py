@@ -46,7 +46,7 @@ def backengine_show(ui, gubun):
 
 
 @thread_decorator
-def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
+def start_backengine(ui, gubun):
     ui.backtest_engine = True
     ui.startday   = int(ui.be_dateEdittttt_01.date().toString('yyyyMMdd'))
     ui.endday     = int(ui.be_dateEdittttt_02.date().toString('yyyyMMdd'))
@@ -64,10 +64,10 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         bctq = Queue()
         ui.back_sques.append(bctq)
     for i in range(20):
-        proc = Process(target=BackSubTotal, args=(i, totalQ, ui.back_sques, ui.dict_set['백테매수시간기준']), daemon=True)
+        proc = Process(target=BackSubTotal, args=(i, ui.totalQ, ui.back_sques, ui.dict_set['백테매수시간기준']), daemon=True)
         proc.start()
         ui.back_sprocs.append(proc)
-        windowQ.put((ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'))
 
     for i in range(multi):
         bpq = Queue()
@@ -79,26 +79,26 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
                     proc = Process(
                         target=StockBackEngine,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques, True),
                         daemon=True
                     )
                 else:
                     proc = Process(
                         target=StockBackEngine,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques),
                         daemon=True
                     )
             else:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
                     proc = Process(
                         target=StockBackEngine2,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques, True),
                         daemon=True
                     )
                 else:
                     proc = Process(
                         target=StockBackEngine2,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques),
                         daemon=True
                     )
         else:
@@ -106,41 +106,41 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
                     proc = Process(
                         target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques, True),
                         daemon=True
                     )
                 else:
                     proc = Process(
                         target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques),
                         daemon=True
                     )
             else:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
                     proc = Process(
                         target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques, True),
                         daemon=True
                     )
                 else:
                     proc = Process(
                         target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2,
-                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        args=(i, ui.windowQ, ui.totalQ, ui.backQ, ui.back_eques, ui.back_sques),
                         daemon=True
                     )
         proc.start()
         ui.back_eprocs.append(proc)
-        windowQ.put((ui_num['백테엔진'], f'연산용 프로세스{i + 1} 생성 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], f'연산용 프로세스{i + 1} 생성 완료'))
 
     if gubun == '주식':
-        webcQ.put(('지수차트', ui.startday))
-        ui.df_kp, ui.df_kd = backQ.get()
+        ui.webcQ.put(('지수차트', ui.startday))
+        ui.df_kp, ui.df_kd = ui.backQ.get()
 
     if not ui.dict_set['백테일괄로딩']:
         file_list = os.listdir(BACK_TEMP)
         for file in file_list:
             os.remove(f'{BACK_TEMP}/{file}')
-        windowQ.put((ui_num['백테엔진'], '이전 임시파일 삭제 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], '이전 임시파일 삭제 완료'))
 
     dict_kd = None
     try:
@@ -163,20 +163,20 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
     except:
         if gubun == '주식':
             if ui.dict_cn is None:
-                windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
+                ui.windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
             elif len(ui.dict_cn) < 100:
-                windowQ.put((ui_num['백테엔진'], '종목명 테이블이 갱신되지 않았습니다. 수동로그인(Alt + S)을 1회 실행하시오.'))
+                ui.windowQ.put((ui_num['백테엔진'], '종목명 테이블이 갱신되지 않았습니다. 수동로그인(Alt + S)을 1회 실행하시오.'))
             elif dict_kd is None:
-                windowQ.put((ui_num['백테엔진'], '종목명 테이블에 코스닥 구분 칼럼이 존재하지 않습니다. 수동로그인(Alt + S)을 1회 실행하시오.'))
+                ui.windowQ.put((ui_num['백테엔진'], '종목명 테이블에 코스닥 구분 칼럼이 존재하지 않습니다. 수동로그인(Alt + S)을 1회 실행하시오.'))
             else:
-                windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
+                ui.windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
         else:
-            windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
+            ui.windowQ.put((ui_num['백테엔진'], '백테디비에 데이터가 존재하지 않습니다. 디비관리창(Alt + D)에서 백테디비를 생성하십시오.'))
         ui.BacktestEngineKill()
         return
 
     if df_mt is None or df_mt.empty:
-        windowQ.put((ui_num['백테엔진'], '시작 또는 종료일자가 잘못 선택되었거나 해당 일자에 데이터가 존재하지 않습니다.'))
+        ui.windowQ.put((ui_num['백테엔진'], '시작 또는 종료일자가 잘못 선택되었거나 해당 일자에 데이터가 존재하지 않습니다.'))
         ui.BacktestEngineKill()
         return
 
@@ -194,36 +194,36 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         code_days[code] = [day for day, codes in day_codes.items() if code in codes]
 
     if divid_mode == '종목코드별 분류' and len(code_days) < multi:
-        windowQ.put((ui_num['백테엔진'], '선택한 일자의 종목의 개수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
+        ui.windowQ.put((ui_num['백테엔진'], '선택한 일자의 종목의 개수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
         ui.BacktestEngineKill()
         return
 
     if divid_mode == '일자별 분류' and len(day_codes) < multi:
-        windowQ.put((ui_num['백테엔진'], '선택한 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
+        ui.windowQ.put((ui_num['백테엔진'], '선택한 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
         ui.BacktestEngineKill()
         return
 
     if divid_mode == '한종목 로딩' and one_code not in code_days.keys():
-        windowQ.put((ui_num['백테엔진'], f'{one_name} 종목은 선택한 일자에 데이터가 존재하지 않습니다.'))
+        ui.windowQ.put((ui_num['백테엔진'], f'{one_name} 종목은 선택한 일자에 데이터가 존재하지 않습니다.'))
         ui.BacktestEngineKill()
         return
 
     if divid_mode == '한종목 로딩' and len(code_days[one_code]) < multi:
-        windowQ.put((ui_num['백테엔진'], f'{one_name} 선택한 종목의 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
+        ui.windowQ.put((ui_num['백테엔진'], f'{one_name} 선택한 종목의 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
         ui.BacktestEngineKill()
         return
 
-    wdzservQ.put(('manager', '백테엔진구동'))
+    ui.wdzservQ.put(('manager', '백테엔진구동'))
 
     for i in range(multi):
         if gubun == '주식':
             ui.back_eques[i].put(('종목명', ui.dict_cn, dict_kd))
         elif ui.dict_set['거래소'] == '바이낸스선물':
             ui.back_eques[i].put(('호가단위', dict_kd))
-    windowQ.put((ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'))
+    ui.windowQ.put((ui_num['백테엔진'], '거래대금순위 및 종목코드 추출 완료'))
 
     if divid_mode == '종목코드별 분류':
-        windowQ.put((ui_num['백테엔진'], '종목별 데이터 크기 추출 시작'))
+        ui.windowQ.put((ui_num['백테엔진'], '종목별 데이터 크기 추출 시작'))
         code_lists = []
         for i in range(multi):
             code_lists.append([code for j, code in enumerate(table_list) if j % multi == i])
@@ -234,12 +234,12 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         dict_lendf = {}
         last = len(table_list)
         for i in range(last):
-            data = backQ.get()
+            data = ui.backQ.get()
             if data[1] != 0:
                 dict_lendf[data[0]] = data[1]
             if (i + 1) % 100 == 0:
-                windowQ.put((ui_num['백테엔진'], f'종목별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
-        windowQ.put((ui_num['백테엔진'], '종목별 데이터 크기 추출 완료'))
+                ui.windowQ.put((ui_num['백테엔진'], f'종목별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
+        ui.windowQ.put((ui_num['백테엔진'], '종목별 데이터 크기 추출 완료'))
 
         code_lists = [[] for _ in range(multi)]
         total_list = [0 for _ in range(multi)]
@@ -269,13 +269,13 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 if total_list[multi_num] < divid_lendf:
                     break
 
-        windowQ.put((ui_num['백테엔진'], '종목코드별 분류 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], '종목코드별 분류 완료'))
         for i, codes in enumerate(code_lists):
             ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, codes, ui.avg_list,
                                   code_days, day_codes, divid_mode, one_code))
 
     elif divid_mode == '일자별 분류':
-        windowQ.put((ui_num['백테엔진'], '일자별 데이터 크기 추출 시작'))
+        ui.windowQ.put((ui_num['백테엔진'], '일자별 데이터 크기 추출 시작'))
         day_lists = []
         for i in range(multi):
             day_lists.append([day for j, day in enumerate(day_list) if j % multi == i])
@@ -286,12 +286,12 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         dict_lendf = {}
         last = len(day_list)
         for i in range(last):
-            data = backQ.get()
+            data = ui.backQ.get()
             if data[1] != 0:
                 dict_lendf[data[0]] = data[1]
             if (i + 1) % 10 == 0:
-                windowQ.put((ui_num['백테엔진'], f'일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
-        windowQ.put((ui_num['백테엔진'], '일자별 데이터 크기 추출 완료'))
+                ui.windowQ.put((ui_num['백테엔진'], f'일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
+        ui.windowQ.put((ui_num['백테엔진'], '일자별 데이터 크기 추출 완료'))
 
         day_lists = [[] for _ in range(multi)]
         total_list = [0 for _ in range(multi)]
@@ -321,12 +321,12 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 if total_list[multi_num] < divid_lendf:
                     break
 
-        windowQ.put((ui_num['백테엔진'], '일자별 분류 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], '일자별 분류 완료'))
         for i, days in enumerate(day_lists):
             ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
                                   code_days, day_codes, divid_mode, one_code))
     else:
-        windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 시작'))
+        ui.windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 시작'))
         day_list = code_days[one_code]
         day_lists = []
         for i in range(multi):
@@ -338,12 +338,12 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         dict_lendf = {}
         last = len(day_list)
         for i in range(last):
-            data = backQ.get()
+            data = ui.backQ.get()
             if data[1] != 0:
                 dict_lendf[data[0]] = data[1]
             if (i + 1) % 10 == 0:
-                windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
-        windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 완료'))
+                ui.windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 중 ... [{i + 1}/{last}]'))
+        ui.windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 데이터 크기 추출 완료'))
 
         day_lists = [[] for _ in range(multi)]
         total_list = [0 for _ in range(multi)]
@@ -373,16 +373,16 @@ def start_backengine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
                 if total_list[multi_num] < divid_lendf:
                     break
 
-        windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 분류 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 분류 완료'))
         for i, days in enumerate(day_lists):
             ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
                                   code_days, day_codes, divid_mode, one_code))
 
     for _ in range(multi):
-        data = backQ.get()
+        data = ui.backQ.get()
         ui.back_count += data
-        windowQ.put((ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'))
-    windowQ.put((ui_num['백테엔진'], '백테엔진 준비 완료'))
+        ui.windowQ.put((ui_num['백테엔진'], f'백테엔진 데이터 로딩 중 ... [{data}]'))
+    ui.windowQ.put((ui_num['백테엔진'], '백테엔진 준비 완료'))
 
 
 def back_code_test1(stg_code, testQ):
