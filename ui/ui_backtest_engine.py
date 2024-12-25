@@ -48,63 +48,88 @@ def backtest_engine_show(ui, gubun):
 @thread_decorator
 def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
     ui.backtest_engine = True
-    ui.startday = int(ui.be_dateEdittttt_01.date().toString('yyyyMMdd'))
-    ui.endday = int(ui.be_dateEdittttt_02.date().toString('yyyyMMdd'))
-    ui.starttime = int(ui.be_lineEdittttt_01.text())
-    ui.endtime = int(ui.be_lineEdittttt_02.text())
-    ui.avg_list = [int(x) for x in ui.be_lineEdittttt_03.text().split(',')]
-    multi = int(ui.be_lineEdittttt_04.text())
-    divid_mode = ui.be_comboBoxxxxx_01.currentText()
-    one_name = ui.be_comboBoxxxxx_02.currentText()
-    one_code = ui.dict_code[one_name] if one_name in ui.dict_code.keys() else one_name
+    ui.startday   = int(ui.be_dateEdittttt_01.date().toString('yyyyMMdd'))
+    ui.endday     = int(ui.be_dateEdittttt_02.date().toString('yyyyMMdd'))
+    ui.starttime  = int(ui.be_lineEdittttt_01.text())
+    ui.endtime    = int(ui.be_lineEdittttt_02.text())
+    ui.avg_list   = [int(x) for x in ui.be_lineEdittttt_03.text().split(',')]
+    multi         = int(ui.be_lineEdittttt_04.text())
+    divid_mode    = ui.be_comboBoxxxxx_01.currentText()
+    one_name      = ui.be_comboBoxxxxx_02.currentText()
+    one_code      = ui.dict_code[one_name] if one_name in ui.dict_code.keys() else one_name
+    ui.multi      = multi
+    ui.divid_mode = divid_mode
 
-    wdzservQ.put(('manager', '백테엔진구동'))
     for i in range(20):
         bctq = Queue()
-        ui.back_cques.append(bctq)
+        ui.back_sques.append(bctq)
     for i in range(20):
-        proc = Process(target=BackSubTotal, args=(i, totalQ, ui.back_cques, ui.dict_set['백테매수시간기준']), daemon=True)
+        proc = Process(target=BackSubTotal, args=(i, totalQ, ui.back_sques, ui.dict_set['백테매수시간기준']), daemon=True)
         proc.start()
-        ui.back_cprocs.append(proc)
+        ui.back_sprocs.append(proc)
         windowQ.put((ui_num['백테엔진'], f'중간집계용 프로세스{i + 1} 생성 완료'))
 
     for i in range(multi):
         bpq = Queue()
+        ui.back_eques.append(bpq)
+
+    for i in range(multi):
         if gubun == '주식':
             if not ui.dict_set['백테주문관리적용']:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True),
-                                   daemon=True)
+                    proc = Process(
+                        target=StockBackEngine,
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        daemon=True
+                    )
                 else:
-                    proc = Process(target=StockBackEngine, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques),
-                                   daemon=True)
+                    proc = Process(
+                        target=StockBackEngine,
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        daemon=True
+                    )
             else:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True),
-                                   daemon=True)
+                    proc = Process(
+                        target=StockBackEngine2,
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        daemon=True
+                    )
                 else:
-                    proc = Process(target=StockBackEngine2, args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques),
-                                   daemon=True)
+                    proc = Process(
+                        target=StockBackEngine2,
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        daemon=True
+                    )
         else:
             if not ui.dict_set['백테주문관리적용']:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
-                    proc = Process(target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
-                                   args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
+                    proc = Process(
+                        target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        daemon=True
+                    )
                 else:
-                    proc = Process(target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
-                                   args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
+                    proc = Process(
+                        target=CoinUpbitBackEngine if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine,
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        daemon=True
+                    )
             else:
                 if i == 0 and ui.dict_set['백테엔진프로파일링']:
                     proc = Process(
                         target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2,
-                        args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques, True), daemon=True)
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques, True),
+                        daemon=True
+                    )
                 else:
                     proc = Process(
                         target=CoinUpbitBackEngine2 if ui.dict_set['거래소'] == '업비트' else CoinFutureBackEngine2,
-                        args=(i, windowQ, bpq, totalQ, backQ, ui.back_cques), daemon=True)
+                        args=(i, windowQ, totalQ, backQ, ui.back_eques, ui.back_sques),
+                        daemon=True
+                    )
         proc.start()
         ui.back_eprocs.append(proc)
-        ui.back_eques.append(bpq)
         windowQ.put((ui_num['백테엔진'], f'연산용 프로세스{i + 1} 생성 완료'))
 
     if gubun == '주식':
@@ -187,6 +212,8 @@ def start_backtest_engine(ui, gubun, windowQ, wdzservQ, backQ, totalQ, webcQ):
         windowQ.put((ui_num['백테엔진'], f'{one_name} 선택한 종목의 일자의 수가 멀티수보다 작습니다. 일자를 늘리십시오.'))
         ui.BacktestEngineKill()
         return
+
+    wdzservQ.put(('manager', '백테엔진구동'))
 
     for i in range(multi):
         if gubun == '주식':

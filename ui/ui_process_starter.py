@@ -142,7 +142,7 @@ def UpdateWindowTitle(ui, windowQ, soundQ, queryQ, chartQ, hogaQ, creceivQ, ctra
         text = f'{text} | 키움증권'
     if ui.showQsize:
         beqsize = sum((stq.qsize() for stq in ui.back_eques)) if ui.back_eques else 0
-        bstqsize = sum((ctq.qsize() for ctq in ui.back_cques)) if ui.back_cques else 0
+        bstqsize = sum((ctq.qsize() for ctq in ui.back_sques)) if ui.back_sques else 0
         text = f'{text} | sreceivQ[{ui.srqsize}] | straderQ[{ui.stqsize}] | sstrateyQ[{ui.ssqsize}] | ' \
                f'creceivQ[{creceivQ.qsize()}] | ctraderQ[{ctraderQ.qsize()}] | cstrateyQ[{cstgQ.qsize()}] | ' \
                f'windowQ[{windowQ.qsize()}] | queryQ[{queryQ.qsize()}] | chartQ[{chartQ.qsize()}] | ' \

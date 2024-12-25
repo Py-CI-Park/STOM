@@ -14,13 +14,14 @@ from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellCo
 
 # noinspection PyUnusedLocal
 class CoinUpbitBackEngine:
-    def __init__(self, gubun, wq, pq, tq, bq, bstq_list, profile=False):
+    def __init__(self, gubun, wq, tq, bq, beq_list, bstq_list, profile=False):
         gc.disable()
         self.gubun        = gubun
         self.wq           = wq
-        self.pq           = pq
         self.tq           = tq
         self.bq           = bq
+        self.beq_list     = beq_list
+        self.beq          = beq_list[gubun]
         self.bstq_list    = bstq_list
         self.profile      = profile
         self.dict_set     = DICT_SET
@@ -95,7 +96,7 @@ class CoinUpbitBackEngine:
 
     def MainLoop(self):
         while True:
-            data = self.pq.get()
+            data = self.beq.get()
             if '정보' in data[0]:
                 if self.back_type == '최적화':
                     if data[0] == '백테정보':
@@ -254,8 +255,30 @@ class CoinUpbitBackEngine:
                 self.dict_set = data[1]
             elif data[0] in ('데이터크기', '데이터로딩'):
                 self.DataLoad(data)
+            elif data[0] == '데이터이동':
+                self.SendData(data)
+            elif data[0] == '데이터전송':
+                self.RecvdData(data)
             elif data == '벤치점수요청':
                 self.bq.put((self.total_ticks, self.total_secds, round(self.total_ticks / self.total_secds, 2)))
+
+    def SendData(self, data):
+        _, cnt, procn = data
+        for i, code in enumerate(self.code_list):
+            if i >= cnt:
+                data = ('데이터전송', code, self.dict_tik_ar[code])
+                self.beq_list[procn].put(data)
+                del self.dict_tik_ar[code]
+                self.wq.put((ui_num['C백테스트'], f'백테엔진 데이터 재분배: 종목코드[{code}] 엔진번호[{self.gubun}->{procn}]'))
+        self.code_list = self.code_list[:cnt]
+
+    def RecvdData(self, data):
+        _, code, arry = data
+        if code in self.dict_tik_ar.keys():
+            arry = np.r_[self.dict_tik_ar[code], arry]
+        self.dict_tik_ar[code] = arry
+        if code not in self.code_list:
+            self.code_list.append(code)
 
     def InitDivid(self, pattern):
         self.sell_count = 0
@@ -433,7 +456,8 @@ class CoinUpbitBackEngine:
             self.tq.put(('전체틱수', total_ticks))
             self.tick_calcul = True
 
-        for code in self.code_list:
+        len_codes = len(self.code_list)
+        for k, code in enumerate(self.code_list):
             self.code = self.name = code
             self.total_count = 0
             self.SetArrayTick(code, same_days, same_time)
@@ -456,7 +480,7 @@ class CoinUpbitBackEngine:
                     if self.back_type is None: break
                     if self.opti_turn in (1, 3): self.tq.put('탐색완료')
 
-            self.tq.put(('백테완료', self.total_count))
+            self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
 
         if self.pattern: self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
         if self.profile: self.pr.print_stats(sort='cumulative')

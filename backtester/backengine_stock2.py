@@ -43,7 +43,8 @@ class StockBackEngine2(StockBackEngine):
             self.tq.put(('전체틱수', total_ticks))
             self.tick_calcul = True
 
-        for code in self.code_list:
+        len_codes = len(self.code_list)
+        for k, code in enumerate(self.code_list):
             if self.dict_set['백테주문관리적용'] and self.dict_set['주식매수금지블랙리스트'] and code in self.dict_set['주식블랙리스트'] and self.back_type != '백파인더':
                 self.tq.put(('백테완료', 0))
                 continue
@@ -71,7 +72,7 @@ class StockBackEngine2(StockBackEngine):
                     if self.back_type is None: break
                     if self.opti_turn in (1, 3): self.tq.put('탐색완료')
 
-            self.tq.put(('백테완료', self.total_count))
+            self.tq.put(('백테완료', self.total_count, self.gubun, k+1, len_codes))
 
         if self.pattern: self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
         if self.profile: self.pr.print_stats(sort='cumulative')

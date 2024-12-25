@@ -160,8 +160,8 @@ class Window(QMainWindow):
         self.sell_index       = []
         self.back_eprocs      = []
         self.back_eques       = []
-        self.back_cprocs      = []
-        self.back_cques       = []
+        self.back_sprocs      = []
+        self.back_sques       = []
         self.avg_list         = []
         self.back_count       = 0
         self.startday         = 0
@@ -170,6 +170,8 @@ class Window(QMainWindow):
         self.endtime          = 0
         self.ct_test          = 0
         self.back_scount      = 0
+        self.multi            = 0
+        self.divide_mode      = str
 
         self.stock_simulator_alive = False
         self.backengin_window_open = False
