@@ -582,8 +582,7 @@ class StrategyBinanceFuture:
             if BBT and BLK and C20 and (A or B or (C and D) or (C and E) or D or E or F or G):
                 매수수량 = 0
                 if not (F or G):
-                    oc_ratio = dict_order_ratio[self.dict_set['코인매수분할방법']][self.dict_set['코인매수분할횟수']][분할매수횟수]
-                    매수수량 = round(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100, self.dict_info[종목코드]['소숫점자리수'])
+                    매수수량 = self.SetBuyCount(분할매수횟수, 매입가, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), self.dict_info[종목코드]['소숫점자리수'])
 
                 if A or B or (C and (D or E)) or F or G:
                     BUY_LONG, SELL_SHORT = True, True
@@ -648,9 +647,7 @@ class StrategyBinanceFuture:
                 if A or B or H or J or K or L or M or N:
                     매도수량 = 보유수량
                 elif not (F or G):
-                    oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][분할매도횟수]
-                    매도수량 = round(self.int_tujagm / 매입가 * oc_ratio / 100, self.dict_info[종목코드]['소숫점자리수'])
-                    if 매도수량 > 보유수량 or 분할매도횟수 + 1 == self.dict_set['코인매도분할횟수']: 매도수량 = 보유수량
+                    매도수량 = self.SetSellCount(분할매도횟수, 보유수량, 매입가, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), self.dict_info[종목코드]['소숫점자리수'])
 
                 if A or B or (C and (D or E)) or F or G:
                     if 시분초 < self.dict_set['코인장초전략종료시간']:
@@ -706,6 +703,62 @@ class StrategyBinanceFuture:
 
             gap = (now() - 틱수신시간).total_seconds()
             self.windowQ.put((ui_num['C단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.'))
+
+    def SetBuyCount(self, 분할매수횟수, 매입가, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도, 소숫점자리수):
+        if self.dict_set['코인비중조절'][0] == 0:
+            betting = self.int_tujagm
+        else:
+            if self.dict_set['코인비중조절'][0] == 1:
+                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+            elif self.dict_set['코인비중조절'][0] == 2:
+                비중조절기준 = 등락율각도
+            else:
+                비중조절기준 = 당일거래대금각도
+
+            if 비중조절기준 < self.dict_set['코인비중조절'][1]:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][2]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][4]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][5]:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][6]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][7]:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][8]
+            else:
+                betting = self.int_tujagm * self.dict_set['코인비중조절'][9]
+
+        oc_ratio = dict_order_ratio[self.dict_set['코인매수분할방법']][self.dict_set['코인매수분할횟수']][분할매수횟수]
+        매수수량 = round(betting / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100, 소숫점자리수)
+        return 매수수량
+
+    def SetSellCount(self, 분할매도횟수, 보유수량, 매입가, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도, 소숫점자리수):
+        if self.dict_set['코인매도분할횟수'] == 1:
+            return 보유수량
+        else:
+            if self.dict_set['코인비중조절'][0] == 0:
+                betting = self.int_tujagm
+            else:
+                if self.dict_set['코인비중조절'][0] == 1:
+                    비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                elif self.dict_set['코인비중조절'][0] == 2:
+                    비중조절기준 = 등락율각도
+                else:
+                    비중조절기준 = 당일거래대금각도
+
+                if 비중조절기준 < self.dict_set['코인비중조절'][1]:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][2]
+                elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][4]
+                elif 비중조절기준 < self.dict_set['코인비중조절'][5]:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][6]
+                elif 비중조절기준 < self.dict_set['코인비중조절'][7]:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][8]
+                else:
+                    betting = self.int_tujagm * self.dict_set['코인비중조절'][9]
+
+            oc_ratio = dict_order_ratio[self.dict_set['코인매도분할방법']][self.dict_set['코인매도분할횟수']][분할매도횟수]
+            매도수량 = round(betting / 매입가 * oc_ratio / 100, 소숫점자리수)
+            if 매도수량 > 보유수량 or 분할매도횟수 + 1 == self.dict_set['코인매도분할횟수']: 매도수량 = 보유수량
+            return 매도수량
 
     def Buy(self, 종목코드, BUY_LONG, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이):
         if self.dict_set['코인장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None and self.pattern_sell1 is not None:

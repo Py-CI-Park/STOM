@@ -1535,6 +1535,14 @@ def sj_button_cicked_30(ui):
     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
 
+def sj_button_cicked_31(ui):
+    ui.dialog_bjjs.show() if not ui.dialog_bjjs.isVisible() else ui.dialog_bjjs.close()
+
+
+def sj_button_cicked_32(ui):
+    ui.dialog_bjjc.show() if not ui.dialog_bjjc.isVisible() else ui.dialog_bjjc.close()
+
+
 def LoadSettings(ui):
     ui.sj_set_comBoxx_01.clear()
     file_list = os.listdir(DB_PATH)

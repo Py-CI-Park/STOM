@@ -35,7 +35,6 @@ from ui.ui_update_progressbar import update_progressbar
 
 from ui.ui_etc import *
 from ui.ui_pattern import *
-from ui.ui_event_filter import *
 from ui.ui_activated_b import *
 from ui.ui_activated_c import *
 from ui.ui_activated_s import *
@@ -45,8 +44,10 @@ from ui.ui_cell_clicked import *
 from ui.ui_text_changed import *
 from ui.ui_process_kill import *
 from ui.ui_return_press import *
+from ui.ui_event_filter import *
 from ui.ui_activated_etc import *
 from ui.ui_process_alive import *
+from ui.ui_betting_cotrol import *
 from ui.ui_backtest_engine import *
 from ui.ui_key_press_event import *
 from ui.ui_checkbox_changed import *
@@ -746,6 +747,15 @@ class Window(QMainWindow):
     def sjButtonClicked_28(self): sj_button_cicked_28(self, proc_query, queryQ)
     def sjButtonClicked_29(self): sj_button_cicked_29(self)
     def sjButtonClicked_30(self): sj_button_cicked_30(self)
+    def sjButtonClicked_31(self): sj_button_cicked_31(self)
+    def sjButtonClicked_32(self): sj_button_cicked_32(self)
+    # =================================================================================================================
+    def bjsButtonClicked_01(self): bjs_button_clicked_01(self)
+    def bjsButtonClicked_02(self): bjs_button_clicked_02(self, proc_query, queryQ)
+    def bjcButtonClicked_01(self): bjc_button_clicked_01(self)
+    def bjcButtonClicked_02(self): bjc_button_clicked_02(self, proc_query, queryQ)
+    def bjsCheckChanged_01(self, state):  bjs_check_changed_01(self, state)
+    def bjcCheckChanged_01(self, state):  bjc_check_changed_01(self, state)
     # =================================================================================================================
     def StomLiveProcessAlive(self):       return stom_live_process_alive(self)
     def SimulatorProcessAlive(self):      return simulator_process_alive(self)

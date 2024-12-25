@@ -753,29 +753,11 @@ class CoinFutureBackEngine:
                     SELL_LONG, BUY_SHORT = False, False
                     if not self.trade_info[vars_turn][vars_key]['보유중']:
                         if not 관심종목: continue
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = round(self.betting / 현재가, 8)
+                        self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
                         exec(self.buystg)
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
-                            self.trade_info[vars_turn][vars_key].values()
-                        self.indexb = 매수틱번호
-                        if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
-                            _, 수익금, 수익률 = GetBinanceLongPgSgSp(
-                                보유수량 * 매수가, 보유수량 * 현재가,
-                                '시장가' in self.dict_set['코인매수주문구분'],
-                                '시장가' in self.dict_set['코인매도주문구분'])
-                        else:
-                            _, 수익금, 수익률 = GetBinanceShortPgSgSp(
-                                보유수량 * 매수가, 보유수량 * 현재가,
-                                '시장가' in self.dict_set['코인매수주문구분'],
-                                '시장가' in self.dict_set['코인매도주문구분'])
-                        if 수익률 > 최고수익률:
-                            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
-                        elif 수익률 < 최저수익률:
-                            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
-                        보유시간 = (now_utc() - 매수시간).total_seconds()
+                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now_utc())
                         포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
                         exec(self.sellstg)
 
         elif self.opti_turn == 3:
@@ -795,32 +777,14 @@ class CoinFutureBackEngine:
                     SELL_LONG, BUY_SHORT = False, False
                     if not self.trade_info[vars_turn][vars_key]['보유중']:
                         if not 관심종목: continue
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = round(self.betting / 현재가, 8)
+                        self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
                         if self.back_type != '조건최적화':
                             exec(self.buystg)
                         else:
                             exec(self.dict_buystg[index])
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
-                            self.trade_info[vars_turn][vars_key].values()
-                        self.indexb = 매수틱번호
-                        if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
-                            _, 수익금, 수익률 = GetBinanceLongPgSgSp(
-                                보유수량 * 매수가, 보유수량 * 현재가,
-                                '시장가' in self.dict_set['코인매수주문구분'],
-                                '시장가' in self.dict_set['코인매도주문구분'])
-                        else:
-                            _, 수익금, 수익률 = GetBinanceShortPgSgSp(
-                                보유수량 * 매수가, 보유수량 * 현재가,
-                                '시장가' in self.dict_set['코인매수주문구분'],
-                                '시장가' in self.dict_set['코인매도주문구분'])
-                        if 수익률 > 최고수익률:
-                            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
-                        elif 수익률 < 최저수익률:
-                            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
-                        보유시간 = (now_utc() - 매수시간).total_seconds()
+                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now_utc())
                         포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
                         else:
@@ -840,30 +804,57 @@ class CoinFutureBackEngine:
             SELL_LONG, BUY_SHORT = False, False
             if not self.trade_info[vars_turn][vars_key]['보유중']:
                 if not 관심종목: return
-                self.trade_info[vars_turn][vars_key]['주문수량'] = round(self.betting / 현재가, 8)
+                self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30))
                 exec(self.buystg)
             else:
-                _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
-                    self.trade_info[vars_turn][vars_key].values()
-                self.indexb = 매수틱번호
-                if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
-                    _, 수익금, 수익률 = GetBinanceLongPgSgSp(
-                        보유수량 * 매수가, 보유수량 * 현재가,
-                        '시장가' in self.dict_set['코인매수주문구분'],
-                        '시장가' in self.dict_set['코인매도주문구분'])
-                else:
-                    _, 수익금, 수익률 = GetBinanceShortPgSgSp(
-                        보유수량 * 매수가, 보유수량 * 현재가,
-                        '시장가' in self.dict_set['코인매수주문구분'],
-                        '시장가' in self.dict_set['코인매도주문구분'])
-                if 수익률 > 최고수익률:
-                    self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
-                elif 수익률 < 최저수익률:
-                    self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
-                보유시간 = (now_utc() - 매수시간).total_seconds()
+                수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now_utc())
                 포지션 = 'LONG' if self.trade_info[vars_turn][vars_key]['보유중'] == 1 else 'SHORT'
-                self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
                 exec(self.sellstg)
+
+    def SetBuyCount(self, vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도):
+        if self.dict_set['코인비중조절'][0] == 0:
+            betting = self.betting
+        else:
+            if self.dict_set['코인비중조절'][0] == 1:
+                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+            elif self.dict_set['코인비중조절'][0] == 2:
+                비중조절기준 = 등락율각도
+            else:
+                비중조절기준 = 당일거래대금각도
+
+            if 비중조절기준 < self.dict_set['코인비중조절'][1]:
+                betting = self.betting * self.dict_set['코인비중조절'][5]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][2]:
+                betting = self.betting * self.dict_set['코인비중조절'][6]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][3]:
+                betting = self.betting * self.dict_set['코인비중조절'][7]
+            elif 비중조절기준 < self.dict_set['코인비중조절'][4]:
+                betting = self.betting * self.dict_set['코인비중조절'][8]
+            else:
+                betting = self.betting * self.dict_set['코인비중조절'][9]
+
+        self.trade_info[vars_turn][vars_key]['주문수량'] = round(betting / 현재가, 8)
+
+    def SetSellCount(self, vars_turn, vars_key, 현재가, now_time):
+        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = self.trade_info[vars_turn][vars_key].values()
+        if self.trade_info[vars_turn][vars_key]['보유중'] == 1:
+            _, 수익금, 수익률 = GetBinanceLongPgSgSp(
+                보유수량 * 매수가, 보유수량 * 현재가,
+                '시장가' in self.dict_set['코인매수주문구분'],
+                '시장가' in self.dict_set['코인매도주문구분'])
+        else:
+            _, 수익금, 수익률 = GetBinanceShortPgSgSp(
+                보유수량 * 매수가, 보유수량 * 현재가,
+                '시장가' in self.dict_set['코인매수주문구분'],
+                '시장가' in self.dict_set['코인매도주문구분'])
+        if 수익률 > 최고수익률:
+            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
+        elif 수익률 < 최저수익률:
+            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
+        보유시간 = (now_time - 매수시간).total_seconds()
+        self.indexb = 매수틱번호
+        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+        return 수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호
 
     def Buy(self, vars_turn, vars_key, gubun):
         if self.back_type == '백테스트':

@@ -100,12 +100,12 @@ class BackSubTotal:
             data = [index, 종목명, 시가총액또는포지션, 매수시간, 매도시간, 보유시간, 매수가, 매도가, 매수금액, 매도금액, 수익률, 수익금, 매도조건, 추가매수시간]
         self.ddict_tsg[vars_turn][vars_key].append(data)
 
-        if 잔량없음:
-            arry_bct  = self.ddict_bct[vars_turn][vars_key]
-            arry_bct_ = arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)]
-            arry_bct_[:, 1] += 1
-            arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)] = arry_bct_
-            self.ddict_bct[vars_turn][vars_key] = arry_bct
+        arry_bct  = self.ddict_bct[vars_turn][vars_key]
+        arry_bct_ = arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)]
+        arry_bct_[:, 2] += 매수금액
+        if 잔량없음: arry_bct_[:, 1] += 1
+        arry_bct[(매수시간 <= arry_bct[:, 0]) & (arry_bct[:, 0] <= 매도시간)] = arry_bct_
+        self.ddict_bct[vars_turn][vars_key] = arry_bct
 
     def DivideData(self):
         if self.ddict_tsg:
@@ -118,6 +118,7 @@ class BackSubTotal:
             self.arry_bct = arry_bct
         else:
             self.arry_bct[:, 1] += arry_bct[:, 1]
+            self.arry_bct[:, 2] += arry_bct[:, 2]
         self.list_tsg += list_tsg
 
     def SendSubTotal1(self):

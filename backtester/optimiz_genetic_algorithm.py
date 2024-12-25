@@ -268,7 +268,7 @@ class OptimizeGeneticAlgorithm:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증 기간 {vsday} ~ {veday}'))
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
-        arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
+        arry_bct = np.zeros((len(df_mt), 3), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
         data = ('백테정보', self.ui_gubun, None, valid_days, arry_bct, betting, len(day_list))
         for q in self.bstq_list:
@@ -322,7 +322,7 @@ class OptimizeGeneticAlgorithm:
                 vars_lists = self.GetVarslist()
                 if len(vars_lists) == 1000:
                     data = (ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 [{k}][{i+1}/{vc}]단계 시작, 최고 기준값[{hstd:,.2f}]')
-                    threading_timer(5, self.wq.put, data)
+                    threading_timer(6, self.wq.put, data)
 
                     data = ('변수정보', vars_lists)
                     self.tq.put(data)
@@ -350,7 +350,7 @@ class OptimizeGeneticAlgorithm:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 모든 경우의 수 탐색 완료'))
                 break
 
-            if len(self.result) > 0: self.SetOptilist(k, int(vc / 4) if vc / 4 > 5 else 5, goal, optistandard)
+            if len(self.result) > 0: self.SetOptilist(k, int(vc / 4) if vc / 4 > 5 else 5, goal)
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 현재 경우의수[{self.total_count:,.0f}] 목표 경우의수[{goal:,.0f}]'))
             k += 1
 
@@ -390,16 +390,13 @@ class OptimizeGeneticAlgorithm:
                     break
         return vars_lists
 
-    def SetOptilist(self, count, rank, goal, optistandard):
+    def SetOptilist(self, count, rank, goal):
         self.vars_list = [[] for _ in self.vars_list]
         rs_list = sorted(self.result.items(), key=operator.itemgetter(0), reverse=True)
 
         text = f'{self.backname} 결과\n'
         for std, vars_list in rs_list[:rank]:
-            if optistandard == 'TG':
-                text += f' 기준값 [{std:,.0f}] 변수 {vars_list}\n'
-            else:
-                text += f' 기준값 [{std:.2f}] 변수 {vars_list}\n'
+            text += f' 기준값 [{std:.2f}] 변수 {vars_list}\n'
             for i, vars_ in enumerate(vars_list):
                 if vars_ not in self.vars_list[i]:
                     self.vars_list[i].append(vars_)
@@ -407,7 +404,7 @@ class OptimizeGeneticAlgorithm:
 
         self.total_count = 1
         for i, vars_ in enumerate(self.vars_list):
-            if count < 2 and self.high_list[i] not in vars_:
+            if count < 4 and self.high_list[i] not in vars_:
                 self.vars_list[i].append(self.high_list[i])
             self.vars_list[i].sort()
             self.total_count *= len(vars_)
@@ -415,10 +412,7 @@ class OptimizeGeneticAlgorithm:
         if self.total_count <= goal:
             text = ''
             for std, vars_list in rs_list[rank:100 - rank]:
-                if optistandard == 'TG':
-                    text += f' 기준값 [{std:,.0f}] 변수 {vars_list}\n'
-                else:
-                    text += f' 기준값 [{std:.2f}] 변수 {vars_list}\n'
+                text += f' 기준값 [{std:.2f}] 변수 {vars_list}\n'
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], text[:-1]))
 
     def SaveVarslist(self, rank, optistandard, buystg, sellstg):
@@ -430,7 +424,8 @@ class OptimizeGeneticAlgorithm:
             df.to_sql(self.savename, con, if_exists='append', chunksize=1000)
         con.close()
         self.high_vars = rs_list[0][1]
-        self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 상위100위 결과 저장 완료'))
+        data = (ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 상위100위 결과 저장 완료')
+        threading_timer(5, self.wq.put, data)
 
     def SysExit(self, cancel):
         for proc in self.bst_procs:

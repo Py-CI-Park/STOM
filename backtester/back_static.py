@@ -710,7 +710,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, onegm, mdd, startday, endday,
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 4])
     # noinspection PyTypeChecker
     plt.subplot(gs[0])
-    plt.plot(df_bct.index, df_bct['보유종목수'], label='보유종목수', color='g')
+    plt.plot(df_bct.index, df_bct['보유금액'], label='보유금액', color='g')
     plt.xticks([])
     if buy_vars is None:
         plt.xlabel('\n' + back_text + '\n' + label_text)
@@ -762,7 +762,7 @@ def GetResultDataframe(ui_gubun, list_tsg, arry_bct):
     df_tsg['수익금합계'] = df_tsg['수익금'].cumsum()
     df_tsg = df_tsg[columns2]
     arry_bct = arry_bct[arry_bct[:, 1] > 0]
-    df_bct = pd.DataFrame(arry_bct[:, 1], columns=['보유종목수'], index=arry_bct[:, 0])
+    df_bct = pd.DataFrame(arry_bct[:, 1:], columns=['보유종목수', '보유금액'], index=arry_bct[:, 0])
     df_bct.index = df_bct.index.astype(str)
     return df_tsg, df_bct
 
@@ -807,7 +807,7 @@ def GetBackResult(arry_tsg, arry_bct, betting, day_count, ui_gubun):
         amp    = abs(arry_m[:, 2].mean()) if len(arry_m) > 0 else 0
         try:    mhct  = arry_bct[int(len(arry_bct) * 0.01):, 1].max() if len(arry_bct) > 100 else arry_bct[:, 1].max()
         except: mhct  = 0
-        try:    onegm = int(betting * mhct) if int(betting * mhct) > betting else betting
+        try:    onegm = arry_bct[int(len(arry_bct) * 0.01):, 2].max()
         except: onegm = betting
         tsp  = round(tsg / onegm * 100, 2)
         cagr = round(tsp / day_count * (250 if ui_gubun == 'S' else 365), 2)

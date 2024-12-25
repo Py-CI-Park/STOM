@@ -207,8 +207,9 @@ class Total:
                 self.vars_list = data[1]
                 self.opti_turn = data[2]
                 self.vars      = [var[1] for var in self.vars_list]
-                start = now()
-                tt = 0
+                if self.opti_turn != 4:
+                    tt = 0
+                    start = now()
             elif data[0] == '경우의수':
                 self.total_count = data[1]
                 self.back_count  = data[2]
@@ -484,7 +485,7 @@ class Optimize:
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
-        arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
+        arry_bct = np.zeros((len(df_mt), 3), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
         data = ('백테정보', self.ui_gubun, list_days, None, arry_bct, betting, len(day_list))
         for q in self.bstq_list:

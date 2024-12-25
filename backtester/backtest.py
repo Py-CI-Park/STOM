@@ -290,7 +290,7 @@ class BackTest:
         day_count = len(list(set(df_mt['일자'].to_list())))
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
-        arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
+        arry_bct = np.zeros((len(df_mt), 3), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
         data = ('백테정보', self.ui_gubun, None, None, arry_bct, betting, day_count)
         for q in self.bstq_list:

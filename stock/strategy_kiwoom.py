@@ -624,8 +624,7 @@ class StrategyKiwoom:
                 매수수량 = 0
 
                 if A or (B and C) or C:
-                    oc_ratio = dict_order_ratio[self.dict_set['주식매수분할방법']][self.dict_set['주식매수분할횟수']][분할매수횟수]
-                    매수수량 = int(self.int_tujagm / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100)
+                    매수수량 = self.SetBuyCount(분할매수횟수, 매입가, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), 전일비, 회전율, 전일동시간비)
 
                 if A or (B and C) or D:
                     매수 = True
@@ -676,9 +675,7 @@ class StrategyKiwoom:
                 if A or E or F:
                     매도수량 = 보유수량
                 elif (B and C) or C:
-                    oc_ratio = dict_order_ratio[self.dict_set['주식매도분할방법']][self.dict_set['주식매도분할횟수']][분할매도횟수]
-                    매도수량 = int(self.int_tujagm / 매입가 * oc_ratio / 100)
-                    if 매도수량 > 보유수량 or 분할매도횟수 + 1 == self.dict_set['주식매도분할횟수']: 매도수량 = 보유수량
+                    매도수량 = self.SetSellCount(분할매도횟수, 보유수량, 매입가, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), 전일비, 회전율, 전일동시간비)
 
                 if A or (B and C) or D:
                     if 시분초 < self.dict_set['주식장초전략종료시간']:
@@ -716,6 +713,74 @@ class StrategyKiwoom:
         if 틱수신시간 != 0:
             gap = (now() - 틱수신시간).total_seconds()
             self.kwzservQ.put(('window', (ui_num['S단순텍스트'], f'전략스 연산 시간 알림 - 수신시간과 연산시간의 차이는 [{gap:.6f}]초입니다.')))
+
+    def SetBuyCount(self, 분할매수횟수, 매입가, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도, 전일비, 회전율, 전일동시간비):
+        if self.dict_set['주식비중조절'][0] == 0:
+            betting = self.int_tujagm
+        else:
+            if self.dict_set['주식비중조절'][0] == 1:
+                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+            elif self.dict_set['주식비중조절'][0] == 2:
+                비중조절기준 = 등락율각도
+            elif self.dict_set['주식비중조절'][0] == 3:
+                비중조절기준 = 당일거래대금각도
+            elif self.dict_set['주식비중조절'][0] == 4:
+                비중조절기준 = 전일비
+            elif self.dict_set['주식비중조절'][0] == 5:
+                비중조절기준 = 회전율
+            else:
+                비중조절기준 = 전일동시간비
+
+            if 비중조절기준 < self.dict_set['주식비중조절'][1]:
+                betting = self.int_tujagm * self.dict_set['주식비중조절'][2]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][3]:
+                betting = self.int_tujagm * self.dict_set['주식비중조절'][4]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][5]:
+                betting = self.int_tujagm * self.dict_set['주식비중조절'][6]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][7]:
+                betting = self.int_tujagm * self.dict_set['주식비중조절'][8]
+            else:
+                betting = self.int_tujagm * self.dict_set['주식비중조절'][9]
+
+        oc_ratio = dict_order_ratio[self.dict_set['주식매수분할방법']][self.dict_set['주식매수분할횟수']][분할매수횟수]
+        매수수량 = int(betting / (현재가 if 매입가 == 0 else 매입가) * oc_ratio / 100)
+        return 매수수량
+
+    def SetSellCount(self, 분할매도횟수, 보유수량, 매입가, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도, 전일비, 회전율, 전일동시간비):
+        if self.dict_set['주식매도분할횟수'] == 1:
+            return 보유수량
+        else:
+            if self.dict_set['주식비중조절'][0] == 0:
+                betting = self.int_tujagm
+            else:
+                if self.dict_set['주식비중조절'][0] == 1:
+                    비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+                elif self.dict_set['주식비중조절'][0] == 2:
+                    비중조절기준 = 등락율각도
+                elif self.dict_set['주식비중조절'][0] == 3:
+                    비중조절기준 = 당일거래대금각도
+                elif self.dict_set['주식비중조절'][0] == 4:
+                    비중조절기준 = 전일비
+                elif self.dict_set['주식비중조절'][0] == 5:
+                    비중조절기준 = 회전율
+                else:
+                    비중조절기준 = 전일동시간비
+
+                if 비중조절기준 < self.dict_set['주식비중조절'][1]:
+                    betting = self.int_tujagm * self.dict_set['주식비중조절'][2]
+                elif 비중조절기준 < self.dict_set['주식비중조절'][3]:
+                    betting = self.int_tujagm * self.dict_set['주식비중조절'][4]
+                elif 비중조절기준 < self.dict_set['주식비중조절'][5]:
+                    betting = self.int_tujagm * self.dict_set['주식비중조절'][6]
+                elif 비중조절기준 < self.dict_set['주식비중조절'][7]:
+                    betting = self.int_tujagm * self.dict_set['주식비중조절'][8]
+                else:
+                    betting = self.int_tujagm * self.dict_set['주식비중조절'][9]
+
+            oc_ratio = dict_order_ratio[self.dict_set['주식매도분할방법']][self.dict_set['주식매도분할횟수']][분할매도횟수]
+            매도수량 = int(betting / 매입가 * oc_ratio / 100)
+            if 매도수량 > 보유수량 or 분할매도횟수 + 1 == self.dict_set['주식매도분할횟수']: 매도수량 = 보유수량
+            return 매도수량
 
     def Buy(self, 종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이):
         if self.dict_set['주식장초패턴인식'] and not self.stg_change and self.pattern_buy1 is not None:

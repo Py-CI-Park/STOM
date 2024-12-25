@@ -257,7 +257,7 @@ class OptimizeConditions:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 검증 기간 {vsday} ~ {veday}'))
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
 
-        arry_bct = np.zeros((len(df_mt), 2), dtype='int64')
+        arry_bct = np.zeros((len(df_mt), 3), dtype='int64')
         arry_bct[:, 0] = df_mt['index'].values
         data = ('백테정보', self.ui_gubun, None, valid_days, arry_bct, betting, len(day_list))
         for q in self.bstq_list:
@@ -371,7 +371,7 @@ class OptimizeConditions:
         for key, value in rs_list[:rank]:
             buyconds  = 'if ' + ':\n    매수 = False\nelif '.join(value[0]) + ':\n    매수 = False'
             sellconds = 'if ' + ':\n    매도 = True\nelif '.join(value[1]) + ':\n    매도 = True'
-            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 - {self.optistandard}[{key}]\n'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 - {self.optistandard}[{key:,.2f}]\n'))
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 - 매수조건\n{buyconds}\n'))
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 결과 - 매도조건\n{sellconds}\n'))
             data = [[self.optistandard, key, buyconds, sellconds]]

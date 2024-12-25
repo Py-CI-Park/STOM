@@ -781,19 +781,10 @@ class StockBackEngine:
                     매수, 매도 = True, False
                     if not self.trade_info[vars_turn][vars_key]['보유중']:
                         if not 관심종목: continue
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = int(self.betting / 현재가)
+                        self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), 전일비, 회전율, 전일동시간비)
                         exec(self.buystg)
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
-                            self.trade_info[vars_turn][vars_key].values()
-                        self.indexb = 매수틱번호
-                        _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
-                        if 수익률 > 최고수익률:
-                            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
-                        elif 수익률 < 최저수익률:
-                            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
-                        보유시간 = (now() - 매수시간).total_seconds()
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now())
                         exec(self.sellstg)
 
         elif self.opti_turn == 3:
@@ -812,22 +803,13 @@ class StockBackEngine:
                     매수, 매도 = True, False
                     if not self.trade_info[vars_turn][vars_key]['보유중']:
                         if not 관심종목: continue
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = int(self.betting / 현재가)
+                        self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), 전일비, 회전율, 전일동시간비)
                         if self.back_type != '조건최적화':
                             exec(self.buystg)
                         else:
                             exec(self.dict_buystg[index])
                     else:
-                        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
-                            self.trade_info[vars_turn][vars_key].values()
-                        self.indexb = 매수틱번호
-                        _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
-                        if 수익률 > 최고수익률:
-                            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
-                        elif 수익률 < 최저수익률:
-                            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
-                        보유시간 = (now() - 매수시간).total_seconds()
-                        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+                        수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now())
                         if self.back_type != '조건최적화':
                             exec(self.sellstg)
                         else:
@@ -847,20 +829,54 @@ class StockBackEngine:
             매수, 매도 = True, False
             if not self.trade_info[vars_turn][vars_key]['보유중']:
                 if not 관심종목: return
-                self.trade_info[vars_turn][vars_key]['주문수량'] = int(self.betting / 현재가)
+                self.SetBuyCount(vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도(30), 당일거래대금각도(30), 전일비, 회전율, 전일동시간비)
                 exec(self.buystg)
             else:
-                _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
-                    self.trade_info[vars_turn][vars_key].values()
-                self.indexb = 매수틱번호
-                _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
-                if 수익률 > 최고수익률:
-                    self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
-                elif 수익률 < 최저수익률:
-                    self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
-                보유시간 = (now() - 매수시간).total_seconds()
-                self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+                수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호 = self.SetSellCount(vars_turn, vars_key, 현재가, now())
                 exec(self.sellstg)
+
+    def SetBuyCount(self, vars_turn, vars_key, 현재가, 고가, 저가, 등락율각도, 당일거래대금각도, 전일비, 회전율, 전일동시간비):
+        if self.dict_set['주식비중조절'][0] == 0:
+            betting = self.betting
+        else:
+            if self.dict_set['주식비중조절'][0] == 1:
+                비중조절기준 = round((고가 / 저가) - 1 * 100, 2)
+            elif self.dict_set['주식비중조절'][0] == 2:
+                비중조절기준 = 등락율각도
+            elif self.dict_set['주식비중조절'][0] == 3:
+                비중조절기준 = 당일거래대금각도
+            elif self.dict_set['주식비중조절'][0] == 4:
+                비중조절기준 = 전일비
+            elif self.dict_set['주식비중조절'][0] == 5:
+                비중조절기준 = 회전율
+            else:
+                비중조절기준 = 전일동시간비
+
+            if 비중조절기준 < self.dict_set['주식비중조절'][1]:
+                betting = self.betting * self.dict_set['주식비중조절'][5]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][2]:
+                betting = self.betting * self.dict_set['주식비중조절'][6]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][3]:
+                betting = self.betting * self.dict_set['주식비중조절'][7]
+            elif 비중조절기준 < self.dict_set['주식비중조절'][4]:
+                betting = self.betting * self.dict_set['주식비중조절'][8]
+            else:
+                betting = self.betting * self.dict_set['주식비중조절'][9]
+
+        self.trade_info[vars_turn][vars_key]['주문수량'] = int(betting / 현재가)
+
+    def SetSellCount(self, vars_turn, vars_key, 현재가, now_time):
+        _, 매수가, _, _, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간 = \
+            self.trade_info[vars_turn][vars_key].values()
+        _, _, 수익률 = GetKiwoomPgSgSp(보유수량 * 매수가, 보유수량 * 현재가)
+        if 수익률 > 최고수익률:
+            self.trade_info[vars_turn][vars_key]['최고수익률'] = 최고수익률 = 수익률
+        elif 수익률 < 최저수익률:
+            self.trade_info[vars_turn][vars_key]['최저수익률'] = 최저수익률 = 수익률
+        보유시간 = (now_time - 매수시간).total_seconds()
+        self.indexb = 매수틱번호
+        self.trade_info[vars_turn][vars_key]['주문수량'] = 보유수량
+        return 수익률, 최고수익률, 최저수익률, 보유시간, 매수틱번호
 
     def Buy(self, vars_turn, vars_key):
         if self.back_type == '백테스트':

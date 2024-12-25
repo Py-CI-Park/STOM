@@ -268,10 +268,13 @@ class SetOrderTap:
         self.ui.sj_save_Button_11 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_03, click=self.ui.sjButtonClicked_25)
         self.ui.sj_save_Button_12 = self.wc.setPushbutton('저장하기', box=self.ui.sj_od_groupBoxxx_04, click=self.ui.sjButtonClicked_26)
 
-        self.ui.sj_od_groupBoxxx_01.setGeometry(5, 5, 1326, 155)
-        self.ui.sj_od_groupBoxxx_02.setGeometry(5, 170, 1326, 155)
-        self.ui.sj_od_groupBoxxx_03.setGeometry(5, 335, 1326, 155)
-        self.ui.sj_od_groupBoxxx_04.setGeometry(5, 500, 1326, 155)
+        self.ui.sj_save_Button_13 = self.wc.setPushbutton('주식비중조절', box=self.ui.sod_tab, click=self.ui.sjButtonClicked_31)
+        self.ui.sj_save_Button_14 = self.wc.setPushbutton('코인비중조절', box=self.ui.sod_tab, click=self.ui.sjButtonClicked_32)
+
+        self.ui.sj_od_groupBoxxx_01.setGeometry(5, 15, 1326, 165)
+        self.ui.sj_od_groupBoxxx_02.setGeometry(5, 190, 1326, 165)
+        self.ui.sj_od_groupBoxxx_03.setGeometry(5, 365, 1326, 165)
+        self.ui.sj_od_groupBoxxx_04.setGeometry(5, 540, 1326, 165)
 
         self.ui.sj_sodb_labellll_01.setGeometry(10, 25, 80, 20)
         self.ui.sj_sodb_checkBox_01.setGeometry(100, 25, 55, 20)
@@ -491,3 +494,6 @@ class SetOrderTap:
         self.ui.sj_save_Button_10.setGeometry(1250, 25, 70, 20)
         self.ui.sj_save_Button_11.setGeometry(1250, 25, 70, 20)
         self.ui.sj_save_Button_12.setGeometry(1250, 25, 70, 20)
+
+        self.ui.sj_save_Button_13.setGeometry(1180, 10, 145, 20)
+        self.ui.sj_save_Button_14.setGeometry(1180, 360, 145, 20)
