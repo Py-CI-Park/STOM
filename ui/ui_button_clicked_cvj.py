@@ -634,6 +634,9 @@ def cvj_button_clicked_11(ui):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
@@ -645,7 +648,7 @@ def cvj_button_clicked_11(ui):
         if not back_club and (not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier)):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -677,12 +680,12 @@ def cvj_button_clicked_11(ui):
             betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, None, ui.back_count,
             bl, False, None, None, back_club, False
         ))
-        ui.proc_backtester_bb = Process(
+        ui.proc_backtester_bc = Process(
             target=BackTest,
             args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques, '백테스트',
                   'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
         )
-        ui.proc_backtester_bb.start()
+        ui.proc_backtester_bc.start()
         ui.cvjButtonClicked_07()
         ui.cs_progressBar_01.setValue(0)
         ui.csicon_alert = True
@@ -692,13 +695,16 @@ def cvj_button_clicked_12(ui):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -748,6 +754,9 @@ def cvj_button_clicked_14(ui, back_name):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
@@ -756,7 +765,7 @@ def cvj_button_clicked_14(ui, back_name):
                                       (QApplication.keyboardModifiers() & Qt.ControlModifier)):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -810,84 +819,84 @@ def cvj_button_clicked_14(ui, back_name):
             ui.proc_backtester_o = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_o.start()
         elif back_name == '최적화OV':
             ui.proc_backtester_ov = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ov.start()
         elif back_name == '최적화OVC':
             ui.proc_backtester_ovc = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ovc.start()
         elif back_name == '최적화B':
             ui.proc_backtester_b = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_b.start()
         elif back_name == '최적화BV':
             ui.proc_backtester_bv = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bv.start()
         elif back_name == '최적화BVC':
             ui.proc_backtester_bvc = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bvc.start()
         elif back_name == '최적화OT':
             ui.proc_backtester_ot = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ot.start()
         elif back_name == '최적화OVT':
             ui.proc_backtester_ovt = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ovt.start()
         elif back_name == '최적화OVCT':
             ui.proc_backtester_ovct = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_ovct.start()
         elif back_name == '최적화BT':
             ui.proc_backtester_bt = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bt.start()
         elif back_name == '최적화BVT':
             ui.proc_backtester_bvt = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bvt.start()
         else:
             ui.proc_backtester_bvct = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_bvct.start()
         ui.cvjButtonClicked_07()
@@ -899,13 +908,16 @@ def cvj_button_clicked_15(ui, back_name):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -956,42 +968,42 @@ def cvj_button_clicked_15(ui, back_name):
             ui.proc_backtester_or = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_or.start()
         elif back_name == '전진분석ORV':
             ui.proc_backtester_orv = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_orv.start()
         elif back_name == '전진분석ORVC':
             ui.proc_backtester_orvc = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_orvc.start()
         elif back_name == '전진분석BR':
             ui.proc_backtester_br = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_br.start()
         elif back_name == '전진분석BRV':
             ui.proc_backtester_brv = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_brv.start()
         else:
             ui.proc_backtester_brvc = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      ui.multi, ui.divid_mode, back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+                      back_name, 'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
             )
             ui.proc_backtester_brvc.start()
         ui.cvjButtonClicked_07()
@@ -1003,13 +1015,16 @@ def cvj_button_clicked_16(ui, back_name):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -1077,13 +1092,16 @@ def cvj_button_clicked_17(ui, back_name):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -1204,13 +1222,16 @@ def cvj_button_clicked_23(ui):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('코인')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
         if ui.pt_comboBoxxxxx_00.currentText() == '':
@@ -1253,13 +1274,16 @@ def cvj_button_clicked_24(ui):
     if ui.BacktestProcessAlive():
         QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        if ui.back_engining:
+            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
+            return
         if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
             QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
             return
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
             ui.BackTestengineShow('주식')
             return
-        if not ui.back_condition:
+        if ui.back_cancelling:
             QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
             return
 
@@ -1293,7 +1317,8 @@ def cvj_button_clicked_24(ui):
         ))
         ui.proc_backtester_bc = Process(
             target=BackTest,
-            args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques, '백테스트', 'C')
+            args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques, '백테스트',
+                  'C' if ui.dict_set['거래소'] == '업비트' else 'CF')
         )
         ui.proc_backtester_bc.start()
         ui.cvjButtonClicked_07()

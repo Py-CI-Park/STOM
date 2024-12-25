@@ -462,8 +462,6 @@ class MainWindow(QMainWindow):
         SetDialogBack(self, self.wc)
         SetMediaPlayer(self)
 
-        self.cs_pushButton.setGeometry(0, 0, 0, 0)
-
         con1 = sqlite3.connect(DB_SETTING)
         con2 = sqlite3.connect(DB_STOCK_BACK)
         try:
@@ -499,10 +497,11 @@ class MainWindow(QMainWindow):
         self.database_chart   = False
         self.daydata_download = False
         self.tickdata_save    = False
+        self.back_engining    = False
         self.backtest_engine  = False
         self.time_sync        = False
         self.extend_window    = False
-        self.back_condition   = True
+        self.back_cancelling  = False
 
         self.animation        = None
         self.webEngineView    = None
@@ -518,6 +517,7 @@ class MainWindow(QMainWindow):
         self.back_eques       = []
         self.back_sprocs      = []
         self.back_sques       = []
+        self.back_shm_list    = []
         self.avg_list         = []
         self.back_count       = 0
         self.startday         = 0
@@ -533,7 +533,7 @@ class MainWindow(QMainWindow):
         self.backengin_window_open = False
         self.optuna_window_open    = False
 
-        self.proc_backtester_bb    = None
+        self.proc_backtester_bs    = None
         self.proc_backtester_bf    = None
         self.proc_backtester_bc    = None
         self.proc_backtester_bp    = None
@@ -600,14 +600,19 @@ class MainWindow(QMainWindow):
         self.tm_mc1  = 0
         self.tm_mc2  = 0
 
-        subprocess.Popen('python ./stock/kiwoom_manager.py')
+        port_num = 5100
+        while True:
+            try:
+                self.zmqserv = ZmqServ(self.wdzservQ, port_num)
+                self.zmqserv.start()
+                self.zmqrecv = ZmqRecv(self.qlist, port_num + 1)
+                self.zmqrecv.start()
+            except:
+                port_num += 10
+            else:
+                break
 
-        port_num = get_port_number()
-        self.zmqserv = ZmqServ(self.wdzservQ, port_num)
-        self.zmqserv.start()
-
-        self.zmqrecv = ZmqRecv(self.qlist, port_num + 1)
-        self.zmqrecv.start()
+        subprocess.Popen(f'python ./stock/kiwoom_manager.py {port_num}')
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)
@@ -806,7 +811,6 @@ class MainWindow(QMainWindow):
     # =================================================================================================================
     def beButtonClicked_01(self): bebutton_clicked_01(self)
     def BacktestEngineKill(self): backtest_engine_kill(self)
-    def BackBench(self):          back_bench(self)
     def sdButtonClicked_01(self): sdbutton_clicked_01(self)
     def sdButtonClicked_02(self): sdbutton_clicked_02(self)
     def sdButtonClicked_03(self): sdbutton_clicked_03(self)

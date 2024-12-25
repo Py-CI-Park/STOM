@@ -50,7 +50,7 @@ class UpdateTextedit:
                 self.ui.log5.info(text)
             elif data[0] == ui_num['S백테스트']:
                 if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or \
-                        '벤치점수' in data[1] or '백테스트 시작' in data[1] or ']단계' in data[1]:
+                        '백테스트 시작' in data[1] or ']단계' in data[1]:
                     color = color_fg_rt
                 elif ('AP' in data[1] and '-' in data[1].split('AP')[1]) or \
                         ('수익률' in data[1] and '-' in data[1].split('수익률')[1]):
@@ -63,8 +63,8 @@ class UpdateTextedit:
                     if '백테스트 시작' in data[1] or '인샘플 최적화 시작' in data[1]: self.logging = False
                     elif '최적화 완료' in data[1] or '인샘플 최적화 완료' in data[1]: self.logging = True
                 if self.logging: self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
-                if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill(0)
-                if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료',
+                if '백테스트를 중지합니다' in data[1] and not self.ui.back_cancelling: self.ui.BacktestProcessKill(0)
+                if data[1] in ('백테스트 완료', '백파인더 완료', '최적화O 완료', '최적화OV 완료',
                                '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료',
                                '최적화OVT 완료', '최적화OVCT 완료', '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료',
                                '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료', '전진분석BR 완료', '전진분석BRV 완료',
@@ -76,8 +76,8 @@ class UpdateTextedit:
                     if data[1] in ('최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료'):
                         self.ui.sActivated_06()
                     if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in \
-                            ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                             '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
+                            ('백파인더 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료',
+                             '최적화OCV 완료', '최적화OCVC 완료'):
                         self.ui.svjButtonClicked_08()
                     self.ui.BacktestProcessKill(0)
                     self.ui.ssicon_alert = False
@@ -87,7 +87,7 @@ class UpdateTextedit:
                         self.ui.sdButtonClicked_02()
             elif data[0] in (ui_num['C백테스트'], ui_num['CF백테스트']):
                 if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or \
-                        '벤치점수' in data[1] or '백테스트 시작' in data[1] or ']단계' in data[1]:
+                        '백테스트 시작' in data[1] or ']단계' in data[1]:
                     color = color_fg_rt
                 elif ('AP' in data[1] and '-' in data[1].split('AP')[1]) or \
                         ('수익률' in data[1] and '-' in data[1].split('수익률')[1].split('KRW')[0]):
@@ -100,8 +100,8 @@ class UpdateTextedit:
                     if '백테스트 시작' in data[1] or '인샘플 최적화 시작' in data[1]: self.logging = False
                     elif '최적화 완료' in data[1] or '인샘플 최적화 완료' in data[1]: self.logging = True
                 if self.logging: self.ui.log6.info(re.sub('(<([^>]+)>)', '', text))
-                if '백테스트를 중지합니다' in data[1] and self.ui.back_condition: self.ui.BacktestProcessKill(0)
-                if data[1] in ('백테스트 완료', '백파인더 완료', '벤치테스트 완료', '최적화O 완료', '최적화OV 완료',
+                if '백테스트를 중지합니다' in data[1] and not self.ui.back_cancelling: self.ui.BacktestProcessKill(0)
+                if data[1] in ('백테스트 완료', '백파인더 완료', '최적화O 완료', '최적화OV 완료',
                                '최적화OVC 완료', '최적화B 완료', '최적화BV 완료', '최적화BVC 완료', '최적화OT 완료',
                                '최적화OVT 완료', '최적화OVCT 완료', '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료',
                                '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료', '전진분석BR 완료', '전진분석BRV 완료',
@@ -113,8 +113,8 @@ class UpdateTextedit:
                     if data[1] in ('최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료'):
                         self.ui.cActivated_06()
                     if not self.ui.dict_set['그래프띄우지않기'] and data[1] not in \
-                            ('백파인더 완료', '벤치테스트 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료',
-                             '최적화OC 완료', '최적화OCV 완료', '최적화OCVC 완료'):
+                            ('백파인더 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료',
+                             '최적화OCV 완료', '최적화OCVC 완료'):
                         self.ui.cvjButtonClicked_08()
                     self.ui.BacktestProcessKill(0)
                     self.ui.csicon_alert = False

@@ -124,6 +124,24 @@ def ptbutton_clicked_02(ui):
     if ui.pt_lineEdittttt_01.text() == '' or ui.pt_lineEdittttt_02.text() == '':
         QMessageBox.critical(ui.dialog_pattern, '오류 알림', '등락율 수치가 입력되지 않았습니다.\n사용하지 않더라도 입력되어야 합니다.')
         return
+    if not ui.pt_checkBoxxxxx_01.isChecked() and not ui.pt_checkBoxxxxx_02.isChecked() and \
+            not ui.pt_checkBoxxxxx_03.isChecked() and not ui.pt_checkBoxxxxx_04.isChecked() and \
+            not ui.pt_checkBoxxxxx_05.isChecked() and not ui.pt_checkBoxxxxx_06.isChecked() and \
+            not ui.pt_checkBoxxxxx_07.isChecked() and not ui.pt_checkBoxxxxx_08.isChecked() and \
+            not ui.pt_checkBoxxxxx_09.isChecked() and not ui.pt_checkBoxxxxx_10.isChecked() and \
+            not ui.pt_checkBoxxxxx_11.isChecked() and not ui.pt_checkBoxxxxx_12.isChecked() and \
+            not ui.pt_checkBoxxxxx_13.isChecked():
+        QMessageBox.critical(ui.dialog_pattern, '오류 알림', '매수 패턴 인식 팩터를 선택하십시오.\n')
+        return
+    if not ui.pt_checkBoxxxxx_21.isChecked() and not ui.pt_checkBoxxxxx_22.isChecked() and \
+            not ui.pt_checkBoxxxxx_23.isChecked() and not ui.pt_checkBoxxxxx_24.isChecked() and \
+            not ui.pt_checkBoxxxxx_25.isChecked() and not ui.pt_checkBoxxxxx_26.isChecked() and \
+            not ui.pt_checkBoxxxxx_27.isChecked() and not ui.pt_checkBoxxxxx_28.isChecked() and \
+            not ui.pt_checkBoxxxxx_29.isChecked() and not ui.pt_checkBoxxxxx_30.isChecked() and \
+            not ui.pt_checkBoxxxxx_31.isChecked() and not ui.pt_checkBoxxxxx_32.isChecked() and \
+            not ui.pt_checkBoxxxxx_33.isChecked():
+        QMessageBox.critical(ui.dialog_pattern, '오류 알림', '매도 패턴 인식 팩터를 선택하십시오.\n')
+        return
 
     pattern_text = get_pattern_text(ui)
     df = pd.DataFrame({'패턴설정': [pattern_text]}, index=[name])

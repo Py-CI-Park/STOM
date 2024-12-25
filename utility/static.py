@@ -21,16 +21,6 @@ def threading_timer(sec, func, args=None):
         Timer(float(sec), func, args=[args]).start()
 
 
-def get_port_number():
-    port_number = 5500
-    run_count = 0
-    for proc in psutil.process_iter():
-        if 'cmd' in proc.name():
-            run_count += 1
-    port_number += run_count * 10
-    return port_number
-
-
 def win_proc_alive(name):
     alive = False
     for proc in psutil.process_iter():

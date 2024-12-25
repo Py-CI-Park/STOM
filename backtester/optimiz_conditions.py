@@ -53,7 +53,7 @@ class Total:
         dict_dummy = {}
         while True:
             data = self.tq.get()
-            if data[0] == '백테완료':
+            if data == '백테완료':
                 bc  += 1
                 if bc == self.back_count:
                     bc = 0

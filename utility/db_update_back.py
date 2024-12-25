@@ -21,7 +21,10 @@ for db_name in file_list:
     df_tb = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
     table_list = df_tb['name'].to_list()
     table_list.remove('moneytop')
-    table_list.remove('codename')
+    try:
+        table_list.remove('codename')
+    except:
+        pass
     last = len(table_list)
     for i, code in enumerate(table_list):
         df = pd.read_sql(f"SELECT * FROM '{code}'", con)

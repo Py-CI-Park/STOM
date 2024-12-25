@@ -13,19 +13,16 @@ from utility.setting import ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_STOCK
 
 
 class Total:
-    def __init__(self, wq, sq, tq, teleQ, mq, beq_list, bstq_list, backname, ui_gubun, gubun, multi, divid_mode):
+    def __init__(self, wq, sq, tq, teleQ, mq, bstq_list, backname, ui_gubun, gubun):
         self.wq           = wq
         self.sq           = sq
         self.tq           = tq
         self.mq           = mq
         self.teleQ        = teleQ
-        self.beq_list     = beq_list
         self.bstq_list    = bstq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
         self.gubun        = gubun
-        self.multi        = multi
-        self.divid_mode   = divid_mode
         self.dict_set     = DICT_SET
         gubun_text        = f'{self.gubun}_future' if self.ui_gubun == 'CF' else self.gubun
         self.savename     = f'{gubun_text}_{self.backname.replace("전진분석", "").lower()}'
@@ -86,27 +83,13 @@ class Total:
         st  = {}
         start = now()
         dict_dummy = {}
-        first_time = None
-        divid_time = now()
-        divid_multi = int(self.multi * 90 / 100)
-        fast_proc_list = []
-        slow_proc_dict = {}
         while True:
             data = self.tq.get()
-            if data[0] == '백테완료':
+            if data == '백테완료':
                 bc  += 1
                 tbc += 1
-                if self.opti_turn == 1:
-                    if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
-                        if first_time is None: first_time = now()
-                        procn, cnt, total = data[1:]
-                        if cnt == total:
-                            fast_proc_list.append(procn)
-                            if len(fast_proc_list) == divid_multi:
-                                divid_time = now()
-                        if len(fast_proc_list) > divid_multi and procn not in slow_proc_dict.keys():
-                            slow_proc_dict[procn] = cnt
-                elif self.opti_turn in (0, 2):
+
+                if self.opti_turn in (0, 2):
                     self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.total_count, start))
                 elif self.opti_turn == 4:
                     self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, start))
@@ -114,17 +97,6 @@ class Total:
                 if bc == self.back_count:
                     bc = 0
                     if self.opti_turn == 1:
-                        if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
-                            time_90 = (divid_time - first_time).total_seconds()
-                            time_10 = (now() - divid_time).total_seconds()
-                            if time_90 * 5 / 90 < time_10:
-                                k = 0
-                                for procn, cnt in slow_proc_dict.items():
-                                    self.beq_list[procn].put(('데이터이동', cnt, fast_proc_list[k]))
-                                    k += 1
-                            first_time = None
-                            fast_proc_list = []
-                            slow_proc_dict = {}
                         for q in self.bstq_list:
                             q.put(('백테완료', '미분리집계'))
                     else:
@@ -372,7 +344,7 @@ class StopWhenNotUpdateBestCallBack:
 
 
 class RollingWalkForwardTest:
-    def __init__(self, wq, bq, sq, tq, lq, teleQ, beq_list, bstq_list, multi, divid_mode, backname, ui_gubun):
+    def __init__(self, wq, bq, sq, tq, lq, teleQ, beq_list, bstq_list, backname, ui_gubun):
         self.wq        = wq
         self.bq        = bq
         self.sq        = sq
@@ -381,8 +353,6 @@ class RollingWalkForwardTest:
         self.teleQ     = teleQ
         self.beq_list  = beq_list
         self.bstq_list = bstq_list
-        self.multi      = multi
-        self.divid_mode = divid_mode
         self.backname  = backname
         self.ui_gubun  = ui_gubun
         self.dict_set  = DICT_SET
@@ -519,8 +489,7 @@ class RollingWalkForwardTest:
         mq = Queue()
         Process(
             target=Total,
-            args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.beq_list, self.bstq_list, self.backname, self.ui_gubun,
-                  self.gubun, self.multi, self.divid_mode)
+            args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)
         ).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,

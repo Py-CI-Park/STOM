@@ -17,7 +17,7 @@ def update_progressbar(ui):
     ui.bs_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_scheduler.isVisible() else style_bc_bt)
     ui.tt_pushButton.setStyleSheet(style_bc_bb if not ui.s_calendarWidgett.isVisible() and not ui.c_calendarWidgett.isVisible() else style_bc_bt)
 
-    style_ = style_bc_bt if ui.proc_backtester_bb is not None and ui.proc_backtester_bb.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    style_ = style_bc_bt if ui.proc_backtester_bs is not None and ui.proc_backtester_bs.is_alive() and ui.counter % 2 != 0 else style_bc_by
     ui.svj_pushButton_01.setStyleSheet(style_)
     ui.cvj_pushButton_01.setStyleSheet(style_)
 
@@ -33,101 +33,101 @@ def update_progressbar(ui):
     ui.svj_pushButton_04.setStyleSheet(style_)
     ui.cvj_pushButton_04.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_ovc is not None and ui.proc_backtester_ovc.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_06.setStyleSheet(style_)
-    ui.cvc_pushButton_06.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_o is not None and ui.proc_backtester_o.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_08.setStyleSheet(style_)
+    ui.cvc_pushButton_08.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_ov is not None and ui.proc_backtester_ov.is_alive() and ui.counter % 2 != 0 else style_bc_by
     ui.svc_pushButton_07.setStyleSheet(style_)
     ui.cvc_pushButton_07.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_o is not None and ui.proc_backtester_o.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_08.setStyleSheet(style_)
-    ui.cvc_pushButton_08.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_ovct is not None and ui.proc_backtester_ovct.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_15.setStyleSheet(style_)
-    ui.cvc_pushButton_15.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_ovt is not None and ui.proc_backtester_ovt.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_16.setStyleSheet(style_)
-    ui.cvc_pushButton_16.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_ovc is not None and ui.proc_backtester_ovc.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_06.setStyleSheet(style_)
+    ui.cvc_pushButton_06.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_ot is not None and ui.proc_backtester_ot.is_alive() and ui.counter % 2 != 0 else style_bc_by
     ui.svc_pushButton_17.setStyleSheet(style_)
     ui.cvc_pushButton_17.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_orvc is not None and ui.proc_backtester_orvc.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_18.setStyleSheet(style_)
-    ui.cvc_pushButton_18.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_ovt is not None and ui.proc_backtester_ovt.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_16.setStyleSheet(style_)
+    ui.cvc_pushButton_16.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_orv is not None and ui.proc_backtester_orv.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_19.setStyleSheet(style_)
-    ui.cvc_pushButton_19.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_or is not None and ui.proc_backtester_or.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svc_pushButton_20.setStyleSheet(style_)
-    ui.cvc_pushButton_20.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_ogvc is not None and ui.proc_backtester_ogvc.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.sva_pushButton_01.setStyleSheet(style_)
-    ui.cva_pushButton_01.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_ogv is not None and ui.proc_backtester_ogv.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.sva_pushButton_02.setStyleSheet(style_)
-    ui.cva_pushButton_02.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_og is not None and ui.proc_backtester_og.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.sva_pushButton_03.setStyleSheet(style_)
-    ui.cva_pushButton_03.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_ocvc is not None and ui.proc_backtester_ocvc.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svo_pushButton_05.setStyleSheet(style_)
-    ui.cvo_pushButton_05.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_ocv is not None and ui.proc_backtester_ocv.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svo_pushButton_06.setStyleSheet(style_)
-    ui.cvo_pushButton_06.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_ovct is not None and ui.proc_backtester_ovct.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_15.setStyleSheet(style_)
+    ui.cvc_pushButton_15.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_oc is not None and ui.proc_backtester_oc.is_alive() and ui.counter % 2 != 0 else style_bc_by
     ui.svo_pushButton_07.setStyleSheet(style_)
     ui.cvo_pushButton_07.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_bvc is not None and ui.proc_backtester_bvc.is_alive() and ui.counter % 2 != 0 else style_bc_sl
-    ui.svc_pushButton_27.setStyleSheet(style_)
-    ui.cvc_pushButton_27.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_ocv is not None and ui.proc_backtester_ocv.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svo_pushButton_06.setStyleSheet(style_)
+    ui.cvo_pushButton_06.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_bv is not None and ui.proc_backtester_bv.is_alive() and ui.counter % 2 != 0 else style_bc_sl
-    ui.svc_pushButton_28.setStyleSheet(style_)
-    ui.cvc_pushButton_28.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_ocvc is not None and ui.proc_backtester_ocvc.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svo_pushButton_05.setStyleSheet(style_)
+    ui.cvo_pushButton_05.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_og is not None and ui.proc_backtester_og.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.sva_pushButton_03.setStyleSheet(style_)
+    ui.cva_pushButton_03.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_ogv is not None and ui.proc_backtester_ogv.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.sva_pushButton_02.setStyleSheet(style_)
+    ui.cva_pushButton_02.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_ogvc is not None and ui.proc_backtester_ogvc.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.sva_pushButton_01.setStyleSheet(style_)
+    ui.cva_pushButton_01.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_or is not None and ui.proc_backtester_or.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_20.setStyleSheet(style_)
+    ui.cvc_pushButton_20.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_orv is not None and ui.proc_backtester_orv.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_19.setStyleSheet(style_)
+    ui.cvc_pushButton_19.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_orvc is not None and ui.proc_backtester_orvc.is_alive() and ui.counter % 2 != 0 else style_bc_by
+    ui.svc_pushButton_18.setStyleSheet(style_)
+    ui.cvc_pushButton_18.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_b is not None and ui.proc_backtester_b.is_alive() and ui.counter % 2 != 0 else style_bc_sl
     ui.svc_pushButton_29.setStyleSheet(style_)
     ui.cvc_pushButton_29.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_bvct is not None and ui.proc_backtester_bvct.is_alive() and ui.counter % 2 != 0 else style_bc_sl
-    ui.svc_pushButton_30.setStyleSheet(style_)
-    ui.cvc_pushButton_30.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_bv is not None and ui.proc_backtester_bv.is_alive() and ui.counter % 2 != 0 else style_bc_sl
+    ui.svc_pushButton_28.setStyleSheet(style_)
+    ui.cvc_pushButton_28.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_bvt is not None and ui.proc_backtester_bvt.is_alive() and ui.counter % 2 != 0 else style_bc_sl
-    ui.svc_pushButton_31.setStyleSheet(style_)
-    ui.cvc_pushButton_31.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_bvc is not None and ui.proc_backtester_bvc.is_alive() and ui.counter % 2 != 0 else style_bc_sl
+    ui.svc_pushButton_27.setStyleSheet(style_)
+    ui.cvc_pushButton_27.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_bt is not None and ui.proc_backtester_bt.is_alive() and ui.counter % 2 != 0 else style_bc_sl
     ui.svc_pushButton_32.setStyleSheet(style_)
     ui.cvc_pushButton_32.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_brvc is not None and ui.proc_backtester_brvc.is_alive() and ui.counter % 2 != 0 else style_bc_sl
-    ui.svc_pushButton_33.setStyleSheet(style_)
-    ui.cvc_pushButton_33.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_bvt is not None and ui.proc_backtester_bvt.is_alive() and ui.counter % 2 != 0 else style_bc_sl
+    ui.svc_pushButton_31.setStyleSheet(style_)
+    ui.cvc_pushButton_31.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_bvct is not None and ui.proc_backtester_bvct.is_alive() and ui.counter % 2 != 0 else style_bc_sl
+    ui.svc_pushButton_30.setStyleSheet(style_)
+    ui.cvc_pushButton_30.setStyleSheet(style_)
+
+    style_ = style_bc_bt if ui.proc_backtester_br is not None and ui.proc_backtester_br.is_alive() and ui.counter % 2 != 0 else style_bc_sl
+    ui.svc_pushButton_35.setStyleSheet(style_)
+    ui.cvc_pushButton_35.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_brv is not None and ui.proc_backtester_brv.is_alive() and ui.counter % 2 != 0 else style_bc_sl
     ui.svc_pushButton_34.setStyleSheet(style_)
     ui.cvc_pushButton_34.setStyleSheet(style_)
 
-    style_ = style_bc_bt if ui.proc_backtester_br is not None and ui.proc_backtester_br.is_alive() and ui.counter % 2 != 0 else style_bc_sl
-    ui.svc_pushButton_35.setStyleSheet(style_)
-    ui.cvc_pushButton_35.setStyleSheet(style_)
+    style_ = style_bc_bt if ui.proc_backtester_brvc is not None and ui.proc_backtester_brvc.is_alive() and ui.counter % 2 != 0 else style_bc_sl
+    ui.svc_pushButton_33.setStyleSheet(style_)
+    ui.cvc_pushButton_33.setStyleSheet(style_)
 
     style_ = style_bc_bb if ui.ct_test > 0 and ui.counter % 2 != 0 else style_bc_bt
     ui.tt_pushButtonnn_03.setStyleSheet(style_)

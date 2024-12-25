@@ -31,46 +31,44 @@ class CoinUpbitBackEngine2(CoinUpbitBackEngine):
         same_days = self.startday_ == self.startday and self.endday_ == self.endday
         same_time = self.starttime_ == self.starttime and self.endtime_ == self.endtime
 
-        if not self.tick_calcul and self.opti_turn in (1, 3):
-            total_ticks = 0
-            for code in self.code_list:
-                self.SetArrayTick(code, same_days, same_time)
-                total_ticks += len(self.array_tick)
-            self.tq.put(('전체틱수', int(total_ticks / 100)))
-            self.tick_calcul = True
-
         j = 0
-        len_codes = len(self.code_list)
-        for k, code in enumerate(self.code_list):
-            if self.dict_set['백테주문관리적용'] and self.dict_set['코인매수금지블랙리스트'] and self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
-                self.tq.put(('백테완료', 0, self.gubun, k+1, len_codes))
-                continue
+        total_ticks = 0
+        while True:
+            result, ticks, exist_shm = self.SetArrayTick(same_days, same_time)
+            if result:
+                if self.dict_set['백테주문관리적용'] and self.dict_set['코인매수금지블랙리스트'] and \
+                        self.code in self.dict_set['코인블랙리스트'] and self.back_type != '백파인더':
+                    self.tq.put('백테완료')
+                    continue
+                self.last = ticks - 1
+                if ticks > 0:
+                    for i, index in enumerate(self.array_tick[:, 0]):
+                        self.index = int(index)
+                        self.indexn = i
+                        self.tick_count += 1
+                        next_day_change = i == self.last or str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
+                        if not next_day_change:
+                            try:
+                                self.Strategy()
+                            except:
+                                print_exc()
+                                self.BackStop(1)
+                                return
+                        else:
+                            self.LastSell()
+                            self.InitTradeInfo()
 
-            self.code = self.name = code
-            self.SetArrayTick(code, same_days, same_time)
-            self.last = len(self.array_tick) - 1
-            if self.last > 0:
-                for i, index in enumerate(self.array_tick[:, 0]):
-                    self.index = int(index)
-                    self.indexn = i
-                    self.tick_count += 1
-                    next_day_change = i == self.last or str(index)[:8] != str(self.array_tick[i + 1, 0])[:8]
-                    if not next_day_change:
-                        try:
-                            self.Strategy()
-                        except:
-                            print_exc()
-                            self.BackStop(1)
-                            return
-                    else:
-                        self.LastSell()
-                        self.InitTradeInfo()
+                        if self.opti_turn in (1, 3):
+                            j += 1
+                            if j % 100 == 0: self.tq.put('탐색완료')
 
-                    j += 1
-                    if self.opti_turn in (1, 3) and j % 100 == 0: self.tq.put('탐색완료')
+                if self.opti_turn == 0: total_ticks += ticks
+                self.tq.put('백테완료')
+                exist_shm.close()
+            else:
+                break
 
-            self.tq.put(('백테완료', self.gubun, k+1, len_codes))
-
+        if self.opti_turn == 0: self.tq.put(('전체틱수', int(total_ticks / 100)))
         if self.pattern: self.tq.put(('학습결과', self.pattern_buy, self.pattern_sell))
         if self.profile: self.pr.print_stats(sort='cumulative')
 

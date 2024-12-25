@@ -14,7 +14,7 @@ from simulator_kiwoom import ReceiverKiwoom2, TraderKiwoom2
 from login_kiwoom.manuallogin import find_window
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utility.setting import DICT_SET, LOGIN_PATH
-from utility.static import now, timedelta_sec, int_hms, qtest_qwait, opstarter_kill, get_port_number
+from utility.static import now, timedelta_sec, int_hms, qtest_qwait, opstarter_kill
 
 
 class ZmqRecv(QThread):
@@ -98,7 +98,7 @@ class ZmqServ(QThread):
 
 
 class KWManager:
-    def __init__(self):
+    def __init__(self, port_num):
         app = QApplication(sys.argv)
 
         self.kwzservQ, self.sreceivQ, self.straderQ, sstg1Q, sstg2Q, sstg3Q, sstg4Q, sstg5Q, sstg6Q, sstg7Q, sstg8Q = \
@@ -123,7 +123,6 @@ class KWManager:
         self.proc_simulator_rv    = None
         self.proc_simulator_td    = None
 
-        port_num = get_port_number()
         self.zmqserv = ZmqServ(self.qlist, port_num + 1)
         self.zmqserv.start()
 
@@ -392,4 +391,5 @@ class KWManager:
 
 
 if __name__ == '__main__':
-    KWManager()
+    port_number = int(sys.argv[1])
+    KWManager(port_number)

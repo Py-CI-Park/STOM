@@ -26,7 +26,7 @@ class Total:
         list_pattern_sell = []
         while True:
             data = self.tq.get()
-            if data[0] == '백테완료':
+            if data == '백테완료':
                 bc += 1
                 self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
             elif data[0] == '학습결과':
