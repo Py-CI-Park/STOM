@@ -737,8 +737,8 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, 매도분할횟수, \
             매수주문취소시간, 매도주문취소시간, 주문포지션 = self.trade_info[vturn][vkey].values()
         """
-        보유중, 매수가, _, 주문수량, 보유수량, _, _, _, _, _, 매수호가, _, _, _, _, \
-            매수호가단위, _, _, _, _, _, 매수주문취소시간, 주문포지션 = self.trade_info[vturn][vkey].values()
+        _, 매수가, _, 주문수량, 보유수량, _, _, _, _, _, 매수호가, _, _, _, _, \
+            매수호가단위, _, _, _, _, _, 매수주문취소시간, _, 주문포지션 = self.trade_info[vturn][vkey].values()
 
         if self.dict_set['코인매수취소관심이탈'] and 관심이탈:
             self.trade_info[vturn][vkey]['매수호가'] = 0
@@ -767,8 +767,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
         self.trade_info[vturn][vkey]['보유중'] = 1 if gubun == 'LONG' else 2
         self.trade_info[vturn][vkey]['매수호가'] = 0
         self.trade_info[vturn][vkey]['매수정정횟수'] = 0
-        self.day_info[vturn][vkey]['직전거래시간'] = \
-            timedelta_sec(self.dict_set['코인매수금지간격초'], datetimefromindex)
+        self.day_info[vturn][vkey]['직전거래시간'] = timedelta_sec(self.dict_set['코인매수금지간격초'], datetimefromindex)
         if firstbuy:
             self.trade_info[vturn][vkey]['매수틱번호'] = self.indexn
             self.trade_info[vturn][vkey]['매수시간'] = datetimefromindex
@@ -857,8 +856,7 @@ class CoinFutureBackEngine2(CoinFutureBackEngine):
             매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, 매도분할횟수, \
             매수주문취소시간, 매도주문취소시간, 주문포지션 = self.trade_info[vturn][vkey].values()
         """
-        _, bp, sp, oc, bc, _, _, bi, bdt, abt, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = \
-            self.trade_info[vturn][vkey].values()
+        _, bp, sp, oc, bc, _, _, bi, bdt, abt, _, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[vturn][vkey].values()
         bt, st, bg = int(self.array_tick[bi, 0]), self.index, oc * bp
         if self.trade_info[vturn][vkey]['보유중'] == 1:
             ps = 'LONG'

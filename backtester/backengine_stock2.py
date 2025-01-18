@@ -774,8 +774,7 @@ class StockBackEngine2(StockBackEngine):
         self.trade_info[vturn][vkey]['보유중'] = 1
         self.trade_info[vturn][vkey]['매수호가'] = 0
         self.trade_info[vturn][vkey]['매수정정횟수'] = 0
-        self.day_info[vturn][vkey]['직전거래시간'] = \
-            timedelta_sec(self.dict_set['주식매수금지간격초'], datetimefromindex)
+        self.day_info[vturn][vkey]['직전거래시간'] = timedelta_sec(self.dict_set['주식매수금지간격초'], datetimefromindex)
         if firstbuy:
             self.trade_info[vturn][vkey]['매수틱번호'] = self.indexn
             self.trade_info[vturn][vkey]['매수시간'] = datetimefromindex
