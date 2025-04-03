@@ -439,7 +439,8 @@ class KWReceiver:
 
         elif realtype == 'VI발동/해제':
             try:
-                code  = self.kw.GetCommRealData(code, 9001).strip('A').strip('Q').strip('_AL')
+                code  = self.kw.GetCommRealData(code, 9001).strip('A').strip('Q')
+                if '_' in code: return
                 gubun = self.kw.GetCommRealData(code, 9068)
                 name  = self.dict_name[code]
             except Exception as e:
