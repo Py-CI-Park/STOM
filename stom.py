@@ -9,7 +9,10 @@ from ui.set_style import color_bg_bc, color_fg_bc, color_bg_dk, color_fg_bk, col
 if __name__ == '__main__':
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
-    auto_run = 1 if len(sys.argv) > 1 and sys.argv[1] == 'stocklogin' else 0
+    auto_run = 0
+    if len(sys.argv) > 1:
+        if sys.argv[1] == 'stock':  auto_run = 1
+        elif sys.argv[1] == 'coin': auto_run = 2
     timesync()
     app = QApplication(sys.argv)
     app.setStyle('fusion')

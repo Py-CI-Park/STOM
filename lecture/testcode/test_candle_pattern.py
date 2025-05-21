@@ -1,7 +1,7 @@
 import talib
 import sqlite3
 import pandas as pd
-from utility.setting import DB_STOCK_BACK
+from utility.setting import DB_STOCK_BACK_TICK
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -10,7 +10,7 @@ patterns = talib.get_function_groups()['Pattern Recognition']
 pattern_number = {x: i + 1 for i, x in enumerate(patterns)}
 print(pattern_number)
 
-con = sqlite3.connect(DB_STOCK_BACK)
+con = sqlite3.connect(DB_STOCK_BACK_TICK)
 df = pd.read_sql(f"SELECT * FROM '089140' WHERE `index` LIKE '20221007%'", con)
 con.close()
 

@@ -6,9 +6,10 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, GetMoneytopQuery, InitBackSequence
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery
 from utility.static import factorial, strf_time, now, timedelta_day, strp_time, timedelta_sec
-from utility.setting import ui_num, DB_STRATEGY, DICT_SET, DB_BACKTEST, DB_STOCK_BACK, DB_COIN_BACK
+from utility.setting import ui_num, DB_STRATEGY, DICT_SET, DB_BACKTEST, DB_STOCK_BACK_TICK, DB_COIN_BACK_TICK, \
+    DB_STOCK_BACK_MIN, DB_COIN_BACK_MIN
 
 
 class Total:
@@ -53,11 +54,7 @@ class Total:
         dict_dummy = {}
         while True:
             data = self.tq.get()
-            if data == '탐색완료':
-                tt += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2 * vc, start))
-
-            elif data == '백테완료':
+            if data[0] == '백테완료':
                 bc  += 1
                 if bc == self.back_count:
                     bc = 0
@@ -117,6 +114,9 @@ class Total:
                 vc = int(self.total_count / self.back_count)
             elif data[0] == '전체틱수':
                 self.total_count2 += data[1]
+            elif data == '탐색완료':
+                tt += 1
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2 * vc, start))
             elif data == '백테중지':
                 self.mq.put('백테중지')
                 break
@@ -228,7 +228,11 @@ class OptimizeConditions:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 학습기간 만큼의 데이터가 필요합니다'))
             self.SysExit(True)
 
-        con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
+        if self.ui_gubun == 'S':
+            db = DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN
+        else:
+            db = DB_COIN_BACK_TICK if self.dict_set['코인타임프레임'] else DB_COIN_BACK_MIN
+        con   = sqlite3.connect(db)
         query = GetMoneytopQuery(self.ui_gubun, startday, endday, starttime, endtime)
         df_mt = pd.read_sql(query, con)
         con.close()
@@ -314,7 +318,6 @@ class OptimizeConditions:
             buy_conds, sell_conds = self.GetCondlist()
             if len(buy_conds) == 20:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 백테스트 [{i+1}/{rcount}]단계 시작, 최고 기준값[{hstd:,.2f}]'))
-                InitBackSequence()
                 for q in self.bstq_list:
                     q.put(('백테시작', 3))
                 if is_long is None:

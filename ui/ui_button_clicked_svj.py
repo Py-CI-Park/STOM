@@ -4,12 +4,9 @@ from multiprocessing import Process
 from backtester.optimiz import Optimize
 from backtester.backtest import BackTest
 from backtester.backfinder import BackFinder
-from backtester.pattern_modeling import PatternModeling
 from backtester.optimiz_conditions import OptimizeConditions
 from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from backtester.optimiz_genetic_algorithm import OptimizeGeneticAlgorithm
-from ui.ui_pattern import get_pattern_text
-from utility.static import get_pattern_setup
 from ui.set_style import style_bc_by, style_bc_dk, style_bc_bs, style_bc_bd
 from ui.set_text import testtext, rwfttext, gaoptext, vedittxt, optitext, condtext, cedittxt, example_finder
 
@@ -677,7 +674,7 @@ def svj_button_clicked_11(ui):
 
         ui.backQ.put((
             betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, ui.dict_cn, ui.back_count,
-            bl, False, ui.df_kp, ui.df_kd, back_club, False
+            bl, False, ui.df_kp, ui.df_kd, back_club
         ))
         ui.proc_backtester_bs = Process(
             target=BackTest,
@@ -816,84 +813,84 @@ def svj_button_clicked_14(ui, back_name):
             ui.proc_backtester_o = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_o.start()
         elif back_name == '최적화OV':
             ui.proc_backtester_ov = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_ov.start()
         elif back_name == '최적화OVC':
             ui.proc_backtester_ovc = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_ovc.start()
         elif back_name == '최적화B':
             ui.proc_backtester_b = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_b.start()
         elif back_name == '최적화BV':
             ui.proc_backtester_bv = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_bv.start()
         elif back_name == '최적화BVC':
             ui.proc_backtester_bvc = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_bvc.start()
         elif back_name == '최적화OT':
             ui.proc_backtester_ot = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_ot.start()
         elif back_name == '최적화OVT':
             ui.proc_backtester_ovt = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_ovt.start()
         elif back_name == '최적화OVCT':
             ui.proc_backtester_ovct = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_ovct.start()
         elif back_name == '최적화BT':
             ui.proc_backtester_bt = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_bt.start()
         elif back_name == '최적화BVT':
             ui.proc_backtester_bvt = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_bvt.start()
         else:
             ui.proc_backtester_bvct = Process(
                 target=Optimize,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_bvct.start()
         ui.svjButtonClicked_07()
@@ -969,42 +966,42 @@ def svj_button_clicked_15(ui, back_name):
             ui.proc_backtester_or = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_or.start()
         elif back_name == '전진분석ORV':
             ui.proc_backtester_orv = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_orv.start()
         elif back_name == '전진분석ORVC':
             ui.proc_backtester_orvc = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_orvc.start()
         elif back_name == '전진분석BR':
             ui.proc_backtester_br = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_br.start()
         elif back_name == '전진분석BRV':
             ui.proc_backtester_brv = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_brv.start()
         else:
             ui.proc_backtester_brvc = Process(
                 target=RollingWalkForwardTest,
                 args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques,
-                      back_name, 'S')
+                      ui.multi, ui.divid_mode, back_name, 'S')
             )
             ui.proc_backtester_brvc.start()
         ui.svjButtonClicked_07()
@@ -1211,120 +1208,6 @@ def svj_button_clicked_22(ui):
     ui.ss_textEditttt_04.clear()
     ui.ss_textEditttt_03.append(buystg_str)
     ui.ss_textEditttt_04.append(sellstg_str)
-
-
-def svj_button_clicked_23(ui):
-    if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-    else:
-        if ui.back_engining:
-            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
-            return
-        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
-            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
-            return
-        if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-            ui.BackTestengineShow('주식')
-            return
-        if ui.back_cancelling:
-            QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-            return
-        if ui.pt_comboBoxxxxx_00.currentText() == '':
-            QMessageBox.critical(ui, '오류 알림', '학습할 패턴설정이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
-            return
-        if ui.svjb_comboBoxx_01.currentText() == '':
-            QMessageBox.critical(ui, '오류 알림', '학습할 매수전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
-            return
-        if ui.svjs_comboBoxx_01.currentText() == '':
-            QMessageBox.critical(ui, '오류 알림', '학습할 매도전략이 없습니다.\n불러오기 후 콤보박스에서 선택하십시오.\n')
-            return
-
-        betting   = ui.svjb_lineEditt_04.text()
-        avgtime   = ui.svjb_lineEditt_05.text()
-        startday  = ui.pt_dateEdittttt_01.date().toString('yyyyMMdd')
-        endday    = ui.pt_dateEdittttt_02.date().toString('yyyyMMdd')
-        starttime = ui.svjb_lineEditt_02.text()
-        endtime   = ui.svjb_lineEditt_03.text()
-        buystg    = ui.svjb_comboBoxx_01.currentText()
-        sellstg   = ui.svjs_comboBoxx_01.currentText()
-        multi     = int(ui.be_lineEdittttt_04.text())
-
-        ui.ClearBacktestQ()
-        for q in ui.back_eques:
-            q.put(('백테유형', '백테스트'))
-
-        dict_pattern, dict_pattern_buy, dict_pattern_sell = get_pattern_setup(get_pattern_text(ui))
-        ui.backQ.put((betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, dict_pattern,
-                      dict_pattern_buy, dict_pattern_sell))
-        ui.proc_backtester_bp = Process(
-            target=PatternModeling, args=(ui.windowQ, ui.backQ, ui.totalQ, ui.back_eques, 'S', ui.back_count, multi)
-        )
-        ui.proc_backtester_bp.start()
-        ui.svjButtonClicked_07()
-        ui.ss_progressBar_01.setValue(0)
-        ui.ssicon_alert = True
-
-
-def svj_button_clicked_24(ui):
-    if ui.BacktestProcessAlive():
-        QMessageBox.critical(ui, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
-    else:
-        if ui.back_engining:
-            QMessageBox.critical(ui, '오류 알림', '백테엔진 구동 중...\n')
-            return
-        if ui.dialog_backengine.isVisible() and not ui.backtest_engine:
-            QMessageBox.critical(ui, '오류 알림', '백테엔진이 구동되지 않았습니다.\n')
-            return
-        if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
-            ui.BackTestengineShow('주식')
-            return
-        if ui.back_cancelling:
-            QMessageBox.critical(ui, '오류 알림', '이전 백테스트를 중지하고 있습니다.\n잠시 후 다시 시도하십시오.\n')
-            return
-
-        startday  = ui.svjb_dateEditt_01.date().toString('yyyyMMdd')
-        endday    = ui.svjb_dateEditt_02.date().toString('yyyyMMdd')
-        starttime = ui.svjb_lineEditt_02.text()
-        endtime   = ui.svjb_lineEditt_03.text()
-        betting   = ui.svjb_lineEditt_04.text()
-        avgtime   = ui.svjb_lineEditt_05.text()
-        buystg    = ui.svjb_comboBoxx_01.currentText()
-        sellstg   = ui.svjs_comboBoxx_01.currentText()
-        bl        = True if ui.dict_set['블랙리스트추가'] else False
-
-        if int(avgtime) not in ui.avg_list:
-            QMessageBox.critical(ui, '오류 알림', '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
-            return
-        if '' in (startday, endday, starttime, endtime, betting, avgtime):
-            QMessageBox.critical(ui, '오류 알림', '일부 설정값이 공백 상태입니다.\n')
-            return
-        if '' in (buystg, sellstg):
-            QMessageBox.critical(ui, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
-            return
-
-        ui.ClearBacktestQ()
-        for q in ui.back_eques:
-            q.put(('백테유형', '백테스트'))
-
-        ui.backQ.put((
-            betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, ui.dict_cn, ui.back_count,
-            bl, False, ui.df_kp, ui.df_kd, False, True
-        ))
-        ui.proc_backtester_bs = Process(
-            target=BackTest,
-            args=(ui.windowQ, ui.backQ, ui.soundQ, ui.totalQ, ui.liveQ, ui.teleQ, ui.back_eques, ui.back_sques, '백테스트', 'S')
-        )
-        ui.proc_backtester_bs.start()
-        ui.svjButtonClicked_07()
-        ui.ss_progressBar_01.setValue(0)
-        ui.ssicon_alert = True
-
-
-def svj_button_clicked_25(ui):
-    if not ui.dialog_pattern.isVisible():
-        ui.dialog_pattern.show()
-    else:
-        ui.dialog_pattern.close()
 
 
 def sChangeSvjButtonColor(ui):

@@ -12,8 +12,7 @@ def update_progressbar(ui):
     ui.gu_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_info.isVisible() else style_bc_bt)
     ui.hg_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_hoga.isVisible() else style_bc_bt)
     ui.ct_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_chart.isVisible() else style_bc_bt)
-    ui.ct_pushButtonnn_02.setStyleSheet(style_bc_bt if not ui.dialog_factor.isVisible() else style_bc_bb)
-    ui.ct_pushButtonnn_05.setStyleSheet(style_bc_bt if not ui.dialog_test.isVisible() else style_bc_bb)
+    ui.ct_pushButtonnn_03.setStyleSheet(style_bc_bt if not ui.dialog_factor.isVisible() else style_bc_bb)
     ui.bs_pushButton.setStyleSheet(style_bc_bb if not ui.dialog_scheduler.isVisible() else style_bc_bt)
     ui.tt_pushButton.setStyleSheet(style_bc_bb if not ui.s_calendarWidgett.isVisible() and not ui.c_calendarWidgett.isVisible() else style_bc_bt)
 
@@ -24,14 +23,6 @@ def update_progressbar(ui):
     style_ = style_bc_bt if ui.proc_backtester_bf is not None and ui.proc_backtester_bf.is_alive() and ui.counter % 2 != 0 else style_bc_by
     ui.svj_pushButton_02.setStyleSheet(style_)
     ui.cvj_pushButton_02.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_bc is not None and ui.proc_backtester_bc.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svj_pushButton_03.setStyleSheet(style_)
-    ui.cvj_pushButton_03.setStyleSheet(style_)
-
-    style_ = style_bc_bt if ui.proc_backtester_bp is not None and ui.proc_backtester_bp.is_alive() and ui.counter % 2 != 0 else style_bc_by
-    ui.svj_pushButton_04.setStyleSheet(style_)
-    ui.cvj_pushButton_04.setStyleSheet(style_)
 
     style_ = style_bc_bt if ui.proc_backtester_o is not None and ui.proc_backtester_o.is_alive() and ui.counter % 2 != 0 else style_bc_by
     ui.svc_pushButton_08.setStyleSheet(style_)
@@ -129,9 +120,6 @@ def update_progressbar(ui):
     ui.svc_pushButton_33.setStyleSheet(style_)
     ui.cvc_pushButton_33.setStyleSheet(style_)
 
-    style_ = style_bc_bb if ui.ct_test > 0 and ui.counter % 2 != 0 else style_bc_bt
-    ui.tt_pushButtonnn_03.setStyleSheet(style_)
-
     ui.be_pushButtonnn_01.setStyleSheet(style_bc_by if ui.backtest_engine else style_bc_bt)
 
     if ui.ssicon_alert:
@@ -145,7 +133,7 @@ def update_progressbar(ui):
     if ui.lgicon_alert:
         icon = ui.icon_log if ui.counter % 2 == 0 else ui.icon_log2
         ui.main_btn_list[5].setIcon(icon)
-        if ui.counter % 5 == 0 and (ui.dict_set['주식알림소리'] or ui.dict_set['코인알림소리']):
+        if ui.counter % 600 == 0 and (ui.dict_set['주식알림소리'] or ui.dict_set['코인알림소리']):
             ui.soundQ.put('오류가 발생하였습니다. 로그탭을 확인하십시오.')
 
     if not ui.image_search or (ui.counter % 600 == 0 and (ui.image_label1.isVisible() or ui.image_label2.isVisible())):

@@ -78,10 +78,7 @@ class SetCoinBack:
 
         self.ui.cvj_pushButton_01 = self.wc.setPushbutton('백테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_11, color=2, tip='(Alt+Enter) 기본전략을 백테스팅한다.\nCtrl키와 함께 누르면 백테스트 엔진을 재시작할 수 있습니다.\nCtrl + Alt 키와 함계 누르면 백테 완료 후 변수목록이 포함된 그래프가 저장됩니다.')
         self.ui.cvj_pushButton_02 = self.wc.setPushbutton('백파인더', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_12, color=2, tip='구간등락율을 기준으로 변수를 탐색한다.')
-        self.ui.cvj_pushButton_03 = self.wc.setPushbutton('패턴 테스트', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_24, color=2, tip='선택한 전략과 패턴을 테스트한다.\n패턴 학습한 일자 외의 기간을 테스트해야합니다.')
-        self.ui.cvj_pushButton_04 = self.wc.setPushbutton('패턴 학습', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_23, color=2, tip='선택한 일자에서 패턴을 학습시킨다.\n패턴 테스트할 일자와 중복되지 않게 일자를 선택해야합니다.')
         self.ui.cvj_pushButton_05 = self.wc.setPushbutton('백파인더 예제', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_13, color=3)
-        self.ui.cvj_pushButton_06 = self.wc.setPushbutton('패턴 설정', box=self.ui.cs_tab, click=self.ui.cvjButtonClicked_25, color=3)
 
         self.ui.cvjs_comboBoxx_01 = self.wc.setCombobox(self.ui.cs_tab, font=qfont14, activated=self.ui.cActivated_02)
         self.ui.cvjs_lineEditt_01 = self.wc.setLineedit(self.ui.cs_tab, font=qfont14, aleft=True, ltext='F6, F7', style=style_bc_dk)
@@ -123,7 +120,7 @@ class SetCoinBack:
             self.ui.cvjb_dateEditt_01 = self.wc.setDateEdit(self.ui.cs_tab, addday=-int(self.ui.dict_set['백테날짜']))
         self.ui.cvjb_dateEditt_02 = self.wc.setDateEdit(self.ui.cs_tab)
         self.ui.cvjb_lineEditt_02 = self.wc.setLineedit(self.ui.cs_tab, ltext='0', style=style_bc_dk)
-        self.ui.cvjb_lineEditt_03 = self.wc.setLineedit(self.ui.cs_tab, ltext='235959', style=style_bc_dk)
+        self.ui.cvjb_lineEditt_03 = self.wc.setLineedit(self.ui.cs_tab, ltext='235959' if self.ui.dict_set['코인타임프레임'] else '2359', style=style_bc_dk)
         self.ui.cvjb_lineEditt_04 = self.wc.setLineedit(self.ui.cs_tab, ltext='20', style=style_bc_dk)
         self.ui.cvjb_lineEditt_05 = self.wc.setLineedit(self.ui.cs_tab, ltext='30', style=style_bc_dk)
 
@@ -366,12 +363,9 @@ class SetCoinBack:
         self.ui.cvjb_pushButon_11.setGeometry(1012, 215, 165, 30)
         self.ui.cvjb_pushButon_12.setGeometry(1182, 215, 165, 30)
 
-        self.ui.cvj_pushButton_01.setGeometry(1012, 335, 80, 30)
-        self.ui.cvj_pushButton_02.setGeometry(1012, 370, 80, 30)
-        self.ui.cvj_pushButton_03.setGeometry(1097, 335, 80, 30)
-        self.ui.cvj_pushButton_04.setGeometry(1097, 370, 80, 30)
-        self.ui.cvj_pushButton_05.setGeometry(1012, 405, 80, 30)
-        self.ui.cvj_pushButton_06.setGeometry(1097, 405, 80, 30)
+        self.ui.cvj_pushButton_01.setGeometry(1012, 335, 165, 30)
+        self.ui.cvj_pushButton_02.setGeometry(1012, 370, 165, 30)
+        self.ui.cvj_pushButton_05.setGeometry(1012, 405, 165, 30)
 
         self.ui.cvjs_comboBoxx_01.setGeometry(1012, 478, 165, 25)
         self.ui.cvjs_lineEditt_01.setGeometry(1182, 478, 165, 25)

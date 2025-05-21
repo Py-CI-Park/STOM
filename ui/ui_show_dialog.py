@@ -1,13 +1,14 @@
 import os
 import sqlite3
 import pandas as pd
-from coin.kimp import Kimp
 from PyQt5.QtCore import QUrl, Qt
 from multiprocessing import Process
-from PyQt5.QtWidgets import QVBoxLayout, QTableWidgetItem
+from PyQt5.QtWidgets import QVBoxLayout, QTableWidgetItem, QMessageBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from coin.kimp_upbit_binance import Kimp
 from utility.static import qtest_qwait
-from utility.setting import columns_hc, DB_STRATEGY, DB_COIN_BACK, DB_COIN_TICK, DB_STOCK_BACK, DB_STOCK_TICK, DB_PATH
+from utility.setting import columns_hc, DB_STRATEGY, DB_COIN_BACK_TICK, DB_COIN_TICK, DB_STOCK_BACK_TICK, DB_STOCK_TICK, \
+    DB_PATH, DB_COIN_BACK_MIN, DB_STOCK_MIN, DB_STOCK_BACK_MIN, DB_COIN_MIN
 from ui.set_style import style_bc_bt, style_bc_bb
 
 
@@ -73,11 +74,16 @@ def show_dialog(ui, code_or_name, tickcount, searchdate, col):
         ui.ShowDialogHoga(False, coin, code)
         ui.ShowDialogChart(True, coin, code)
     else:
+        starttime = ui.ct_lineEdittttt_01.text()
+        endtime   = ui.ct_lineEdittttt_02.text()
+        if (len(starttime) > 4 or len(endtime) > 4) and \
+                (coin and not ui.dict_set['코인타임프레임'] or not coin and not ui.dict_set['주식타임프레임']):
+            QMessageBox.critical(ui, '오류 알림', '분봉차트의 시작 및 종료시간은\n분단위로 입력하십시오. (예: 900, 1520)\n')
+            return
         if not coin:
             ui.ShowDialogWeb(False, code)
         ui.ShowDialogHoga(False, coin, code)
-        ui.ShowDialogChart(False, coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(),
-                           ui.ct_lineEdittttt_02.text())
+        ui.ShowDialogChart(False, coin, code, tickcount, searchdate, starttime, endtime)
 
 
 def show_dialog_web(ui, show, code):
@@ -98,6 +104,7 @@ def show_dialog_web(ui, show, code):
 
 
 def show_dialog_hoga(ui, show, coin, code):
+    if ui.dict_set['리시버공유'] == 2: return
     if show and not ui.dialog_hoga.isVisible():
         ui.dialog_hoga.show()
     if ui.dialog_hoga.isVisible():
@@ -141,52 +148,35 @@ def show_dialog_hoga(ui, show, coin, code):
 def show_dialog_chart(ui, real, coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes):
     if not ui.dialog_chart.isVisible():
         if ui.main_btn in (1, 3):
-            ui.ct_lineEdittttt_01.setText('0')
-            ui.ct_lineEdittttt_02.setText('235959')
+            if ui.dict_set['코인타임프레임']:
+                ui.ct_lineEdittttt_01.setText('0')
+                ui.ct_lineEdittttt_02.setText('235959')
+            else:
+                ui.ct_lineEdittttt_01.setText('0')
+                ui.ct_lineEdittttt_02.setText('2359')
         else:
-            ui.ct_lineEdittttt_01.setText('90000')
-            ui.ct_lineEdittttt_02.setText('93000')
+            if ui.dict_set['주식타임프레임']:
+                ui.ct_lineEdittttt_01.setText('90000')
+                ui.ct_lineEdittttt_02.setText('93000')
+            else:
+                ui.ct_lineEdittttt_01.setText('900')
+                ui.ct_lineEdittttt_02.setText('1519')
         ui.dialog_chart.show()
     if ui.dialog_chart.isVisible() and ui.proc_chart.is_alive():
         if real:
             ui.ChartClear()
             if coin:
                 if ui.CoinStrategyProcessAlive(): ui.cstgQ.put(('차트종목코드', code))
+                if not ui.dict_set['코인타임프레임'] and ui.CoinReceiverProcessAlive(): ui.creceivQ.put(('차트종목코드', code))
             else:
-                ui.wdzservQ.put(('strategy', ('차트종목코드', code, ui.dict_sgbn[code])))
+                ui.wdzservQ.put(('strategy', ('차트종목코드', code)))
+                if not ui.dict_set['주식타임프레임']: ui.wdzservQ.put(('receiver', ('차트종목코드', code)))
         else:
             ui.ChartClear()
             if detail is None:
-                ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist()))
+                ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(code)))
             else:
-                ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(), detail, buytimes))
-
-
-def show_dialog_chart2(ui):
-    if ui.ct_pushButtonnn_06.text() == '확장':
-        if ui.ct_pushButtonnn_04.text() == 'CHART 8':
-            width = 1528
-        elif ui.ct_pushButtonnn_04.text() == 'CHART 12':
-            width = 2213
-        else:
-            width = 2898
-        ui.dialog_chart.setFixedSize(width, 1370 if not ui.dict_set['저해상도'] else 1010)
-        ui.ct_pushButtonnn_06.setText('주식')
-        ui.ct_pushButtonnn_06.setStyleSheet(style_bc_bb)
-        ui.ChartMoneyTopList()
-    elif ui.ct_pushButtonnn_06.text() == '주식':
-        ui.ct_pushButtonnn_06.setText('코인')
-        ui.ChartMoneyTopList()
-    elif ui.ct_pushButtonnn_06.text() == '코인':
-        if ui.ct_pushButtonnn_04.text() == 'CHART 8':
-            width = 1403
-        elif ui.ct_pushButtonnn_04.text() == 'CHART 12':
-            width = 2088
-        else:
-            width = 2773
-        ui.dialog_chart.setFixedSize(width, 1370 if not ui.dict_set['저해상도'] else 1010)
-        ui.ct_pushButtonnn_06.setText('확장')
-        ui.ct_pushButtonnn_06.setStyleSheet(style_bc_bt)
+                ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(code), detail, buytimes))
 
 
 def show_qsize(ui):
@@ -202,23 +192,21 @@ def show_dialog_factor(ui):
     ui.dialog_factor.show() if not ui.dialog_factor.isVisible() else ui.dialog_factor.close()
 
 
-def show_dialog_test(ui):
-    if not ui.dialog_test.isVisible():
-        ui.ct_pushButtonnn_05.setStyleSheet(style_bc_bt)
-        ui.dialog_test.show()
-    else:
-        ui.ct_pushButtonnn_05.setStyleSheet(style_bc_bb)
-        ui.dialog_test.close()
-
-
 def show_chart(ui):
     if not ui.dialog_chart.isVisible():
         if ui.main_btn in (1, 3):
             ui.ct_lineEdittttt_01.setText('0')
-            ui.ct_lineEdittttt_02.setText('235959')
+            if ui.dict_set['코인타임프레임']:
+                ui.ct_lineEdittttt_02.setText('235959')
+            else:
+                ui.ct_lineEdittttt_02.setText('2359')
         else:
-            ui.ct_lineEdittttt_01.setText('90000')
-            ui.ct_lineEdittttt_02.setText('93000')
+            if ui.dict_set['주식타임프레임']:
+                ui.ct_lineEdittttt_01.setText('90000')
+                ui.ct_lineEdittttt_02.setText('93000')
+            else:
+                ui.ct_lineEdittttt_01.setText('900')
+                ui.ct_lineEdittttt_02.setText('1519')
         ui.dialog_chart.show()
     else:
         ui.dialog_chart.close()
@@ -421,38 +409,43 @@ def put_hoga_code(ui, coin, code):
 
 def chart_moneytop_list(ui):
     searchdate = ui.ct_dateEdittttt_02.date().toString('yyyyMMdd')
-    starttime = ui.ct_lineEdittttt_01.text()
-    endtime = ui.ct_lineEdittttt_02.text()
+    starttime  = ui.ct_lineEdittttt_01.text()
+    endtime    = ui.ct_lineEdittttt_02.text()
     coin = True if ui.ct_pushButtonnn_06.text() == '코인' else False
 
+    is_min = False
     if coin:
-        db_name1 = f'{DB_PATH}/coin_tick_{searchdate}.db'
-        db_name2 = DB_COIN_BACK
-        db_name3 = DB_COIN_TICK
+        db_name1 = f'{DB_PATH}/coin_tick_{searchdate}.db' if ui.dict_set['코인타임프레임'] else f'{DB_PATH}/coin_min_{searchdate}.db'
+        db_name2 = DB_COIN_BACK_TICK if ui.dict_set['코인타임프레임'] else DB_COIN_BACK_MIN
+        db_name3 = DB_COIN_TICK if ui.dict_set['코인타임프레임'] else DB_COIN_MIN
+        if ui.dict_set['코인타임프레임']:
+            query = f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}"
+        else:
+            query = f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 10000 >= {starttime} and `index` % 10000 <= {endtime}"
+            is_min = True
     else:
-        db_name1 = f'{DB_PATH}/stock_tick_{searchdate}.db'
-        db_name2 = DB_STOCK_BACK
-        db_name3 = DB_STOCK_TICK
+        db_name1 = f'{DB_PATH}/stock_tick_{searchdate}.db' if ui.dict_set['주식타임프레임'] else f'{DB_PATH}/stock_min_{searchdate}.db'
+        db_name2 = DB_STOCK_BACK_TICK if ui.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN
+        db_name3 = DB_STOCK_TICK if ui.dict_set['주식타임프레임'] else DB_STOCK_MIN
+        if ui.dict_set['주식타임프레임']:
+            query = f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}"
+        else:
+            query = f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 10000 >= {starttime} and `index` % 10000 <= {endtime}"
+            is_min = True
 
     df = None
     try:
         if os.path.isfile(db_name1):
             con = sqlite3.connect(db_name1)
-            df = pd.read_sql(
-                f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}",
-                con)
+            df = pd.read_sql(query, con)
             con.close()
         elif os.path.isfile(db_name2):
             con = sqlite3.connect(db_name2)
-            df = pd.read_sql(
-                f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}",
-                con)
+            df = pd.read_sql(query, con)
             con.close()
         elif os.path.isfile(db_name3):
             con = sqlite3.connect(db_name3)
-            df = pd.read_sql(
-                f"SELECT * FROM moneytop WHERE `index` LIKE '{searchdate}%' and `index` % 1000000 >= {starttime} and `index` % 1000000 <= {endtime}",
-                con)
+            df = pd.read_sql(query, con)
             con.close()
     except:
         pass
@@ -461,9 +454,11 @@ def chart_moneytop_list(ui):
         ui.ct_tableWidgett_01.clearContents()
         return
 
-    table_list = list(set(';'.join(df['거래대금순위'].to_list()[30:]).split(';')))
-    name_list = [ui.dict_name[code] if code in ui.dict_name.keys() else code for code in
-                 table_list] if not coin else table_list
+    if is_min:
+        table_list = list(set(';'.join(df['거래대금순위'].to_list()).split(';')))
+    else:
+        table_list = list(set(';'.join(df['거래대금순위'].to_list()[29:]).split(';')))
+    name_list = [ui.dict_name[code] if code in ui.dict_name.keys() else code for code in table_list] if not coin else table_list
     name_list.sort()
 
     ui.ct_tableWidgett_01.setRowCount(len(name_list))
@@ -473,3 +468,30 @@ def chart_moneytop_list(ui):
         ui.ct_tableWidgett_01.setItem(i, 0, item)
     if len(name_list) < 100:
         ui.ct_tableWidgett_01.setRowCount(100)
+
+
+def chart_size_change(ui):
+    if ui.ct_pushButtonnn_06.text() == '확장':
+        if ui.ct_pushButtonnn_04.text() == 'CHART 8':
+            width = 1528
+        elif ui.ct_pushButtonnn_04.text() == 'CHART 12':
+            width = 2213
+        else:
+            width = 2898
+        ui.dialog_chart.setFixedSize(width, 1370 if not ui.dict_set['저해상도'] else 1010)
+        ui.ct_pushButtonnn_06.setText('주식')
+        ui.ct_pushButtonnn_06.setStyleSheet(style_bc_bb)
+        ui.ChartMoneyTopList()
+    elif ui.ct_pushButtonnn_06.text() == '주식':
+        ui.ct_pushButtonnn_06.setText('코인')
+        ui.ChartMoneyTopList()
+    elif ui.ct_pushButtonnn_06.text() == '코인':
+        if ui.ct_pushButtonnn_04.text() == 'CHART 8':
+            width = 1403
+        elif ui.ct_pushButtonnn_04.text() == 'CHART 12':
+            width = 2088
+        else:
+            width = 2773
+        ui.dialog_chart.setFixedSize(width, 1370 if not ui.dict_set['저해상도'] else 1010)
+        ui.ct_pushButtonnn_06.setText('확장')
+        ui.ct_pushButtonnn_06.setStyleSheet(style_bc_bt)

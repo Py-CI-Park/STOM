@@ -83,54 +83,32 @@ def press_keys(data):
 
 
 def manual_login(gubun):
-    """
-    gubun == 1 : 첫번째 계정 모의서버
-    gubun == 2 : 첫번째 계정 본서버
-    gubun == 3 : 두번째 계정 모의서버
-    gubun == 4 : 두번째 계정 본서버
-    gubun == 5 : 세번째 계정 모의서버
-    gubun == 6 : 세번째 계정 본서버
-    gubun == 7 : 네번째 계정 모의서버
-    gubun == 8 : 네번째 계정 본서버
-    """
     hwnd = find_window('Open API login')
-    if gubun in (1, 3, 5, 7):
-        if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
-            click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-        if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
-            click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-    elif gubun in (2, 4, 6, 8):
-        if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
-            click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-        if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
-            click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
-
-    count = 0
-    if gubun in (1, 2):   count = 1
-    elif gubun in (3, 4): count = 2
-    elif gubun in (5, 6): count = 3
-    elif gubun in (7, 8): count = 4
-
-    if count != 0:
-        enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{count}'])
-        enter_keys(win32gui.GetDlgItem(hwnd, 0x3E9), DICT_SET[f'비밀번호{count}'])
-        enter_keys(win32gui.GetDlgItem(hwnd, 0x3EA), DICT_SET[f'인증서비밀번호{count}'])
-        win32api.Sleep(1000)
-        doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3E8))
-        enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{count}'])
-        doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3E9))
-        enter_keys(win32gui.GetDlgItem(hwnd, 0x3E9), DICT_SET[f'비밀번호{count}'])
-        doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3EA))
-        enter_keys(win32gui.GetDlgItem(hwnd, 0x3EA), DICT_SET[f'인증서비밀번호{count}'])
-        click_button(win32gui.GetDlgItem(hwnd, 0x1))
-        click_button(win32gui.GetDlgItem(hwnd, 0x1))
+    if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
+        click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
+    if not win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
+        click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
+    """ 모의서버 접속용
+    if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
+        click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
+    if win32gui.IsWindowEnabled(win32gui.GetDlgItem(hwnd, 0x3EA)):
+        click_button(win32gui.GetDlgItem(hwnd, 0x3ED))
+    """
+    enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{gubun}'])
+    enter_keys(win32gui.GetDlgItem(hwnd, 0x3E9), DICT_SET[f'비밀번호{gubun}'])
+    enter_keys(win32gui.GetDlgItem(hwnd, 0x3EA), DICT_SET[f'인증서비밀번호{gubun}'])
+    win32api.Sleep(1000)
+    doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3E8))
+    enter_keys(win32gui.GetDlgItem(hwnd, 0x3E8), DICT_SET[f'아이디{gubun}'])
+    doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3E9))
+    enter_keys(win32gui.GetDlgItem(hwnd, 0x3E9), DICT_SET[f'비밀번호{gubun}'])
+    doubleClick(15, 15, win32gui.GetDlgItem(hwnd, 0x3EA))
+    enter_keys(win32gui.GetDlgItem(hwnd, 0x3EA), DICT_SET[f'인증서비밀번호{gubun}'])
+    click_button(win32gui.GetDlgItem(hwnd, 0x1))
+    click_button(win32gui.GetDlgItem(hwnd, 0x1))
 
 
 def auto_on(gubun):
-    """
-    gubun == 1 : 첫번째 계정
-    gubun == 2 : 두번째 계정
-    """
     hwnd = find_window('계좌비밀번호')
     if hwnd != 0:
         edit = win32gui.GetDlgItem(hwnd, 0xCC)
@@ -140,6 +118,12 @@ def auto_on(gubun):
         elif DICT_SET['증권사'] == '키움증권2':
             if gubun == 1:   enter_keys(edit, DICT_SET['계좌비밀번호3'])
             elif gubun == 2: enter_keys(edit, DICT_SET['계좌비밀번호4'])
+        elif DICT_SET['증권사'] == '키움증권3':
+            if gubun == 1:   enter_keys(edit, DICT_SET['계좌비밀번호5'])
+            elif gubun == 2: enter_keys(edit, DICT_SET['계좌비밀번호6'])
+        elif DICT_SET['증권사'] == '키움증권4':
+            if gubun == 1:   enter_keys(edit, DICT_SET['계좌비밀번호7'])
+            elif gubun == 2: enter_keys(edit, DICT_SET['계좌비밀번호8'])
         click_button(win32gui.GetDlgItem(hwnd, 0xD4))
         click_button(win32gui.GetDlgItem(hwnd, 0xD3))
         click_button(win32gui.GetDlgItem(hwnd, 0x01))

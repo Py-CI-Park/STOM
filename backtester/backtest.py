@@ -5,9 +5,10 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd, InitBackSequence
+from backtester.back_static import PltShow, GetMoneytopQuery, GetBackResult, GetResultDataframe, AddMdd
 from utility.static import now, strf_time
-from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, columns_vj, DICT_SET, DB_STOCK_BACK, DB_COIN_BACK, coinreadlines
+from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, columns_vj, DICT_SET, DB_STOCK_BACK_TICK, \
+    DB_COIN_BACK_TICK, coinreadlines, DB_STOCK_BACK_MIN, DB_COIN_BACK_MIN
 
 
 class Total:
@@ -27,10 +28,6 @@ class Total:
         self.savename     = f'{gubun_text}_bt'
 
         self.back_count   = None
-        self.dict_bkvc    = {}
-        self.dict_bkvc_   = {}
-        self.vb_file_name = strf_time('%Y%m%d%H%M%S', now())
-
         self.buystg_name  = None
         self.buystg       = None
         self.sellstg      = None
@@ -48,13 +45,10 @@ class Total:
 
         self.df_tsg       = None
         self.df_bct       = None
-
         self.df_kp        = None
         self.df_kd        = None
         self.back_club    = None
 
-        self.dict_t       = {}
-        self.dict_v       = {}
         self.insertlist   = []
 
         self.MainLoop()
@@ -65,7 +59,7 @@ class Total:
         start = now()
         while True:
             data = self.tq.get()
-            if data == '백테완료':
+            if data[0] == '백테완료':
                 bc += 1
                 self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.back_count, start))
 
@@ -152,20 +146,20 @@ class Total:
         self.df_tsg, self.df_bct = GetResultDataframe(self.ui_gubun, list_tsg, arry_bct)
         if self.blacklist: self.InsertBlacklist()
 
-        _df_tsg   = self.df_tsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
-        arry_tsg  = np.array(_df_tsg, dtype='float64')
-        arry_bct  = np.sort(arry_bct, axis=0)[::-1]
-        result    = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, self.day_count)
-        result    = AddMdd(arry_tsg, result)
+        _df_tsg    = self.df_tsg[['보유시간', '매도시간', '수익률', '수익금', '수익금합계']].copy()
+        arry_tsg   = np.array(_df_tsg, dtype='float64')
+        arry_bct   = np.sort(arry_bct, axis=0)[::-1]
+        result     = GetBackResult(arry_tsg, arry_bct, self.betting, self.ui_gubun, self.day_count)
+        result     = AddMdd(arry_tsg, result)
         tc, atc, pc, mc, wr, ah, app, tpp, tsg, mhct, seed, cagr, tpi, mdd, mdd_ = result
-        save_time = strf_time('%Y%m%d%H%M%S')
+        save_time  = strf_time('%Y%m%d%H%M%S')
         startday, endday, starttime, endtime = str(self.startday), str(self.endday), str(self.starttime).zfill(6), str(self.endtime).zfill(6)
-        startday  = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
-        endday    = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
-        starttime = starttime[:2] + ':' + starttime[2:4] + ':' + starttime[4:]
-        endtime   = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
-        bet_unit  = '원' if self.ui_gubun != 'CF' else 'USDT'
-        back_text = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.avgtime}'
+        startday   = startday[:4] + '-' + startday[4:6] + '-' + startday[6:]
+        endday     = endday[:4] + '-' + endday[4:6] + '-' + endday[6:]
+        starttime  = starttime[:2] + ':' + starttime[2:4] + ':' + starttime[4:]
+        endtime    = endtime[:2] + ':' + endtime[2:4] + ':' + endtime[4:]
+        bet_unit   = '원' if self.ui_gubun != 'CF' else 'USDT'
+        back_text  = f'백테기간 : {startday}~{endday}, 백테시간 : {starttime}~{endtime}, 거래일수 : {self.day_count}, 평균값계산틱수 : {self.avgtime}'
         label_text = f'종목당 배팅금액 {int(self.betting):,}{bet_unit}, 필요자금 {seed:,.0f}{bet_unit}, '\
                      f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n' \
                      f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '\
@@ -237,7 +231,6 @@ class BackTest:
         self.backname  = backname
         self.ui_gubun  = ui_gubun
         self.dict_set  = DICT_SET
-        self.pattern   = False
         self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
         self.Start()
 
@@ -263,9 +256,12 @@ class BackTest:
         df_kp         = data[12]
         df_kq         = data[13]
         back_club     = data[14]
-        self.pattern  = data[15]
 
-        con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
+        if self.ui_gubun == 'S':
+            db = DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN
+        else:
+            db = DB_COIN_BACK_TICK if self.dict_set['코인타임프레임'] else DB_COIN_BACK_MIN
+        con   = sqlite3.connect(db)
         query = GetMoneytopQuery(self.ui_gubun, startday, endday, starttime, endtime)
         df_mt = pd.read_sql(query, con)
         con.close()
@@ -304,8 +300,7 @@ class BackTest:
                      dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
 
         time.sleep(1)
-        InitBackSequence()
-        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg, self.pattern)
+        data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg)
         for q in self.bstq_list:
             q.put(('백테시작', 2))
         for q in self.beq_list:
@@ -325,9 +320,6 @@ class BackTest:
         if cancel:
             self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         else:
-            if self.pattern:
-                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'패턴 테스트 완료'))
-            else:
-                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
+            self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 완료'))
         time.sleep(1)
         sys.exit()

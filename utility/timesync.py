@@ -15,7 +15,7 @@ def timesync():
             dt = datetime.utcfromtimestamp(response.tx_time + response.delay)
             localtime = dt.astimezone(tz.tzlocal())
             offset = abs(response.offset)
-            if offset >= 0.01:
+            if offset >= 0.05:
                 win32api.SetSystemTime(
                     localtime.year,
                     localtime.month,

@@ -4,7 +4,6 @@ import pandas as pd
 from static import read_key, write_key
 
 os.makedirs('./_database', exist_ok=True)
-os.makedirs('./_pattern', exist_ok=True)
 os.makedirs('./_log', exist_ok=True)
 
 DB_SETTING   = './_database/setting.db'
@@ -19,209 +18,88 @@ except:
     write_key()
     print('시스템 명령 실행 알림 - 암호화키 생성 완료')
 
-delete_file_list = [
-    './update.txt',
-    './licence.txt',
-    './license.txt',
-    './stom_32.bat',
-    './stom_32.bat.lnk',
-    './stom_32_stocklogin.bat',
-    './stom_64.bat',
-    './stom_64.bat.lnk',
-    './stom_64_backscheduler.bat',
-    './stom_backscheduler.bat',
-    './stock/collector_kiwoom.py',
-    './coin/collector_coin.py',
-    './utility/static_numba.py',
-    './utility/db_update_20220529.py',
-    './utility/db_update_20220713.py',
-    './utility/db_update_20230126.py',
-    './utility/db_update_gsjm_column.py',
-    './utility/stomlive.py',
-    './db_update_20220529.bat',
-    './db_update_20220713.bat',
-    './db_update_20230126.bat',
-    './db_update_20240503.bat',
-    './backtester/backengine_coin_future3.py',
-    './backtester/backengine_coin_future4.py',
-    './backtester/backengine_coin_upbit3.py',
-    './backtester/backengine_coin_upbit4.py',
-    './backtester/backengine_stock3.py',
-    './backtester/backengine_stock4.py',
-    './download_kiwoom.py',
-    './stock/strategy_kiwoom_.py',
-    './ui/ui_draw_chart_daymin.py',
-    './ui/event_filter.py',
-    './ui/ui_static.py',
-    './ui/ui_writer.py',
-    './kiwoom_manager.py',
-    './db_update_day_20240504.bat',
-    './db_update_back_20240504.bat',
-    './db_distinct.bat',
-    './lecture/study.py'
-]
-
-for file in delete_file_list:
-    if os.path.isfile(file):
-        os.remove(file)
-
 con = sqlite3.connect(DB_SETTING)
 df  = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)
 table_list = df['name'].to_list()
 
 if 'main' not in table_list:
     columns = [
-        'index', '증권사', '주식리시버', '주식트레이더', '주식틱데이터저장', '거래소', '코인리시버', '코인트레이더', '코인틱데이터저장',
-        '장중전략조건검색식사용', '주식순위시간', '주식순위선정', '코인순위시간', '코인순위선정', '리시버실행시간', '트레이더실행시간',
+        'index', '증권사', '주식리시버', '주식트레이더', '주식데이터저장', '거래소', '코인리시버', '코인트레이더', '코인데이터저장',
         '바이낸스선물고정레버리지', '바이낸스선물고정레버리지값', '바이낸스선물변동레버리지값', '바이낸스선물마진타입', '바이낸스선물포지션',
         '버전업', '리시버공유'
     ]
-    data = [0, '키움증권1', 0, 0, 0, '바이낸스선물', 0, 0, 0, 0, 5, 50, 5, 10, 84000, 84500, 1, 1, '0;5;1^5;10;2^10;20;3^20;30;4^30;100;5', 'ISOLATED', 'false', 1, 0]
+    data = [0, '키움증권1', 0, 0, 0, '바이낸스선물', 0, 0, 0, 1, 1, '0;5;1^5;10;2^10;20;3^20;30;4^30;100;5', 'ISOLATED', 'false', 1, 0]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('main', con)
-else:
-    df = pd.read_sql('SELECT * FROM main', con).set_index('index')
-    if '주식틱데이터저장' not in df.columns:
-        df.drop(columns=['주식콜렉터', '코인콜렉터'], inplace=True)
-        df['주식틱데이터저장'] = 0
-        df['코인틱데이터저장'] = 0
-        df['버전업'] = 1
-        df['리시버공유'] = 0
-        df.to_sql('main', con, if_exists='replace')
 
 if 'sacc' not in table_list:
     columns = [
-        "index", "아이디1", "비밀번호1", "인증서비밀번호1", "계좌비밀번호1", "아이디2", "비밀번호2", "인증서비밀번호2", "계좌비밀번호2",
-        "아이디3", "비밀번호3", "인증서비밀번호3", "계좌비밀번호3", "아이디4", "비밀번호4", "인증서비밀번호4", "계좌비밀번호4"
+        "index", "아이디", "비밀번호", "인증서비밀번호", "계좌비밀번호"
     ]
-    data = [0, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
-    df = pd.DataFrame([data], columns=columns).set_index('index')
+    data = [
+        [1, '', '', '', ''],
+        [2, '', '', '', ''],
+        [3, '', '', '', ''],
+        [4, '', '', '', ''],
+        [5, '', '', '', ''],
+        [6, '', '', '', ''],
+        [7, '', '', '', ''],
+        [8, '', '', '', '']
+    ]
+    df = pd.DataFrame(data, columns=columns).set_index('index')
     df.to_sql('sacc', con)
 
 if 'cacc' not in table_list:
-    columns = ["index", "Access_key1", "Secret_key1", "Access_key2", "Secret_key2"]
-    data = [0, '', '', '', '']
-    df = pd.DataFrame([data], columns=columns).set_index('index')
+    columns = ["index", "Access_key", "Secret_key"]
+    data = [[1, '', ''], [2, '', '']]
+    df = pd.DataFrame(data, columns=columns).set_index('index')
     df.to_sql('cacc', con)
 
 if 'telegram' not in table_list:
     columns = ["index", "str_bot", "int_id"]
-    data = [0, '', '']
-    df = pd.DataFrame([data], columns=columns).set_index('index')
+    data = [[1, '', ''], [2, '', ''], [3, '', ''], [4, '', '']]
+    df = pd.DataFrame(data, columns=columns).set_index('index')
     df.to_sql('telegram', con)
 
 if 'stock' not in table_list:
     columns = [
-        "index", "주식모의투자", "주식알림소리", "주식장초매수전략", "주식장초매도전략", "주식장초평균값계산틱수", "주식장초최대매수종목수",
-        "주식장초전략종료시간", "주식장초잔고청산", "주식장초프로세스종료", "주식장초컴퓨터종료", "주식장중매수전략", "주식장중매도전략",
-        "주식장중평균값계산틱수", "주식장중최대매수종목수", "주식장중전략종료시간", "주식장중잔고청산", "주식장중프로세스종료", "주식장중컴퓨터종료",
-        "주식투자금고정", "주식장초투자금", "주식장중투자금", "주식손실중지", "주식손실중지수익률", "주식수익중지", "주식수익중지수익률",
-        "주식장초패턴인식", "주식장중패턴인식", "주식경과틱수설정"
+        "index", "주식모의투자", "주식알림소리", "주식매수전략", "주식매도전략", "주식타임프레임", "주식평균값계산틱수", "주식최대매수종목수",
+        "주식전략종료시간", "주식잔고청산", "주식프로세스종료", "주식컴퓨터종료", "주식투자금고정", "주식투자금", "주식손실중지",
+        "주식손실중지수익률", "주식수익중지", "주식수익중지수익률", "주식경과틱수설정"
     ]
-    data = [0, 1, 1, '', '', 30, 10, 93000, 1, 1, 0, '', '', 30, 10, 152900, 1, 0, 0, 1, 20.0, 20.0, 0, 2.0, 0, 2.0, 0, 0, '']
+    data = [0, 1, 1, '', '', 1, 30, 10, 93000, 1, 1, 0, 1, 20.0, 0, 2.0, 0, 2.0, '']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('stock', con)
-else:
-    df = pd.read_sql('SELECT * FROM stock', con).set_index('index')
-    update = False
-    if '주식장초패턴인식' not in df.columns:
-        df['주식장초패턴인식'] = 0
-        df['주식장중패턴인식'] = 0
-    if '주식경과틱수설정' not in df.columns:
-        df['주식경과틱수설정'] = ''
-        update = True
-    if update:
-        df.to_sql('stock', con, if_exists='replace')
 
 if 'coin' not in table_list:
     columns = [
-        "index", "코인모의투자", "코인알림소리", "코인장초매수전략", "코인장초매도전략", "코인장초평균값계산틱수", "코인장초최대매수종목수",
-        "코인장초전략종료시간", "코인장초잔고청산", "코인장초프로세스종료", "코인장초컴퓨터종료", "코인장중매수전략", "코인장중매도전략",
-        "코인장중평균값계산틱수", "코인장중최대매수종목수", "코인장중전략종료시간", "코인장중잔고청산", "코인장중프로세스종료", "코인장중컴퓨터종료",
-        "코인투자금고정", "코인장초투자금", "코인장중투자금", "코인손실중지", "코인손실중지수익률", "코인수익중지", "코인수익중지수익률",
-        "코인장초패턴인식", "코인장중패턴인식", "코인경과틱수설정"
+        "index", "코인모의투자", "코인알림소리", "코인매수전략", "코인매도전략", "코인타임프레임", "코인평균값계산틱수", "코인최대매수종목수",
+        "코인전략종료시간", "코인잔고청산", "코인프로세스종료", "코인컴퓨터종료", "코인투자금고정", "코인투자금", "코인손실중지",
+        "코인손실중지수익률", "코인수익중지", "코인수익중지수익률", "코인경과틱수설정"
     ]
-    data = [0, 1, 1, '', '', 30, 10, 100000, 1, 0, 0, '', '', 30, 10, 234500, 1, 0, 0, 1, 1000.0, 1000.0, 0, 2.0, 0, 2.0, 0, 0, '']
+    data = [0, 1, 1, '', '', 0, 30, 10, 235000, 1, 0, 0, 1, 1000.0, 0, 2.0, 0, 2.0, '']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('coin', con)
-else:
-    df = pd.read_sql('SELECT * FROM coin', con).set_index('index')
-    update = False
-    if '코인장초패턴인식' not in df.columns:
-        df['코인장초패턴인식'] = 0
-        df['코인장중패턴인식'] = 0
-        update = True
-    if '코인경과틱수설정' not in df.columns:
-        df['코인경과틱수설정'] = ''
-        update = True
-    if update:
-        df.to_sql('coin', con, if_exists='replace')
 
 if 'back' not in table_list:
     columns = [
         "index", "블랙리스트추가", "백테주문관리적용", "백테매수시간기준", "백테일괄로딩", "그래프저장하지않기", "그래프띄우지않기",
         "디비자동관리", "교차검증가중치", "백테스케쥴실행", "백테스케쥴요일", "백테스케쥴시간", "백테스케쥴구분", "백테스케쥴명",
         "백테날짜고정", "백테날짜", "최적화기준값제한", "백테엔진분류방법", "옵튜나샘플러", "옵튜나고정변수", "옵튜나실행횟수",
-        "옵튜나자동스탭", "범위자동관리", "보조지표사용", "보조지표설정", "최적화로그기록안함"
+        "옵튜나자동스탭", "범위자동관리", "보조지표설정", "최적화로그기록안함"
     ]
     data = [0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 4, 160000, '', '', 1, '20220323',
             '0.0;1000.0;0;100.0;0.0;100.0;-10.0;10.0;0.0;100.0;-10000.0;10000.0;0.0;10.0',
-            '종목코드별 분류', 'TPESampler', '', 0, 0, 0, 0,
-            '5;2;2;0;12;26;9;12;26;0;30;14', 1]
+            '종목코드별 분류', 'TPESampler', '', 0, 0, 0,
+            '3;10;14;12;26;0;14;14;5;2;2;0;14;14;12;26;9;14;10;12;26;0;10;14;0.02;0.2;5;3;0;3;0;5;3;0;14', 1]
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('back', con)
-else:
-    df = pd.read_sql('SELECT * FROM back', con).set_index('index')
-    update = False
-    if '옵튜나자동스탭' not in df.columns:
-        df['백테엔진분류방법'] = '종목코드별 분류'
-        df['백테스케쥴실행'] = 0
-        df['백테스케쥴요일'] = 4
-        df['백테스케쥴시간'] = 160000
-        df['옵튜나샘플러'] = 'BaseSampler'
-        df['옵튜나고정변수'] = ''
-        df['옵튜나실행횟수'] = 0
-        df['옵튜나자동스탭'] = 0
-        update = True
-    if '범위자동관리' not in df.columns:
-        df['범위자동관리'] = 0
-        update = True
-    if '주식일봉데이터' in df.columns:
-        columns = ["주식일봉데이터", "주식분봉데이터", "주식분봉기간", "주식일봉데이터다운", "주식일봉다운컴종료", "일봉다운실행시간",
-                   "코인일봉데이터", "코인분봉데이터", "코인분봉기간", "코인일봉데이터다운"]
-        df.drop(columns=columns, inplace=True)
-        update = True
-    if '보조지표사용' not in df.columns:
-        df['보조지표사용'] = 0
-        df['보조지표설정'] = '5;2;2;0;12;26;9;12;26;0;30;14'
-        update = True
-    if '최적화로그기록안함' not in df.columns:
-        df['최적화로그기록안함'] = 1
-        update = True
-    if update:
-        df.to_sql('back', con, if_exists='replace')
 
 if 'etc' not in table_list:
     columns = ["index", "테마", "인트로숨김", "저해상도", "휴무프로세스종료", "휴무컴퓨터종료", "창위치기억", "창위치", "스톰라이브", "프로그램종료", "팩터선택"]
-    data = [0, '다크블루', 0, 0, 1, 0, 1, '', 1, 0, '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1']
+    data = [0, '다크블루', 1, 0, 1, 0, 1, '', 1, 0, '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('etc', con)
-else:
-    df = pd.read_sql('SELECT * FROM etc', con).set_index('index')
-    update = False
-    if '주식틱자동저장' in df.columns:
-        df.drop(columns=['주식틱자동저장'], inplace=True)
-        update = True
-    factor_text = df['팩터선택'][0]
-    len_factor  = len(factor_text.split(';'))
-    if len_factor < 26:
-        df['팩터선택'] = '1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1;1'
-        update = True
-    if '인트로숨김' not in df.columns:
-        df['인트로숨김'] = 0
-        update = True
-    if update:
-        df.to_sql('etc', con, if_exists='replace')
 
 if 'stockbuyorder' not in table_list:
     columns = [
@@ -236,11 +114,6 @@ if 'stockbuyorder' not in table_list:
             130000, 0, 5, 0, 300, 0, 5, 2, '0;0;0;0;0;1;1;1;1;1']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('stockbuyorder', con)
-else:
-    df = pd.read_sql('SELECT * FROM stockbuyorder', con).set_index('index')
-    if '주식비중조절' not in df.columns:
-        df['주식비중조절'] = '0;0;0;0;0;1;1;1;1;1'
-        df.to_sql('stockbuyorder', con, if_exists='replace')
 
 if 'stocksellorder' not in table_list:
     columns = [
@@ -268,11 +141,6 @@ if 'coinbuyorder' not in table_list:
             0, 5, 0, 300, 0, 5, 2, '0;0;0;0;0;1;1;1;1;1']
     df = pd.DataFrame([data], columns=columns).set_index('index')
     df.to_sql('coinbuyorder', con)
-else:
-    df = pd.read_sql('SELECT * FROM coinbuyorder', con).set_index('index')
-    if '코인비중조절' not in df.columns:
-        df['코인비중조절'] = '0;0;0;0;0;1;1;1;1;1'
-        df.to_sql('coinbuyorder', con, if_exists='replace')
 
 if 'coinsellorder' not in table_list:
     columns = [
@@ -309,27 +177,7 @@ if 'coinsell' not in table_list:
     cur.execute('CREATE INDEX "ix_coinsell_index"ON "coinsell" ("index")')
 
 if 'coinoptibuy' not in table_list:
-    query = 'CREATE TABLE "coinoptibuy" ( "index" TEXT, "전략코드" TEXT, ' \
-            '"변수0" REAL, "변수1" REAL, "변수2" REAL, "변수3" REAL, "변수4" REAL, "변수5" REAL, "변수6" REAL, "변수7" REAL, "변수8" REAL, "변수9" REAL, ' \
-            '"변수10" REAL, "변수11" REAL, "변수12" REAL, "변수13" REAL, "변수14" REAL, "변수15" REAL, "변수16" REAL, "변수17" REAL, "변수18" REAL, "변수19" REAL, ' \
-            '"변수20" REAL, "변수21" REAL, "변수22" REAL, "변수23" REAL, "변수24" REAL, "변수25" REAL, "변수26" REAL, "변수27" REAL, "변수28" REAL, "변수29" REAL, ' \
-            '"변수30" REAL, "변수31" REAL, "변수32" REAL, "변수33" REAL, "변수34" REAL, "변수35" REAL, "변수36" REAL, "변수37" REAL, "변수38" REAL, "변수39" REAL, ' \
-            '"변수40" REAL, "변수41" REAL, "변수42" REAL, "변수43" REAL, "변수44" REAL, "변수45" REAL, "변수46" REAL, "변수47" REAL, "변수48" REAL, "변수49" REAL, ' \
-            '"변수50" REAL, "변수51" REAL, "변수52" REAL, "변수53" REAL, "변수54" REAL, "변수55" REAL, "변수56" REAL, "변수57" REAL, "변수58" REAL, "변수59" REAL, ' \
-            '"변수60" REAL, "변수61" REAL, "변수62" REAL, "변수63" REAL, "변수64" REAL, "변수65" REAL, "변수66" REAL, "변수67" REAL, "변수68" REAL, "변수69" REAL, ' \
-            '"변수70" REAL, "변수71" REAL, "변수72" REAL, "변수73" REAL, "변수74" REAL, "변수75" REAL, "변수76" REAL, "변수77" REAL, "변수78" REAL, "변수79" REAL, ' \
-            '"변수80" REAL, "변수81" REAL, "변수82" REAL, "변수83" REAL, "변수84" REAL, "변수85" REAL, "변수86" REAL, "변수87" REAL, "변수88" REAL, "변수89" REAL, ' \
-            '"변수90" REAL, "변수91" REAL, "변수92" REAL, "변수93" REAL, "변수94" REAL, "변수95" REAL, "변수96" REAL, "변수97" REAL, "변수98" REAL, "변수99" REAL, ' \
-            '"변수100" REAL, "변수101" REAL, "변수102" REAL, "변수103" REAL, "변수104" REAL, "변수105" REAL, "변수106" REAL, "변수107" REAL, "변수108" REAL, "변수109" REAL, ' \
-            '"변수110" REAL, "변수111" REAL, "변수112" REAL, "변수113" REAL, "변수114" REAL, "변수115" REAL, "변수116" REAL, "변수117" REAL, "변수118" REAL, "변수119" REAL, ' \
-            '"변수120" REAL, "변수121" REAL, "변수122" REAL, "변수123" REAL, "변수124" REAL, "변수125" REAL, "변수126" REAL, "변수127" REAL, "변수128" REAL, "변수129" REAL, ' \
-            '"변수130" REAL, "변수131" REAL, "변수132" REAL, "변수133" REAL, "변수134" REAL, "변수135" REAL, "변수136" REAL, "변수137" REAL, "변수138" REAL, "변수139" REAL, ' \
-            '"변수140" REAL, "변수141" REAL, "변수142" REAL, "변수143" REAL, "변수144" REAL, "변수145" REAL, "변수146" REAL, "변수147" REAL, "변수148" REAL, "변수149" REAL, ' \
-            '"변수150" REAL, "변수151" REAL, "변수152" REAL, "변수153" REAL, "변수154" REAL, "변수155" REAL, "변수156" REAL, "변수157" REAL, "변수158" REAL, "변수159" REAL, ' \
-            '"변수160" REAL, "변수161" REAL, "변수162" REAL, "변수163" REAL, "변수164" REAL, "변수165" REAL, "변수166" REAL, "변수167" REAL, "변수168" REAL, "변수169" REAL, ' \
-            '"변수170" REAL, "변수171" REAL, "변수172" REAL, "변수173" REAL, "변수174" REAL, "변수175" REAL, "변수176" REAL, "변수177" REAL, "변수178" REAL, "변수179" REAL, ' \
-            '"변수180" REAL, "변수181" REAL, "변수182" REAL, "변수183" REAL, "변수184" REAL, "변수185" REAL, "변수186" REAL, "변수187" REAL, "변수188" REAL, "변수189" REAL, ' \
-            '"변수190" REAL, "변수191" REAL, "변수192" REAL, "변수193" REAL, "변수194" REAL, "변수195" REAL, "변수196" REAL, "변수197" REAL, "변수198" REAL, "변수199" REAL )'
+    query = 'CREATE TABLE "coinoptibuy" ( "index" TEXT, "전략코드" TEXT, "변수값" TEXT )'
     cur.execute(query)
     cur.execute('CREATE INDEX "ix_coinoptibuy_index"ON "coinoptibuy" ("index")')
 
@@ -353,10 +201,6 @@ if 'coinsellconds' not in table_list:
     cur.execute('CREATE TABLE "coinsellconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_coinsellconds_index"ON "coinsellconds" ("index")')
 
-if 'coinpattern' not in table_list:
-    cur.execute('CREATE TABLE "coinpattern" ( "index" TEXT, "패턴설정" TEXT )')
-    cur.execute('CREATE INDEX "ix_coinpattern_index" ON "coinpattern"("index")')
-
 if 'stockbuy' not in table_list:
     cur.execute('CREATE TABLE "stockbuy" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stockbuy_index"ON "stockbuy" ("index")')
@@ -366,27 +210,7 @@ if 'stocksell' not in table_list:
     cur.execute('CREATE INDEX "ix_stocksell_index"ON "stocksell" ("index")')
 
 if 'stockoptibuy' not in table_list:
-    query = 'CREATE TABLE "stockoptibuy" ( "index" TEXT, "전략코드" TEXT, ' \
-            '"변수0" REAL, "변수1" REAL, "변수2" REAL, "변수3" REAL, "변수4" REAL, "변수5" REAL, "변수6" REAL, "변수7" REAL, "변수8" REAL, "변수9" REAL, ' \
-            '"변수10" REAL, "변수11" REAL, "변수12" REAL, "변수13" REAL, "변수14" REAL, "변수15" REAL, "변수16" REAL, "변수17" REAL, "변수18" REAL, "변수19" REAL, ' \
-            '"변수20" REAL, "변수21" REAL, "변수22" REAL, "변수23" REAL, "변수24" REAL, "변수25" REAL, "변수26" REAL, "변수27" REAL, "변수28" REAL, "변수29" REAL, ' \
-            '"변수30" REAL, "변수31" REAL, "변수32" REAL, "변수33" REAL, "변수34" REAL, "변수35" REAL, "변수36" REAL, "변수37" REAL, "변수38" REAL, "변수39" REAL, ' \
-            '"변수40" REAL, "변수41" REAL, "변수42" REAL, "변수43" REAL, "변수44" REAL, "변수45" REAL, "변수46" REAL, "변수47" REAL, "변수48" REAL, "변수49" REAL, ' \
-            '"변수50" REAL, "변수51" REAL, "변수52" REAL, "변수53" REAL, "변수54" REAL, "변수55" REAL, "변수56" REAL, "변수57" REAL, "변수58" REAL, "변수59" REAL, ' \
-            '"변수60" REAL, "변수61" REAL, "변수62" REAL, "변수63" REAL, "변수64" REAL, "변수65" REAL, "변수66" REAL, "변수67" REAL, "변수68" REAL, "변수69" REAL, ' \
-            '"변수70" REAL, "변수71" REAL, "변수72" REAL, "변수73" REAL, "변수74" REAL, "변수75" REAL, "변수76" REAL, "변수77" REAL, "변수78" REAL, "변수79" REAL, ' \
-            '"변수80" REAL, "변수81" REAL, "변수82" REAL, "변수83" REAL, "변수84" REAL, "변수85" REAL, "변수86" REAL, "변수87" REAL, "변수88" REAL, "변수89" REAL, ' \
-            '"변수90" REAL, "변수91" REAL, "변수92" REAL, "변수93" REAL, "변수94" REAL, "변수95" REAL, "변수96" REAL, "변수97" REAL, "변수98" REAL, "변수99" REAL, ' \
-            '"변수100" REAL, "변수101" REAL, "변수102" REAL, "변수103" REAL, "변수104" REAL, "변수105" REAL, "변수106" REAL, "변수107" REAL, "변수108" REAL, "변수109" REAL, ' \
-            '"변수110" REAL, "변수111" REAL, "변수112" REAL, "변수113" REAL, "변수114" REAL, "변수115" REAL, "변수116" REAL, "변수117" REAL, "변수118" REAL, "변수119" REAL, ' \
-            '"변수120" REAL, "변수121" REAL, "변수122" REAL, "변수123" REAL, "변수124" REAL, "변수125" REAL, "변수126" REAL, "변수127" REAL, "변수128" REAL, "변수129" REAL, ' \
-            '"변수130" REAL, "변수131" REAL, "변수132" REAL, "변수133" REAL, "변수134" REAL, "변수135" REAL, "변수136" REAL, "변수137" REAL, "변수138" REAL, "변수139" REAL, ' \
-            '"변수140" REAL, "변수141" REAL, "변수142" REAL, "변수143" REAL, "변수144" REAL, "변수145" REAL, "변수146" REAL, "변수147" REAL, "변수148" REAL, "변수149" REAL, ' \
-            '"변수150" REAL, "변수151" REAL, "변수152" REAL, "변수153" REAL, "변수154" REAL, "변수155" REAL, "변수156" REAL, "변수157" REAL, "변수158" REAL, "변수159" REAL, ' \
-            '"변수160" REAL, "변수161" REAL, "변수162" REAL, "변수163" REAL, "변수164" REAL, "변수165" REAL, "변수166" REAL, "변수167" REAL, "변수168" REAL, "변수169" REAL, ' \
-            '"변수170" REAL, "변수171" REAL, "변수172" REAL, "변수173" REAL, "변수174" REAL, "변수175" REAL, "변수176" REAL, "변수177" REAL, "변수178" REAL, "변수179" REAL, ' \
-            '"변수180" REAL, "변수181" REAL, "변수182" REAL, "변수183" REAL, "변수184" REAL, "변수185" REAL, "변수186" REAL, "변수187" REAL, "변수188" REAL, "변수189" REAL, ' \
-            '"변수190" REAL, "변수191" REAL, "변수192" REAL, "변수193" REAL, "변수194" REAL, "변수195" REAL, "변수196" REAL, "변수197" REAL, "변수198" REAL, "변수199" REAL )'
+    query = 'CREATE TABLE "stockoptibuy" ( "index" TEXT, "전략코드" TEXT, "변수값" TEXT )'
     cur.execute(query)
     cur.execute('CREATE INDEX "ix_stockoptibuy_index"ON "stockoptibuy" ("index")')
 
@@ -409,10 +233,6 @@ if 'stockbuyconds' not in table_list:
 if 'stocksellconds' not in table_list:
     cur.execute('CREATE TABLE "stocksellconds" ( "index" TEXT, "전략코드" TEXT )')
     cur.execute('CREATE INDEX "ix_stocksellconds_index"ON "stocksellconds" ("index")')
-
-if 'stockpattern' not in table_list:
-    cur.execute('CREATE TABLE "stockpattern" ( "index" TEXT, "패턴설정" TEXT )')
-    cur.execute('CREATE INDEX "ix_stockpattern_index" ON "stockpattern"("index")')
 
 if 'schedule' not in table_list:
     cur.execute('CREATE TABLE "schedule" ( "index" TEXT, "스케쥴" TEXT )')

@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QDate
-from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QLineEdit, QMessageBox
 from ui.set_style import style_bc_dk
 
 
@@ -31,11 +31,16 @@ def return_press_01(ui):
         searchdate = ui.ct_dateEdittttt_02.date().toString('yyyyMMdd')
         linetext   = ui.ct_lineEdittttt_03.text()
         tickcount  = int(linetext) if linetext != '' else 30
+        starttime  = ui.ct_lineEdittttt_01.text()
+        endtime    = ui.ct_lineEdittttt_02.text()
+        if (len(starttime) > 4 or len(endtime) > 4) and \
+                (coin and not ui.dict_set['코인타임프레임'] or not coin and not ui.dict_set['주식타임프레임']):
+            QMessageBox.critical(ui.dialog_chart, '오류 알림', '분봉차트의 시작 및 종료시간은\n분단위로 입력하십시오. (예: 900, 1520)\n')
+            return
         ui.ct_lineEdittttt_04.setText(code)
         ui.ct_lineEdittttt_05.setText(name)
         ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-        ui.chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(),
-                       ui.GetKlist()))
+        ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(code)))
 
 
 def return_press_02(ui):

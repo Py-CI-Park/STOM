@@ -134,8 +134,13 @@ def cell_clicked_06(ui, row):
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
     tickcount = int(ui.cvjb_lineEditt_05.text()) if coin else int(ui.svjb_lineEditt_05.text())
-    ui.ShowDialogChart(False, coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(),
-                       ui.ct_lineEdittttt_02.text(), detail, buytimes)
+    starttime = ui.ct_lineEdittttt_01.text()
+    endtime   = ui.ct_lineEdittttt_02.text()
+    if (len(starttime) > 4 or len(endtime) > 4) and \
+            (coin and not ui.dict_set['코인타임프레임'] or not coin and not ui.dict_set['주식타임프레임']):
+        QMessageBox.critical(ui, '오류 알림', '분봉차트의 시작 및 종료시간은\n분단위로 입력하십시오. (예: 900, 1520)\n')
+        return
+    ui.ShowDialogChart(False, coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes)
 
 
 def cell_clicked_07(ui, row):
@@ -148,11 +153,16 @@ def cell_clicked_07(ui, row):
     searchdate = ui.ct_dateEdittttt_02.date().toString('yyyyMMdd')
     linetext   = ui.ct_lineEdittttt_03.text()
     tickcount  = int(linetext) if linetext != '' else 30
+    starttime  = ui.ct_lineEdittttt_01.text()
+    endtime    = ui.ct_lineEdittttt_02.text()
+    is_min     = coin and not ui.dict_set['코인타임프레임'] or not coin and not ui.dict_set['주식타임프레임']
+    if is_min and (len(starttime) > 4 or len(endtime) > 4):
+        QMessageBox.critical(ui.dialog_chart, '오류 알림', '분봉차트의 시작 및 종료시간은\n분단위로 입력하십시오. (예: 900, 1520)\n')
+        return
     ui.ct_lineEdittttt_04.setText(code)
     ui.ct_lineEdittttt_05.setText(name)
     ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-    ui.chartQ.put((coin, code, tickcount, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(),
-                   ui.GetKlist()))
+    ui.chartQ.put((coin, code, tickcount, searchdate, starttime, endtime, ui.GetKlist(code)))
 
 
 def cell_clicked_08(ui, row):

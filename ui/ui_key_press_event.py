@@ -1,7 +1,7 @@
 import sqlite3
 import pandas as pd
 from PyQt5.QtCore import Qt, QDate
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from utility.setting import DB_TRADELIST
 from utility.static import strf_time, timedelta_sec, comma2int, comma2float
 
@@ -98,10 +98,16 @@ def key_press_event(ui, event):
                 buytimes   = tableWidget.item(row, 13).text()
                 coin       = True if 'KRW' in name or 'USDT' in name else False
                 code       = ui.dict_code[name] if name in ui.dict_code.keys() else name
+                starttime  = ui.ct_lineEdittttt_01.text()
+                endtime    = ui.ct_lineEdittttt_02.text()
+                if (len(starttime) > 4 or len(endtime) > 4) and \
+                        (coin and not ui.dict_set['코인타임프레임'] or not coin and not ui.dict_set['주식타임프레임']):
+                    QMessageBox.critical(ui, '오류 알림', '분봉차트의 시작 및 종료시간은\n분단위로 입력하십시오. (예: 900, 1520)\n')
+                    return
                 ui.ct_lineEdittttt_04.setText(code)
                 ui.ct_lineEdittttt_05.setText(name)
                 ui.ct_dateEdittttt_01.setDate(QDate.fromString(searchdate, 'yyyyMMdd'))
-                ui.ShowDialogChart(False, coin, code, 30, searchdate, ui.ct_lineEdittttt_01.text(), ui.ct_lineEdittttt_02.text(), detail, buytimes)
+                ui.ShowDialogChart(False, coin, code, 30, searchdate, starttime, endtime, detail, buytimes)
     elif event.key() in (Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5, Qt.Key_6, Qt.Key_7, Qt.Key_8, Qt.Key_9, Qt.Key_0):
         if QApplication.keyboardModifiers() & Qt.AltModifier:
             if ui.main_btn == 2:

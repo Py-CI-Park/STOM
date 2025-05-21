@@ -15,10 +15,11 @@ class TelegramMsg:
         self.ctraderQ = qlist[9]
         self.cstgQ    = qlist[10]
         self.wdzservQ = qlist[13]
-        self.dict_set = None
+        self.dict_set = DICT_SET
+        self.gubun    = self.dict_set['증권사'][4:]
         self.updater  = None
         self.bot      = None
-        self.UpdateBot(DICT_SET)
+        self.UpdateBot()
         self.Start()
 
     def Start(self):
@@ -35,17 +36,18 @@ class TelegramMsg:
                 if self.updater is not None:
                     self.updater.stop()
                     self.updater = None
-                self.UpdateBot(data[1])
+                self.dict_set = data[1]
+                self.gubun = int(self.dict_set['증권사'][4:])
+                self.UpdateBot()
 
     def __del__(self):
         if self.updater is not None:
             self.updater.stop()
 
-    def UpdateBot(self, dict_set):
-        self.dict_set = dict_set
-        if self.updater is None and self.dict_set['텔레그램봇토큰'] is not None:
+    def UpdateBot(self):
+        if self.updater is None and self.dict_set[f'텔레그램봇토큰{self.gubun}'] is not None:
             try:
-                self.bot = telegram.Bot(self.dict_set['텔레그램봇토큰'])
+                self.bot = telegram.Bot(self.dict_set[f'텔레그램봇토큰{self.gubun}'])
             except:
                 print('텔레그램 설정 오류 알림 - 텔레그램 봇토큰이 잘못되어 봇을 만들 수 없습니다.')
             else:
@@ -61,8 +63,8 @@ class TelegramMsg:
             ['S스톰라이브', 'C스톰라이브', '백테라이브']
         ]
         reply_markup = telegram.ReplyKeyboardMarkup(custum_button)
-        self.bot.send_message(chat_id=self.dict_set['텔레그램사용자아이디'], text='사용자버튼 설정을 완료하였습니다.', reply_markup=reply_markup)
-        self.updater = Updater(self.dict_set['텔레그램봇토큰'])
+        self.bot.send_message(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], text='사용자버튼 설정을 완료하였습니다.', reply_markup=reply_markup)
+        self.updater = Updater(self.dict_set[f'텔레그램봇토큰{self.gubun}'])
         self.updater.dispatcher.add_handler(MessageHandler(Filters.text, self.ButtonClicked))
         self.updater.start_polling(drop_pending_updates=True)
 
@@ -86,7 +88,7 @@ class TelegramMsg:
     def SendMsg(self, msg):
         if self.bot is not None:
             try:
-                self.bot.sendMessage(chat_id=self.dict_set['텔레그램사용자아이디'], text=msg)
+                self.bot.sendMessage(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], text=msg)
             except Exception as e:
                 print(f'텔레그램 명령 오류 알림 - sendMessage {e}')
         else:
@@ -96,7 +98,7 @@ class TelegramMsg:
         if self.bot is not None:
             try:
                 with open(path, 'rb') as image:
-                    self.bot.send_photo(chat_id=self.dict_set['텔레그램사용자아이디'], photo=image)
+                    self.bot.send_photo(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], photo=image)
             except Exception as e:
                 print(f'텔레그램 명령 오류 알림 - send_photo {e}')
         else:

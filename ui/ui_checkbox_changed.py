@@ -8,10 +8,7 @@ from PyQt5.QtWidgets import QPushButton, QMessageBox
 def checkbox_changed_01(ui, state):
     if type(ui.focusWidget()) != QPushButton:
         if state == Qt.Checked:
-            con = sqlite3.connect(DB_SETTING)
-            df = pd.read_sql('SELECT * FROM sacc', con).set_index('index')
-            con.close()
-            if len(df) == 0 or df['아이디2'][0] == '':
+            if ui.dict_set['아이디2'] is None:
                 ui.sj_main_cheBox_01.nextCheckState()
                 QMessageBox.critical(ui, '오류 알림', '두번째 계정이 설정되지 않아\n리시버를 선택할 수 없습니다.\n계정 설정 후 다시 선택하십시오.\n')
             elif not ui.sj_main_cheBox_02.isChecked():
@@ -24,10 +21,7 @@ def checkbox_changed_01(ui, state):
 def checkbox_changed_02(ui, state):
     if type(ui.focusWidget()) != QPushButton:
         if state == Qt.Checked:
-            con = sqlite3.connect(DB_SETTING)
-            df = pd.read_sql('SELECT * FROM sacc', con).set_index('index')
-            con.close()
-            if len(df) == 0 or df['아이디1'][0] == '':
+            if ui.dict_set['아이디1'] is None:
                 ui.sj_main_cheBox_02.nextCheckState()
                 QMessageBox.critical(ui, '오류 알림', '첫번째 계정이 설정되지 않아\n트레이더를 선택할 수 없습니다.\n계정 설정 후 다시 선택하십시오.\n')
             elif not ui.sj_main_cheBox_01.isChecked():
@@ -39,7 +33,7 @@ def checkbox_changed_02(ui, state):
 
 def checkbox_changed_03(ui, state):
     if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
-        if ui.sj_main_cheBox_11.isChecked():
+        if ui.sj_main_cheBox_09.isChecked():
             ui.sj_main_cheBox_03.nextCheckState()
             QMessageBox.critical(ui, '오류 알림', '클라이언트용 스톰은\n틱데이터를 저장할 수 없습니다.\n서버용 스톰으로 저장하십시오.\n')
         else:
@@ -71,7 +65,7 @@ def checkbox_changed_05(ui, state):
 
 def checkbox_changed_06(ui, state):
     if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
-        if ui.sj_main_cheBox_11.isChecked():
+        if ui.sj_main_cheBox_09.isChecked():
             ui.sj_main_cheBox_03.nextCheckState()
             QMessageBox.critical(ui, '오류 알림', '클라이언트용 스톰은\n틱데이터를 저장할 수 없습니다.\n서버용 스톰으로 저장하십시오.\n')
         else:
@@ -99,61 +93,45 @@ def checkbox_changed_08(ui, state):
 
 def checkbox_changed_09(ui, state):
     if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
-        for widget in ui.sproc_exit_listtt:
-            if widget != ui.focusWidget():
-                if widget.isChecked():
-                    widget.nextCheckState()
-
-
-def checkbox_changed_10(ui, state):
-    if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
-        for widget in ui.cproc_exit_listtt:
-            if widget != ui.focusWidget():
-                if widget.isChecked():
-                    widget.nextCheckState()
-
-
-def checkbox_changed_11(ui, state):
-    if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
         for widget in ui.com_exit_list:
             if widget != ui.focusWidget():
                 if widget.isChecked():
                     widget.nextCheckState()
 
 
-def checkbox_changed_12(ui, state):
+def checkbox_changed_10(ui, state):
     if type(ui.focusWidget()) != QPushButton and state != Qt.Checked:
         if ui.dialog_factor.focusWidget() == ui.ft_checkBoxxxxx_01:
             ui.ft_checkBoxxxxx_01.nextCheckState()
             QMessageBox.critical(ui.dialog_factor, '오류 알림', '현재가는 해제할 수 없습니다.\n')
 
 
-def checkbox_changed_13(ui, state):
+def checkbox_changed_11(ui, state):
     if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
         for widget in ui.sj_ilbunback_listtt:
             if widget != ui.focusWidget() and widget.isChecked():
                 widget.nextCheckState()
 
 
-def checkbox_changed_14(ui, state):
+def checkbox_changed_12(ui, state):
     if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
         if not ui.sj_back_cheBox_14.isChecked():
             ui.sj_back_cheBox_14.nextCheckState()
 
 
-def checkbox_changed_15(ui, state):
+def checkbox_changed_13(ui, state):
     if type(ui.focusWidget()) != QPushButton and state != Qt.Checked:
         if ui.sj_back_cheBox_13.isChecked():
             ui.sj_back_cheBox_13.nextCheckState()
 
 
-def checkbox_changed_16(ui, state):
+def checkbox_changed_14(ui, state):
     if type(ui.focusWidget()) != QPushButton and state != Qt.Checked:
         if ui.sj_back_cheBox_06.isChecked():
             ui.sj_back_cheBox_06.nextCheckState()
 
 
-def checkbox_changed_17(ui, state):
+def checkbox_changed_15(ui, state):
     gubun = ui.list_checkBoxxxxxx.index(ui.dialog_scheduler.focusWidget())
     if state == Qt.Checked:
         for item in ('백테스트',
@@ -178,7 +156,7 @@ def checkbox_changed_17(ui, state):
         ui.list_tcomboBoxxxxx[gubun].clear()
 
 
-def checkbox_changed_18(ui, state):
+def checkbox_changed_16(ui, state):
     if type(ui.focusWidget()) != QPushButton:
         if state == Qt.Checked:
             if ui.sj_back_cheBox_18.isChecked():
@@ -188,7 +166,7 @@ def checkbox_changed_18(ui, state):
                 ui.sj_back_cheBox_18.nextCheckState()
 
 
-def checkbox_changed_19(ui, state):
+def checkbox_changed_17(ui, state):
     if type(ui.focusWidget()) != QPushButton:
         if state == Qt.Checked:
             if ui.sj_back_cheBox_17.isChecked():
@@ -198,30 +176,22 @@ def checkbox_changed_19(ui, state):
                 ui.sj_back_cheBox_17.nextCheckState()
 
 
-def checkbox_changed_20(ui, state):
-    if type(ui.focusWidget()) != QPushButton and state == Qt.Checked:
-        for widget in ui.sj_checkbox_list:
-            if widget != ui.focusWidget():
-                if widget.isChecked():
-                    widget.nextCheckState()
-
-
-def checkbox_changed_21(ui, state):
+def checkbox_changed_18(ui, state):
     if type(ui.focusWidget()) != QPushButton:
         if state == Qt.Checked:
-            if ui.focusWidget() == ui.sj_main_cheBox_10:
-                if ui.sj_main_cheBox_11.isChecked():
-                    ui.sj_main_cheBox_11.nextCheckState()
+            if ui.focusWidget() == ui.sj_main_cheBox_08:
+                if ui.sj_main_cheBox_09.isChecked():
+                    ui.sj_main_cheBox_09.nextCheckState()
             else:
-                if ui.sj_main_cheBox_10.isChecked():
-                    ui.sj_main_cheBox_10.nextCheckState()
-        elif not ui.sj_main_cheBox_11.isChecked() and not ui.sj_main_cheBox_10.isChecked() and not ui.sj_main_cheBox_09.isChecked():
-            ui.sj_main_cheBox_09.nextCheckState()
+                if ui.sj_main_cheBox_08.isChecked():
+                    ui.sj_main_cheBox_08.nextCheckState()
+        elif not ui.sj_main_cheBox_09.isChecked() and not ui.sj_main_cheBox_08.isChecked() and not ui.sj_main_cheBox_07.isChecked():
+            ui.sj_main_cheBox_07.nextCheckState()
 
 
 # noinspection PyUnusedLocal
-def checkbox_changed_23(ui, state):
-    ui.ctpg_tik_name = None
+def checkbox_changed_19(ui, state):
+    ui.ctpg_name = None
 
 
 def sbcheckbox_changed_01(ui, state):

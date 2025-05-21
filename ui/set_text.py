@@ -1,15 +1,17 @@
-optistandard = 'TP : 수익률합계\n' \
-               'TG : 수익금합계\n' \
+optistandard = 'TG : 수익금합계\n' \
+               'TP : 수익률합계\n' \
                'TPI : 승률 / 100 * (1 + 평균이익수익률 / 평균손실수익률)\n' \
                'CAGR : 연간예상수익률\n' \
-               'PM : 수익률합계 / 최대낙폭률\n' \
                'GM : 수익금합계 / 최대낙폭금액\n' \
-               'P2M : 수익률합계 * 수익률합계 / 최대낙폭률 / 1000\n' \
+               'PM : 수익률합계 / 최대낙폭률\n' \
                'G2M : 수익금합계 * 수익금합계 / 최대낙폭금액 / 100_000_000\n' \
-               'PAM : 수익률합계 * 평균수익률 / 최대낙폭률\n' \
+               'P2M : 수익률합계 * 수익률합계 / 최대낙폭률 / 1000\n' \
                'GAM : 수익금합계 * 평균수익률 / 최대낙폭금액\n' \
+               'PAM : 수익률합계 * 평균수익률 / 최대낙폭률\n' \
+               'GWM : 수익금합계 * 승률 / 최대낙폭금액 / 100\n' \
                'PWM : 수익률합계 * 승률 / 최대낙폭률 / 100\n' \
-               'GWM : 수익금합계 * 승률 / 최대낙폭금액 / 100'
+               'GTM : 수익금합계 * 평균수익률 * 승률 * TPI * CAGR / 최대낙폭금액 / 10000\n' \
+               'PTM : 수익률합계 * 평균수익률 * 승률 * TPI * CAGR / 최대낙폭률 / 10000'
 
 optitext = ' - 최적화 백테스트는 일반, 검증, 교차검증 세가지이며\n' \
            ' - 일반은 데이터를 구분하지 않고 전체를 사용하며\n' \
@@ -66,7 +68,7 @@ train_period    = ['1', '2', '3', '4', '6', '7', '8', '10', '11', '12', '16', '2
 valid_period    = ['1', '2', '4', '8', '12', '16', '20', '24']
 test_period     = ['1', '2', '4', '8', '12', '16', '20', '24']
 optimized_count = ['0', '1', '2', '3', '4', '5']
-opti_standard   = ['TG', 'TP', 'TPI', 'CAGR', 'GM', 'PM', 'G2M', 'P2M', 'GAM', 'PAM', 'GWM', 'PWM']
+opti_standard   = ['TG', 'TP', 'TPI', 'CAGR', 'GM', 'PM', 'G2M', 'P2M', 'GAM', 'PAM', 'GWM', 'PWM', 'GTM', 'PTM']
 
 stock_buy_var = '''"""
 # 기본 변수들 - 괄호없이 변수명만으로 사용한다.
@@ -76,17 +78,15 @@ stock_buy_var = '''"""
 초당매수수량(int), 초당매도수량(int), 초당거래대금(int), 매도총잔량(int), 매수총잔량(int), 매도호가1~5(int), 매도잔량1~5(int),
 매수호가1~5(int), 매수잔량1~5(int), 매도수5호가잔량합(int), 관심종목(int)
 # 구간연산 변수들 - 괄호 안에 '변수명(구간틱수, 이전틱수)' 형태로 사용한다.
-# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
+# 이전틱수 미입력 시 현재값을 호출한다. 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(int), 최저현재가(int), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float),
 최저체결강도(float), 누적초당매수수량(int), 누적초당매도수량(int), 최고초당매수수량(int), 최고초당매도수량(int),
 당일거래대금각도(float), 전일비각도(float), 등락율각도(float)
-# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
-BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(int), 호가단위(int), 데이터길이(int), 시분초(int)
 종목명(str), 종목코드(str), 매수(True)
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다.
-평균값계산틱수 : 일반설정에서 장초, 장중 전략별로 설정할 수 있는 평균값 계산에 사용되는 구간의 틱수
+평균값계산틱수 : 일반설정에서 설정할 수 있는 평균값 계산에 사용되는 구간의 틱수
 매수 : True 상태의 변수이다. 전략 상단에 매수 = False로 시작하면 참인 조건들을 and로 묶어서 전략을 작성할 수 있다.
 현재가 : 최소 1초마다 수신된 틱데이터의 현재가
 시가, 고가, 저가 : 일봉상 시고저가
@@ -135,8 +135,6 @@ stock_sell_var = '''"""
 이동평균(float), 최고현재가(int), 최저현재가(int), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float),
 최저체결강도(float), 누적초당매수수량(int), 누적초당매도수량(int), 최고초당매수수량(int), 최고초당매도수량(int),
 당일거래대금각도(float), 전일비각도(float), 등락율각도(float)
-# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
-BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(int), 호가단위(int), 데이터길이(int), 시분초(int),
 종목명(str), 종목코드(str), 매도(False)
@@ -146,6 +144,89 @@ VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(in
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다. -1입력은 모든 변수의 매수시점정보를 조회한다.
 """'''
 
+stock_buy_var2 = '''"""
+# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
+# 변수명 뒤에 'N(이전봉수)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1봉전 현재가
+현재가(int), 시가(int), 고가(int), 저가(int), 등락율(float), 고저평균대비등락율(float), 당일거래대금(int), 체결강도(float),
+거래대금증감(int), 전일비(float), 회전율(float), 전일동시간비(float), 시가총액(int), 라운드피겨위5호가이내(boolean),
+분당매수수량(int), 분당매도수량(int), 분당거래대금(int), 매도총잔량(int), 매수총잔량(int), 매도호가1~5(int), 매도잔량1~5(int),
+매수호가1~5(int), 매수잔량1~5(int), 매도수5호가잔량합(int), 관심종목(int), 분봉시가(int), 분봉고가(int), 분봉저가(int)
+# 구간연산 변수들 - 괄호 안에 '변수명(구간봉수, 이전봉수)' 형태로 사용한다.
+# 이전봉수 미입력 시 현재값을 호출한다. 예 : 이동평균(60). 이동평균(60, 1)
+이동평균(float), 최고현재가(int), 최저현재가(int), 분당거래대금평균(float), 체결강도평균(float), 최고체결강도(float),
+최저체결강도(float), 누적분당매수수량(int), 누적분당매도수량(int), 최고분당매수수량(int), 최고분당매도수량(int),
+당일거래대금각도(float), 전일비각도(float), 등락율각도(float), 최고분봉고가(int), 최고분봉저가(int)
+# 보조지표, 변수명 뒤에 '_N(이전봉수)'을 붙여 이전값을 조회할 수 있다.
+AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM,
+OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+# 그외 변수들
+VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(int), 호가단위(int), 데이터길이(int), 시분(int)
+종목명(str), 종목코드(str), 매수(True)
+# 이전값 조회 시 봉수 입력은 1부터 평균값계산수치까지이다.
+평균값계산틱수 : 일반설정에서 설정할 수 있는 평균값 계산에 사용되는 구간의 봉수
+매수 : True 상태의 변수이다. 전략 상단에 매수 = False로 시작하면 참인 조건들을 and로 묶어서 전략을 작성할 수 있다.
+현재가 : 1분마다 기록된 봉의 종가
+시가, 고가, 저가 : 일봉상 시고저가
+분봉시가, 분봉고가, 분봉저가 : 분봉상 시고저가
+등락율 : 일봉상 전일종가 대비 등락율
+고저평균대비등락율 : 당일 고가와 저가의 평균 대비 현재가의 등락율
+전일비 : 전일거래량 대비 당일거래량의 비율 (당일거래량 / 전일거래량 * 100)
+회전율 : 상장주식수 대비 당일거래량의 비율 (당일거래량 / 상장주식수 * 100)
+전일동시간비 : 1분단위로 누적 기록된 전일 동시간대의 거래량 대비 당일거래량의 비율 (당일거래량 / 전일동시간거래량 * 100)
+거래대금증감 : 전일거래대금 보다 증가한 당일거래대금 (당일거래대금 - 전일거래대금)
+라운드피겨위5호가이내 : 라운드피겨 가격(예: 1000)포함 상위 5호가(예: 1025)이내에 현재가가 위치하면 True 아니면 False
+매도수5호가잔량합 : 매수, 매도잔량 1호가부터 5호가까지의 총합
+VI해제시간, VI가격, VI호가단위, VI아래5호가 : VI해제시간, 상승VI가격, 상승VI가격의 호가단위, 상승VI가격5단계아래호가
+이동평균 : 1분마다 기록된 현재가의 단순평균값
+최고현재가 : 입력한 구간봉수 동안 현재가의 최고값
+최저현재가 : 입력한 구간봉수 동안 현재가의 최저값
+최고분봉고가 : 입력한 구간봉수 동안 분봉고가의 최고값
+최저분봉저가 : 입력한 구간봉수 동안 분봉저가의 최저값
+분당거래대금 : 1분 동안 거래대금의 누적값(단위:백만원)
+분당거래대금평균 : 입력한 구간봉수 동안 분당거래대금의 평균값
+체결강도 : 매도수량 대비 매수수량의 비율, 최소값0, 최대값500, 매도수량이 없을 경우와 비율이 500이 넘을 경우 500 (매수수량 / 매도수량 * 100)
+체결강도평균 : 입력한 구간봉수 동안 체결강도의 평균값
+최고체결강도 : 입력한 구간봉수 동안 체결강도의 최고값
+최저체결강도 : 입력한 구간봉수 동안 체결강도의 최저값
+분당매수수량 : 1분 동안 매수수량의 누적값
+분당매도수량 : 1분 동안 매도수량의 누적값
+누적분당매수수량 : 입력한 구간봉수 동안 분당매수수량의 누적값
+누적분당매도수량 : 입력한 구간봉수 동안 분당매도수량의 누적값
+최고분당매수수량 : 입력한 구간봉수 동안 분당매수수량의 최고값
+최고분당매도수량 : 입력한 구간봉수 동안 분당매도수량의 최고값
+당일거래대금각도 : 입력한 구간봉수 동안의 당일거래대금 차이를 높이로 하고 입력한 봉수를 밑변으로 계산한 각도 (0~90)
+전일비각도 : 입력한 구간봉수 동안의 전일비 차이를 높이로 하고 봉수를 밑변으로 계산한 각도 (0~90)
+등락율각도 : 입력한 구간봉수 동안의 등락율 차이를 높이로 하고 봉수를 밑변으로 계산한 각도 (-90~90)
+관심종목 : 거래대금순위에 있을 경우 1, 없을 경우 0
+호가단위 : 현재가의 호가단위
+데이터길이 : 1분에 한번 기록된 봉수의 누적합
+시분 : 호가정보에 기록된 서버의 현재시간을 시분 단위로 만든 숫자 (예: 930)
+"""'''
+
+stock_sell_var2 = '''"""
+# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
+# 변수명 뒤에 'N(이전봉수 또는 -1)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1틱전 현재가
+현재가(int), 시가(int), 고가(int), 저가(int), 등락율(float), 고저평균대비등락율(float),당일거래대금(int),
+체결강도(float), 거래대금증감(int), 전일비(float), 회전율(float), 전일동시간비(float), 시가총액(int), 라운드피겨위5호가이내(boolean),
+분당매수수량(int), 분당매도수량(int), 분당거래대금(int), 매도총잔량(int), 매수총잔량(int), 매도호가1~5(int), 매도잔량1~5(int),
+매수호가1~5(int), 매수잔량1~5(int), 매도수5호가잔량합(int), 관심종목(int), 분봉시가(int), 분봉고가(int), 분봉저가(int)
+# 구간연산 변수들 - 괄호 안에 '변수명(구간봉수, 이전봉수 또는 -1)' 형태로 사용한다.
+# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
+이동평균(float), 최고현재가(int), 최저현재가(int), 분당거래대금평균(float), 체결강도평균(float), 최고체결강도(float),
+최저체결강도(float), 누적분당매수수량(int), 누적분당매도수량(int), 최고분당매수수량(int), 최고분당매도수량(int),
+당일거래대금각도(float), 전일비각도(float), 등락율각도(float), 최고분봉고가(int), 최고분봉저가(int)
+# 보조지표, 변수명 뒤에 '_N(이전봉수)'을 붙여 이전값을 조회할 수 있다.
+AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM,
+OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+# 그외 변수들
+VI해제시간(datetime), VI가격(int), VI호가단위(int), VI아래5호가(int), 호가단위(int), 데이터길이(int), 시분(int),
+종목명(str), 종목코드(str), 매도(False)
+# 잔고종목 변수들, 보유시간은 분단위이다.
+수익률(float), 최고수익률(float), 최저수익률(float), 보유수량(int), 보유시간(int), 매수틱번호(int)
+매수틱번호 : 기록된 분봉데이터(2차원 어레이)에서 매수시점에 해당하는 어레이의 번호
+# 이전값 조회 시 봉수 입력은 1부터 평균값계산수치까지이다. -1입력은 모든 변수의 매수시점정보를 조회한다.
+"""'''
+
 coin_buy_var = '''"""
 # 기본 변수들 - 괄호없이 변수명만으로 사용한다.
 # 변수명 뒤에 'N(이전틱수)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1틱전 현재가
@@ -153,15 +234,13 @@ coin_buy_var = '''"""
 초당매수수량(float), 초당매도수량(float), 초당거래대금(int), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
 매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float), 관심종목(int)
 # 구간연산 변수들 - 괄호 안에 '변수명(구간틱수, 이전틱수)' 형태로 사용한다.
-# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
+# 이전틱수 미입력 시 현재값을 호출한다. 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float), 등락율각도(float)
-# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
-BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 호가단위(float), 데이터길이(int), 시분초(int), 종목코드(str), 매수(True)
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다.
-평균값계산틱수 : 일반설정에서 장초, 장중 전략별로 설정할 수 있는 평균값 계산에 사용되는 구간의 틱수
+평균값계산틱수 : 일반설정에서 설정할 수 있는 평균값 계산에 사용되는 구간의 틱수
 매수 : True 상태의 변수이다. 전략 상단에 매수 = False로 시작하면 참인 조건들을 and로 묶어서 전략을 작성할 수 있다.
 현재가 : 최소 1초마다 수신된 틱데이터의 현재가
 시가, 고가, 저가 : 일봉상 시고저가
@@ -202,14 +281,85 @@ coin_sell_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float), 등락율각도(float)
-# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
-BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 관심종목(int), 호가단위(int), 데이터길이(int), 시분초(int), 종목코드(str), 매도(False)
 # 잔고종목 변수들, 보유시간은 초단위이다.
 수익률(float), 최고수익률(float), 최저수익률(float), 보유수량(float), 보유시간(int), 매수틱번호(int)
 매수틱번호 : 기록된 틱데이터(2차원 어레이)에서 매수시점에 해당하는 어레이의 번호
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다. -1입력은 모든 변수의 매수시점정보를 조회한다.
+"""'''
+
+coin_buy_var2 = '''"""
+# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
+# 변수명 뒤에 'N(이전봉수)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1봉전 현재가
+현재가(float), 시가(float), 고가(float), 저가(float), 등락율(float), 고저평균대비등락율(float), 당일거래대금(int), 체결강도(float),
+분당매수수량(float), 분당매도수량(float), 분당거래대금(int), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
+매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float), 관심종목(int), 분봉시가(int), 분봉고가(int), 분봉저가(int)
+# 구간연산 변수들 - 괄호 안에 '변수명(구간봉수, 이전봉수)' 형태로 사용한다.
+# 이전봉수 미입력 시 현재값을 호출한다. 예 : 이동평균(60). 이동평균(60, 1)
+이동평균(float), 최고현재가(float), 최저현재가(float), 분당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
+누적분당매수수량(float), 누적분당매도수량(float), 최고분당매수수량(float), 최고분당매도수량(float), 당일거래대금각도(float), 등락율각도(float),
+최고분봉고가(int), 최고분봉저가(int)
+# 보조지표, 변수명 뒤에 '_N(이전봉수)'을 붙여 이전값을 조회할 수 있다.
+AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM,
+OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+# 그외 변수들
+호가단위(float), 데이터길이(int), 시분(int), 종목코드(str), 매수(True)
+# 이전값 조회 시 봉수 입력은 1부터 평균값계산수치까지이다.
+평균값계산틱수 : 일반설정에서 설정할 수 있는 평균값 계산에 사용되는 구간의 봉수
+매수 : True 상태의 변수이다. 전략 상단에 매수 = False로 시작하면 참인 조건들을 and로 묶어서 전략을 작성할 수 있다.
+현재가 : 1분마다 기록된 봉의 종가
+시가, 고가, 저가 : 일봉상 시고저가
+분봉시가, 분봉고가, 분봉저가 : 분봉상 시고저가
+등락율 : 일봉상 전일종가 대비 등락율
+고저평균대비등락율 : 당일 고가와 저가의 평균 대비 현재가의 등락율
+라운드피겨위5호가이내 : 라운드피겨 가격(예: 1000)포함 상위 5호가(예: 1025)이내에 현재가가 위치하면 True 아니면 False
+매도수5호가잔량합 : 매수, 매도잔량 1호가부터 5호가까지의 총합
+이동평균 : 1분마다 기록된 현재가의 단순평균값
+최고현재가 : 입력한 구간봉수 동안 현재가의 최고값
+최저현재가 : 입력한 구간봉수 동안 현재가의 최저값
+최고분봉고가 : 입력한 구간봉수 동안 분봉고가의 최고값
+최저분봉저가 : 입력한 구간봉수 동안 분봉저가의 최저값
+분당거래대금 : 1분 동안 거래대금의 누적값(단위:백만원)
+분당거래대금평균 : 입력한 구간봉수 동안 분당거래대금의 평균값
+체결강도 : 매도수량 대비 매수수량의 비율, 최소값0, 최대값500, 매도수량이 없을 경우와 비율이 500이 넘을 경우 500 (매수수량 / 매도수량 * 100)
+체결강도평균 : 입력한 구간봉수 동안 체결강도의 평균값
+최고체결강도 : 입력한 구간봉수 동안 체결강도의 최고값
+최저체결강도 : 입력한 구간봉수 동안 체결강도의 최저값
+분당매수수량 : 1분 동안 매수수량의 누적값
+분당매도수량 : 1분 동안 매도수량의 누적값
+누적분당매수수량 : 입력한 구간봉수 동안 분당매수수량의 누적값
+누적분당매도수량 : 입력한 구간봉수 동안 분당매도수량의 누적값
+최고분당매수수량 : 입력한 구간봉수 동안 분당매수수량의 최고값
+최고분당매도수량 : 입력한 구간봉수 동안 분당매도수량의 최고값
+당일거래대금각도 : 입력한 구간봉수 동안의 당일거래대금 차이를 높이로 하고 입력한 봉수를 밑변으로 계산한 각도 (0~90)
+등락율각도 : 입력한 구간봉수 동안의 등락율 차이를 높이로 하고 봉수를 밑변으로 계산한 각도 (-90~90)
+관심종목 : 거래대금순위에 있을 경우 1, 없을 경우 0
+호가단위 : 현재가의 호가단위
+데이터길이 : 1분에 한번 기록된 봉수의 누적합
+시분 : 호가정보에 기록된 서버의 현재시간을 시분 단위로 만든 숫자 (예: 930)
+"""'''
+
+coin_sell_var2 = '''"""
+# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
+# 변수명 뒤에 'N(이전봉수 또는 -1)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1틱전 현재가
+현재가(float), 시가(float), 고가(float), 저가(float), 등락율(float), 고저평균대비등락율(float), 당일거래대금(float), 체결강도(float),
+분당매수수량(float), 분당매도수량(float), 분당거래대금(float), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
+매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float), 관심종목(int), 분봉시가(int), 분봉고가(int), 분봉저가(int)
+# 구간연산 변수들 - 괄호 안에 '변수명(구간봉수, 이전봉수 또는 -1)' 형태로 사용한다.
+# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
+이동평균(float), 최고현재가(float), 최저현재가(float), 분당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
+누적분당매수수량(float), 누적분당매도수량(float), 최고분당매수수량(float), 최고분당매도수량(float), 당일거래대금각도(float), 등락율각도(float),
+최고분봉고가(int), 최고분봉저가(int)
+# 보조지표, 변수명 뒤에 '_N(이전봉수)'을 붙여 이전값을 조회할 수 있다.
+AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM,
+OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+# 그외 변수들
+관심종목(int), 호가단위(int), 데이터길이(int), 시분(int), 종목코드(str), 매도(False)
+# 잔고종목 변수들, 보유시간은 분단위이다.
+수익률(float), 최고수익률(float), 최저수익률(float), 보유수량(float), 보유시간(int), 매수틱번호(int)
+매수틱번호 : 기록된 틱데이터(2차원 어레이)에서 매수시점에 해당하는 어레이의 번호
+# 이전값 조회 시 봉수 입력은 1부터 평균값계산수치까지이다. -1입력은 모든 변수의 매수시점정보를 조회한다.
 """'''
 
 coin_future_buy_var = '''"""
@@ -219,15 +369,13 @@ coin_future_buy_var = '''"""
 초당매수수량(float), 초당매도수량(float), 초당거래대금(int), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
 매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float)
 # 구간연산 변수들 - 괄호 안에 '변수명(구간틱수, 이전틱수)' 형태로 사용한다.
-# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
+# 이전틱수 미입력 시 현재값을 호출한다. 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float), 등락율각도(float)
-# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
-BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 호가단위(float), 데이터길이(int), 시분초(int), 종목코드(str), BUY_LONG(True), SELL_SHORT(True)
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다.
-평균값계산틱수 : 일반설정에서 장초, 장중 전략별로 설정할 수 있는 평균값 계산에 사용되는 구간의 틱수
+평균값계산틱수 : 일반설정에서 설정할 수 있는 평균값 계산에 사용되는 구간의 틱수
 매수 : True 상태의 변수이다. 전략 상단에 매수 = False로 시작하면 참인 조건들을 and로 묶어서 전략을 작성할 수 있다.
 현재가 : 최소 1초마다 수신된 틱데이터의 현재가
 시가, 고가, 저가 : 일봉상 시고저가
@@ -268,14 +416,85 @@ coin_future_sell_var = '''"""
 # 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
 이동평균(float), 최고현재가(float), 최저현재가(float), 초당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
 누적초당매수수량(float), 누적초당매도수량(float), 최고초당매수수량(float), 최고초당매도수량(float), 당일거래대금각도(float), 등락율각도(float)
-# TA-Lib 보조지표, 변수명 뒤에 '_N(이전틱수)'을 붙여 이전값을 조회할 수 있다.
-BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV
 # 그외 변수들
 호가단위(int), 데이터길이(int), 시분초(int), 종목코드(str), SELL_LONG(False), BUY_SHORT(False)
 # 잔고종목 변수들, 보유시간은 초단위이다.
 수익률(float), 최고수익률(float), 최저수익률(float), 보유수량(float), 보유시간(int), 매수틱번호(int)
 매수틱번호 : 기록된 틱데이터(2차원 어레이)에서 매수시점에 해당하는 어레이의 번호
 # 이전값 조회 시 틱수 입력은 1부터 평균값계산틱수까지이다. -1입력은 모든 변수의 매수시점정보를 조회한다.
+"""'''
+
+coin_future_buy_var2 = '''"""
+# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
+# 변수명 뒤에 'N(이전봉수)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1봉전 현재가
+현재가(float), 시가(float), 고가(float), 저가(float), 등락율(float), 고저평균대비등락율(float), 당일거래대금(int), 체결강도(float),
+분당매수수량(float), 분당매도수량(float), 분당거래대금(int), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
+매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float), 관심종목(int), 분봉시가(int), 분봉고가(int), 분봉저가(int)
+# 구간연산 변수들 - 괄호 안에 '변수명(구간봉수, 이전봉수)' 형태로 사용한다.
+# 이전봉수 미입력 시 현재값을 호출한다. 예 : 이동평균(60). 이동평균(60, 1)
+이동평균(float), 최고현재가(float), 최저현재가(float), 분당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
+누적분당매수수량(float), 누적분당매도수량(float), 최고분당매수수량(float), 최고분당매도수량(float), 당일거래대금각도(float), 등락율각도(float),
+최고분봉고가(int), 최고분봉저가(int)
+# 보조지표, 변수명 뒤에 '_N(이전봉수)'을 붙여 이전값을 조회할 수 있다.
+AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM,
+OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+# 그외 변수들
+호가단위(float), 데이터길이(int), 시분(int), 종목코드(str), BUY_LONG(True), SELL_SHORT(True)
+# 이전값 조회 시 봉수 입력은 1부터 평균값계산수치까지이다.
+평균값계산틱수 : 일반설정에서 설정할 수 있는 평균값 계산에 사용되는 구간의 봉수
+매수 : True 상태의 변수이다. 전략 상단에 매수 = False로 시작하면 참인 조건들을 and로 묶어서 전략을 작성할 수 있다.
+현재가 : 1분마다 기록된 봉의 종가
+시가, 고가, 저가 : 일봉상 시고저가
+분봉시가, 분봉고가, 분봉저가 : 분봉상 시고저가
+등락율 : 일봉상 전일종가 대비 등락율
+고저평균대비등락율 : 당일 고가와 저가의 평균 대비 현재가의 등락율
+라운드피겨위5호가이내 : 라운드피겨 가격(예: 1000)포함 상위 5호가(예: 1025)이내에 현재가가 위치하면 True 아니면 False
+매도수5호가잔량합 : 매수, 매도잔량 1호가부터 5호가까지의 총합
+이동평균 : 1분마다 기록된 현재가의 단순평균값
+최고현재가 : 입력한 구간봉수 동안 현재가의 최고값
+최저현재가 : 입력한 구간봉수 동안 현재가의 최저값
+최고분봉고가 : 입력한 구간봉수 동안 분봉고가의 최고값
+최저분봉저가 : 입력한 구간봉수 동안 분봉저가의 최저값
+분당거래대금 : 1분 동안 거래대금의 누적값(단위:백만원)
+분당거래대금평균 : 입력한 구간봉수 동안 분당거래대금의 평균값
+체결강도 : 매도수량 대비 매수수량의 비율, 최소값0, 최대값500, 매도수량이 없을 경우와 비율이 500이 넘을 경우 500 (매수수량 / 매도수량 * 100)
+체결강도평균 : 입력한 구간봉수 동안 체결강도의 평균값
+최고체결강도 : 입력한 구간봉수 동안 체결강도의 최고값
+최저체결강도 : 입력한 구간봉수 동안 체결강도의 최저값
+분당매수수량 : 1분 동안 매수수량의 누적값
+분당매도수량 : 1분 동안 매도수량의 누적값
+누적분당매수수량 : 입력한 구간봉수 동안 분당매수수량의 누적값
+누적분당매도수량 : 입력한 구간봉수 동안 분당매도수량의 누적값
+최고분당매수수량 : 입력한 구간봉수 동안 분당매수수량의 최고값
+최고분당매도수량 : 입력한 구간봉수 동안 분당매도수량의 최고값
+당일거래대금각도 : 입력한 구간봉수 동안의 당일거래대금 차이를 높이로 하고 입력한 봉수를 밑변으로 계산한 각도 (0~90)
+등락율각도 : 입력한 구간봉수 동안의 등락율 차이를 높이로 하고 봉수를 밑변으로 계산한 각도 (-90~90)
+관심종목 : 거래대금순위에 있을 경우 1, 없을 경우 0
+호가단위 : 현재가의 호가단위
+데이터길이 : 1분에 한번 기록된 봉수의 누적합
+시분 : 호가정보에 기록된 서버의 현재시간을 시분 단위로 만든 숫자 (예: 930)
+"""'''
+
+coin_future_sell_var2 = '''"""
+# 기본 변수들 - 괄호없이 변수명만으로 사용한다.
+# 변수명 뒤에 'N(이전봉수 또는 -1)'을 붙여 이전값을 조회할 수 있다 예: 현재가N(1) - 1틱전 현재가
+현재가(float), 시가(float), 고가(float), 저가(float), 등락율(float), 고저평균대비등락율(float), 당일거래대금(float), 체결강도(float),
+분당매수수량(float), 분당매도수량(float), 분당거래대금(float), 매도총잔량(float), 매수총잔량(float), 매도호가1~5(float), 매도잔량1~5(float),
+매수호가1~5(float), 매수잔량1~5(float), 매도수5호가잔량합(float), 관심종목(int), 분봉시가(int), 분봉고가(int), 분봉저가(int)
+# 구간연산 변수들 - 괄호 안에 '변수명(구간봉수, 이전봉수 또는 -1)' 형태로 사용한다.
+# 두번째 숫자 미입력시 현재틱 기준값 예 : 이동평균(60). 이동평균(60, 1)
+이동평균(float), 최고현재가(float), 최저현재가(float), 분당거래대금평균(float), 체결강도평균(float), 최고체결강도(float), 최저체결강도(float),
+누적분당매수수량(float), 누적분당매도수량(float), 최고분당매수수량(float), 최고분당매도수량(float), 당일거래대금각도(float), 등락율각도(float),
+최고분봉고가(int), 최고분봉저가(int)
+# 보조지표, 변수명 뒤에 '_N(이전봉수)'을 붙여 이전값을 조회할 수 있다.
+AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM,
+OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+# 그외 변수들
+호가단위(int), 데이터길이(int), 시분(int), 종목코드(str), SELL_LONG(False), BUY_SHORT(False)
+# 잔고종목 변수들, 보유시간은 분단위이다.
+수익률(float), 최고수익률(float), 최저수익률(float), 보유수량(float), 보유시간(int), 매수틱번호(int)
+매수틱번호 : 기록된 틱데이터(2차원 어레이)에서 매수시점에 해당하는 어레이의 번호
+# 이전값 조회 시 봉수 입력은 1부터 평균값계산수치까지이다. -1입력은 모든 변수의 매수시점정보를 조회한다.
 """'''
 
 stock_buy1  = 'elif not (now() > timedelta_sec(180, VI해제시간)):\n    매수 = False'
@@ -378,7 +597,7 @@ example_stockopti_sell1 = '''if 등락율 > 변수 or 수익률 <= 변수 or 수
     매도 = True'''
 
 example_stockopti_buy2 = '''# 최적화할 값들을 self.vars[1] 형태로 변경하십시오.
-# 키값은 0을 제외한 1부터 199까지 입력가능합니다.
+# 키값은 0을 제외한 1부터 입력가능합니다.
 # 키값은 변수범위 설정에서 동일하게 사용됩니다.
 # 매수 및 매도 전략 모두 변경해야합니다.
 
@@ -395,6 +614,67 @@ elif not (체결강도 >= 체결강도평균(30) + self.vars[6]):
 
 if 매수:
     self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, index)'''
+
+example_stockopti_buy3 = '''# 최적화할 값들을 self.vars[1] 형태로 변경하십시오.
+# 키값은 0을 제외한 1부터 입력가능합니다.
+# 키값은 변수범위 설정에서 동일하게 사용됩니다.
+# 매수 및 매도 전략 모두 변경해야합니다.
+# 보조지표의 설정값의 최적화는 다음과 같이 설정합니다.
+# self.indicator[딕셔너리의 키값] = self.vars[번호]
+# 딕셔너리의 키값은 맨아래 주석를 참조하십시오.
+self.indicator['ADOSC_fastperiod'] = self.vars[7]
+
+if not (self.vars[1] <= 등락율 <= self.vars[2]):
+    매수 = False
+elif not (고저평균대비등락율 >= self.vars[3]):
+    매수 = False
+elif not (당일거래대금 >= self.vars[4]):
+    매수 = False
+elif not (체결강도 >= self.vars[5]):
+    매수 = False
+elif not (체결강도 >= 체결강도평균(30) + self.vars[6]):
+    매수 = False
+
+if 매수:
+    self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, index)
+
+# indicator = {
+#     'ADOSC_fastperiod': 0,
+#     'ADOSC_slowperiod': 0,
+#     'ADXR_timeperiod': 0,
+#     'APO_fastperiod': 0,
+#     'APO_slowperiod': 0,
+#     'APO_matype': 0,
+#     'AROON_timeperiod': 0,
+#     'ATR_timeperiod': 0,
+#     'BBANDS_timeperiod': 0,
+#     'BBANDS_nbdevup': 0,
+#     'BBANDS_nbdevdn': 0,
+#     'BBANDS_matype': 0,
+#     'CCI_timeperiod': 0,
+#     'DI_timeperiod': 0,
+#     'MACD_fastperiod': 0,
+#     'MACD_slowperiod': 0,
+#     'MACD_signalperiod': 0,
+#     'MFI_timeperiod': 0,
+#     'MOM_timeperiod': 0,
+#     'PPO_fastperiod': 0,
+#     'PPO_slowperiod': 0,
+#     'PPO_matype': 0,
+#     'ROC_timeperiod': 0,
+#     'RSI_timeperiod': 0,
+#     'SAR_acceleration': 0,
+#     'SAR_maximum': 0,
+#     'STOCHS_fastk_period': 0,
+#     'STOCHS_slowk_period': 0,
+#     'STOCHS_slowk_matype': 0,
+#     'STOCHS_slowd_period': 0,
+#     'STOCHS_slowd_matype': 0,
+#     'STOCHF_fastk_period': 0,
+#     'STOCHF_fastd_period': 0,
+#     'STOCHF_fastd_matype': 0,
+#     'WILLR_timeperiod': 0
+# }'''
 
 example_stockopti_sell2 = '''if 등락율 > self.vars[7] or 수익률 <= self.vars[8] or 수익률 >= self.vars[9]:
     매도 = True
@@ -443,7 +723,7 @@ example_coinopti_sell1 = '''if 등락율 > 변수 or 수익률 <= 변수 or 수�
     매도 = True'''
 
 example_coinopti_buy2 = '''# 최적화할 값들을 self.vars[1] 형태로 변경하십시오.
-# 키값은 0을 제외한 1, 2, 3 순서대로 입력해야합니다.
+# 키값은 0을 제외한 1부터 입력가능합니다.
 # 이 키값은 변수범위 설정에서 동일하게 사용됩니다.
 # 매수 및 매도 전략 모두 변경해야합니다.
 
@@ -460,6 +740,67 @@ elif not (체결강도 >= 체결강도평균(30) + self.vars[6]):
 
 if 매수:
     self.Buy(종목코드, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)'''
+
+example_coinopti_buy3 = '''# 최적화할 값들을 self.vars[1] 형태로 변경하십시오.
+# 키값은 0을 제외한 1부터 입력가능합니다.
+# 이 키값은 변수범위 설정에서 동일하게 사용됩니다.
+# 매수 및 매도 전략 모두 변경해야합니다.
+# 보조지표의 설정값의 최적화는 다음과 같이 설정합니다.
+# self.indicator[딕셔너리의 키값] = self.vars[번호]
+# 딕셔너리의 키값은 맨아래 주석를 참조하십시오.
+self.indicator['ADOSC_fastperiod'] = self.vars[7]
+
+if not (self.vars[1] <= 등락율 <= self.vars[2]):
+    매수 = False
+elif not (고저평균대비등락율 >= self.vars[3]):
+    매수 = False
+elif not (당일거래대금 >= self.vars[4]):
+    매수 = False
+elif not (체결강도 >= self.vars[5]):
+    매수 = False
+elif not (체결강도 >= 체결강도평균(30) + self.vars[6]):
+    매수 = False
+
+if 매수:
+    self.Buy(종목코드, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)
+
+# indicator = {
+#     'ADOSC_fastperiod': 0,
+#     'ADOSC_slowperiod': 0,
+#     'ADXR_timeperiod': 0,
+#     'APO_fastperiod': 0,
+#     'APO_slowperiod': 0,
+#     'APO_matype': 0,
+#     'AROON_timeperiod': 0,
+#     'ATR_timeperiod': 0,
+#     'BBANDS_timeperiod': 0,
+#     'BBANDS_nbdevup': 0,
+#     'BBANDS_nbdevdn': 0,
+#     'BBANDS_matype': 0,
+#     'CCI_timeperiod': 0,
+#     'DI_timeperiod': 0,
+#     'MACD_fastperiod': 0,
+#     'MACD_slowperiod': 0,
+#     'MACD_signalperiod': 0,
+#     'MFI_timeperiod': 0,
+#     'MOM_timeperiod': 0,
+#     'PPO_fastperiod': 0,
+#     'PPO_slowperiod': 0,
+#     'PPO_matype': 0,
+#     'ROC_timeperiod': 0,
+#     'RSI_timeperiod': 0,
+#     'SAR_acceleration': 0,
+#     'SAR_maximum': 0,
+#     'STOCHS_fastk_period': 0,
+#     'STOCHS_slowk_period': 0,
+#     'STOCHS_slowk_matype': 0,
+#     'STOCHS_slowd_period': 0,
+#     'STOCHS_slowd_matype': 0,
+#     'STOCHF_fastk_period': 0,
+#     'STOCHF_fastd_period': 0,
+#     'STOCHF_fastd_matype': 0,
+#     'WILLR_timeperiod': 0
+# }'''
 
 example_coinopti_sell2 = '''if 등락율 > self.vars[7] or 수익률 <= self.vars[8] or 수익률 >= self.vars[9]:
     매도 = True
@@ -520,7 +861,7 @@ if 수익률 <= 변수 or 수익률 >= 변수:
     BUY_SHORT = True'''
 
 example_coinopti_future_buy2 = '''# 최적화할 값들을 self.vars[1] 형태로 변경하십시오.
-# 키값은 0을 제외한 1, 2, 3 순서대로 입력해야합니다.
+# 키값은 0을 제외한 1부터 입력가능합니다.
 # 이 키값은 변수범위 설정에서 동일하게 사용됩니다.
 # 매수 및 매도 전략 모두 변경해야합니다.
 
@@ -540,6 +881,70 @@ elif not (체결강도 < self.vars[6]):
 
 if BUY_LONG or SELL_SHORT:
     self.Buy(종목코드, BUY_LONG, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)'''
+
+example_coinopti_future_buy3 = '''# 최적화할 값들을 self.vars[1] 형태로 변경하십시오.
+# 키값은 0을 제외한 1부터 입력가능합니다.
+# 이 키값은 변수범위 설정에서 동일하게 사용됩니다.
+# 매수 및 매도 전략 모두 변경해야합니다.
+# 보조지표의 설정값의 최적화는 다음과 같이 설정합니다.
+# self.indicator[딕셔너리의 키값] = self.vars[번호]
+# 딕셔너리의 키값은 맨아래 주석를 참조하십시오.
+self.indicator['ADOSC_fastperiod'] = self.vars[7]
+
+if not (고저평균대비등락율 >= self.vars[1]):
+    BUY_LONG = False
+elif not (체결강도 >= 체결강도평균(30) + self.vars[2]):
+    BUY_LONG = False
+elif not (체결강도 >= self.vars[3]):
+    BUY_LONG = False
+
+if not (고저평균대비등락율 < self.vars[4]):
+    SELL_SHORT = False
+elif not (체결강도 < 체결강도평균(30) + self.vars[5]):
+    SELL_SHORT = False
+elif not (체결강도 < self.vars[6]):
+    SELL_SHORT = False
+
+if BUY_LONG or SELL_SHORT:
+    self.Buy(종목코드, BUY_LONG, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)
+
+# indicator = {
+#     'ADOSC_fastperiod': 0,
+#     'ADOSC_slowperiod': 0,
+#     'ADXR_timeperiod': 0,
+#     'APO_fastperiod': 0,
+#     'APO_slowperiod': 0,
+#     'APO_matype': 0,
+#     'AROON_timeperiod': 0,
+#     'ATR_timeperiod': 0,
+#     'BBANDS_timeperiod': 0,
+#     'BBANDS_nbdevup': 0,
+#     'BBANDS_nbdevdn': 0,
+#     'BBANDS_matype': 0,
+#     'CCI_timeperiod': 0,
+#     'DI_timeperiod': 0,
+#     'MACD_fastperiod': 0,
+#     'MACD_slowperiod': 0,
+#     'MACD_signalperiod': 0,
+#     'MFI_timeperiod': 0,
+#     'MOM_timeperiod': 0,
+#     'PPO_fastperiod': 0,
+#     'PPO_slowperiod': 0,
+#     'PPO_matype': 0,
+#     'ROC_timeperiod': 0,
+#     'RSI_timeperiod': 0,
+#     'SAR_acceleration': 0,
+#     'SAR_maximum': 0,
+#     'STOCHS_fastk_period': 0,
+#     'STOCHS_slowk_period': 0,
+#     'STOCHS_slowk_matype': 0,
+#     'STOCHS_slowd_period': 0,
+#     'STOCHS_slowd_matype': 0,
+#     'STOCHF_fastk_period': 0,
+#     'STOCHF_fastd_period': 0,
+#     'STOCHF_fastd_matype': 0,
+#     'WILLR_timeperiod': 0
+# }'''
 
 example_coinopti_future_sell2 = '''if 수익률 <= -self.vars[7] or 수익률 >= self.vars[8]:
     SELL_LONG = True
@@ -572,7 +977,7 @@ example_finder = '''# 탐색틱수에 현재틱 이후의 범위를 입력하십
 self.tickcols = ['체결강도', '최고체결강도(30)', '체결강도차이', '누적수량비', '초당순매수금액', '매도총잔량대비매수수량비율', '당일거래대금대비초당거래대금평균비율']
 self.tickdata = (체결강도, 최고체결강도(30), 체결강도차이, 누적수량비, 초당순매수금액, 매도총잔량대비매수수량비율, 당일거래대금대비초당거래대금평균비율)
 
-탐색범위고가 = self.array_tick[self.indexn + 1:self.indexn + 1 + 탐색틱수, 1].max()
+탐색범위고가 = self.arry_data[self.indexn + 1:self.indexn + 1 + 탐색틱수, 1].max()
 현재가대비고가등락율 = round((탐색범위고가 / 현재가 - 1) * 100, 2)
 
 if not (데이터길이 > 30):
@@ -585,7 +990,7 @@ elif not (초당거래대금 > 초당거래대금N(1)):
 # 이하는 수정하면 안됩니다.
 현재날짜 = str(self.index)[:8]
 try:
-    마지막날짜 = str(self.array_tick[self.indexn + 탐색틱수, 0])[:8]
+    마지막날짜 = str(self.arry_data[self.indexn + 탐색틱수, 0])[:8]
 except:
     마지막날짜 = ''
 if 현재날짜 == 마지막날짜 and 매수:
@@ -613,7 +1018,7 @@ example_finder_future = '''# 탐색틱수에 현재틱 이후의 범위를 입�
 self.tickcols = ['체결강도', '최고체결강도(30)', '체결강도차이', '누적수량비', '초당순매수금액', '매도총잔량대비매수수량비율', '당일거래대금대비초당거래대금평균비율']
 self.tickdata = (체결강도, 최고체결강도(30), 체결강도차이, 누적수량비, 초당순매수금액, 매도총잔량대비매수수량비율, 당일거래대금대비초당거래대금평균비율)
 
-탐색범위고가 = self.array_tick[self.indexn + 1:self.indexn + 1 + 탐색틱수, 1].max()
+탐색범위고가 = self.arry_data[self.indexn + 1:self.indexn + 1 + 탐색틱수, 1].max()
 현재가대비고가등락율 = round((탐색범위고가 / 현재가 - 1) * 100, 2)
 
 if not (데이터길이 > 30):
@@ -626,7 +1031,7 @@ elif not (초당거래대금 > 초당거래대금N(1)):
 # 이하는 수정하면 안됩니다.
 현재날짜 = str(self.index)[:8]
 try:
-    마지막날짜 = str(self.array_tick[self.indexn + 탐색틱수, 0])[:8]
+    마지막날짜 = str(self.arry_data[self.indexn + 탐색틱수, 0])[:8]
 except:
     마지막날짜 = ''
 if 현재날짜 == 마지막날짜 and BUY_LONG:
@@ -646,11 +1051,6 @@ example_opti_vars = '''# 키값 0번을 제외한 모든 변수는 최적화편�
 # 처음에는 범위를 넓게 사용하고 매매횟수가 너무 적거나
 # 무의미한 구간이 발견되면 점차 범위를 좁히면서 속도를
 # 개선하십시오. 범위의 최대개수는 20개입니다.
-
-# 하한 조건은 낮은값부터 높은값으로 순차 탐색하고
-# 상한 조건은 높은값부터 낮은값으로 역순 탐색해야합니다.
-# 최적화 기준의 값이 같을 경우 나중에 탐색한 값으로
-# 최적화되기 때문입니다.
 
 self.vars[0] = [[30, 30, 0], 30]
 self.vars[1] = [[0, 10, 1], 3]
@@ -674,10 +1074,6 @@ example_opti_future_vars = '''# 키값 0번을 제외한 모든 변수는 최적
 
 # 처음에는 범위를 넓게 사용하고 매매횟수가 너무 적거나
 # 무의미한 구간이 발견되면 점차 범위를 좁히면서 속도를 개선하십시오.
-
-# 하한 조건은 낮은값부터 높은값으로 순차 탐색하고
-# 상한 조건은 높은값부터 낮은값으로 역순 탐색해야합니다.
-# 최적화 기준의 값이 같을 경우 나중에 탐색한 값으로 최적화되기 때문입니다.
 
 self.vars[0] = [[30, 30, 0], 30]
 self.vars[1] = [[-3, 0, 1], 0]

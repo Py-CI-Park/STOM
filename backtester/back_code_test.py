@@ -1,6 +1,7 @@
 import sys
 import time
 from traceback import print_exc
+from utility.setting import indicator
 # noinspection PyUnresolvedReferences
 from utility.static import now, now_utc, timedelta_sec
 
@@ -10,6 +11,7 @@ class BackCodeTest:
     def __init__(self, testQ, stg, var=None, ga=False):
         self.testQ = testQ
         self.vars  = {0: []}
+        self.indicator = indicator
 
         if var is None:
             self.vars = {i: 1 for i in range(200)}
@@ -49,7 +51,8 @@ class BackCodeTest:
         error = False
         gugan_factors = [
             '이동평균', '최고현재가', '최저현재가', '초당거래대금평균', '체결강도평균', '최고체결강도', '최저체결강도',
-            '누적초당매수수량', '누적초당매도수량', '최고초당매수수량', '최고초당매도수량', '당일거래대금각도', '전일비각도'
+            '누적초당매수수량', '누적초당매도수량', '최고초당매수수량', '최고초당매도수량', '당일거래대금각도', '전일비각도',
+            '분당거래대금평균', '누적분당매수수량', '누적분당매도수량', '최고분당매수수량', '최고분당매도수량', '최고분봉고가', '최저분봉저가'
         ]
         for factor in gugan_factors:
             if factor in stg:
@@ -246,7 +249,61 @@ class BackCodeTest:
         def 초당거래대금평균(tick, pre=0):
             return 1
 
+        def 분당매수수량N(pre):
+            return 1
+
+        def 분당매도수량N(pre):
+            return 1
+
+        def 분봉시가N(pre):
+            return 1
+
+        def 분봉고가N(pre):
+            return 1
+
+        def 분봉저가N(pre):
+            return 1
+
+        def 분당거래대금N(pre):
+            return 1
+
+        def 최고분당매수수량(tick, pre=0):
+            return 1
+
+        def 최고분당매도수량(tick, pre=0):
+            return 1
+
+        def 누적분당매수수량(tick, pre=0):
+            return 1
+
+        def 누적분당매도수량(tick, pre=0):
+            return 1
+
+        def 분당거래대금평균(tick, pre=0):
+            return 1
+
         def 경과틱수(tick):
+            return 1
+
+        def AD_N(pre):
+            return 1
+
+        def ADOSC_N(pre):
+            return 1
+
+        def ADXR_N(pre):
+            return 1
+
+        def APO_N(pre):
+            return 1
+
+        def AROOND_N(pre):
+            return 1
+
+        def AROONU_N(pre):
+            return 1
+
+        def ATR_N(pre):
             return 1
 
         def BBU_N(pre):
@@ -258,6 +315,15 @@ class BackCodeTest:
         def BBL_N(pre):
             return 1
 
+        def CCI_N(pre):
+            return 1
+
+        def DIM_N(pre):
+            return 1
+
+        def DIP_N(pre):
+            return 1
+
         def MACD_N(pre):
             return 1
 
@@ -267,28 +333,40 @@ class BackCodeTest:
         def MACDH_N(pre):
             return 1
 
-        def APO_N(pre):
+        def MFI_N(pre):
             return 1
 
-        def KAMA_N(pre):
+        def MOM_N(pre):
+            return 1
+
+        def OBV_N(pre):
+            return 1
+
+        def PPO_N(pre):
+            return 1
+
+        def ROC_N(pre):
             return 1
 
         def RSI_N(pre):
             return 1
 
-        def HT_SINE_N(pre):
+        def SAR_N(pre):
             return 1
 
-        def HT_LSINE_N(pre):
+        def STOCHSK_N(pre):
             return 1
 
-        def HT_PHASE_N(pre):
+        def STOCHSD_N(pre):
             return 1
 
-        def HT_QUDRA_N(pre):
+        def STOCHFK_N(pre):
             return 1
 
-        def OBV_N(pre):
+        def STOCHFD_N(pre):
+            return 1
+
+        def WILLR_N(pre):
             return 1
 
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, \
@@ -300,16 +378,16 @@ class BackCodeTest:
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, '005930', now(), '삼성전자'
             ]
 
-        BBU, BBM, BBL, MACD, MACDS, MACDH, APO, KAMA, RSI, HT_SINE, HT_LSINE,  HT_PHASE, HT_QUDRA, OBV = \
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM, OBV, \
+            PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR = \
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
         bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
         시분초, VI아래5호가, 데이터길이, 호가단위, 포지션, 평균값계산틱수 = int(str(체결시간)[8:]), 1, 1800, 1, 'LONG', 30
-        분봉시가, 분봉고가, 분봉저가, 분봉이평5, 분봉이평10, 분봉이평20, 분봉이평60, 분봉이평120, 분봉이평240, 분봉거래대금 = \
-            1, 1, 1, 1., 1., 1., 1., 1., 1., 1
-        일봉이평5, 일봉이평10, 일봉이평20, 일봉이평60, 일봉이평120, 일봉이평240 = 1., 1., 1., 1., 1., 1.
+        분봉시가, 분봉고가, 분봉저가, 분당거래대금 = 1, 1, 1, 1
+
         수익률, 매입가, 보유수량, 매도수량, 분할매수횟수, 분할매도횟수, 보유시간, 최고수익률, 최저수익률 = 1, 1, 1, 1, 1, 0, 0, 1, 0
         매수, 매도, BUY_LONG, SELL_LONG, SELL_SHORT, BUY_SHORT, 강제청산 = False, False, False, False, False, False, False
 

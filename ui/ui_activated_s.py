@@ -123,25 +123,7 @@ def sactivated_09(ui):
         df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
-            optivars = [var for var in list(df.loc[strategy_name])[1:] if var != 9999. and var is not None]
-            QMessageBox.warning(
-                ui, '경고',
-                '최적화용 전략 선택시 최적값으로 전략이 실행됩니다.\n'
-                '다음 변수값을 확인하십시오\n'
-                f'{optivars}\n'
-                f'매도전략 또한 반드시 최적화용 전략으로 변경하십시오.\n'
-                f'최적화 백테스트를 실행할 경우 자동으로 변경됩니다.\n'
-            )
-
-
-def sactivated_10(ui):
-    strategy_name = ui.sj_stock_cbBox_03.currentText()
-    if strategy_name != '':
-        con = sqlite3.connect(DB_STRATEGY)
-        df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
-        con.close()
-        if len(df) > 0:
-            optivars = [var for var in list(df.loc[strategy_name])[1:] if var != 9999. and var is not None]
+            optivars = [float(i) if '.' in i else int(i) for i in df['변수값'][strategy_name].split(';')]
             QMessageBox.warning(
                 ui, '경고',
                 '최적화용 전략 선택시 최적값으로 전략이 실행됩니다.\n'

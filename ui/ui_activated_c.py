@@ -123,7 +123,7 @@ def cactivated_09(ui):
         df = pd.read_sql(f"SELECT * FROM coinoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
-            optivars = [var for var in list(df.loc[strategy_name])[1:] if var != 9999. and var is not None]
+            optivars = [float(i) if '.' in i else int(i) for i in df['변수값'][strategy_name].split(';')]
             QMessageBox.warning(
                 ui, '경고',
                 '최적화용 전략 선택시 최적값으로 전략이 실행됩니다.\n'
@@ -135,37 +135,12 @@ def cactivated_09(ui):
 
 
 def cactivated_10(ui):
-    strategy_name = ui.sj_coin_comBox_03.currentText()
-    if strategy_name != '':
-        con = sqlite3.connect(DB_STRATEGY)
-        df = pd.read_sql(f"SELECT * FROM coinoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
-        con.close()
-        if len(df) > 0:
-            optivars = [var for var in list(df.loc[strategy_name])[1:] if var != 9999. and var is not None]
-            QMessageBox.warning(
-                ui, '경고',
-                '최적화용 전략 선택시 최적값으로 전략이 실행됩니다.\n'
-                '다음 변수값을 확인하십시오\n'
-                f'{optivars}\n'
-                f'매도전략 또한 반드시 최적화용 전략으로 변경하십시오.\n'
-                f'최적화 백테스트를 실행할 경우 자동으로 변경됩니다.\n'
-            )
-
-
-def cactivated_11(ui):
-    coin_trade_name = ui.sj_main_comBox_02.currentText()
-    if coin_trade_name != '업비트':
-        ui.sj_main_liEdit_03.setText('5')
-        ui.sj_main_liEdit_04.setText('10')
-
-
-def cactivated_12(ui):
     if ui.dict_set['거래소'] == '바이낸스선물' and ui.sj_main_comBox_03.currentText() == '교차':
         ui.sj_main_comBox_03.setCurrentText('격리')
         QMessageBox.warning(ui, '경고', '현재 바이낸스 선물 마진타입은 격리타입만 지원합니다.\n')
 
 
-def cactivated_13(ui):
+def cactivated_11(ui):
     if ui.dict_set['거래소'] == '바이낸스선물' and ui.sj_main_comBox_04.currentText() == '양방향':
         ui.sj_main_comBox_04.setCurrentText('단방향')
         QMessageBox.warning(ui, '경고', '현재 바이낸스 선물 포지션모드는 단방향만 지원합니다.\n')

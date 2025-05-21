@@ -7,22 +7,26 @@ import operator
 import numpy as np
 import pandas as pd
 from multiprocessing import Process, Queue
-from backtester.back_static import SendTextAndStd, GetMoneytopQuery, PltShow, GetResultDataframe, GetBackResult, AddMdd, InitBackSequence
+from backtester.back_static import SendTextAndStd, GetMoneytopQuery, PltShow, GetResultDataframe, GetBackResult, AddMdd
 from utility.static import strf_time, now, timedelta_day, strp_time, threading_timer
-from utility.setting import ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_STOCK_BACK, DB_COIN_BACK, DB_OPTUNA
+from utility.setting import ui_num, DB_STRATEGY, DB_BACKTEST, DICT_SET, DB_STOCK_BACK_TICK, DB_COIN_BACK_TICK, \
+    DB_OPTUNA, DB_STOCK_BACK_MIN, DB_COIN_BACK_MIN
 
 
 class Total:
-    def __init__(self, wq, sq, tq, teleQ, mq, bstq_list, backname, ui_gubun, gubun):
+    def __init__(self, wq, sq, tq, teleQ, mq, beq_list, bstq_list, backname, ui_gubun, gubun, multi, divid_mode):
         self.wq           = wq
         self.sq           = sq
         self.tq           = tq
         self.mq           = mq
         self.teleQ        = teleQ
+        self.beq_list     = beq_list
         self.bstq_list    = bstq_list
         self.backname     = backname
         self.ui_gubun     = ui_gubun
         self.gubun        = gubun
+        self.multi        = multi
+        self.divid_mode   = divid_mode
         self.dict_set     = DICT_SET
         gubun_text        = f'{self.gubun}_future' if self.ui_gubun == 'CF' else self.gubun
         self.savename     = f'{gubun_text}_{self.backname.replace("전진분석", "").lower()}'
@@ -83,17 +87,27 @@ class Total:
         st  = {}
         start = now()
         dict_dummy = {}
+        first_time = None
+        divid_time = now()
+        divid_multi = int(self.multi * 90 / 100)
+        fast_proc_list = []
+        slow_proc_dict = {}
         while True:
             data = self.tq.get()
-            if data == '탐색완료':
-                tt += 1
-                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2, start))
-
-            elif data == '백테완료':
+            if data[0] == '백테완료':
                 bc  += 1
                 tbc += 1
-
-                if self.opti_turn in (0, 2):
+                if self.opti_turn == 1:
+                    if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
+                        if first_time is None: first_time = now()
+                        procn, cnt, total = data[1:]
+                        if cnt == total:
+                            fast_proc_list.append(procn)
+                            if len(fast_proc_list) == divid_multi:
+                                divid_time = now()
+                        if len(fast_proc_list) > divid_multi and procn not in slow_proc_dict.keys():
+                            slow_proc_dict[procn] = cnt
+                elif self.opti_turn in (0, 2):
                     self.wq.put((ui_num[f'{self.ui_gubun}백테바'], bc, self.total_count, start))
                 elif self.opti_turn == 4:
                     self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tbc, self.total_count, start))
@@ -101,6 +115,17 @@ class Total:
                 if bc == self.back_count:
                     bc = 0
                     if self.opti_turn == 1:
+                        if self.dict_set['백테일괄로딩'] and self.divid_mode != '한종목 로딩':
+                            time_90 = (divid_time - first_time).total_seconds()
+                            time_10 = (now() - divid_time).total_seconds()
+                            if time_90 * 5 / 90 < time_10:
+                                k = 0
+                                for procn, cnt in slow_proc_dict.items():
+                                    self.beq_list[procn].put(('데이터이동', cnt, fast_proc_list[k]))
+                                    k += 1
+                            first_time = None
+                            fast_proc_list = []
+                            slow_proc_dict = {}
                         for q in self.bstq_list:
                             q.put(('백테완료', '미분리집계'))
                     else:
@@ -202,6 +227,9 @@ class Total:
                 self.total_count = data[1]
             elif data[0] == '전체틱수':
                 self.total_count2 += data[1]
+            elif data == '탐색완료':
+                tt += 1
+                self.wq.put((ui_num[f'{self.ui_gubun}백테바'], tt, self.total_count2, start))
             elif data[0] == '최적화정보':
                 self.hstd_list = data[1]
             elif data == '백테중지':
@@ -345,21 +373,23 @@ class StopWhenNotUpdateBestCallBack:
 
 
 class RollingWalkForwardTest:
-    def __init__(self, wq, bq, sq, tq, lq, teleQ, beq_list, bstq_list, backname, ui_gubun):
-        self.wq        = wq
-        self.bq        = bq
-        self.sq        = sq
-        self.tq        = tq
-        self.lq        = lq
-        self.teleQ     = teleQ
-        self.beq_list  = beq_list
-        self.bstq_list = bstq_list
-        self.backname  = backname
-        self.ui_gubun  = ui_gubun
-        self.dict_set  = DICT_SET
-        self.gubun     = 'stock' if self.ui_gubun == 'S' else 'coin'
-        self.vars      = {}
-        self.study     = None
+    def __init__(self, wq, bq, sq, tq, lq, teleQ, beq_list, bstq_list, multi, divid_mode, backname, ui_gubun):
+        self.wq         = wq
+        self.bq         = bq
+        self.sq         = sq
+        self.tq         = tq
+        self.lq         = lq
+        self.teleQ      = teleQ
+        self.beq_list   = beq_list
+        self.bstq_list  = bstq_list
+        self.multi      = multi
+        self.divid_mode = divid_mode
+        self.backname   = backname
+        self.ui_gubun   = ui_gubun
+        self.dict_set   = DICT_SET
+        self.gubun      = 'stock' if self.ui_gubun == 'S' else 'coin'
+        self.vars       = {}
+        self.study      = None
         self.dict_simple_vars = {}
         self.Start()
 
@@ -427,7 +457,11 @@ class RollingWalkForwardTest:
                 self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테엔진에 로딩된 데이터가 부족합니다. 최소 (학습기간 + 확인기간 + 1)주 만큼의 데이터가 필요합니다'))
                 self.SysExit(True)
 
-        con   = sqlite3.connect(DB_STOCK_BACK if self.ui_gubun == 'S' else DB_COIN_BACK)
+        if self.ui_gubun == 'S':
+            db = DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN
+        else:
+            db = DB_COIN_BACK_TICK if self.dict_set['코인타임프레임'] else DB_COIN_BACK_MIN
+        con   = sqlite3.connect(db)
         query = GetMoneytopQuery(self.ui_gubun, startday, endday, starttime, endtime)
         df_mt = pd.read_sql(query, con)
         con.close()
@@ -492,7 +526,8 @@ class RollingWalkForwardTest:
         mq = Queue()
         Process(
             target=Total,
-            args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)
+            args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.beq_list, self.bstq_list, self.backname, self.ui_gubun,
+                  self.gubun, self.multi, self.divid_mode)
         ).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
         self.tq.put(('백테정보', betting, startday, endday, starttime, endtime, buystg_name, buystg, sellstg, optivars,
@@ -766,7 +801,6 @@ class RollingWalkForwardTest:
         return vars_, self.study.best_value
 
     def PutData(self, data):
-        InitBackSequence()
         self.tq.put(data[:3])
         for q in self.bstq_list:
             q.put(('백테시작', data[2], data[-1]))

@@ -2,15 +2,6 @@ def stom_live_process_alive(ui):
     return ui.proc_live is not None and ui.proc_live.is_alive()
 
 
-def simulator_process_alive(ui):
-    result = False
-    if ui.proc_simulator_rv is not None and ui.proc_simulator_rv.is_alive() and ui.proc_simulator_td is not None and ui.proc_simulator_td.is_alive():
-        result = True
-    if ui.stock_simulator_alive:
-        result = True
-    return result
-
-
 def coin_receiver_process_alive(ui):
     return ui.proc_receiver_coin is not None and ui.proc_receiver_coin.is_alive()
 
@@ -29,9 +20,7 @@ def coinkimp_process_alive(ui):
 
 def backtest_process_alive(ui):
     return (ui.proc_backtester_bs is not None and ui.proc_backtester_bs.is_alive()) or \
-        (ui.proc_backtester_bc is not None and ui.proc_backtester_bc.is_alive()) or \
         (ui.proc_backtester_bf is not None and ui.proc_backtester_bf.is_alive()) or \
-        (ui.proc_backtester_bp is not None and ui.proc_backtester_bp.is_alive()) or \
         (ui.proc_backtester_o is not None and ui.proc_backtester_o.is_alive()) or \
         (ui.proc_backtester_ov is not None and ui.proc_backtester_ov.is_alive()) or \
         (ui.proc_backtester_ovc is not None and ui.proc_backtester_ovc.is_alive()) or \

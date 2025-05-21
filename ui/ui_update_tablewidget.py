@@ -4,7 +4,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableWidgetItem
 from ui.set_style import color_fg_bt, color_fg_dk, color_fg_bc, color_bf_bt, color_bf_dk, color_ct_hg
 from ui.ui_get_label_text import get_label_text
-from utility.setting import ui_num, columns_hg, columns_hj
+from utility.setting import ui_num, columns_hg, columns_hj, list_stock_tick, list_stock_min, list_coin_min1, \
+    list_coin_min2, list_coin_tick1, list_coin_tick2
 from utility.static import error_decorator, change_format, comma2int, comma2float, strp_time
 
 
@@ -26,13 +27,14 @@ class UpdateTablewidget:
     def update_tablewidget(self, data):
         if len(data) == 2:
             gubun, df = data
-        elif len(data) == 3:
-            gubun, usdtokrw, df = data
-            self.ui.dialog_kimp.setWindowTitle(f'STOM KIMP - 환율 {usdtokrw:,}원/달러')
         else:
-            gubun, df, ymshms, dummy = data
-            if self.ui.ctpg_tik_xticks is not None:
-                self.UpdateHogainfoForChart(gubun, ymshms)
+            if type(data[2]) == str:
+                gubun, df, ymshms = data
+                if self.ui.ctpg_xticks is not None:
+                    self.UpdateHogainfoForChart(gubun, ymshms)
+            else:
+                gubun, df, usdtokrw = data
+                self.ui.dialog_kimp.setWindowTitle(f'STOM KIMP - 환율 {usdtokrw:,}원/달러')
 
         tableWidget = None
         if gubun == ui_num['S실현손익']:
@@ -345,18 +347,32 @@ class UpdateTablewidget:
             tableWidget.setSortingEnabled(True)
 
     def UpdateHogainfoForChart(self, gubun, ymdhms):
+        def fi(fname):
+            if is_min:
+                if gubun == ui_num['S호가종목']:   return list_stock_min.index(fname)
+                elif 'KRW' in self.ui.ctpg_name: return list_coin_min1.index(fname)
+                else:                            return list_coin_min2.index(fname)
+            else:
+                if gubun == ui_num['S호가종목']:  return list_stock_tick.index(fname)
+                elif 'KRW' in self.ui.ctpg_name: return list_coin_tick1.index(fname)
+                else:                            return list_coin_tick2.index(fname)
+
         def setInfiniteLine():
             vhline = pg.InfiniteLine()
             vhline.setPen(pg.mkPen(color_ct_hg, width=1))
             return vhline
 
-        x = strp_time('%Y%m%d%H%M%S', ymdhms).timestamp()
+        is_min = len(ymdhms) == 12
+        if is_min:
+            x = strp_time('%Y%m%d%H%M%S', f'{ymdhms}00').timestamp()
+        else:
+            x = strp_time('%Y%m%d%H%M%S', ymdhms).timestamp()
         try:
-            xpoint = self.ui.ctpg_tik_xticks.index(x)
+            xpoint = self.ui.ctpg_xticks.index(x)
         except:
             return
 
-        if self.ui.ctpg_tik_hline is None:
+        if self.ui.ctpg_hline is None:
             vLine1  = setInfiniteLine()
             vLine2  = setInfiniteLine()
             vLine3  = setInfiniteLine()
@@ -374,114 +390,90 @@ class UpdateTablewidget:
             vLine15 = setInfiniteLine()
             vLine16 = setInfiniteLine()
 
-            if self.ui.ct_pushButtonnn_04.text() == 'CHART 8':
-                self.ui.ctpg_tik_hline = [vLine1, vLine2, vLine3, vLine4, vLine5, vLine6, vLine7, vLine8]
-            elif self.ui.ct_pushButtonnn_04.text() == 'CHART 12':
-                self.ui.ctpg_tik_hline = [vLine1, vLine2, vLine3, vLine4, vLine5, vLine6, vLine7, vLine8, vLine9, vLine10, vLine11, vLine12]
-            else:
-                self.ui.ctpg_tik_hline = [vLine1, vLine2, vLine3, vLine4, vLine5, vLine6, vLine7, vLine8, vLine9, vLine10, vLine11, vLine12, vLine13, vLine14, vLine15, vLine16]
-
             self.ui.ctpg[0].addItem(vLine1)
             self.ui.ctpg[1].addItem(vLine2)
             self.ui.ctpg[2].addItem(vLine3)
             self.ui.ctpg[3].addItem(vLine4)
             self.ui.ctpg[4].addItem(vLine5)
             self.ui.ctpg[5].addItem(vLine6)
-            self.ui.ctpg[6].addItem(vLine7)
-            self.ui.ctpg[7].addItem(vLine8)
-            if self.ui.ct_pushButtonnn_04.text() == 'CHART 12':
+            self.ui.ctpg_hline = [vLine1, vLine2, vLine3, vLine4, vLine5, vLine6]
+            if len(self.ui.ctpg) > 6:
+                self.ui.ctpg[6].addItem(vLine7)
+                self.ui.ctpg[7].addItem(vLine8)
+                self.ui.ctpg_hline += [vLine7, vLine8]
+            if len(self.ui.ctpg) > 8:
                 self.ui.ctpg[8].addItem(vLine9)
                 self.ui.ctpg[9].addItem(vLine10)
+                self.ui.ctpg_hline += [vLine9, vLine10]
+            if len(self.ui.ctpg) > 10:
                 self.ui.ctpg[10].addItem(vLine11)
                 self.ui.ctpg[11].addItem(vLine12)
-            elif self.ui.ct_pushButtonnn_04.text() == 'CHART 16':
-                self.ui.ctpg[8].addItem(vLine9)
-                self.ui.ctpg[9].addItem(vLine10)
-                self.ui.ctpg[10].addItem(vLine11)
-                self.ui.ctpg[11].addItem(vLine12)
+                self.ui.ctpg_hline += [vLine11, vLine12]
+            if len(self.ui.ctpg) > 12:
                 self.ui.ctpg[12].addItem(vLine13)
                 self.ui.ctpg[13].addItem(vLine14)
                 self.ui.ctpg[14].addItem(vLine15)
                 self.ui.ctpg[15].addItem(vLine16)
+                self.ui.ctpg_hline += [vLine13, vLine14, vLine15, vLine16]
 
-        for vline in self.ui.ctpg_tik_hline:
+        for vline in self.ui.ctpg_hline:
             vline.setPos(x)
 
         ymd = ymdhms[:8]
         hms = ymdhms[8:]
-        self.ui.hg_labellllllll_01.setText(f'{ymd[:4]}-{ymd[4:6]}-{ymd[6:]} {hms[:2]}:{hms[2:4]}:{hms[4:]}')
+        ymd_text = f'{ymd[:4]}-{ymd[4:6]}-{ymd[6:]}'
+        hms_text = f'{hms[:2]}:{hms[2:]}' if is_min else f'{hms[:2]}:{hms[2:4]}:{hms[4:]}'
+        self.ui.hg_labellllllll_01.setText(f'{ymd_text} {hms_text}')
 
-        """ 주식
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
-           0      1     2    3    4     5         6         7         8        9      10       11        12           13
-        초당매수수량, 초당매도수량, VI해제시간, VI가격, VI호가단위, 초당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
-            14         15          16      17       18         19            20            21        22
-        매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           23       24       25        26       27        28       29        30       31        32
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목
-           33       34       35        36       37        38       39        40       41       42          43           44
-        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도,
-            45         46          47           48           49         50         51           52           53
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_, 전일비각도_
-              54            55               56              57              58             59         60            61
-        매수가, 매도가
-          62    63
-        """
-
-        info = ['이평60', '이평300', '이평600', '이평1200', '체결강도', '체결강도평균', '최고체결강도', '최저체결강도', '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량']
-        if gubun == ui_num['S호가종목']:
-            data = [
-                self.ui.ctpg_tik_arry[xpoint, 45], self.ui.ctpg_tik_arry[xpoint, 46], self.ui.ctpg_tik_arry[xpoint, 47],
-                self.ui.ctpg_tik_arry[xpoint, 48], self.ui.ctpg_tik_arry[xpoint, 7], self.ui.ctpg_tik_arry[xpoint, 51],
-                self.ui.ctpg_tik_arry[xpoint, 52], self.ui.ctpg_tik_arry[xpoint, 53], self.ui.ctpg_tik_arry[xpoint, 19],
-                self.ui.ctpg_tik_arry[xpoint, 58], self.ui.ctpg_tik_arry[xpoint, 14], self.ui.ctpg_tik_arry[xpoint, 15]
+        if is_min:
+            info = [
+                '이동평균005', '이동평균010', '이동평균020', '이동평균060', '체결강도', '체결강도평균', '최고체결강도',
+                '최저체결강도', '분당거래대금', '분당거래대금평균', '분당매수수량', '분당매도수량'
             ]
-            df1  = pd.DataFrame({'체결수량': info, '체결강도': data})
-            info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '등락율각도', '당일거래대금각도', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비']
-            data = [
-                self.ui.ctpg_tik_arry[xpoint, 20], self.ui.ctpg_tik_arry[xpoint, 43], self.ui.ctpg_tik_arry[xpoint, 6],
-                self.ui.ctpg_tik_arry[xpoint, 56], self.ui.ctpg_tik_arry[xpoint, 57], self.ui.ctpg_tik_arry[xpoint, 59],
-                self.ui.ctpg_tik_arry[xpoint, 60], self.ui.ctpg_tik_arry[xpoint, 61], self.ui.ctpg_tik_arry[xpoint, 8],
-                self.ui.ctpg_tik_arry[xpoint, 9], self.ui.ctpg_tik_arry[xpoint, 10], self.ui.ctpg_tik_arry[xpoint, 11]
-            ]
-            df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
-            coin = False
-            self.ui.windowQ.put((ui_num['S호가체결'], df1))
-            self.ui.windowQ.put((ui_num['S호가체결2'], df2))
         else:
-            data = [
-                self.ui.ctpg_tik_arry[xpoint, 36], self.ui.ctpg_tik_arry[xpoint, 37], self.ui.ctpg_tik_arry[xpoint, 38],
-                self.ui.ctpg_tik_arry[xpoint, 39], self.ui.ctpg_tik_arry[xpoint, 7], self.ui.ctpg_tik_arry[xpoint, 42],
-                self.ui.ctpg_tik_arry[xpoint, 43], self.ui.ctpg_tik_arry[xpoint, 44], self.ui.ctpg_tik_arry[xpoint, 10],
-                self.ui.ctpg_tik_arry[xpoint, 49], self.ui.ctpg_tik_arry[xpoint, 8], self.ui.ctpg_tik_arry[xpoint, 9]
+            info = [
+                '이동평균0060', '이동평균0300', '이동평균0600', '이동평균1200', '체결강도', '체결강도평균', '최고체결강도',
+                '최저체결강도', '초당거래대금', '초당거래대금평균', '초당매수수량', '초당매도수량'
             ]
-            df1  = pd.DataFrame({'체결수량': info, '체결강도': data})
-            info = ['고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량', '등락율각도', '당일거래대금각도']
-            data = [
-                self.ui.ctpg_tik_arry[xpoint, 11], self.ui.ctpg_tik_arry[xpoint, 34], self.ui.ctpg_tik_arry[xpoint, 6],
-                self.ui.ctpg_tik_arry[xpoint, 47], self.ui.ctpg_tik_arry[xpoint, 48], self.ui.ctpg_tik_arry[xpoint, 50],
-                self.ui.ctpg_tik_arry[xpoint, 51]
-            ]
-            df2  = pd.DataFrame({'체결수량': info, '체결강도': data})
-            coin = True
-            self.ui.windowQ.put((ui_num['C호가체결'], df1))
-            self.ui.windowQ.put((ui_num['C호가체결2'], df2))
 
-        """ 코인
-        체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 초당매수수량, 초당매도수량, 초당거래대금, 고저평균대비등락율,
-           0      1     2    3     4     5        6         7         8           9          10            11
-        매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
-           12        13        14       15       16        17       18        19       20       21        22       23
-        매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목,
-           24        25       26       27        28       29        30       31       32        33         34           35
-        이동평균60_, 이동평균300_, 이동평균600_, 이동평균1200_, 최고현재가_, 최저현재가_, 체결강도평균_, 최고체결강도_, 최저체결강도_,
-            36         37           38          39          40         51          42           43          44
-        최고초당매수수량_, 최고초당매도수량_, 누적초당매수수량_, 누적초당매도수량_, 초당거래대금평균_, 등락율각도_, 당일거래대금각도_
-               45            46              47              48              49           50           51
-        매수가, 매도가, 매수가2, 매도가2
-          52    53     54      55
-        """
+        data = []
+        for col_name in info:
+            data.append(self.ui.ctpg_arry[xpoint, fi(col_name)])
+        df1 = pd.DataFrame({'체결수량': info, '체결강도': data})
 
-        for i in range(len(self.ui.ctpg_tik_legend)):
-            self.ui.ctpg_tik_legend[i].setText(get_label_text(coin, self.ui.ctpg_tik_arry, xpoint, self.ui.ctpg_tik_factors[i], f'{hms[:2]}:{hms[2:4]}:{hms[4:]}'))
-            self.ui.ctpg_tik_labels[i].setText('')
+        if is_min:
+            if gubun == ui_num['S호가종목']:
+                info = [
+                    '고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적분당매수수량', '누적분당매도수량',
+                    '등락율각도', '당일거래대금각도', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비'
+                ]
+            else:
+                info = [
+                    '고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적분당매수수량', '누적분당매도수량',
+                    '등락율각도', '당일거래대금각도'
+                ]
+        else:
+            if gubun == ui_num['S호가종목']:
+                info = [
+                    '고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량',
+                    '등락율각도', '당일거래대금각도', '전일비각도', '거래대금증감', '전일비', '회전율', '전일동시간비'
+                ]
+            else:
+                info = [
+                    '고저평균대비등락율', '매도수5호가잔량합', '당일거래대금', '누적초당매수수량', '누적초당매도수량',
+                    '등락율각도', '당일거래대금각도'
+                ]
+
+        data = []
+        for col_name in info:
+            data.append(self.ui.ctpg_arry[xpoint, fi(col_name)])
+        df2 = pd.DataFrame({'체결수량': info, '체결강도': data})
+
+        gubun_ = 'C' if gubun == ui_num['C호가종목'] else 'S'
+        self.ui.windowQ.put((ui_num[f'{gubun_}호가체결'], df1))
+        self.ui.windowQ.put((ui_num[f'{gubun_}호가체결2'], df2))
+
+        coin = gubun == ui_num['C호가종목']
+        for i in range(len(self.ui.ctpg_legend)):
+            self.ui.ctpg_legend[i].setText(get_label_text(False, coin, self.ui.ctpg_name, is_min, self.ui.ctpg_arry, xpoint, self.ui.ctpg_factors[i], hms_text))
+            self.ui.ctpg_labels[i].setText('')

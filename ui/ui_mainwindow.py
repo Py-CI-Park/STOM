@@ -19,7 +19,6 @@ from ui.set_mediaplayer import SetMediaPlayer
 from ui.set_dialog_chart import SetDialogChart
 
 from ui.ui_etc import *
-from ui.ui_pattern import *
 from ui.ui_draw_chart import *
 from ui.ui_activated_b import *
 from ui.ui_activated_c import *
@@ -336,10 +335,6 @@ class Writer(QThread):
                         self.signal8.emit(data[1])
                     elif '라이브' in data:
                         self.signal9.emit(data)
-                    elif data == '복기모드시작':
-                        self.test = True
-                    elif data == '복기모드종료':
-                        self.test = False
             except:
                 pass
 
@@ -464,7 +459,7 @@ class MainWindow(QMainWindow):
         SetMediaPlayer(self)
 
         con1 = sqlite3.connect(DB_SETTING)
-        con2 = sqlite3.connect(DB_STOCK_BACK)
+        con2 = sqlite3.connect(DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN)
         try:
             df = pd.read_sql('SELECT * FROM codename', con1).set_index('index')
         except:
@@ -488,7 +483,6 @@ class MainWindow(QMainWindow):
 
         self.back_schedul     = False
         self.showQsize        = False
-        self.test_pause       = False
         self.image_search     = False
         self.auto_mode        = False
         self.database_control = False
@@ -496,17 +490,14 @@ class MainWindow(QMainWindow):
         self.csicon_alert     = False
         self.lgicon_alert     = False
         self.database_chart   = False
-        self.daydata_download = False
-        self.tickdata_save    = False
+        self.data_save        = False
         self.back_engining    = False
         self.backtest_engine  = False
-        self.time_sync        = False
         self.extend_window    = False
         self.back_cancelling  = False
 
         self.animation        = None
         self.webEngineView    = None
-        self.df_test          = None
         self.dict_sgbn        = None
         self.dict_cn          = None
         self.dict_mt          = None
@@ -518,26 +509,17 @@ class MainWindow(QMainWindow):
         self.back_eques       = []
         self.back_sprocs      = []
         self.back_sques       = []
-        self.back_shm_list    = []
         self.avg_list         = []
         self.back_count       = 0
-        self.startday         = 0
-        self.endday           = 0
-        self.starttime        = 0
-        self.endtime          = 0
-        self.ct_test          = 0
         self.back_scount      = 0
         self.multi            = 0
         self.divide_mode      = str
 
-        self.stock_simulator_alive = False
         self.backengin_window_open = False
         self.optuna_window_open    = False
 
         self.proc_backtester_bs    = None
         self.proc_backtester_bf    = None
-        self.proc_backtester_bc    = None
-        self.proc_backtester_bp    = None
         self.proc_backtester_o     = None
         self.proc_backtester_ov    = None
         self.proc_backtester_ovc   = None
@@ -567,23 +549,24 @@ class MainWindow(QMainWindow):
         self.proc_strategy_coin    = None
         self.proc_trader_coin      = None
         self.proc_coin_kimp        = None
-        self.proc_simulator_rv     = None
-        self.proc_simulator_td     = None
 
         self.backdetail_list       = None
         self.backcheckbox_list     = None
         self.order_combo_name_list = []
 
-        self.ctpg_tik_name         = None
-        self.ctpg_tik_cline        = None
-        self.ctpg_tik_hline        = None
-        self.ctpg_tik_xticks       = None
-        self.ctpg_tik_arry         = None
-        self.ctpg_tik_legend       = {}
-        self.ctpg_tik_item         = {}
-        self.ctpg_tik_data         = {}
-        self.ctpg_tik_factors      = []
-        self.ctpg_tik_labels       = []
+        self.ctpg_name             = None
+        self.ctpg_cline            = None
+        self.ctpg_hline            = None
+        self.ctpg_xticks           = None
+        self.ctpg_arry             = None
+        self.ctpg_last_candlestick = None
+        self.ctpg_last_volumebar   = None
+        self.ctpg_last_xtick       = None
+        self.ctpg_legend           = {}
+        self.ctpg_item             = {}
+        self.ctpg_data             = {}
+        self.ctpg_factors          = []
+        self.ctpg_labels           = []
 
         self.srqsize = 0
         self.stqsize = 0
@@ -649,6 +632,8 @@ class MainWindow(QMainWindow):
         self.writer.signal9.connect(self.StomliveScreenshot)
         self.writer.start()
 
+        if self.dict_set['코인리시버']: self.mnButtonClicked_01(1)
+
         font_name = 'C:/Windows/Fonts/malgun.ttf'
         font_family = font_manager.FontProperties(fname=font_name).get_name()
         plt.rcParams['font.family'] = font_family
@@ -692,9 +677,6 @@ class MainWindow(QMainWindow):
     def CheckboxChanged_17(self, state):   checkbox_changed_17(self, state)
     def CheckboxChanged_18(self, state):   checkbox_changed_18(self, state)
     def CheckboxChanged_19(self, state):   checkbox_changed_19(self, state)
-    def CheckboxChanged_20(self, state):   checkbox_changed_20(self, state)
-    def CheckboxChanged_21(self, state):   checkbox_changed_21(self, state)
-    def CheckboxChanged_22(self, state):   checkbox_changed_23(self, state)
     # =================================================================================================================
     def sbCheckboxChanged_01(self, state): sbcheckbox_changed_01(self, state)
     def sbCheckboxChanged_02(self, state): sbcheckbox_changed_02(self, state)
@@ -745,10 +727,8 @@ class MainWindow(QMainWindow):
     def ShowDialogChart(self, real, coin, code, tickcount=None, searchdate=None, starttime=None, endtime=None, detail=None, buytimes=None):
         show_dialog_chart(self, real, coin, code, tickcount, searchdate, starttime, endtime, detail, buytimes)
 
-    def ShowDialogChart2(self):  show_dialog_chart2(self)
     def ShowQsize(self):         show_qsize(self)
     def ShowDialogFactor(self):  show_dialog_factor(self)
-    def ShowDialogTest(self):    show_dialog_test(self)
     def ShowChart(self):         show_chart(self)
     def ShowHoga(self):          show_hoga(self)
     def ShowGiup(self):          show_giup(self)
@@ -761,6 +741,7 @@ class MainWindow(QMainWindow):
     def ShowVideo(self):         show_video(self)
     def PutHogaCode(self, coin, code): put_hoga_code(self, coin, code)
     def ChartMoneyTopList(self): chart_moneytop_list(self)
+    def ChartSizeChange(self):   chart_size_change(self)
     # =================================================================================================================
     def dbButtonClicked_01(self): dbbutton_clicked_01(self)
     def dbButtonClicked_02(self): dbbutton_clicked_02(self)
@@ -781,11 +762,6 @@ class MainWindow(QMainWindow):
     def dbButtonClicked_17(self): dbbutton_clicked_17(self)
     def dbButtonClicked_18(self): dbbutton_clicked_18(self)
     def dbButtonClicked_19(self): dbbutton_clicked_19(self)
-    # =================================================================================================================
-    def ptActivated_01(self):     ptactivated_01(self)
-    def ptButtonClicked_01(self): ptbutton_clicked_01(self)
-    def ptButtonClicked_02(self): ptbutton_clicked_02(self)
-    def ptButtonClicked_03(self): ptbutton_clicked_03(self)
     # =================================================================================================================
     def odButtonClicked_01(self): odbutton_clicked_01(self)
     def odButtonClicked_02(self): odbutton_clicked_02(self)
@@ -818,12 +794,12 @@ class MainWindow(QMainWindow):
     def sdButtonClicked_04(self): sdbutton_clicked_04(self)
     def sdButtonClicked_05(self): sdbutton_clicked_05(self)
     # =================================================================================================================
-    def mnButtonClicked_01(self, index):            mnbutton_c_clicked_01(self, index)
-    def mnButtonClicked_02(self):                   mnbutton_c_clicked_02(self)
-    def mnButtonClicked_03(self, stocklogin=False): mnbutton_c_clicked_03(self, stocklogin)
-    def mnButtonClicked_04(self):                   mnbutton_c_clicked_04(self)
-    def mnButtonClicked_05(self):                   mnbutton_c_clicked_05(self)
-    def mnButtonClicked_06(self):                   mnbutton_c_clicked_06(self)
+    def mnButtonClicked_01(self, index):   mnbutton_c_clicked_01(self, index)
+    def mnButtonClicked_02(self):          mnbutton_c_clicked_02(self)
+    def mnButtonClicked_03(self, login=0): mnbutton_c_clicked_03(self, login)
+    def mnButtonClicked_04(self):          mnbutton_c_clicked_04(self)
+    def mnButtonClicked_05(self):          mnbutton_c_clicked_05(self)
+    def mnButtonClicked_06(self):          mnbutton_c_clicked_06(self)
     # =================================================================================================================
     def ssButtonClicked_01(self): ssbutton_clicked_01(self)
     def ssButtonClicked_02(self): ssbutton_clicked_02(self)
@@ -856,7 +832,6 @@ class MainWindow(QMainWindow):
     def sActivated_07(self): sactivated_07(self)
     def sActivated_08(self): sactivated_08(self)
     def sActivated_09(self): sactivated_09(self)
-    def sActivated_10(self): sactivated_10(self)
     # =================================================================================================================
     def cActivated_01(self): cactivated_01(self)
     def cActivated_02(self): cactivated_02(self)
@@ -869,8 +844,6 @@ class MainWindow(QMainWindow):
     def cActivated_09(self): cactivated_09(self)
     def cActivated_10(self): cactivated_10(self)
     def cActivated_11(self): cactivated_11(self)
-    def cActivated_12(self): cactivated_12(self)
-    def cActivated_13(self): cactivated_13(self)
     # =================================================================================================================
     def bActivated_01(self): bactivated_01(self)
     def bActivated_02(self): bactivated_02(self)
@@ -923,9 +896,6 @@ class MainWindow(QMainWindow):
     def svjButtonClicked_20(self): svj_button_clicked_20(self)
     def svjButtonClicked_21(self): svj_button_clicked_21(self)
     def svjButtonClicked_22(self): svj_button_clicked_22(self)
-    def svjButtonClicked_23(self): svj_button_clicked_23(self)
-    def svjButtonClicked_24(self): svj_button_clicked_24(self)
-    def svjButtonClicked_25(self): svj_button_clicked_25(self)
     # =================================================================================================================
     def svjsButtonClicked_01(self): svjs_button_clicked_01(self)
     def svjsButtonClicked_02(self): svjs_button_clicked_02(self)
@@ -997,9 +967,6 @@ class MainWindow(QMainWindow):
     def cvjButtonClicked_20(self): cvj_button_clicked_20(self)
     def cvjButtonClicked_21(self): cvj_button_clicked_21(self)
     def cvjButtonClicked_22(self): cvj_button_clicked_22(self)
-    def cvjButtonClicked_23(self): cvj_button_clicked_23(self)
-    def cvjButtonClicked_24(self): cvj_button_clicked_24(self)
-    def cvjButtonClicked_25(self): cvj_button_clicked_25(self)
     # =================================================================================================================
     def cvjsButtonClicked_01(self): cvjs_button_clicked_01(self)
     def cvjsButtonClicked_02(self): cvjs_button_clicked_02(self)
@@ -1046,14 +1013,7 @@ class MainWindow(QMainWindow):
     def ctButtonClicked_01(self): ct_button_clicked_01(self)
     def ctButtonClicked_02(self): ct_button_clicked_02(self)
     def ctButtonClicked_03(self): ct_button_clicked_03(self)
-    def ctButtonClicked_04(self): ct_button_clicked_04(self)
-    def ctButtonClicked_05(self): ct_button_clicked_05(self)
-    def ctButtonClicked_06(self): ct_button_clicked_06(self)
-    def ctButtonClicked_07(self): ct_button_clicked_07(self)
-    def ctButtonClicked_08(self): ct_button_clicked_08(self)
-    def ctButtonClicked_09(self): ct_button_clicked_09(self)
-    def GetKlist(self):    return get_k_list(self)
-    def TickInput(self, code, gubun): tick_put(self, code, gubun)
+    def GetKlist(self, code): return get_k_list(self, code)
     # =================================================================================================================
     def sjButtonClicked_01(self): sj_button_cicked_01(self)
     def sjButtonClicked_02(self): sj_button_cicked_02(self)
@@ -1104,7 +1064,6 @@ class MainWindow(QMainWindow):
     def cetButtonClicked_03(self): cet_button_clicked_03(self)
     # =================================================================================================================
     def StomLiveProcessAlive(self):     return stom_live_process_alive(self)
-    def SimulatorProcessAlive(self):    return simulator_process_alive(self)
     def CoinReceiverProcessAlive(self): return coin_receiver_process_alive(self)
     def CoinTraderProcessAlive(self):   return coin_trader_process_alive(self)
     def CoinStrategyProcessAlive(self): return coin_strategy_process_alive(self)

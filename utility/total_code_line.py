@@ -8,14 +8,14 @@ ignore_paths = [
     './backtester/graph',
     './backtester/temp',
     './lecture/imagefiles',
+    './lecture/pycharm',
     './lecture/testcode/temp',
+    './icon',
     './_database',
-    './pycharm'
-    './.git',
-    './.idea',
-    './__pycache__',
     './_log',
-    './icon'
+    './__pycache__',
+    './.git',
+    './.idea'
 ]
 
 total_line_count = 0

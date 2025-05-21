@@ -7,7 +7,7 @@ from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
 from ui.set_style import style_bc_st, style_bc_dk
 from ui.set_text import famous_saying, stock_buy_var, stock_buy1, stock_buy2, stock_buy3, stock_buy4, stock_buy5, \
-    stock_buy6, stock_buy_signal
+    stock_buy6, stock_buy_signal, stock_buy_var2
 
 
 def svjb_button_clicked_01(ui):
@@ -51,7 +51,7 @@ def svjb_button_clicked_02(ui):
 
 def svjb_button_clicked_03(ui):
     ui.ss_textEditttt_01.clear()
-    ui.ss_textEditttt_01.append(stock_buy_var)
+    ui.ss_textEditttt_01.append(stock_buy_var if ui.dict_set['주식타임프레임'] else stock_buy_var2)
     ui.svjb_pushButon_04.setStyleSheet(style_bc_st)
 
 

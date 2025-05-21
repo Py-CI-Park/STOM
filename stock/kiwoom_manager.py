@@ -4,13 +4,14 @@ import zmq
 import win32gui
 import subprocess
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QThread, QTimer, pyqtSignal
 from multiprocessing import Process, Queue
-from trader_kiwoom import KWTrader
-from receiver_kiwoom import KWReceiver
-from strategy_kiwoom import StrategyKiwoom
-from receiver_kiwoom_client import KWReceiverClient
-from simulator_kiwoom import ReceiverKiwoom2, TraderKiwoom2
+from PyQt5.QtCore import QThread, pyqtSignal
+from kiwoom_trader import KiwoomTrader
+from kiwoom_receiver_min import KiwoomReceiverMin
+from kiwoom_strategy_min import KiwoomStrategyMin
+from kiwoom_receiver_tick import KiwoomReceiverTick
+from kiwoom_strategy_tick import KiwoomStrategyTick
+from kiwoom_receiver_client import KiwoomReceiverClient
 from login_kiwoom.manuallogin import find_window
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utility.setting import DICT_SET, LOGIN_PATH
@@ -21,9 +22,8 @@ class ZmqRecv(QThread):
     signal1 = pyqtSignal(str)
     signal2 = pyqtSignal(tuple)
 
-    def __init__(self, main, qlist, port_num):
+    def __init__(self, qlist, port_num):
         super().__init__()
-        self.main     =  main
         self.sreceivQ = qlist[1]
         self.straderQ = qlist[2]
         self.sstgQs   = qlist[3]
@@ -42,16 +42,8 @@ class ZmqRecv(QThread):
             elif msg == 'trader':
                 self.straderQ.put(data)
             elif msg == 'strategy':
-                if data[0] == '차트종목코드':
-                    count = data[-1]
-                    for i, q in enumerate(self.sstgQs):
-                        if i == count:
-                            q.put(data[:2])
-                        else:
-                            q.put(data[:2])
-                else:
-                    for q in self.sstgQs:
-                        q.put(data)
+                for q in self.sstgQs:
+                    q.put(data)
             elif msg == 'manager':
                 if type(data) == str:
                     self.signal1.emit(data)
@@ -97,7 +89,7 @@ class ZmqServ(QThread):
         self.zctx.term()
 
 
-class KWManager:
+class KiwoomManager:
     def __init__(self, port_num):
         app = QApplication(sys.argv)
 
@@ -106,10 +98,8 @@ class KWManager:
         self.sstgQs   = [sstg1Q, sstg2Q, sstg3Q, sstg4Q, sstg5Q, sstg6Q, sstg7Q, sstg8Q]
         self.qlist    = [self.kwzservQ, self.sreceivQ, self.straderQ, self.sstgQs]
         self.dict_set = DICT_SET
-        self.int_time = int_hms()
 
         self.backtest_engine      = False
-        self.daydata_download     = False
         self.proc_receiver_stock  = None
         self.proc_strategy_stock1 = None
         self.proc_strategy_stock2 = None
@@ -120,31 +110,20 @@ class KWManager:
         self.proc_strategy_stock7 = None
         self.proc_strategy_stock8 = None
         self.proc_trader_stock    = None
-        self.proc_simulator_rv    = None
-        self.proc_simulator_td    = None
 
         self.zmqserv = ZmqServ(self.qlist, port_num + 1)
         self.zmqserv.start()
 
-        self.zmqrecv = ZmqRecv(self, self.qlist, port_num)
+        self.zmqrecv = ZmqRecv(self.qlist, port_num)
         self.zmqrecv.signal1.connect(self.UpdateString)
         self.zmqrecv.signal2.connect(self.UpdateTuple)
         self.zmqrecv.start()
-
-        self.qtimer1 = QTimer()
-        self.qtimer1.setInterval(1 * 1000)
-        self.qtimer1.timeout.connect(self.ProcessStarter)
-        self.qtimer1.start()
 
         app.exec_()
 
     def UpdateString(self, data):
         if data == '주식수동시작':
             self.StockManualStart()
-        elif data == '시뮬레이터구동':
-            self.SimulatorStart()
-        elif data == '시뮬레이터종료':
-            self.SimulatorProcessKill()
         elif data == '리시버 종료':
             self.StockReceiverProcessKill()
         elif data == '전략연산 종료':
@@ -180,23 +159,6 @@ class KWManager:
         elif self.dict_set['주식트레이더'] and self.StockReceiverProcessAlive() and not self.StockTraderProcessAlive():
             self.StockTraderStart()
 
-    def SimulatorStart(self):
-        if self.backtest_engine:
-            print('백테엔진 구동 중에는 시뮬레이터를 실행할 수 없습니다.')
-            return
-        self.proc_simulator_rv    = Process(target=ReceiverKiwoom2, args=(self.qlist,), daemon=True)
-        self.proc_simulator_td    = Process(target=TraderKiwoom2, args=(self.qlist,), daemon=True)
-        self.proc_strategy_stock1 = Process(target=StrategyKiwoom, args=(0, self.qlist,), daemon=True)
-        self.proc_strategy_stock1.start()
-        self.proc_simulator_td.start()
-        self.proc_simulator_rv.start()
-
-    def SimulatorProcessKill(self):
-        if self.SimulatorProcessAlive():
-            self.proc_simulator_td.kill()
-            self.proc_simulator_rv.kill()
-            self.proc_strategy_stock1.kill()
-
     def StockReceiverProcessKill(self):
         if self.StockReceiverProcessAlive():
             self.proc_receiver_stock.kill()
@@ -221,21 +183,11 @@ class KWManager:
 
     def ManagerProcessKill(self):
         self.kwzservQ.put(('window', '통신종료'))
-        self.SimulatorProcessKill()
         self.StockReceiverProcessKill()
         self.StockStrategyProcessKill()
         self.StockTraderProcessKill()
         qtest_qwait(3)
         sys.exit()
-
-    def ProcessStarter(self):
-        inthms = int_hms()
-        if not self.backtest_engine:
-            if self.int_time < self.dict_set['리시버실행시간'] <= inthms and self.dict_set['주식리시버'] and not self.StockReceiverProcessAlive():
-                self.StockReceiverStart()
-            if self.int_time < self.dict_set['트레이더실행시간'] <= inthms and self.dict_set['주식트레이더'] and self.StockReceiverProcessAlive() and not self.StockTraderProcessAlive():
-                self.StockTraderStart()
-        self.int_time = inthms
 
     @staticmethod
     def OpenapiLoginWait():
@@ -313,7 +265,8 @@ class KWManager:
                 while True:
                     qtest_qwait(0.1)
                     if not self.StockReceiverProcessAlive():
-                        self.proc_receiver_stock = Process(target=KWReceiver, args=(self.qlist,), daemon=True)
+                        target = KiwoomReceiverTick if self.dict_set['주식타임프레임'] else KiwoomReceiverMin
+                        self.proc_receiver_stock = Process(target=target, args=(self.qlist,), daemon=True)
                         self.proc_receiver_stock.start()
                         if self.OpenapiLoginWait():
                             with open('C:/OpenAPI/system/opcomms.ini') as file:
@@ -342,20 +295,21 @@ class KWManager:
                 self.StockVersionUp()
 
             if not self.StockReceiverProcessAlive():
-                self.proc_receiver_stock = Process(target=KWReceiverClient, args=(self.qlist,), daemon=True)
+                self.proc_receiver_stock = Process(target=KiwoomReceiverClient, args=(self.qlist,), daemon=True)
                 self.proc_receiver_stock.start()
 
     def StockTraderStart(self):
         if self.dict_set['아이디1'] is not None:
             self.StockAutoLogin1()
-            self.proc_strategy_stock1 = Process(target=StrategyKiwoom, args=(0, self.qlist), daemon=True)
-            self.proc_strategy_stock2 = Process(target=StrategyKiwoom, args=(1, self.qlist), daemon=True)
-            self.proc_strategy_stock3 = Process(target=StrategyKiwoom, args=(2, self.qlist), daemon=True)
-            self.proc_strategy_stock4 = Process(target=StrategyKiwoom, args=(3, self.qlist), daemon=True)
-            self.proc_strategy_stock5 = Process(target=StrategyKiwoom, args=(4, self.qlist), daemon=True)
-            self.proc_strategy_stock6 = Process(target=StrategyKiwoom, args=(5, self.qlist), daemon=True)
-            self.proc_strategy_stock7 = Process(target=StrategyKiwoom, args=(6, self.qlist), daemon=True)
-            self.proc_strategy_stock8 = Process(target=StrategyKiwoom, args=(7, self.qlist), daemon=True)
+            target = KiwoomStrategyTick if self.dict_set['주식타임프레임'] else KiwoomStrategyMin
+            self.proc_strategy_stock1 = Process(target=target, args=(0, self.qlist), daemon=True)
+            self.proc_strategy_stock2 = Process(target=target, args=(1, self.qlist), daemon=True)
+            self.proc_strategy_stock3 = Process(target=target, args=(2, self.qlist), daemon=True)
+            self.proc_strategy_stock4 = Process(target=target, args=(3, self.qlist), daemon=True)
+            self.proc_strategy_stock5 = Process(target=target, args=(4, self.qlist), daemon=True)
+            self.proc_strategy_stock6 = Process(target=target, args=(5, self.qlist), daemon=True)
+            self.proc_strategy_stock7 = Process(target=target, args=(6, self.qlist), daemon=True)
+            self.proc_strategy_stock8 = Process(target=target, args=(7, self.qlist), daemon=True)
             self.proc_strategy_stock1.start()
             self.proc_strategy_stock2.start()
             self.proc_strategy_stock3.start()
@@ -367,7 +321,7 @@ class KWManager:
             while True:
                 qtest_qwait(1)
                 if not self.StockTraderProcessAlive():
-                    self.proc_trader_stock = Process(target=KWTrader, args=(self.qlist,), daemon=True)
+                    self.proc_trader_stock = Process(target=KiwoomTrader, args=(self.qlist,), daemon=True)
                     self.proc_trader_stock.start()
                     if self.OpenapiLoginWait():
                         break
@@ -385,11 +339,7 @@ class KWManager:
     def StockStrategyProcessAlive(self):
         return self.proc_strategy_stock1 is not None and self.proc_strategy_stock1.is_alive()
 
-    def SimulatorProcessAlive(self):
-        return self.proc_simulator_rv is not None and self.proc_simulator_rv.is_alive() and \
-            self.proc_simulator_td is not None and self.proc_simulator_td.is_alive()
-
 
 if __name__ == '__main__':
     port_number = int(sys.argv[1])
-    KWManager(port_number)
+    KiwoomManager(port_number)

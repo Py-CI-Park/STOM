@@ -56,7 +56,7 @@ class CustomViewBox(pg.ViewBox):
                     code = self.ui.ct_lineEdittttt_04.text()
                     name = self.ui.ct_lineEdittttt_05.text()
                     ymd  = self.ui.ct_dateEdittttt_01.date().toString('yyyyMMdd')
-                    hms  = self.ui.ctpg_tik_labels[0].toPlainText()
+                    hms  = self.ui.ctpg_labels[0].toPlainText()
                     hms  = hms.split('시간')[1].split('이평')[0].strip().replace(':', '')
                     self.ui.hogaQ.put(('차트용호가정보요청', code, name, ymd + hms))
             except:
@@ -224,15 +224,15 @@ class WidgetCreater:
             progressBar.setVisible(False)
         return progressBar
 
-    def setaddPlot(self, ctpg, row, col, dateaxis=True, title=None):
+    def setaddPlot(self, layout, row, col, colspan=1, dateaxis=True, title=None):
         cb = CustomViewBox()
         cb.set_uiclass(self.ui)
         if not dateaxis:
-            subplot = ctpg.addPlot(row=row, col=col, viewBox=cb)
+            subplot = layout.addPlot(row=row, col=col, colspan=colspan, viewBox=cb)
         elif title is not None:
-            subplot = ctpg.addPlot(title=title, row=row, col=col, axisItems={'bottom': pg.DateAxisItem()})
+            subplot = layout.addPlot(title=title, row=row, col=col, colspan=colspan, axisItems={'bottom': pg.DateAxisItem()})
         else:
-            subplot = ctpg.addPlot(title=title, row=row, col=col, viewBox=cb, axisItems={'bottom': pg.DateAxisItem()})
+            subplot = layout.addPlot(title=title, row=row, col=col, colspan=colspan, viewBox=cb, axisItems={'bottom': pg.DateAxisItem()})
         subplot.showAxis('left', False)
         subplot.showAxis('right', True)
         subplot.getAxis('right').setStyle(tickTextWidth=45, autoExpandTextSpace=False)

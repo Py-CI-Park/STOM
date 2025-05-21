@@ -7,7 +7,8 @@ from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
 from ui.set_style import style_bc_st, style_bc_dk
 from ui.set_text import famous_saying, coin_sell_var, coin_future_sell_var, coin_sell1, coin_sell2, coin_sell3, \
-    coin_sell4, coin_sell5, coin_sell6, coin_sell7, coin_sell8, coin_sell_signal, coin_future_sell_signal
+    coin_sell4, coin_sell5, coin_sell6, coin_sell7, coin_sell8, coin_sell_signal, coin_future_sell_signal, \
+    coin_sell_var2, coin_future_sell_var2
 
 
 def cvjs_button_clicked_01(ui):
@@ -50,7 +51,10 @@ def cvjs_button_clicked_02(ui):
 
 def cvjs_button_clicked_03(ui):
     ui.cs_textEditttt_02.clear()
-    ui.cs_textEditttt_02.append(coin_sell_var if ui.dict_set['거래소'] == '업비트' else coin_future_sell_var)
+    if ui.dict_set['거래소'] == '업비트':
+        ui.cs_textEditttt_02.append(coin_sell_var if ui.dict_set['코인타임프레임'] else coin_sell_var2)
+    else:
+        ui.cs_textEditttt_02.append(coin_future_sell_var if ui.dict_set['코인타임프레임'] else coin_future_sell_var2)
     ui.cvjs_pushButon_04.setStyleSheet(style_bc_st)
 
 

@@ -7,7 +7,7 @@ from utility.setting import DB_STRATEGY
 from utility.static import text_not_in_special_characters
 from ui.set_style import style_bc_st, style_bc_dk
 from ui.set_text import famous_saying, stock_sell_var, stock_sell1, stock_sell2, stock_sell3, stock_sell4, stock_sell5, \
-    stock_sell6, stock_sell7, stock_sell8, stock_sell_signal
+    stock_sell6, stock_sell7, stock_sell8, stock_sell_signal, stock_sell_var2
 
 
 def svjs_button_clicked_01(ui):
@@ -50,7 +50,7 @@ def svjs_button_clicked_02(ui):
 
 def svjs_button_clicked_03(ui):
     ui.ss_textEditttt_02.clear()
-    ui.ss_textEditttt_02.append(stock_sell_var)
+    ui.ss_textEditttt_02.append(stock_sell_var if ui.dict_set['주식타임프레임'] else stock_sell_var2)
     ui.svjs_pushButon_04.setStyleSheet(style_bc_st)
 
 

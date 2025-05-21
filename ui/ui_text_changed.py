@@ -48,11 +48,11 @@ def text_changed_05(ui):
     if name != '':
         if 'KRW' in name:
             order_price = float(ui.od_lineEdittttt_01.text())
-            order_count = round(ui.dict_set['코인장초투자금'] * 1_000_000 / order_price, 8)
+            order_count = round(ui.dict_set['코인투자금'] * 1_000_000 / order_price, 8)
         elif 'USDT' in name:
             order_price = float(ui.od_lineEdittttt_01.text())
-            order_count = round(ui.dict_set['코인장초투자금'] / order_price, 8)
+            order_count = round(ui.dict_set['코인투자금'] / order_price, 8)
         else:
             order_price = int(ui.od_lineEdittttt_01.text())
-            order_count = int(ui.dict_set['주식장초투자금'] * 1_000_000 / order_price)
+            order_count = int(ui.dict_set['주식투자금'] * 1_000_000 / order_price)
         ui.od_lineEdittttt_02.setText(str(order_count))

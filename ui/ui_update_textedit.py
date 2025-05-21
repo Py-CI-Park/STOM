@@ -34,20 +34,33 @@ class UpdateTextedit:
                     self.ui.AutoBackSchedule(2)
             elif data[0] == ui_num['S로그텍스트']:
                 self.ui.sst_textEditttt_01.append(text)
-                self.ui.log1.info(text)
+                try:
+                    self.ui.log1.info(text)
+                except:
+                    pass
             elif data[0] == ui_num['S단순텍스트']:
                 self.ui.src_textEditttt_01.append(text)
-                self.ui.log2.info(text)
-                if '전략연산 프로세스 틱데이터 저장 중 ... [8]' in text:
-                    self.ui.tickdata_save = True
+                try:
+                    self.ui.log2.info(text)
+                except:
+                    pass
             elif data[0] == ui_num['S오더텍스트']:
-                self.ui.log3.info(text)
+                try:
+                    self.ui.log3.info(text)
+                except:
+                    pass
             elif data[0] == ui_num['C로그텍스트']:
                 self.ui.cst_textEditttt_01.append(text)
-                self.ui.log4.info(text)
+                try:
+                    self.ui.log4.info(text)
+                except:
+                    pass
             elif data[0] == ui_num['C단순텍스트']:
                 self.ui.crc_textEditttt_01.append(text)
-                self.ui.log5.info(text)
+                try:
+                    self.ui.log5.info(text)
+                except:
+                    pass
             elif data[0] == ui_num['S백테스트']:
                 if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or \
                         '백테스트 시작' in data[1] or ']단계' in data[1]:
@@ -70,7 +83,7 @@ class UpdateTextedit:
                                '최적화OVT 완료', '최적화OVCT 완료', '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료',
                                '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료', '전진분석BR 완료', '전진분석BRV 완료',
                                '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료',
-                               '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
+                               '최적화OCV 완료', '최적화OCVC 완료'):
                     if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료',
                                    '최적화BV 완료', '최적화BVC 완료'):
                         self.ui.sActivated_04()
@@ -108,7 +121,7 @@ class UpdateTextedit:
                                '최적화OVT 완료', '최적화OVCT 완료', '최적화BT 완료', '최적화BVT 완료', '최적화BVCT 완료',
                                '전진분석OR 완료', '전진분석ORV 완료', '전진분석ORVC 완료', '전진분석BR 완료', '전진분석BRV 완료',
                                '전진분석BRVC 완료', '최적화OG 완료', '최적화OGV 완료', '최적화OGVC 완료', '최적화OC 완료',
-                               '최적화OCV 완료', '최적화OCVC 완료', '패턴 학습 완료', '패턴 테스트 완료'):
+                               '최적화OCV 완료', '최적화OCVC 완료'):
                     if data[1] in ('최적화O 완료', '최적화OV 완료', '최적화OVC 완료', '최적화B 완료',
                                    '최적화BV 완료', '최적화BVC 완료'):
                         self.ui.cActivated_04()
@@ -127,12 +140,14 @@ class UpdateTextedit:
             elif data[0] == ui_num['기업개요']:
                 self.ui.gg_textEdittttt_01.clear()
                 self.ui.gg_textEdittttt_01.append(data[1])
-    
-            if data[0] == ui_num['S단순텍스트'] and '리시버 종료' in data[1]:
+
+            if '전략연산 프로세스 데이터 저장 중' in text:
+                self.ui.data_save = True
+            elif data[0] == ui_num['S단순텍스트'] and '리시버 종료' in data[1]:
                 self.ui.wdzservQ.put(('manager', '리시버 종료'))
             elif data[0] == ui_num['S로그텍스트'] and '전략연산 종료' in data[1]:
                 self.ui.wdzservQ.put(('manager', '전략연산 종료'))
-                if self.ui.tickdata_save and self.ui.dict_set['디비자동관리']:
+                if self.ui.data_save and self.ui.dict_set['디비자동관리']:
                     self.AutoDataBase(1)
                 else:
                     self.StockShutDownCheck()
@@ -144,7 +159,10 @@ class UpdateTextedit:
             elif data[0] == ui_num['C로그텍스트'] and '전략연산 종료' in data[1]:
                 if self.ui.CoinStrategyProcessAlive():
                     self.ui.proc_strategy_coin.kill()
-                self.CoinShutDownCheck()
+                if self.ui.data_save and self.ui.dict_set['디비자동관리']:
+                    self.AutoDataBase(4)
+                else:
+                    self.CoinShutDownCheck()
             elif data[0] == ui_num['C로그텍스트'] and '트레이더 종료' in data[1]:
                 if self.ui.CoinTraderProcessAlive():
                     self.ui.proc_trader_coin.kill()
@@ -154,10 +172,14 @@ class UpdateTextedit:
                 else:
                     self.ui.db_textEdittttt_01.append(text)
                 if self.ui.auto_mode:
-                    if data[1] == '날짜별 DB 생성 완료':
+                    if data[1] == '주식 날짜별 DB 생성 완료':
                         self.AutoDataBase(2)
-                    elif data[1] == '당일 데이터 백테디비로 추가 완료':
+                    elif data[1] == '주식 당일 데이터 백테디비로 추가 완료':
                         self.AutoDataBase(3)
+                    elif data[1] == '코인 날짜별 DB 생성 완료':
+                        self.AutoDataBase(5)
+                    elif data[1] == '코인 당일 데이터 백테디비로 추가 완료':
+                        self.AutoDataBase(6)
         elif len(data) == 5:
             self.ui.dict_name = data[1]
             self.ui.dict_code = data[2]
@@ -191,43 +213,62 @@ class UpdateTextedit:
     def AutoDataBase(self, gubun):
         if gubun == 1:
             self.ui.auto_mode = True
-            if self.ui.dict_set['주식알림소리'] or self.ui.dict_set['코인알림소리']:
+            if self.ui.dict_set['주식알림소리']:
                 self.ui.soundQ.put('데이터베이스 자동관리를 시작합니다.')
             if not self.ui.dialog_db.isVisible():
                 self.ui.dialog_db.show()
+            self.ui.sdb_tapWidgettt_01.setCurrentIndex(self.ui.sdb_index1)
             qtest_qwait(2)
             self.ui.dbButtonClicked_08()
         elif gubun == 2:
             if not self.ui.dialog_db.isVisible():
                 self.ui.dialog_db.show()
+            self.ui.sdb_tapWidgettt_01.setCurrentIndex(self.ui.sdb_index1)
             qtest_qwait(2)
             self.ui.dbButtonClicked_07()
-        elif gubun == 3:
+        elif gubun == 4:
+            self.ui.auto_mode = True
+            if self.ui.dict_set['코인알림소리']:
+                self.ui.soundQ.put('데이터베이스 자동관리를 시작합니다.')
+            if not self.ui.dialog_db.isVisible():
+                self.ui.dialog_db.show()
+            self.ui.sdb_tapWidgettt_01.setCurrentIndex(self.ui.sdb_index2)
+            qtest_qwait(2)
+            self.ui.dbButtonClicked_16()
+        elif gubun == 5:
+            if not self.ui.dialog_db.isVisible():
+                self.ui.dialog_db.show()
+            self.ui.sdb_tapWidgettt_01.setCurrentIndex(self.ui.sdb_index2)
+            qtest_qwait(2)
+            self.ui.dbButtonClicked_15()
+        elif gubun in (3, 6):
             if self.ui.dialog_db.isVisible():
                 self.ui.dialog_db.close()
             self.ui.teleQ.put('데이터베이스 자동관리 완료')
             qtest_qwait(2)
             self.ui.auto_mode = False
-            self.StockShutDownCheck()
+            if gubun == 3:
+                self.StockShutDownCheck()
+            else:
+                self.CoinShutDownCheck()
 
     def StockShutDownCheck(self):
-        if not self.ui.dict_set['백테스케쥴실행'] or now().weekday() != self.ui.dict_set['백테스케쥴요일']:
+        if self.ui.dict_set['백테스케쥴실행'] and now().weekday() == self.ui.dict_set['백테스케쥴요일']:
+            if self.ui.dict_set['주식알림소리']:
+                self.ui.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
+        else:
             if self.ui.dict_set['프로그램종료']:
                 QTimer.singleShot(180 * 1000, self.ui.ProcessKill)
             if self.ui.dict_set['리시버공유'] < 2:
-                if self.ui.dict_set['주식장초컴퓨터종료'] or \
-                        self.ui.dict_set['주식장중컴퓨터종료'] or \
-                        (90000 < int_hms() < 90500 and self.ui.dict_set['휴무컴퓨터종료']):
+                if self.ui.dict_set['주식컴퓨터종료'] or (90000 < int_hms() < 90500 and self.ui.dict_set['휴무컴퓨터종료']):
                     os.system('shutdown /s /t 300')
-        elif self.ui.dict_set['주식알림소리']:
-            self.ui.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
 
     def CoinShutDownCheck(self):
-        if not self.ui.dict_set['백테스케쥴실행'] or now().weekday() != self.ui.dict_set['백테스케쥴요일']:
+        if self.ui.dict_set['백테스케쥴실행'] and now().weekday() == self.ui.dict_set['백테스케쥴요일']:
+            if self.ui.dict_set['코인알림소리']:
+                self.ui.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
+        else:
             if self.ui.dict_set['프로그램종료']:
                 QTimer.singleShot(180 * 1000, self.ui.ProcessKill)
-            if self.ui.dict_set['리시버공유'] < 2:
-                if self.ui.dict_set['코인장초컴퓨터종료'] or self.ui.dict_set['코인장중컴퓨터종료']:
-                    os.system('shutdown /s /t 300')
-        elif self.ui.dict_set['코인알림소리']:
-            self.ui.soundQ.put('오늘은 백테 스케쥴러의 실행이 예약되어 있어 프로그램을 종료하지 않습니다.')
+            if self.ui.dict_set['리시버공유'] < 2 and self.ui.dict_set['코인컴퓨터종료']:
+                os.system('shutdown /s /t 300')

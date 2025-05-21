@@ -241,8 +241,8 @@ def hg_button_clicked_01(ui, gubun):
     if not ui.dialog_hoga.isVisible(): return
     index = ui.hg_labellllllll_01.text()
     if index == '': return
-    code = ui.ct_lineEdittttt_04.text()
-    name = ui.ct_lineEdittttt_05.text()
+    code  = ui.ct_lineEdittttt_04.text()
+    name  = ui.ct_lineEdittttt_05.text()
     index = index.replace('-', '').replace(' ', '').replace(':', '')
     ui.hogaQ.put(('이전호가정보요청' if gubun == '이전' else '다음호가정보요청', code, name, index))
 

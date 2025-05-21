@@ -3,10 +3,11 @@ with open('C:/OpenAPI/data/nkrealtime.dat') as f:
 
 주식체결, 주식호가 = '', ''
 for txt in realtimetxt:
-    if '0B주식체결' in txt:
-        주식체결 = '20' + txt.split('20')[1]
-    if '0D주식호가잔량' in txt:
-        주식호가 = '21' + txt.split('10321')[1]
+    if ';' not in txt:
+        if '0B주식체결' in txt:
+            주식체결 = '20' + txt.split('20')[1]
+        if '0D주식호가잔량' in txt:
+            주식호가 = '21' + txt.split('16321')[1]
 
 주식체결 = 주식체결.replace('   ', ';').replace('  ', ';').split(';')
 주식호가 = 주식호가.replace('   ', ';').replace('  ', ';').split(';')

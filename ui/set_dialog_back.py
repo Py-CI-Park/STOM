@@ -62,22 +62,22 @@ class SetDialogBack:
                '학습         검증         확인          횟수      최적화기준                  매수                                 ' \
                '매도                                   범위                                         상태'
         self.ui.sd_labellllllll_01 = QLabel(text, self.ui.sd_groupBoxxxxx_02)
-        self.ui.sd_checkBoxxxxx_01 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_02 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_03 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_04 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_05 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_06 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_07 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_08 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_09 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_10 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_11 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_12 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_13 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_14 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_15 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
-        self.ui.sd_checkBoxxxxx_16 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_17, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_01 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_02 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_03 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_04 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_05 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_06 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_07 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_08 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_09 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_10 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_11 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_12 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_13 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_14 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_15 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
+        self.ui.sd_checkBoxxxxx_16 = self.wc.setCheckBox('    ', self.ui.sd_groupBoxxxxx_02, changed=self.ui.CheckboxChanged_15, style=style_ck_bx)
 
         self.ui.list_checkBoxxxxxx = [
             self.ui.sd_checkBoxxxxx_01, self.ui.sd_checkBoxxxxx_02, self.ui.sd_checkBoxxxxx_03, self.ui.sd_checkBoxxxxx_04,
@@ -176,22 +176,33 @@ class SetDialogBack:
             self.ui.sd_edateEditttt_13, self.ui.sd_edateEditttt_14, self.ui.sd_edateEditttt_15, self.ui.sd_edateEditttt_16
         ]
 
-        self.ui.sd_slineEditttt_01 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_02 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_03 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_04 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_05 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_06 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_07 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_08 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_09 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_10 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_11 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_12 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_13 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_14 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_15 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
-        self.ui.sd_slineEditttt_16 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='90000', style=style_bc_dk, change=self.ui.TextChanged_01)
+        if self.ui.dict_set['주식리시버']:
+            if self.ui.dict_set['주식타임프레임']:
+                starttime, endtime = '90000', '93000'
+            else:
+                starttime, endtime = '900', '1519'
+        else:
+            if self.ui.dict_set['코인타임프레임']:
+                starttime, endtime = '0', '235959'
+            else:
+                starttime, endtime = '0', '2359'
+
+        self.ui.sd_slineEditttt_01 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_02 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_03 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_04 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_05 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_06 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_07 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_08 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_09 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_10 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_11 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_12 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_13 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_14 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_15 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
+        self.ui.sd_slineEditttt_16 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=starttime, style=style_bc_dk, change=self.ui.TextChanged_01)
 
         self.ui.list_slineEdittttt = [
             self.ui.sd_slineEditttt_01, self.ui.sd_slineEditttt_02, self.ui.sd_slineEditttt_03, self.ui.sd_slineEditttt_04,
@@ -200,22 +211,22 @@ class SetDialogBack:
             self.ui.sd_slineEditttt_13, self.ui.sd_slineEditttt_14, self.ui.sd_slineEditttt_15, self.ui.sd_slineEditttt_16
         ]
 
-        self.ui.sd_elineEditttt_01 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_02 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_03 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_04 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_05 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_06 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_07 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_08 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_09 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_10 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_11 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_12 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_13 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_14 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_15 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
-        self.ui.sd_elineEditttt_16 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext='93000', style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_01 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_02 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_03 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_04 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_05 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_06 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_07 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_08 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_09 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_10 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_11 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_12 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_13 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_14 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_15 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
+        self.ui.sd_elineEditttt_16 = self.wc.setLineedit(self.ui.sd_groupBoxxxxx_02, ltext=endtime, style=style_bc_dk, change=self.ui.TextChanged_02)
 
         self.ui.list_elineEdittttt = [
             self.ui.sd_elineEditttt_01, self.ui.sd_elineEditttt_02, self.ui.sd_elineEditttt_03, self.ui.sd_elineEditttt_04,

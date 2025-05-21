@@ -13,8 +13,9 @@ from utility.setting import OPENAPI_PATH, DICT_SET
 
 def TelegramMassage(txt):
     try:
-        bot = telegram.Bot(DICT_SET['텔레그램봇토큰'])
-        bot.sendMessage(chat_id=DICT_SET['텔레그램사용자아이디'], text=txt)
+        gubun = DICT_SET['증권사'][4:]
+        bot = telegram.Bot(DICT_SET[f'텔레그램봇토큰{gubun}'])
+        bot.sendMessage(chat_id=DICT_SET[f'텔레그램사용자아이디{gubun}'], text=txt)
     except:
         print(txt)
 
@@ -63,9 +64,13 @@ if __name__ == '__main__':
     time.sleep(2)
 
     if DICT_SET['증권사'] == '키움증권1':
-        manual_login(2)
+        manual_login(1)
     elif DICT_SET['증권사'] == '키움증권2':
-        manual_login(6)
+        manual_login(3)
+    elif DICT_SET['증권사'] == '키움증권3':
+        manual_login(5)
+    elif DICT_SET['증권사'] == '키움증권4':
+        manual_login(7)
     print('아이디 및 패스워드 입력 완료')
 
     while find_window('Open API login') != 0:

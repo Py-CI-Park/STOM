@@ -39,8 +39,7 @@ def process_kill(ui):
         geometry += f"{ui.dialog_kimp.x()};{ui.dialog_kimp.y() - 31 if geo_len > 15 and ui.dict_set['창위치'][15] + 31 == ui.dialog_kimp.y() else ui.dialog_kimp.y()};"
         geometry += f"{ui.dialog_hoga.x()};{ui.dialog_hoga.y() - 31 if geo_len > 17 and ui.dict_set['창위치'][17] + 31 == ui.dialog_hoga.y() else ui.dialog_hoga.y()};"
         geometry += f"{ui.dialog_backengine.x()};{ui.dialog_backengine.y() - 31 if geo_len > 19 and ui.dict_set['창위치'][19] + 31 == ui.dialog_backengine.y() else ui.dialog_backengine.y()};"
-        geometry += f"{ui.dialog_order.x()};{ui.dialog_order.y() - 31 if geo_len > 21 and ui.dict_set['창위치'][21] + 31 == ui.dialog_order.y() else ui.dialog_order.y()};"
-        geometry += f"{ui.dialog_pattern.x()};{ui.dialog_pattern.y() - 31 if geo_len > 23 and ui.dict_set['창위치'][23] + 31 == ui.dialog_pattern.y() else ui.dialog_pattern.y()}"
+        geometry += f"{ui.dialog_order.x()};{ui.dialog_order.y() - 31 if geo_len > 21 and ui.dict_set['창위치'][21] + 31 == ui.dialog_order.y() else ui.dialog_order.y()}"
         query = f"UPDATE etc SET 창위치 = '{geometry}'"
         ui.queryQ.put(('설정디비', query))
     ui.queryQ.put('프로세스종료')
@@ -55,7 +54,6 @@ def process_kill(ui):
     if ui.dialog_chart.isVisible():      ui.dialog_chart.close()
     if ui.dialog_jisu.isVisible():       ui.dialog_jisu.close()
     if ui.dialog_backengine.isVisible(): ui.dialog_backengine.close()
-    if ui.dialog_test.isVisible():       ui.dialog_test.close()
     if ui.dialog_hoga.isVisible():       ui.dialog_hoga.close()
     if ui.dialog_info.isVisible():       ui.dialog_info.close()
     if ui.dialog_web.isVisible():        ui.dialog_web.close()
@@ -63,7 +61,6 @@ def process_kill(ui):
     if ui.dialog_graph.isVisible():      ui.dialog_graph.close()
     if ui.dialog_db.isVisible():         ui.dialog_db.close()
     if ui.dialog_order.isVisible():      ui.dialog_order.close()
-    if ui.dialog_pattern.isVisible():    ui.dialog_pattern.close()
     if ui.dialog_pass.isVisible():       ui.dialog_pass.close()
     if ui.dialog_comp.isVisible():       ui.dialog_comp.close()
     if ui.dialog_kimp.isVisible():       ui.dialog_kimp.close()
@@ -86,13 +83,6 @@ def process_kill(ui):
         ui.proc_trader_coin.kill()
     if ui.CoinStrategyProcessAlive():
         ui.proc_strategy_coin.kill()
-
-    if ui.SimulatorProcessAlive():
-        try:
-            ui.proc_simulator_rv.kill()
-            ui.proc_simulator_td.kill()
-        except:
-            pass
     if ui.BacktestProcessAlive():
         ui.BacktestProcessKill(1)
 

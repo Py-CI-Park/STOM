@@ -3,7 +3,6 @@ import time
 import sqlite3
 import pandas as pd
 from multiprocessing import Process
-from backtester.back_static import InitBackSequence
 from utility.static import strf_time, now
 from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, DICT_SET
 
@@ -121,7 +120,6 @@ class BackFinder:
         Process(target=Total, args=(self.wq, self.sq, self.tq, self.bq, self.ui_gubun, self.gubun)).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백파인더 집계용 프로세스 생성 완료'))
 
-        InitBackSequence()
         self.tq.put(('백테정보', avgtime, startday, endday, starttime, endtime, buystg_name, back_count, self.tickcols))
         data = ('백테정보', avgtime, startday, endday, starttime, endtime, buystg, None)
         for q in self.beq_list:
