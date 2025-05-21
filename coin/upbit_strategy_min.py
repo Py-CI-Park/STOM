@@ -338,8 +338,6 @@ class UpbitStrategyMin(UpbitStrategyTick):
             if len(self.dict_arry[종목코드]) >= 평균값계산틱수 - 1:
                 최고현재가_      = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 1].max(), 현재가)
                 최저현재가_      = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 1].min(), 현재가)
-                최고분봉고가_    = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 17].max(), 분봉고가)
-                최저분봉저가_    = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 18].min(), 분봉저가)
                 체결강도평균_    = round((self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수, 3)
                 최고체결강도_    = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 7].max(), 체결강도)
                 최저체결강도_    = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
@@ -347,7 +345,9 @@ class UpbitStrategyMin(UpbitStrategyTick):
                 최고분당매도수량_ = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 9].max(), 분당매도수량)
                 누적분당매수수량_ = self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 8].sum() + 분당매수수량
                 누적분당매도수량_ = self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 9].sum() + 분당매도수량
-                분당거래대금평균_ = int((self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 10].sum() + 분당거래대금) / 평균값계산틱수)
+                최고분봉고가_    = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 11].max(), 분봉고가)
+                최저분봉저가_    = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 12].min(), 분봉저가)
+                분당거래대금평균_ = int((self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 13].sum() + 분당거래대금) / 평균값계산틱수)
                 등락율각도_      = round(math.atan2((등락율 - self.dict_arry[종목코드][-(평균값계산틱수 - 1), 5]) * 10, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 당일거래대금각도_ = round(math.atan2((당일거래대금 - self.dict_arry[종목코드][-(평균값계산틱수 - 1), 6]) / 100_000_000, 평균값계산틱수) / (2 * math.pi) * 360, 2)
 

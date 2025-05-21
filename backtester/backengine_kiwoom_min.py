@@ -83,13 +83,13 @@ class BackEngineKiwoomMin(BackEngineKiwoomTick):
             return Parameter_Previous(15, pre)
 
         def 분봉시가N(pre):
-            return Parameter_Previous(16, pre)
+            return Parameter_Previous(19, pre)
 
         def 분봉고가N(pre):
-            return Parameter_Previous(17, pre)
+            return Parameter_Previous(20, pre)
 
         def 분봉저가N(pre):
-            return Parameter_Previous(18, pre)
+            return Parameter_Previous(21, pre)
 
         def 분당거래대금N(pre):
             return Parameter_Previous(22, pre)
@@ -214,10 +214,10 @@ class BackEngineKiwoomMin(BackEngineKiwoomTick):
             return Parameter_Area(54, 1, tick, pre, 'min')
 
         def 최고분봉고가(tick, pre=0):
-            return Parameter_Area(55, 17, tick, pre, 'max')
+            return Parameter_Area(55, 20, tick, pre, 'max')
 
         def 최저분봉저가(tick, pre=0):
-            return Parameter_Area(56, 18, tick, pre, 'min')
+            return Parameter_Area(56, 21, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
             return round(Parameter_Area(57, 7, tick, pre, 'mean'), 3)

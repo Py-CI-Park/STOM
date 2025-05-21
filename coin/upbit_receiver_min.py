@@ -52,11 +52,12 @@ class UpbitReceiverMin(UpbitReceiverTick):
 
     def UpdateHogaData(self, dt, hoga_tamount, hoga_seprice, hoga_buprice, hoga_samount, hoga_bamount, code, receivetime):
         mm     = 0
-        dm     = self.dict_data[code][5]
+        dm     = 0
         send   = False
         dt_min = int(str(dt)[:12])
 
         if code in self.dict_data.keys():
+            dm = self.dict_data[code][5]
             if code in self.dict_tmdt.keys():
                 if dt_min > self.dict_tmdt[code][0]:
                     send = True

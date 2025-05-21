@@ -308,7 +308,7 @@ class SetSetupTap:
         self.ui.sj_back_cheBox_14.setGeometry(835, 75, 400, 20)
         self.ui.sj_back_cheBox_21.setGeometry(1060, 50, 300, 20)
 
-        self.ui.sj_back_cheBox_15.setGeometry(10, 100, 250, 20)
+        self.ui.sj_back_cheBox_15.setGeometry(10, 100, 500, 20)
         self.ui.sj_back_cheBox_16.setGeometry(835, 25, 250, 20)
         self.ui.sj_back_cheBox_19.setGeometry(500, 100, 800, 20)
         self.ui.sj_back_comBox_05.setGeometry(645, 100, 40, 20)

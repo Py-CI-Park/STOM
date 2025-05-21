@@ -199,10 +199,10 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
             return Parameter_Area(54, 1, tick, pre, 'min')
 
         def 최고분봉고가(tick, pre=0):
-            return Parameter_Area(55, 17, tick, pre, 'max')
+            return Parameter_Area(55, 20, tick, pre, 'max')
 
         def 최저분봉저가(tick, pre=0):
-            return Parameter_Area(56, 18, tick, pre, 'min')
+            return Parameter_Area(56, 21, tick, pre, 'min')
 
         def 체결강도평균(tick, pre=0):
             return round(Parameter_Area(57, 7, tick, pre, 'mean'), 3)
@@ -365,8 +365,6 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
             if len_array >= 평균값계산틱수 - 1:
                 최고현재가_      = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 1].max(), 현재가)
                 최저현재가_      = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 1].min(), 현재가)
-                최고분봉고가_    = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 17].max(), 분봉고가)
-                최저분봉저가_    = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 18].min(), 분봉저가)
                 체결강도평균_    = round((self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 7].sum() + 체결강도) / 평균값계산틱수, 3)
                 최고체결강도_    = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 7].max(), 체결강도)
                 최저체결강도_    = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 7].min(), 체결강도)
@@ -374,6 +372,8 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
                 최고분당매도수량_ = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 15].max(), 분당매도수량)
                 누적분당매수수량_ = self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 14].sum() + 분당매수수량
                 누적분당매도수량_ = self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 15].sum() + 분당매도수량
+                최고분봉고가_    = max(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 20].max(), 분봉고가)
+                최저분봉저가_    = min(self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 21].min(), 분봉저가)
                 분당거래대금평균_ = int((self.dict_arry[종목코드][-(평균값계산틱수 - 1):, 22].sum() + 분당거래대금) / 평균값계산틱수)
                 등락율각도_      = round(math.atan2((등락율 - self.dict_arry[종목코드][-(평균값계산틱수 - 1), 5]) * 5, 평균값계산틱수) / (2 * math.pi) * 360, 2)
                 당일거래대금각도_ = round(math.atan2((당일거래대금 - self.dict_arry[종목코드][-(평균값계산틱수 - 1), 6]) / 100, 평균값계산틱수) / (2 * math.pi) * 360, 2)
