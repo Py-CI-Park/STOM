@@ -258,8 +258,7 @@ class BackEngineKiwoomTick:
         bk = 0
         divid_mode = data[-1]
         is_tick = self.dict_set['주식타임프레임']
-        db  = DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN
-        con = sqlite3.connect(db)
+        con = sqlite3.connect(DB_STOCK_BACK_TICK if is_tick else DB_STOCK_BACK_MIN)
 
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data

@@ -70,8 +70,6 @@ class BinanceReceiverClient:
             else:
                 self.UpdateTuple(data)
             if data == '프로세스종료':
-                self.ctraderQ.put('프로세스종료')
-                self.cstgQ.put('프로세스종료')
                 break
 
             inthmsutc = int_hms_utc()
@@ -109,4 +107,6 @@ class BinanceReceiverClient:
 
     def ReceiverProcKill(self):
         self.dict_bool['프로세스종료'] = True
+        self.ctraderQ.put('프로세스종료')
+        self.cstgQ.put('프로세스종료')
         threading_timer(180, self.creceivQ.put, '프로세스종료')

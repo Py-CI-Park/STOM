@@ -300,14 +300,13 @@ class UpbitTrader:
                 self.SendOrder(data)
 
     def SendOrder(self, data):
-        og, code, op, oc, on, signal_time, manual, fixc, ordertype = data
         curr_time = now()
         if curr_time < self.dict_time['주문시간']:
             next_time = (self.dict_time['주문시간'] - curr_time).total_seconds()
-            data = [og, code, op, oc, on, signal_time, manual, fixc, ordertype]
             threading_timer(next_time, self.ctraderQ.put, data)
             return
 
+        og, code, op, oc, on, signal_time, manual, fixc, ordertype = data
         self.OrderTimeLog(signal_time)
         if og == '매수':
             if self.upbit is not None:

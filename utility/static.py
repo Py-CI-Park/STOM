@@ -15,8 +15,6 @@ from cryptography.fernet import Fernet
 def threading_timer(sec, func, args=None):
     if args is None:
         Timer(float(sec), func).start()
-    elif type(args) == list:
-        Timer(float(sec), func, args=args).start()
     else:
         Timer(float(sec), func, args=[args]).start()
 

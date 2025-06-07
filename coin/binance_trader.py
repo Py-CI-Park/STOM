@@ -425,16 +425,15 @@ class BinanceTrader:
                 self.SendOrder(data)
 
     def SendOrder(self, data):
-        og, code, op, oc, on, signal_time, manual, fixc, ordertype = data
         curr_time = now()
         if curr_time < self.dict_time['주문시간']:
             next_time = (self.dict_time['주문시간'] - curr_time).total_seconds()
-            data = [og, code, op, oc, on, signal_time, manual, fixc, ordertype]
             threading_timer(next_time, self.ctraderQ.put, data)
             return
 
-        ret = None
+        og, code, op, oc, on, signal_time, manual, fixc, ordertype = data
         side, position = og.split('_')[:2]
+        ret = None
         self.OrderTimeLog(signal_time)
         if 'CANCEL' not in og:
             try:
@@ -475,7 +474,7 @@ class BinanceTrader:
                 self.UpdateChegeollist(dt, code, f'{og}_REG', oc, 0, oc, 0, dt[:14], 0, orderId)
                 self.windowQ.put((ui_num['C로그텍스트'], f'주문 관리 시스템 알림 - [접수] {code} | {op} | {oc} | {og}'))
 
-        self.dict_time['주문시간'] = timedelta_sec(0.1)
+        self.dict_time['주문시간'] = timedelta_sec(0.3)
         self.creceivQ.put(('주문목록', self.GetOrderCodeList()))
 
     def JangoCheongsan(self, gubun):

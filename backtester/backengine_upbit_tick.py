@@ -4,7 +4,7 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from traceback import print_exc
-from utility.setting import DB_COIN_BACK_TICK, BACK_TEMP, ui_num, DICT_SET, indicator
+from utility.setting import DB_COIN_BACK_TICK, BACK_TEMP, ui_num, DICT_SET, indicator, DB_COIN_BACK_MIN
 # noinspection PyUnresolvedReferences
 from utility.static import strp_time, timedelta_sec, GetUpbitHogaunit, pickle_read, pickle_write, GetUpbitPgSgSp
 from backtester.back_static import GetBuyStg, GetSellStg, GetBuyConds, GetSellConds, GetBackloadCodeQuery, GetBackloadDayQuery, AddAvgData, GetTradeInfo
@@ -254,8 +254,8 @@ class BackEngineUpbitTick:
     def DataLoad(self, data):
         bk = 0
         divid_mode = data[-1]
-        is_tick = not self.dict_set['코인타임프레임']
-        con = sqlite3.connect(DB_COIN_BACK_TICK)
+        is_tick = self.dict_set['코인타임프레임']
+        con = sqlite3.connect(DB_COIN_BACK_TICK if is_tick else DB_COIN_BACK_MIN)
 
         if divid_mode == '종목코드별 분류':
             gubun, startday, endday, starttime, endtime, code_list, avg_list, code_days, _, _, _ = data
