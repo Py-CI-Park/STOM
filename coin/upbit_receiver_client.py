@@ -89,13 +89,16 @@ class UpbitReceiverClient:
                 self.ctraderQ.put((code, c))
                 self.dict_jgdt[code] = dt
         else:
-            code, c = data[-2], data[1]
-            self.cstgQ.put(data)
-            if code in self.tuple_jango or code in self.tuple_order:
-                if self.dict_set['코인타임프레임']:
-                    self.ctraderQ.put((code, c))
-                else:
-                    self.ctraderQ.put(('주문확인', code, c))
+            try:
+                code, c = data[-2] if self.dict_set['코인타임프레임'] else data[-3], data[1]
+                self.cstgQ.put(data)
+                if code in self.tuple_jango or code in self.tuple_order:
+                    if self.dict_set['코인타임프레임']:
+                        self.ctraderQ.put((code, c))
+                    else:
+                        self.ctraderQ.put(('주문확인', code, c))
+            except:
+                print('리시버 공유모드는 클라이언트부터 실행하고 서버를 마지막에 실행해야합니다.')
 
     def UpdateTuple(self, data):
         gubun, data = data
