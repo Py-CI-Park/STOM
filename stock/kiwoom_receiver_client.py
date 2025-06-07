@@ -111,13 +111,18 @@ class KiwoomReceiverClient:
                 self.straderQ.put((code, c))
                 self.dict_jgdt[code] = dt
         else:
-            code, c = data[-3], data[1]
-            self.sstgQs[self.dict_sgbn[code]].put(data)
-            if code in self.tuple_jango or code in self.tuple_order:
-                if self.dict_set['주식타임프레임']:
-                    self.straderQ.put((code, c))
-                else:
-                    self.straderQ.put(('주문확인', code, c))
+            try:
+                code, c = data[-3], data[1]
+                self.sstgQs[self.dict_sgbn[code]].put(data)
+                if code in self.tuple_jango or code in self.tuple_order:
+                    if self.dict_set['주식타임프레임']:
+                        self.straderQ.put((code, c))
+                    else:
+                        self.straderQ.put(('주문확인', code, c))
+            except:
+                print('주식 리시버 공유모드는 클라이언트부터 실행하고 서버를 마지막에 실행해야합니다.')
+                QTimer.singleShot(10 * 1000, lambda: self.straderQ.put('프로세스종료'))
+                QTimer.singleShot(10 * 1000, self.SysExit)
 
     def UpdateLoginInfo(self, data):
         self.tuple_kosd, self.dict_sgbn, self.dict_name, self.dict_code = data
@@ -148,7 +153,6 @@ class KiwoomReceiverClient:
         QTimer.singleShot(180 * 1000, self.SysExit)
 
     def SysExit(self):
-        self.dict_bool['프로세스종료'] = True
         if self.qtimer.isActive():   self.qtimer.stop()
         if self.updater.isRunning(): self.updater.quit()
         for q in self.sstgQs:

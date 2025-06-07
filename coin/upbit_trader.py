@@ -38,7 +38,7 @@ class UpbitTrader:
         self.df_td = pd.DataFrame(columns=columns_td)
         self.df_tt = pd.DataFrame(columns=columns_tt)
 
-        self.str_today = strf_time('%Y%m%d', timedelta_sec(-32400))
+        self.str_today = strf_time('%Y%m%d')
 
         self.dict_intg = {
             '예수금': 0,

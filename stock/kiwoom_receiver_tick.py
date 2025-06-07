@@ -98,12 +98,13 @@ class KiwoomReceiverTick:
         self.holiday_time = timedelta_sec(remaintime) if remaintime > 0 else None
 
         self.recvservQ = Queue()
-        if self.dict_set['리시버공유'] == 1:
-            self.zmqserver = ZmqServ(self.recvservQ)
-            self.zmqserver.start()
 
         self.kw = Kiwoom(self, 'Receiver')
         self.KiwoomLogin()
+
+        if self.dict_set['리시버공유'] == 1:
+            self.zmqserver = ZmqServ(self.recvservQ)
+            self.zmqserver.start()
 
         self.updater = Updater(self.sreceivQ)
         self.updater.signal.connect(self.UpdateTuple)

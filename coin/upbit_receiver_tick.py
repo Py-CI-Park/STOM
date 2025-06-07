@@ -95,7 +95,7 @@ class UpbitReceiverTick:
                 if data['type'] == 'ticker':
                     try:
                         dt        = int(strf_time('%Y%m%d%H%M%S', from_timestamp(int(data['timestamp'] / 1000 - 32400))))
-                        if self.dict_set['코인전략종료시간'] < dt: continue
+                        if self.dict_set['코인전략종료시간'] < int(str(dt)[8:]): continue
                         code      = data['code']
                         c         = data['trade_price']
                         o         = data['opening_price']

@@ -17,7 +17,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
             라운드피겨위5호가이내, 분당매수수량, 분당매도수량, VI해제시간, VI가격, VI호가단위, 분봉시가, 분봉고가, 분봉저가, 분당거래대금, \
             고저평균대비등락율, 매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, \
             매수호가3, 매수호가4, 매수호가5, 매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, \
-            매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목, 종목코드, 종목명, 틱수신시간 = data
+            매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목, 종목코드, 종목명, 틱수신시간, 전략연산 = data
 
         def Parameter_Previous(aindex, pre):
             if pre < 데이터길이:
@@ -338,7 +338,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
         def WILLR_N(pre):
             return Parameter_Previous(95, pre)
 
-        시분 = int(str(체결시간)[8:])
+        시분초 = int(str(체결시간)[8:] + '00')
         호가단위 = GetHogaunit(종목코드 in self.tuple_kosd, 현재가, 체결시간)
         VI아래5호가 = GetUvilower5(VI가격, VI호가단위, 체결시간)
         VI해제시간_ = int(strf_time('%Y%m%d%H%M%S', VI해제시간))
@@ -466,8 +466,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
 
         new_data_tick = [
             체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 거래대금증감, 전일비, 회전율, 전일동시간비, 시가총액, 라운드피겨위5호가이내,
-            분당매수수량, 분당매도수량, VI해제시간_, VI가격, VI호가단위, 분봉시가, 분봉고가, 분봉저가,
-            분당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            분당매수수량, 분당매도수량, VI해제시간_, VI가격, VI호가단위, 분봉시가, 분봉고가, 분봉저가, 분당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5,
             매도수5호가잔량합, 관심종목, 이동평균005, 이동평균010, 이동평균020, 이동평균060, 이동평균120,
@@ -477,7 +476,6 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
             MOM, OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
         ]
 
-        chart_data = False
         if 종목코드 not in self.dict_arry.keys():
             self.dict_arry[종목코드] = np.array([new_data_tick])
         else:
@@ -485,12 +483,11 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
                 self.dict_arry[종목코드] = np.r_[self.dict_arry[종목코드], np.array([new_data_tick])]
             else:
                 self.dict_arry[종목코드][-1, :] = np.array([new_data_tick])
-                chart_data = True
 
         데이터길이 = len(self.dict_arry[종목코드])
         self.indexn = 데이터길이 - 1
 
-        if self.dict_condition and not chart_data:
+        if self.dict_condition and 전략연산:
             if 종목코드 not in self.dict_cond_indexn.keys():
                 self.dict_cond_indexn[종목코드] = {}
             for k, v in self.dict_condition.items():
@@ -500,7 +497,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
                     print_exc()
                     self.kwzservQ.put(('window', (ui_num['S단순텍스트'], '시스템 명령 오류 알림 - 경과틱수 연산오류')))
 
-        if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0) and not chart_data:
+        if 체결강도평균_ != 0 and not (매수잔량5 == 0 and 매도잔량5 == 0) and 전략연산:
             if 종목코드 in self.df_jg.index:
                 if 종목코드 not in self.dict_buy_num.keys():
                     self.dict_buy_num[종목코드] = len(self.dict_arry[종목코드]) - 1
@@ -525,9 +522,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
                 매수틱번호, 수익금, 수익률, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = 0, 0, 0, 0, 0, 0, 0, now(), 0, 0, 0
             self.indexb = 매수틱번호
 
-            sell_ban_time = self.dict_set['주식매수금지종료시간']
-            sell_ban_time = int(str(sell_ban_time)[:-2]) if sell_ban_time > 2400 else sell_ban_time
-            BBT = not self.dict_set['주식매수금지시간'] or not (self.dict_set['주식매수금지시작시간'] < 시분 < sell_ban_time)
+            BBT = not self.dict_set['주식매수금지시간'] or not (self.dict_set['주식매수금지시작시간'] < 시분초 < self.dict_set['주식매수금지종료시간'])
             BLK = not self.dict_set['주식매수금지블랙리스트'] or 종목코드 not in self.dict_set['주식블랙리스트']
             NIB = 종목코드 not in self.list_buy
             NIS = 종목코드 not in self.list_sell
@@ -562,9 +557,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
                     if 매수:
                         self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이)
 
-            sell_ban_time = self.dict_set['주식매도금지종료시간']
-            sell_ban_time = int(str(sell_ban_time)[:-2]) if sell_ban_time > 2400 else sell_ban_time
-            SBT = not self.dict_set['주식매도금지시간'] or not (self.dict_set['주식매도금지시작시간'] < 시분 < sell_ban_time)
+            SBT = not self.dict_set['주식매도금지시간'] or not (self.dict_set['주식매도금지시작시간'] < 시분초 < self.dict_set['주식매도금지종료시간'])
             SCC = self.dict_set['주식매수분할횟수'] == 1 or not self.dict_set['주식매도금지매수횟수'] or 분할매수횟수 > self.dict_set['주식매도금지매수횟수값']
             NIB = 종목코드 not in self.list_buy
 
@@ -604,7 +597,7 @@ class KiwoomStrategyMin(KiwoomStrategyTick):
                     if 매도:
                         self.Sell(종목코드, 종목명, 매도수량, 현재가, 매도호가1, 매수호가1, 강제청산)
 
-        if 관심종목 and not chart_data:
+        if 관심종목 and 전략연산:
             self.df_gj.loc[종목코드] = 종목명, 등락율, 고저평균대비등락율, 분당거래대금, 분당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_arry[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:

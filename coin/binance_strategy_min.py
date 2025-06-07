@@ -13,7 +13,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
         체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도, 분당매수수량, 분당매도수량, 분봉시가, 분봉고가, 분봉저가, \
             분당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량, 매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, \
             매수호가2, 매수호가3, 매수호가4, 매수호가5, 매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, \
-            매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목, 종목코드, 틱수신시간 = data
+            매수잔량3, 매수잔량4, 매수잔량5, 매도수5호가잔량합, 관심종목, 종목코드, 틱수신시간, 전략연산 = data
 
         def Parameter_Previous(aindex, pre):
             if pre < 데이터길이:
@@ -313,7 +313,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
         def WILLR_N(pre):
             return Parameter_Previous(85, pre)
 
-        시분, 호가단위 = int(str(체결시간)[8:]), self.dict_info[종목코드]['호가단위']
+        시분초, 호가단위 = int(str(체결시간)[8:] + '00'), self.dict_info[종목코드]['호가단위']
         데이터길이 = len(self.dict_arry[종목코드]) + 1 if 종목코드 in self.dict_arry.keys() else 1
         평균값계산틱수 = self.dict_set['코인평균값계산틱수']
         이동평균005, 이동평균010, 이동평균020, 이동평균060, 이동평균120, 최고현재가_, 최저현재가_, 최고분봉고가_, 최저분봉저가_ = 0., 0., 0., 0., 0., 0, 0, 0, 0
@@ -436,8 +436,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
 
         new_data_tick = [
             체결시간, 현재가, 시가, 고가, 저가, 등락율, 당일거래대금, 체결강도,
-            분당매수수량, 분당매도수량, 분봉시가, 분봉고가, 분봉저가,
-            분당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
+            분당매수수량, 분당매도수량, 분봉시가, 분봉고가, 분봉저가, 분당거래대금, 고저평균대비등락율, 매도총잔량, 매수총잔량,
             매도호가5, 매도호가4, 매도호가3, 매도호가2, 매도호가1, 매수호가1, 매수호가2, 매수호가3, 매수호가4, 매수호가5,
             매도잔량5, 매도잔량4, 매도잔량3, 매도잔량2, 매도잔량1, 매수잔량1, 매수잔량2, 매수잔량3, 매수잔량4, 매수잔량5,
             매도수5호가잔량합, 관심종목, 이동평균005, 이동평균010, 이동평균020, 이동평균060, 이동평균120,
@@ -447,7 +446,6 @@ class BinanceStrategyMin(BinanceStrategyTick):
             MOM, OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
         ]
 
-        chart_data = False
         if 종목코드 not in self.dict_arry.keys():
             self.dict_arry[종목코드] = np.array([new_data_tick])
         else:
@@ -455,12 +453,11 @@ class BinanceStrategyMin(BinanceStrategyTick):
                 self.dict_arry[종목코드] = np.r_[self.dict_arry[종목코드], np.array([new_data_tick])]
             else:
                 self.dict_arry[종목코드][-1, :] = np.array([new_data_tick])
-                chart_data = True
 
         데이터길이 = len(self.dict_arry[종목코드])
         self.indexn = 데이터길이 - 1
 
-        if self.dict_condition and not chart_data:
+        if self.dict_condition and 전략연산:
             if 종목코드 not in self.dict_cond_indexn.keys():
                 self.dict_cond_indexn[종목코드] = {}
             for k, v in self.dict_condition.items():
@@ -470,7 +467,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
                     print_exc()
                     self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 오류 알림 - 경과틱수 연산오류'))
 
-        if 체결강도평균_ != 0 and 체결시간 < self.dict_set['코인전략종료시간'] and not chart_data:
+        if 체결강도평균_ != 0 and 전략연산:
             if 종목코드 in self.df_jg.index:
                 if 종목코드 not in self.dict_buy_num.keys():
                     self.dict_buy_num[종목코드] = len(self.dict_arry[종목코드]) - 1
@@ -500,9 +497,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
                 포지션, 매수틱번호, 수익금, 수익률, 레버리지, 매입가, 보유수량, 분할매수횟수, 분할매도횟수, 매수시간, 보유시간, 최고수익률, 최저수익률 = None, 0, 0, 0, 1, 0, 0, 0, 0, now(), 0, 0, 0
             self.indexb = 매수틱번호
 
-            sell_ban_time = self.dict_set['코인매수금지종료시간']
-            sell_ban_time = int(str(sell_ban_time)[:-2]) if sell_ban_time > 2400 else sell_ban_time
-            BBT  = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분 < sell_ban_time)
+            BBT  = not self.dict_set['코인매수금지시간'] or not (self.dict_set['코인매수금지시작시간'] < 시분초 < self.dict_set['코인매수금지종료시간'])
             BLK  = not self.dict_set['코인매수금지블랙리스트'] or 종목코드 not in self.dict_set['코인블랙리스트']
             C20  = not self.dict_set['코인매수금지200원이하'] or 현재가 > 200
             NIBL = 종목코드 not in self.dict_signal['BUY_LONG']
@@ -547,9 +542,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
                     if BUY_LONG or SELL_SHORT:
                         self.Buy(종목코드, BUY_LONG, 현재가, 매도호가1, 매수호가1, 매수수량, 데이터길이)
 
-            sell_ban_time = self.dict_set['코인매도금지종료시간']
-            sell_ban_time = int(str(sell_ban_time)[:-2]) if sell_ban_time > 2400 else sell_ban_time
-            SBT  = not self.dict_set['코인매도금지시간'] or not (self.dict_set['코인매도금지시작시간'] < 시분 < sell_ban_time)
+            SBT  = not self.dict_set['코인매도금지시간'] or not (self.dict_set['코인매도금지시작시간'] < 시분초 < self.dict_set['코인매도금지종료시간'])
             SCC  = self.dict_set['코인매수분할횟수'] == 1 or not self.dict_set['코인매도금지매수횟수'] or 분할매수횟수 > self.dict_set['코인매도금지매수횟수값']
             NIBL = 종목코드 not in self.dict_signal['BUY_LONG']
             NISS = 종목코드 not in self.dict_signal['SELL_SHORT']
@@ -604,7 +597,7 @@ class BinanceStrategyMin(BinanceStrategyTick):
                     if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):
                         self.Sell(종목코드, SELL_LONG, 현재가, 매도호가1, 매수호가1, 매도수량, 강제청산)
 
-        if 관심종목 and not chart_data:
+        if 관심종목 and 전략연산:
             self.df_gj.loc[종목코드] = 종목코드, 등락율, 고저평균대비등락율, 분당거래대금, 분당거래대금평균_, 당일거래대금, 체결강도, 체결강도평균_, 최고체결강도_
 
         if len(self.dict_arry[종목코드]) >= 평균값계산틱수 and self.chart_code == 종목코드:

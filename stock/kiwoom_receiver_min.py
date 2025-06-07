@@ -114,7 +114,7 @@ class KiwoomReceiverMin(KiwoomReceiverTick):
             logt  = now() if self.int_logt < dt_min else 0
             gsjm  = 1 if code in self.list_gsjm else 0
             dt_   = self.dict_tmdt[code][0]
-            data  = (dt_,) + tuple(self.dict_data[code]) + (mm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, name, logt)
+            data  = (dt_,) + tuple(self.dict_data[code]) + (mm, hlp) + hoga_tamount + hoga_seprice + hoga_buprice + hoga_samount + hoga_bamount + (hgjrt, gsjm, code, name, logt, send)
 
             self.sstgQs[self.dict_sgbn[code]].put(data)
             if send:
