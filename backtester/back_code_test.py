@@ -267,6 +267,12 @@ class BackCodeTest:
         def 분당거래대금N(pre):
             return 1
 
+        def 최고분봉고가(tick, pre=0):
+            return 1
+
+        def 최저분봉저가(tick, pre=0):
+            return 1
+
         def 최고분당매수수량(tick, pre=0):
             return 1
 
