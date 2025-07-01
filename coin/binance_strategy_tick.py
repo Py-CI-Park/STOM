@@ -7,7 +7,8 @@ from traceback import print_exc
 from utility.setting import DB_STRATEGY, DICT_SET, ui_num, columns_jgf, columns_gj, dict_order_ratio, DB_COIN_TICK, \
     DB_COIN_MIN, indicator
 # noinspection PyUnresolvedReferences
-from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetBinanceShortPgSgSp, GetBinanceLongPgSgSp
+from utility.static import now, now_utc, strp_time, int_hms_utc, timedelta_sec, GetBinanceShortPgSgSp, \
+    GetBinanceLongPgSgSp, get_buy_indi_stg
 
 
 # noinspection PyUnusedLocal
@@ -61,27 +62,19 @@ class BinanceStrategyTick:
             dfid = None
         con.close()
 
-        buystrategy = ''
-        if self.dict_set['코인매수전략'] == '':
-            self.buystrategy = None
-        elif self.dict_set['코인매수전략'] in dfb.index:
-            buystrategy = dfb['전략코드'][self.dict_set['코인매수전략']]
-            self.buystrategy = compile(buystrategy, '<string>', 'exec')
+        buytxt = ''
+        if self.dict_set['코인매수전략'] in dfb.index:
+            buytxt = dfb['전략코드'][self.dict_set['코인매수전략']]
         elif self.dict_set['코인매수전략'] in dfob.index:
-            buystrategy = dfob['전략코드'][self.dict_set['코인매수전략']]
-            self.buystrategy = compile(buystrategy, '<string>', 'exec')
+            buytxt = dfob['전략코드'][self.dict_set['코인매수전략']]
             vars_text = dfob['변수값'][self.dict_set['코인매수전략']]
             if vars_text != '':
                 vars_list = [float(i) if '.' in i else int(i) for i in vars_text.split(';')]
                 self.vars = {i: var for i, var in enumerate(vars_list)}
-            else:
-                self.buystrategy = None
 
-        self.UpdateIndicator(buystrategy)
+        self.SetBuyStg(buytxt)
 
-        if self.dict_set['코인매도전략'] == '':
-            self.sellstrategy = None
-        elif self.dict_set['코인매도전략'] in dfs.index:
+        if self.dict_set['코인매도전략'] in dfs.index:
             self.sellstrategy = compile(dfs['전략코드'][self.dict_set['코인매도전략']], '<string>', 'exec')
         elif self.dict_set['코인매도전략'] in dfos.index:
             self.sellstrategy = compile(dfos['전략코드'][self.dict_set['코인매도전략']], '<string>', 'exec')
@@ -96,15 +89,11 @@ class BinanceStrategyTick:
             value_list = [compile_condition(x) for x in value_list]
             self.dict_condition = dict(zip(key_list, value_list))
 
-    def UpdateIndicator(self, buystrategy):
-        indistrategy = ''
-        buystrategy = buystrategy.split('\n')
-        for line in buystrategy:
-            if 'self.indicator' in line and '#' not in line:
-                indistrategy += f'{line}\n'
-        if indistrategy != '':
+    def SetBuyStg(self, buytxt):
+        self.buystrategy, indistg = get_buy_indi_stg(buytxt)
+        if indistg is not None:
             try:
-                exec(compile(indistrategy, '<string>', 'exec'))
+                exec(indistg)
             except:
                 pass
             else:
@@ -156,7 +145,7 @@ class BinanceStrategyTick:
                 self.jgrv_count = 0
                 self.PutGsjmAndDeleteHilo()
         elif gubun == '매수전략':
-            self.buystrategy = compile(data, '<string>', 'exec')
+            self.SetBuyStg(data)
         elif gubun == '매도전략':
             self.sellstrategy = compile(data, '<string>', 'exec')
         elif gubun == '종목당투자금':

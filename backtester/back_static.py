@@ -197,25 +197,31 @@ def LoadOrderSetting(gubun):
     return buy_setting, sell_setting
 
 
-def GetBuyStg(buystg, gubun):
-    buystg_ = buystg.split('if 매수:')[0] + 'if 매수:\n    self.Buy(vturn, vkey)'
-    try:
-        buystg_ = compile(buystg_, '<string>', 'exec')
-    except:
-        buystg_ = None
-        if gubun == 0: print_exc()
-    indistg_ = ''
-    for line in buystg.split('\n'):
-        if 'self.indicator' in line and '#' not in line:
-            indistg_ += f'{line}\n'
-    if indistg_ != '':
+def GetBuyStg(buytxt, gubun):
+    buytxt  = buytxt.split('if 매수:')[0] + 'if 매수:\n    self.Buy(vturn, vkey)'
+    buystg  = ''
+    indistg = ''
+    for line in buytxt.split('\n'):
+        if 'self.indicator' in line:
+            indistg += f'{line}\n'
+        else:
+            buystg += f'{line}\n'
+    if buystg != '':
         try:
-            indistg_ = compile(indistg_, '<string>', 'exec')
+            buystg = compile(buystg, '<string>', 'exec')
         except:
-            indistg_ = None
+            buystg = None
+            if gubun == 0: print_exc()
     else:
-        indistg_ = None
-    return buystg_, indistg_
+        buystg = None
+    if indistg != '':
+        try:
+            indistg = compile(indistg, '<string>', 'exec')
+        except:
+            indistg = None
+    else:
+        indistg = None
+    return buystg, indistg
 
 
 def GetSellStg(sellstg, gubun):

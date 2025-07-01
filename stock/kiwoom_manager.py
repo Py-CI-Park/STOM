@@ -111,13 +111,13 @@ class KiwoomManager:
         self.proc_strategy_stock8 = None
         self.proc_trader_stock    = None
 
-        self.zmqserv = ZmqServ(self.qlist, port_num + 1)
-        self.zmqserv.start()
-
         self.zmqrecv = ZmqRecv(self.qlist, port_num)
         self.zmqrecv.signal1.connect(self.UpdateString)
         self.zmqrecv.signal2.connect(self.UpdateTuple)
         self.zmqrecv.start()
+
+        self.zmqserv = ZmqServ(self.qlist, port_num + 1)
+        self.zmqserv.start()
 
         app.exec_()
 

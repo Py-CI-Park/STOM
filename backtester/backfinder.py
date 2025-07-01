@@ -108,7 +108,7 @@ class BackFinder:
         dfb = pd.read_sql(f'SELECT * FROM {self.gubun}buy', con).set_index('index')
         con.close()
 
-        buystg  = dfb['전략코드'][buystg_name]
+        buystg = dfb['전략코드'][buystg_name]
         if 'self.tickcols' not in buystg:
             self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '선택된 전략이 백파인더용 전략이 아닙니다.'))
             self.SysExit(True)

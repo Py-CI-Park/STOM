@@ -79,8 +79,8 @@ from utility.telegram_msg import *
 class LiveSender(Thread):
     def __init__(self, sock, liveQ):
         super().__init__()
-        self.sock      = sock
-        self.liveQ     = liveQ
+        self.sock  = sock
+        self.liveQ = liveQ
 
     def run(self):
         send_time = timedelta_sec(5)
@@ -587,10 +587,10 @@ class MainWindow(QMainWindow):
         port_num = 5100
         while True:
             try:
-                self.zmqserv = ZmqServ(self.wdzservQ, port_num)
-                self.zmqserv.start()
                 self.zmqrecv = ZmqRecv(self.qlist, port_num + 1)
                 self.zmqrecv.start()
+                self.zmqserv = ZmqServ(self.wdzservQ, port_num)
+                self.zmqserv.start()
             except:
                 port_num += 10
             else:

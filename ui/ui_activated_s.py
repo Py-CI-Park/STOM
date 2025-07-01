@@ -123,7 +123,10 @@ def sactivated_09(ui):
         df = pd.read_sql(f"SELECT * FROM stockoptibuy WHERE `index` = '{strategy_name}'", con).set_index('index')
         con.close()
         if len(df) > 0:
-            optivars = [float(i) if '.' in i else int(i) for i in df['변수값'][strategy_name].split(';')]
+            try:
+                optivars = [float(i) if '.' in i else int(i) for i in df['변수값'][strategy_name].split(';')]
+            except:
+                optivars = ''
             QMessageBox.warning(
                 ui, '경고',
                 '최적화용 전략 선택시 최적값으로 전략이 실행됩니다.\n'

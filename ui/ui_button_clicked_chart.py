@@ -38,17 +38,25 @@ def get_k_list(ui, code):
     if not ui.dict_set['주식타임프레임'] or not ui.dict_set['코인타임프레임']:
         if ui.ft_checkBoxxxxx_39.isChecked():
             buystg = None
+            vars_  = None
             try:
                 con = sqlite3.connect(DB_STRATEGY)
                 if 'KRW' not in code and 'USDT' not in code:
                     stg_name = ui.dict_set['주식매수전략']
-                    df = pd.read_sql('SELECT * FROM stockoptibuy', con).set_index('index')
+                    df1 = pd.read_sql('SELECT * FROM stockbuy', con).set_index('index')
+                    df2 = pd.read_sql('SELECT * FROM stockoptibuy', con).set_index('index')
                 else:
                     stg_name = ui.dict_set['코인매수전략']
-                    df = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
+                    df1 = pd.read_sql('SELECT * FROM coinbuy', con).set_index('index')
+                    df2 = pd.read_sql('SELECT * FROM coinoptibuy', con).set_index('index')
                 con.close()
-                if stg_name in df.index:
-                    buystg = df['전략코드'][stg_name]
+                if stg_name in df1.index:
+                    buystg = df1['전략코드'][stg_name]
+                elif stg_name in df2.index:
+                    buystg = df2['전략코드'][stg_name]
+                    vars_text = ['변수값'][stg_name]
+                    vars_list = [float(i) if '.' in i else int(i) for i in vars_text.split(';')]
+                    vars_ = {i: var for i, var in enumerate(vars_list)}
             except:
                 pass
             else:
@@ -59,6 +67,7 @@ def get_k_list(ui, code):
                             indistg += f"{line.replace('self.indicator', 'indicator_')}\n"
                 if indistg != '':
                     indicator_ = indicator
+                    if vars_ is not None: indistg = indistg.replace('self.vars', 'vars_')
                     exec(compile(indistg, '<string>', 'exec'))
                     k_list = list(indicator_.values())
         if k_list is None:

@@ -676,7 +676,7 @@ if 매수:
 #     'WILLR_timeperiod': 0
 # }'''
 
-example_stockopti_sell2 = '''if 등락율 > self.vars[7] or 수익률 <= self.vars[8] or 수익률 >= self.vars[9]:
+example_stockopti_sell2 = '''if 등락율 > self.vars[8] or 수익률 <= self.vars[9] or 수익률 >= self.vars[10]:
     매도 = True
 
 if 매도:
@@ -802,7 +802,7 @@ if 매수:
 #     'WILLR_timeperiod': 0
 # }'''
 
-example_coinopti_sell2 = '''if 등락율 > self.vars[7] or 수익률 <= self.vars[8] or 수익률 >= self.vars[9]:
+example_coinopti_sell2 = '''if 등락율 > self.vars[8] or 수익률 <= self.vars[9] or 수익률 >= self.vars[10]:
     매도 = True
 
 if 매도:
@@ -946,10 +946,10 @@ if BUY_LONG or SELL_SHORT:
 #     'WILLR_timeperiod': 0
 # }'''
 
-example_coinopti_future_sell2 = '''if 수익률 <= -self.vars[7] or 수익률 >= self.vars[8]:
+example_coinopti_future_sell2 = '''if 수익률 <= -self.vars[8] or 수익률 >= self.vars[9]:
     SELL_LONG = True
 
-if 수익률 <= -self.vars[9] or 수익률 >= self.vars[10]:
+if 수익률 <= -self.vars[10] or 수익률 >= self.vars[11]:
     BUY_SHORT = True
 
 if (포지션 == 'LONG' and SELL_LONG) or (포지션 == 'SHORT' and BUY_SHORT):

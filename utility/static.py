@@ -205,6 +205,31 @@ def text_not_in_special_characters(t):
     return False
 
 
+def get_buy_indi_stg(buytxt):
+    buystg  = ''
+    indistg = ''
+    for line in buytxt.split('\n'):
+        if 'self.indicator' in line:
+            indistg += f'{line}\n'
+        else:
+            buystg += f'{line}\n'
+    if buystg != '':
+        try:
+            buystg = compile(buystg, '<string>', 'exec')
+        except:
+            buystg = None
+    else:
+        buystg = None
+    if indistg != '':
+        try:
+            indistg = compile(indistg, '<string>', 'exec')
+        except:
+            indistg = None
+    else:
+        indistg = None
+    return buystg, indistg
+
+
 def roundfigure_upper5(price, index):
     if index < 20230125000000:
         if 1000 <= price <= 1025:

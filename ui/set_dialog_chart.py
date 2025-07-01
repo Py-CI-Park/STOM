@@ -228,7 +228,7 @@ class SetDialogChart:
         self.ui.ft_lineEdittttt_34 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[33], style=style_bc_dk)
         self.ui.ft_lineEdittttt_35 = self.wc.setLineedit(self.ui.jp_groupBoxxxxx_01, ltext=k[34], style=style_bc_dk)
 
-        text = '보조지표의 설정값을\n사용전략으로 최적화한\n보조지표값으로 사용하기\n체크를 해제하면\n좌측 설정값으로 표시됨'
+        text = '매수전략으로 설정된\n보조지표값 사용하기\n체크를 해제하면\n좌측 설정값으로 표시됨'
         self.ui.ft_checkBoxxxxx_39 = self.wc.setCheckBox(text, self.ui.jp_groupBoxxxxx_01, checked=False, style=style_ck_bx)
         self.ui.ft_pushButtonnn_01 = self.wc.setPushbutton('보조지표설정 기본값', box=self.ui.jp_groupBoxxxxx_01, click=self.ui.ctButtonClicked_01)
         self.ui.ft_pushButtonnn_02 = self.wc.setPushbutton('보조지표설정 불러오기', box=self.ui.jp_groupBoxxxxx_01, click=self.ui.ctButtonClicked_02)

@@ -69,6 +69,8 @@ class Kiwooom:
                 params['grant_type'] = 'client_credentials'
             else:
                 params['token'] = self.token
+        else:
+            params['mrkt_tp'] = gubun
         return params
 
     def create_token(self):
@@ -88,6 +90,22 @@ class Kiwooom:
         if ret: self.token = None
         if self.debug: print('revoke_token', body)
         return ret
+
+    def get_code_list(self, gubun):
+        """
+        gubun
+        0:코스피, 10:코스닥, 3:ELW, 8:ETF, 30:K-OTC, 50:코넥스, 5:신주인수권, 4:뮤추얼펀드, 6:리츠, 9:하이일드
+        """
+        url       = self._url('/api/dostk/stkinfo')
+        headers   = self._headers(api_id='ka10099')
+        params    = self._params(gubun=str(gubun))
+        ret, body = self._post(url, headers, params)
+        dict_ = {}
+        if ret:
+            for data in body['list']:
+                dict_[data['code']] = data['name']
+        if self.debug: print('get_code_list', dict_)
+        return ret, dict_
 
     def get_balances(self):
         url = self._url('/api/dostk/acnt')
@@ -295,10 +313,12 @@ if __name__ == '__main__':
     access_key  = ''
     secret_key  = ''
 
-    kiwoom = Kiwooom(access_key, secret_key, debug=True)
-    kiwoom.create_token()
-    kiwoom.get_balances()
-    kiwoom.get_jango()
+    kw = Kiwooom(access_key, secret_key, debug=True)
+    kw.create_token()
+    kw.get_balances()
+    kw.get_jango()
+    kw.get_code_list(10)
+    kw.get_code_list(0)
 
     receiverQ_, traderQ_ = Queue(), Queue()
-    kiwoom.websoket_start(receiverQ_, traderQ_, debug=True)
+    kw.websoket_start(receiverQ_, traderQ_, debug=True)
