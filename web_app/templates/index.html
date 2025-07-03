@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STOM Trading System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: calc(100vh - 70px);
+        }
+        
+        .sidebar {
+            background-color: #2d2d2d;
+            padding: 1rem;
+            border-right: 1px solid #444;
+        }
+        
+        .nav-item {
+            padding: 0.8rem 1rem;
+            margin: 0.2rem 0;
+            background-color: #3d3d3d;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .nav-item:hover {
+            background-color: #4d4d4d;
+        }
+        
+        .nav-item.active {
+            background-color: #667eea;
+        }
+        
+        .content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #4ade80;
+        }
+        
+        .negative {
+            color: #f87171;
+        }
+        
+        .table-container {
+            background-color: #2d2d2d;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        
+        th {
+            background-color: #3d3d3d;
+            font-weight: bold;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-running {
+            background-color: #4ade80;
+        }
+        
+        .status-stopped {
+            background-color: #f87171;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5a6fd8;
+        }
+        
+        .btn-danger {
+            background-color: #f87171;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #f56565;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #888;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">STOM Trading System</div>
+        <div class="user-info">
+            <div class="connection-status">
+                <span class="status-indicator" id="wsStatus"></span>
+                <span id="wsStatusText">Connecting...</span>
+            </div>
+            <button class="btn btn-primary" id="loginBtn">Login</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="nav-item active" data-section="dashboard">Dashboard</div>
+            <div class="nav-item" data-section="trading">Trading</div>
+            <div class="nav-item" data-section="positions">Positions</div>
+            <div class="nav-item" data-section="orders">Orders</div>
+            <div class="nav-item" data-section="backtesting">Backtesting</div>
+            <div class="nav-item" data-section="settings">Settings</div>
+            <div class="nav-item" data-section="logs">Logs</div>
+        </div>
+        
+        <div class="content">
+            <div id="dashboard" class="section">
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-title">Portfolio Summary</div>
+                        <div class="metric">
+                            <span>Total Value:</span>
+                            <span class="metric-value" id="totalValue">$0.00</span>
+                        </div>
+                        <div class="metric">
+                            <span>Total P&L:</span>
+                            <span class="metric-value" id="totalPnl">$0.00</span>
+                        </div>
+                        <div class="metric">
+                            <span>Daily P&L:</span>
+                            <span class="metric-value" id="dailyPnl">$0.00</span>
+                        </div>
+                        <div class="metric">
+                            <span>Positions:</span>
+                            <span class="metric-value" id="totalPositions">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-title">System Status</div>
+                        <div class="metric">
+                            <span>Trading Mode:</span>
+                            <span class="metric-value" id="tradingMode">Paper Trading</span>
+                        </div>
+                        <div class="metric">
+                            <span>Services:</span>
+                            <span class="metric-value" id="serviceStatus">0/0</span>
+                        </div>
+                        <div class="metric">
+                            <span>WebSocket:</span>
+                            <span class="metric-value" id="wsConnections">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-title">Market Data</div>
+                        <div id="marketData" class="loading">Loading market data...</div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Price</th>
+                                <th>Change</th>
+                                <th>Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketDataTable">
+                            <tr>
+                                <td colspan="4" class="loading">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="trading" class="section" style="display: none;">
+                <h2>Trading</h2>
+                <div class="card">
+                    <div class="card-title">Place Order</div>
+                    <form id="orderForm">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label>Symbol:</label>
+                                <input type="text" id="orderSymbol" required style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                            </div>
+                            <div>
+                                <label>Side:</label>
+                                <select id="orderSide" required style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                                    <option value="buy">Buy</option>
+                                    <option value="sell">Sell</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Type:</label>
+                                <select id="orderType" required style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                                    <option value="market">Market</option>
+                                    <option value="limit">Limit</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Size:</label>
+                                <input type="number" id="orderSize" step="0.01" required style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                            </div>
+                            <div>
+                                <label>Price (for limit orders):</label>
+                                <input type="number" id="orderPrice" step="0.01" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Place Order</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="positions" class="section" style="display: none;">
+                <h2>Positions</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Size</th>
+                                <th>Entry Price</th>
+                                <th>Current Price</th>
+                                <th>P&L</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positionsTable">
+                            <tr>
+                                <td colspan="7" class="loading">Loading positions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="orders" class="section" style="display: none;">
+                <h2>Orders</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTable">
+                            <tr>
+                                <td colspan="8" class="loading">Loading orders...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="backtesting" class="section" style="display: none;">
+                <h2>Backtesting</h2>
+                <div class="card">
+                    <div class="card-title">Run Backtest</div>
+                    <p>Backtesting interface will be implemented here.</p>
+                </div>
+            </div>
+            
+            <div id="settings" class="section" style="display: none;">
+                <h2>Settings</h2>
+                <div class="card">
+                    <div class="card-title">System Configuration</div>
+                    <p>Settings interface will be implemented here.</p>
+                </div>
+            </div>
+            
+            <div id="logs" class="section" style="display: none;">
+                <h2>System Logs</h2>
+                <div class="card">
+                    <div class="card-title">Real-time Logs</div>
+                    <div id="logContainer" style="height: 400px; overflow-y: auto; background-color: #1a1a1a; padding: 1rem; font-family: monospace;">
+                        <div>System logs will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let ws = null;
+        let token = null;
+        
+        // DOM elements
+        const wsStatus = document.getElementById('wsStatus');
+        const wsStatusText = document.getElementById('wsStatusText');
+        const loginBtn = document.getElementById('loginBtn');
+        
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.section;
+                showSection(section);
+                
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+        
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(sectionName).style.display = 'block';
+            
+            // Load section data
+            switch(sectionName) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'positions':
+                    loadPositions();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+            }
+        }
+        
+        // WebSocket functions
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                wsStatus.className = 'status-indicator status-running';
+                wsStatusText.textContent = 'Connected';
+                console.log('WebSocket connected');
+            };
+            
+            ws.onclose = () => {
+                wsStatus.className = 'status-indicator status-stopped';
+                wsStatusText.textContent = 'Disconnected';
+                console.log('WebSocket disconnected');
+                
+                // Reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+        }
+        
+        function handleWebSocketMessage(data) {
+            switch(data.type) {
+                case 'channel_data':
+                    handleChannelData(data);
+                    break;
+                case 'system_alert':
+                    handleSystemAlert(data);
+                    break;
+                default:
+                    console.log('Received message:', data);
+            }
+        }
+        
+        function handleChannelData(data) {
+            if (data.channel === 'positions') {
+                updatePositionsDisplay(data.data);
+            } else if (data.channel === 'market_data') {
+                updateMarketData(data.data);
+            }
+        }
+        
+        function handleSystemAlert(data) {
+            console.warn('System alert:', data.data);
+            // TODO: Show notification to user
+        }
+        
+        // API functions
+        async function apiCall(endpoint, options = {}) {
+            const baseUrl = window.location.origin;
+            const url = `${baseUrl}/api${endpoint}`;
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            if (token) {
+                headers.Authorization = `Bearer ${token}`;
+            }
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+        
+        // Dashboard functions
+        async function loadDashboard() {
+            try {
+                if (!token) return;
+                
+                const summary = await apiCall('/trading/portfolio/summary');
+                updatePortfolioSummary(summary);
+                
+                const systemStatus = await apiCall('/trading/system/status');
+                updateSystemStatus(systemStatus);
+                
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+        
+        function updatePortfolioSummary(summary) {
+            document.getElementById('totalValue').textContent = `$${summary.total_value.toFixed(2)}`;
+            document.getElementById('totalPnl').textContent = `$${summary.total_pnl.toFixed(2)}`;
+            document.getElementById('totalPnl').className = `metric-value ${summary.total_pnl >= 0 ? 'positive' : 'negative'}`;
+            document.getElementById('dailyPnl').textContent = `$${summary.daily_pnl.toFixed(2)}`;
+            document.getElementById('dailyPnl').className = `metric-value ${summary.daily_pnl >= 0 ? 'positive' : 'negative'}`;
+            document.getElementById('totalPositions').textContent = summary.total_positions;
+        }
+        
+        function updateSystemStatus(status) {
+            document.getElementById('tradingMode').textContent = status.is_live_trading ? 'Live Trading' : 'Paper Trading';
+            document.getElementById('serviceStatus').textContent = `${status.total_positions}/${status.total_orders}`;
+        }
+        
+        // Trading functions
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+            
+            const orderData = {
+                symbol: document.getElementById('orderSymbol').value,
+                side: document.getElementById('orderSide').value,
+                order_type: document.getElementById('orderType').value,
+                size: parseFloat(document.getElementById('orderSize').value),
+                price: document.getElementById('orderPrice').value ? parseFloat(document.getElementById('orderPrice').value) : null
+            };
+            
+            try {
+                const result = await apiCall('/trading/orders', {
+                    method: 'POST',
+                    body: JSON.stringify(orderData)
+                });
+                
+                if (result.success) {
+                    alert('Order placed successfully');
+                    document.getElementById('orderForm').reset();
+                    loadOrders();
+                } else {
+                    alert(`Order failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Order failed: ${error.message}`);
+            }
+        });
+        
+        // Login function
+        loginBtn.addEventListener('click', async () => {
+            if (token) {
+                // Logout
+                token = null;
+                loginBtn.textContent = 'Login';
+                return;
+            }
+            
+            const username = prompt('Username:');
+            const password = prompt('Password:');
+            
+            if (!username || !password) return;
+            
+            try {
+                const response = await apiCall('/auth/login-json', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password })
+                });
+                
+                token = response.access_token;
+                loginBtn.textContent = 'Logout';
+                
+                // Subscribe to channels
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'subscribe',
+                        channels: ['positions', 'orders', 'market_data']
+                    }));
+                }
+                
+                loadDashboard();
+                
+            } catch (error) {
+                alert(`Login failed: ${error.message}`);
+            }
+        });
+        
+        // Position functions
+        async function loadPositions() {
+            if (!token) return;
+            
+            try {
+                const positions = await apiCall('/trading/positions');
+                updatePositionsTable(positions);
+            } catch (error) {
+                console.error('Failed to load positions:', error);
+            }
+        }
+        
+        function updatePositionsTable(positions) {
+            const tbody = document.getElementById('positionsTable');
+            
+            if (positions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">No positions</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = positions.map(position => `
+                <tr>
+                    <td>${position.symbol}</td>
+                    <td>${position.side}</td>
+                    <td>${position.size}</td>
+                    <td>$${position.entry_price.toFixed(2)}</td>
+                    <td>-</td>
+                    <td class="${position.unrealized_pnl >= 0 ? 'positive' : 'negative'}">
+                        $${position.unrealized_pnl.toFixed(2)}
+                    </td>
+                    <td>
+                        <button class="btn btn-danger" onclick="closePosition('${position.symbol}')">Close</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        async function closePosition(symbol) {
+            if (!confirm(`Close position for ${symbol}?`)) return;
+            
+            try {
+                await apiCall(`/trading/positions/${symbol}`, { method: 'DELETE' });
+                loadPositions();
+            } catch (error) {
+                alert(`Failed to close position: ${error.message}`);
+            }
+        }
+        
+        // Order functions
+        async function loadOrders() {
+            if (!token) return;
+            
+            try {
+                const orders = await apiCall('/trading/orders');
+                updateOrdersTable(orders);
+            } catch (error) {
+                console.error('Failed to load orders:', error);
+            }
+        }
+        
+        function updateOrdersTable(orders) {
+            const tbody = document.getElementById('ordersTable');
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="loading">No orders</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = orders.map(order => `
+                <tr>
+                    <td>${order.id.substring(0, 8)}...</td>
+                    <td>${order.symbol}</td>
+                    <td>${order.side}</td>
+                    <td>${order.type}</td>
+                    <td>${order.size}</td>
+                    <td>${order.price ? '$' + order.price.toFixed(2) : '-'}</td>
+                    <td>${order.status}</td>
+                    <td>
+                        ${order.status === 'pending' ? 
+                            `<button class="btn btn-danger" onclick="cancelOrder('${order.id}')">Cancel</button>` : 
+                            '-'
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        async function cancelOrder(orderId) {
+            if (!confirm('Cancel this order?')) return;
+            
+            try {
+                await apiCall(`/trading/orders/${orderId}`, { method: 'DELETE' });
+                loadOrders();
+            } catch (error) {
+                alert(`Failed to cancel order: ${error.message}`);
+            }
+        }
+        
+        // Initialize
+        connectWebSocket();
+    </script>
+</body>
+</html>
