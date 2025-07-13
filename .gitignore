@@ -42,11 +42,11 @@ scripts/
 .windsurfrules
 
 # Documentation
-Guideline/
-Manual/
-STOM_Analysis_Report/
-Condition/
-Idea/
+# Guideline/
+# Manual/
+# STOM_Analysis_Report/
+# Condition/
+# Idea/
 
 # Development
 Deep_Data/
