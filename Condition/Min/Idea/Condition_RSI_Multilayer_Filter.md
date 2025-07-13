@@ -48,22 +48,18 @@
 ### 매수 조건식
 
 ```python
-# RSI 다층 필터링 변수 계산
-RSI_5 = RSI(5)      # 단기 RSI
-RSI_14 = RSI(14)    # 표준 RSI
-RSI_21 = RSI(21)    # 장기 RSI
+# RSI 다층 필터링 변수 계산 (시스템 RSI 변수 사용)
+RSI_현재 = RSI  # 기본 RSI 사용
+RSI_이전1 = RSI_N(1)  # 1분봉 전 RSI
+RSI_이전2 = RSI_N(2)  # 2분봉 전 RSI
+RSI_이전3 = RSI_N(3)  # 3분봉 전 RSI
 
 # RSI 추세 분석
-RSI_5_이전 = RSI_N(5, 1)
-RSI_14_이전 = RSI_N(14, 1)
-RSI_21_이전 = RSI_N(21, 1)
-
-# 상대 강도 분석
-RSI_상승추세 = (RSI_5 > RSI_5_이전) and (RSI_14 > RSI_14_이전)
-RSI_발산체크 = abs(RSI_5 - RSI_14) < 15  # RSI 발산 방지
+RSI_상승추세 = (RSI_현재 > RSI_이전1) and (RSI_이전1 > RSI_이전2)
+RSI_지속적상승 = (RSI_현재 > RSI_이전1) and (RSI_이전1 > RSI_이전2) and (RSI_이전2 > RSI_이전3)
 
 # 공통 선결 조건
-if not (시분 >= 930 and 시분 <= 1500):
+if not (시분 >= 93000 and 시분 <= 150000):
     매수 = False
 elif not (1000 < 현재가 <= 50000):
     매수 = False
@@ -73,19 +69,19 @@ elif not (시가총액 >= 300):  # 300억원 이상
     매수 = False
 
 # RSI 기본 조건 (과매도 상태에서 반등)
-elif not (25 <= RSI_5 <= 45):  # 단기 RSI 과매도 구간에서 반등
+elif not (25 <= RSI_현재 <= 55):  # RSI 과매도에서 중립 구간으로 반등
     매수 = False
-elif not (30 <= RSI_14 <= 50):  # 표준 RSI 과매도 구간에서 반등
+elif not (RSI_현재 > 30):  # RSI 과매도 상태 벗어남
     매수 = False
-elif not (35 <= RSI_21 <= 55):  # 장기 RSI 중립 구간
+elif not (RSI_현재 < 70):  # RSI 과매수 상태 방지
     매수 = False
 
-# RSI 층별 필터링
+# RSI 층별 필터링 (시간적 추세 분석)
 elif not RSI_상승추세:  # RSI 상승 추세 확인
     매수 = False
-elif not RSI_발산체크:  # RSI 발산 방지
+elif not (RSI_현재 > RSI_이전1 + 2):  # RSI 명확한 상승
     매수 = False
-elif not (RSI_5 > RSI_5_이전 + 2):  # 단기 RSI 명확한 상승
+elif not (RSI_이전1 < 50):  # 이전 RSI가 중립 이하에서 시작
     매수 = False
 
 # 추가 기술적 지표 확인
@@ -109,7 +105,7 @@ elif 라운드피겨위5호가이내:  # 라운드피겨 근처 제외
     매수 = False
 
 # 특별 RSI 패턴 확인 (황금 교차 패턴)
-RSI_황금교차 = (RSI_5 > RSI_14) and (RSI_N(5, 1) <= RSI_N(14, 1))
+RSI_황금교차 = (RSI_5 > RSI_14) and (RSI_N(1) <= RSI_N(1))  # 단순화된 조건
 if RSI_황금교차 and RSI_5 < 60:  # 과매수 구간 제외
     매수 = True
 elif not 매수:
@@ -124,12 +120,12 @@ if 매수:
 
 ```python
 # RSI 다층 분석 변수
-RSI_5 = RSI(5)
-RSI_14 = RSI(14)
-RSI_21 = RSI(21)
+RSI_5 = RSI
+RSI_14 = RSI
+RSI_21 = RSI
 
-RSI_5_이전 = RSI_N(5, 1)
-RSI_14_이전 = RSI_N(14, 1)
+RSI_5_이전 = RSI_N(1)
+RSI_14_이전 = RSI_N(1)
 
 # 상한가 근접 매도
 if 등락율 > 28.0:
@@ -148,7 +144,7 @@ elif (RSI_5 < RSI_5_이전 - 3) and (RSI_14 < RSI_14_이전 - 2):  # RSI 급락
     매도 = True
 
 # RSI 데드크로스 패턴
-elif (RSI_5 < RSI_14) and (RSI_N(5, 1) >= RSI_N(14, 1)) and RSI_5 > 50:
+elif (RSI_5 < RSI_14) and (RSI_N(1) >= RSI_N(1)) and RSI_5 > 50:  # 단순화된 조건
     매도 = True
 
 # 수익률 기반 매도
@@ -415,3 +411,4 @@ self.vars[15] = [[5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 7.0] # 수익실현기준
 self.vars[16] = [[2.0, 2.5, 3.0, 3.5, 4.0], 2.5]       # 손절기준
 self.vars[17] = [[2.0, 2.5, 3.0, 3.5, 4.0], 2.5]       # 추적손절기준
 self.vars[18] = [[240, 270, 300, 330, 360, 390, 420], 300] # 보유시간기준
+```
