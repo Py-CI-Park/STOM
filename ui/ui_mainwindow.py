@@ -592,6 +592,7 @@ class MainWindow(QMainWindow):
                 self.zmqserv = ZmqServ(self.wdzservQ, port_num)
                 self.zmqserv.start()
             except:
+                self.zmqrecv.terminate()
                 port_num += 10
             else:
                 break
