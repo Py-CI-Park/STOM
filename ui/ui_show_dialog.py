@@ -393,11 +393,6 @@ def show_order(ui):
         ui.dialog_order.close()
 
 
-def show_video(ui):
-    ui.videoWidget.setVisible(True)
-    ui.mediaPlayer.play()
-
-
 def put_hoga_code(ui, coin, code):
     if coin:
         ui.wdzservQ.put(('receiver', ('호가종목코드', '000000')))

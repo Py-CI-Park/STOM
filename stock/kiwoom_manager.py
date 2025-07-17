@@ -5,7 +5,7 @@ import win32gui
 import subprocess
 from PyQt5.QtWidgets import QApplication
 from multiprocessing import Process, Queue
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from kiwoom_trader import KiwoomTrader
 from kiwoom_receiver_min import KiwoomReceiverMin
 from kiwoom_strategy_min import KiwoomStrategyMin
@@ -52,8 +52,6 @@ class ZmqRecv(QThread):
                 if data == '통신종료':
                     QThread.sleep(1)
                     break
-            elif msg == 'simul_strategy':
-                self.sstgQs[0].put(data)
         self.sock.close()
         self.zctx.term()
 
@@ -119,6 +117,7 @@ class KiwoomManager:
         self.zmqserv = ZmqServ(self.qlist, port_num + 1)
         self.zmqserv.start()
 
+        QTimer.singleShot(5 * 1000, lambda: self.kwzservQ.put(('window', '키움매니저구동완료')))
         app.exec_()
 
     def UpdateString(self, data):

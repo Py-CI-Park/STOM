@@ -15,7 +15,6 @@ from ui.set_ordertap import SetOrderTap
 from ui.set_mainmenu import SetMainMenu
 from ui.set_dialog_etc import SetDialogEtc
 from ui.set_dialog_back import SetDialogBack
-from ui.set_mediaplayer import SetMediaPlayer
 from ui.set_dialog_chart import SetDialogChart
 
 from ui.ui_etc import *
@@ -288,6 +287,7 @@ class Writer(QThread):
     signal7  = pyqtSignal(tuple)
     signal8  = pyqtSignal(tuple)
     signal9  = pyqtSignal(str)
+    signal10 = pyqtSignal()
 
     def __init__(self, _windowQ):
         super().__init__()
@@ -335,6 +335,8 @@ class Writer(QThread):
                         self.signal8.emit(data[1])
                     elif '라이브' in data:
                         self.signal9.emit(data)
+                    elif data == '키움매니저구동완료':
+                        self.signal10.emit()
             except:
                 pass
 
@@ -456,7 +458,6 @@ class MainWindow(QMainWindow):
         SetDialogChart(self, self.wc)
         SetDialogEtc(self, self.wc)
         SetDialogBack(self, self.wc)
-        SetMediaPlayer(self)
 
         con1 = sqlite3.connect(DB_SETTING)
         con2 = sqlite3.connect(DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN)
@@ -584,6 +585,11 @@ class MainWindow(QMainWindow):
         self.tm_mc1  = 0
         self.tm_mc2  = 0
 
+        font_name = 'C:/Windows/Fonts/malgun.ttf'
+        font_family = font_manager.FontProperties(fname=font_name).get_name()
+        plt.rcParams['font.family'] = font_family
+        plt.rcParams['axes.unicode_minus'] = False
+
         port_num = 5100
         while True:
             try:
@@ -598,21 +604,6 @@ class MainWindow(QMainWindow):
                 break
 
         subprocess.Popen(f'python ./stock/kiwoom_manager.py {port_num}')
-
-        self.qtimer1 = QTimer()
-        self.qtimer1.setInterval(1 * 1000)
-        self.qtimer1.timeout.connect(self.ProcessStarter)
-        self.qtimer1.start()
-
-        self.qtimer2 = QTimer()
-        self.qtimer2.setInterval(500)
-        self.qtimer2.timeout.connect(self.UpdateProgressBar)
-        self.qtimer2.start()
-
-        self.qtimer3 = QTimer()
-        self.qtimer3.setInterval(1 * 1000)
-        self.qtimer3.timeout.connect(self.UpdateCpuper)
-        self.qtimer3.start()
 
         self.update_textedit    = UpdateTextedit(self)
         self.update_tablewidget = UpdateTablewidget(self)
@@ -631,15 +622,27 @@ class MainWindow(QMainWindow):
         self.writer.signal7.connect(self.UpdateImage)
         self.writer.signal8.connect(self.UpdateSQsize)
         self.writer.signal9.connect(self.StomliveScreenshot)
+        self.writer.signal10.connect(self.Qtimer1Start)
         self.writer.start()
+
+        self.qtimer1 = QTimer()
+        self.qtimer1.setInterval(1 * 1000)
+        self.qtimer1.timeout.connect(self.ProcessStarter)
+
+        self.qtimer2 = QTimer()
+        self.qtimer2.setInterval(500)
+        self.qtimer2.timeout.connect(self.UpdateProgressBar)
+        self.qtimer2.start()
+
+        self.qtimer3 = QTimer()
+        self.qtimer3.setInterval(1 * 1000)
+        self.qtimer3.timeout.connect(self.UpdateCpuper)
+        self.qtimer3.start()
 
         if self.dict_set['코인리시버']: self.mnButtonClicked_01(1)
 
-        font_name = 'C:/Windows/Fonts/malgun.ttf'
-        font_family = font_manager.FontProperties(fname=font_name).get_name()
-        plt.rcParams['font.family'] = font_family
-        plt.rcParams['axes.unicode_minus'] = False
-
+    # =================================================================================================================
+    def Qtimer1Start(self):                self.qtimer1.start()
     # =================================================================================================================
     def ProcessStarter(self):              process_starter(self)
     # =================================================================================================================
@@ -739,7 +742,6 @@ class MainWindow(QMainWindow):
     def ShowBackScheduler(self): show_backscheduler(self)
     def ShowKimp(self):          show_kimp(self)
     def ShowOrder(self):         show_order(self)
-    def ShowVideo(self):         show_video(self)
     def PutHogaCode(self, coin, code): put_hoga_code(self, coin, code)
     def ChartMoneyTopList(self): chart_moneytop_list(self)
     def ChartSizeChange(self):   chart_size_change(self)

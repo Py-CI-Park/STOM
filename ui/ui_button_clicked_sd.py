@@ -63,6 +63,7 @@ def backtest_engine_kill(ui):
     ui.dict_cn     = None
     ui.dict_mt     = None
     ui.back_count  = 0
+    ui.back_engining   = False
     ui.backtest_engine = False
     ui.windowQ.put((ui_num['백테엔진'], '<font color=#45cdf7>모든 백테엔진 프로세스가 종료되었습니다.</font>'))
 

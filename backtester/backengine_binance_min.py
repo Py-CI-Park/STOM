@@ -395,17 +395,18 @@ class BackEngineBinanceMin(BackEngineBinanceTick):
         종목코드, 데이터길이, 시분초, 호가단위 = self.code, self.tick_count, int(str(self.index)[8:] + '00'), 매도호가2 - 매도호가1
         self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
-        start, end = self.indexn+1-self.tick_count, self.indexn+1
-        mc = self.arry_data[start:end, 1]
-        mh = self.arry_data[start:end, 11]
-        ml = self.arry_data[start:end, 12]
-        mv = self.arry_data[start:end, 13]
 
         if self.dict_condition:
             if 종목코드 not in self.dict_cond_indexn.keys():
                 self.dict_cond_indexn[종목코드] = {}
             for k, v in self.dict_condition.items():
                 exec(v)
+
+        start, end = self.indexn+1-self.tick_count, self.indexn+1
+        mc = self.arry_data[start:end, 1]
+        mh = self.arry_data[start:end, 11]
+        ml = self.arry_data[start:end, 12]
+        mv = self.arry_data[start:end, 13]
 
         if self.opti_turn == 1:
             for vturn in self.trade_info.keys():
