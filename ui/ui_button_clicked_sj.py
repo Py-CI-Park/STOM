@@ -260,7 +260,6 @@ def sj_button_cicked_08(ui):
     df = pd.read_sql('SELECT * FROM etc', con).set_index('index')
     con.close()
     if len(df) > 0:
-        ui.sj_etc_checBox_01.setChecked(True) if df['인트로숨김'][0] else ui.sj_etc_checBox_01.setChecked(False)
         ui.sj_etc_checBox_02.setChecked(True) if df['저해상도'][0] else ui.sj_etc_checBox_02.setChecked(False)
         ui.sj_etc_checBox_04.setChecked(True) if df['휴무프로세스종료'][0] else ui.sj_etc_checBox_04.setChecked(False)
         ui.sj_etc_checBox_05.setChecked(True) if df['휴무컴퓨터종료'][0] else ui.sj_etc_checBox_05.setChecked(False)
@@ -596,7 +595,6 @@ def sj_button_cicked_15(ui):
 
 def sj_button_cicked_16(ui):
     the = ui.sj_etc_comBoxx_01.currentText()
-    inr = 1 if ui.sj_etc_checBox_01.isChecked() else 0
     ldp = 1 if ui.sj_etc_checBox_02.isChecked() else 0
     cgo = 1 if ui.sj_etc_checBox_03.isChecked() else 0
     pe  = 1 if ui.sj_etc_checBox_04.isChecked() else 0
@@ -605,14 +603,13 @@ def sj_button_cicked_16(ui):
     pex = 1 if ui.sj_etc_checBox_07.isChecked() else 0
 
     if ui.proc_query.is_alive():
-        query = f"UPDATE etc SET 테마 = '{the}', 인트로숨김 = {inr}, 저해상도 = {ldp}, 창위치기억 = {cgo}, " \
+        query = f"UPDATE etc SET 테마 = '{the}', 저해상도 = {ldp}, 창위치기억 = {cgo}, " \
                 f"휴무프로세스종료 = {pe}, 휴무컴퓨터종료 = {ce}, 스톰라이브 = {slv}, 프로그램종료 = {pex}"
         ui.queryQ.put(('설정디비', query))
     QMessageBox.information(ui, '저장 완료', random.choice(famous_saying))
 
     ui.dict_set['테마'] = the
     ui.dict_set['저해상도'] = ldp
-    ui.dict_set['인트로숨김'] = ldp
     ui.dict_set['창위치기억'] = cgo
     ui.dict_set['휴무프로세스종료'] = pe
     ui.dict_set['휴무컴퓨터종료'] = ce

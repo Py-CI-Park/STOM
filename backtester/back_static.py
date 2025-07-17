@@ -273,25 +273,31 @@ def SetSellCond(selllist):
 
 
 def GetBuyStgFuture(buystg, gubun):
-    buystg_ = buystg.split('if BUY_LONG or SELL_SHORT:')[
+    buytxt  = buystg.split('if BUY_LONG or SELL_SHORT:')[
                  0] + 'if BUY_LONG:\n    self.Buy(vturn, vkey, "LONG")\nelif SELL_SHORT:\n    self.Buy(vturn, vkey, "SHORT")'
-    try:
-        buystg_ = compile(buystg_, '<string>', 'exec')
-    except:
-        buystg_ = None
-        if gubun == 0: print_exc()
-    indistg_ = ''
-    for line in buystg.split('\n'):
-        if 'self.indicator' in line and '#' not in line:
-            indistg_ += f'{line}\n'
-    if indistg_ != '':
+    buystg  = ''
+    indistg = ''
+    for line in buytxt.split('\n'):
+        if 'self.indicator' in line:
+            indistg += f'{line}\n'
+        else:
+            buystg += f'{line}\n'
+    if buystg != '':
         try:
-            indistg_ = compile(indistg_, '<string>', 'exec')
+            buystg = compile(buystg, '<string>', 'exec')
         except:
-            indistg_ = None
+            buystg = None
+            if gubun == 0: print_exc()
     else:
-        indistg_ = None
-    return buystg_, indistg_
+        buystg = None
+    if indistg != '':
+        try:
+            indistg = compile(indistg, '<string>', 'exec')
+        except:
+            indistg = None
+    else:
+        indistg = None
+    return buystg, indistg
 
 
 def GetSellStgFuture(sellstg, gubun):

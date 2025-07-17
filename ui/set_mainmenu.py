@@ -72,7 +72,6 @@ class SetMainMenu:
         self.ui.sf_pushButton = self.wc.setPushbutton('Shift')
         self.ui.bb_pushButton = self.wc.setPushbutton('S', color=6, click=self.ui.ChartScreenShot,    shortcut='Shift+S',       tip='차트창 스샷 텔레그램 전송')
         self.ui.od_pushButton = self.wc.setPushbutton('O', color=6, click=self.ui.ShowOrder,          shortcut='Ctrl+Shift+O',  tip='수동주문창')
-        self.ui.vv_pushButton = self.wc.setPushbutton('V', color=6, click=self.ui.ShowVideo,          shortcut='Ctrl+Shift+V',  tip='인트로영상재생')
         self.ui.zz_pushButton = self.wc.setPushbutton('E', color=6, click=self.ui.ExtendWindow,        shortcut='Ctrl+Shift+E', tip='전략탭확장')
 
         self.ui.image_label1 = QLabel(self.ui)
@@ -120,8 +119,7 @@ class SetMainMenu:
         self.ui.sf_pushButton.setGeometry(5, 485, 35, 15)
         self.ui.bb_pushButton.setGeometry(8, 505, 16, 15)
         self.ui.od_pushButton.setGeometry(23, 505, 16, 15)
-        self.ui.vv_pushButton.setGeometry(8, 525, 16, 15)
-        self.ui.zz_pushButton.setGeometry(23, 525, 16, 15)
+        self.ui.zz_pushButton.setGeometry(8, 525, 16, 15)
         self.ui.progressBarrr.setGeometry(6, 545, 35, 212)
         self.ui.image_label1.setGeometry(1057, 478, 335, 105)
         self.ui.image_label2.setGeometry(1057, 756, 335, 602)

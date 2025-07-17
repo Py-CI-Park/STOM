@@ -49,7 +49,7 @@ def backengine_show(ui, gubun):
         ui.be_lineEdittttt_01.setText('90000' if ui.dict_set['주식타임프레임'] else '900')
         ui.be_lineEdittttt_02.setText('93000' if ui.dict_set['주식타임프레임'] else '1519')
     else:
-        ui.be_lineEdittttt_01.setText('0' if ui.dict_set['코인타임프레임'] else '0')
+        ui.be_lineEdittttt_01.setText('0')
         ui.be_lineEdittttt_02.setText('235959' if ui.dict_set['코인타임프레임'] else '2359')
     if not ui.backengin_window_open:
         ui.be_comboBoxxxxx_01.setCurrentText(ui.dict_set['백테엔진분류방법'])
@@ -352,7 +352,7 @@ def start_backengine(ui, gubun):
         ui.windowQ.put((ui_num['백테엔진'], f'{one_code} 일자별 분류 완료'))
         for i, days in enumerate(day_lists):
             ui.back_eques[i].put(('데이터로딩', ui.startday, ui.endday, ui.starttime, ui.endtime, days, ui.avg_list,
-                                  code_days, day_codes, divid_mode, one_code))
+                                  code_days, day_codes, one_code, divid_mode))
 
     for _ in range(multi):
         data = ui.backQ.get()

@@ -165,7 +165,6 @@ class SetSetupTap:
 
         self.ui.sj_etc_labelll_01 = QLabel('▣  UI 테마 선택                                (재구동 후 적용)', self.ui.sj_bs_groupBox_08)
         self.ui.sj_etc_comBoxx_01 = self.wc.setCombobox(self.ui.sj_bs_groupBox_08, items=['다크블루', '다크브라운', '다크그린', '다크옐로', '다크라임', '다크퍼플'])
-        self.ui.sj_etc_checBox_01 = self.wc.setCheckBox('인트로 영상 재생하지 않기', self.ui.sj_bs_groupBox_08)
         self.ui.sj_etc_checBox_02 = self.wc.setCheckBox('저해상도 설정 (해상도 1920 x 1080일 경우, 재구동 후 적용)', self.ui.sj_bs_groupBox_08)
         self.ui.sj_etc_checBox_03 = self.wc.setCheckBox('프로그램 종료 시 창위치 기억하기 (재구동 후 적용)', self.ui.sj_bs_groupBox_08)
         self.ui.sj_etc_checBox_04 = self.wc.setCheckBox('주식 실행 후 9시1분 또는 10분간까지 장운영알림을 받지 못할 경우 프로세스 종료하기', self.ui.sj_bs_groupBox_08)
@@ -323,7 +322,6 @@ class SetSetupTap:
 
         self.ui.sj_etc_labelll_01.setGeometry(10, 25, 300, 20)
         self.ui.sj_etc_comBoxx_01.setGeometry(100, 25, 85, 20)
-        self.ui.sj_etc_checBox_01.setGeometry(300, 25, 200, 20)
         self.ui.sj_etc_checBox_02.setGeometry(500, 25, 350, 20)
         self.ui.sj_etc_checBox_03.setGeometry(835, 25, 300, 20)
         self.ui.sj_etc_checBox_04.setGeometry(10, 50, 500, 20)
