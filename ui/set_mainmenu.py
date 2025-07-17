@@ -54,7 +54,7 @@ class SetMainMenu:
         self.ui.progressBarrr = self.wc.setProgressBar(self.ui, vertical=True, style=style_pgbar)
         self.ui.at_pushButton = self.wc.setPushbutton('Alt')
         self.ui.tt_pushButton = self.wc.setPushbutton('T', color=6, click=self.ui.mnButtonClicked_02, shortcut='Alt+T', tip='수익집계')
-        self.ui.ms_pushButton = self.wc.setPushbutton('S', color=6, click=self.ui.mnButtonClicked_03, shortcut='Alt+S', tip='주식수동시작')
+        self.ui.ms_pushButton = self.wc.setPushbutton('S', color=6, click=self.ui.mnButtonClicked_03, shortcut='Alt+S', tip='수동시작')
         self.ui.dd_pushButton = self.wc.setPushbutton('D', color=6, click=self.ui.ShowDB,             shortcut='Alt+D', tip='DB관리')
         self.ui.kp_pushButton = self.wc.setPushbutton('P', color=6, click=self.ui.ShowKimp,           shortcut='Alt+P', tip='김프')
         self.ui.zo_pushButton = self.wc.setPushbutton('Z', color=6, click=self.ui.mnButtonClicked_04, shortcut='Alt+Z', tip='축소확대')

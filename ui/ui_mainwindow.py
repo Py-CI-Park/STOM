@@ -598,6 +598,7 @@ class MainWindow(QMainWindow):
                 break
 
         subprocess.Popen(f'python ./stock/kiwoom_manager.py {port_num}')
+        time.sleep(5)
 
         self.qtimer1 = QTimer()
         self.qtimer1.setInterval(1 * 1000)

@@ -399,17 +399,18 @@ class BackEngineUpbitMin2(BackEngineUpbitTick2):
         shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
         self.bhogainfo = bhogainfo[:self.dict_set['코인매수시장가잔량범위']]
         self.shogainfo = shogainfo[:self.dict_set['코인매도시장가잔량범위']]
-        start, end = self.indexn+1-self.tick_count, self.indexn+1
-        mc = self.arry_data[start:end, 1]
-        mh = self.arry_data[start:end, 11]
-        ml = self.arry_data[start:end, 12]
-        mv = self.arry_data[start:end, 13]
 
         if self.dict_condition:
             if 종목코드 not in self.dict_cond_indexn.keys():
                 self.dict_cond_indexn[종목코드] = {}
             for k, v in self.dict_condition.items():
                 exec(v)
+
+        start, end = self.indexn+1-self.tick_count, self.indexn+1
+        mc = self.arry_data[start:end, 1]
+        mh = self.arry_data[start:end, 11]
+        ml = self.arry_data[start:end, 12]
+        mv = self.arry_data[start:end, 13]
 
         if self.opti_turn == 1:
             for vturn in self.trade_info.keys():

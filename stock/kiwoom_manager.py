@@ -52,8 +52,6 @@ class ZmqRecv(QThread):
                 if data == '통신종료':
                     QThread.sleep(1)
                     break
-            elif msg == 'simul_strategy':
-                self.sstgQs[0].put(data)
         self.sock.close()
         self.zctx.term()
 
