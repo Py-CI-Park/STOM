@@ -6,6 +6,9 @@ _log
 *.zip
 *.7z
 
+*.png
+*.jpg
+
 # Added by Claude Task Master
 # Logs
 logs
