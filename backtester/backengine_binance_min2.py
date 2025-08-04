@@ -9,6 +9,17 @@ from utility.static import strp_time, timedelta_sec, GetUvilower5, pickle_read
 
 # noinspection PyUnusedLocal
 class BackEngineBinanceMin2(BackEngineBinanceTick2):
+    def SetDictCondition(self):
+        if self.dict_set['코인경과틱수설정'] != '':
+            def compile_condition(x):
+                return compile(f'if {x}:\n    self.dict_cond_indexn[종목코드][k+str(vturn)+str(vkey)] = self.indexn', '<string>', 'exec')
+            text_list  = self.dict_set['코인경과틱수설정'].split(';')
+            half_cnt   = int(len(text_list) / 2)
+            key_list   = text_list[:half_cnt]
+            value_list = text_list[half_cnt:]
+            value_list = [compile_condition(x) for x in value_list]
+            self.dict_condition = dict(zip(key_list, value_list))
+
     def SetArrayTick(self, code, same_days, same_time):
         if not self.dict_set['백테일괄로딩']:
             self.dict_arry = {code: pickle_read(f'{BACK_TEMP}/{self.gubun}_{code}_tick')}
@@ -243,6 +254,7 @@ class BackEngineBinanceMin2(BackEngineBinanceTick2):
             return Parameter_Dgree(57, 6, tick, pre, 0.00000001)
 
         def 경과틱수(조건명):
+            조건명 = f'{조건명}{vturn}{vkey}'
             if 종목코드 in self.dict_cond_indexn.keys() and \
                     조건명 in self.dict_cond_indexn[종목코드].keys() and self.dict_cond_indexn[종목코드][조건명] != 0:
                 return self.indexn - self.dict_cond_indexn[종목코드][조건명]
@@ -396,12 +408,6 @@ class BackEngineBinanceMin2(BackEngineBinanceTick2):
         self.bhogainfo = ((매도호가1, 매도잔량1), (매도호가2, 매도잔량2), (매도호가3, 매도잔량3), (매도호가4, 매도잔량4), (매도호가5, 매도잔량5))
         self.shogainfo = ((매수호가1, 매수잔량1), (매수호가2, 매수잔량2), (매수호가3, 매수잔량3), (매수호가4, 매수잔량4), (매수호가5, 매수잔량5))
 
-        if self.dict_condition:
-            if 종목코드 not in self.dict_cond_indexn.keys():
-                self.dict_cond_indexn[종목코드] = {}
-            for k, v in self.dict_condition.items():
-                exec(v)
-
         start, end = self.indexn+1-self.tick_count, self.indexn+1
         mc = self.arry_data[start:end, 1]
         mh = self.arry_data[start:end, 11]
@@ -433,6 +439,12 @@ class BackEngineBinanceMin2(BackEngineBinanceTick2):
                     k = list(self.indicator.values())
                     AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM, \
                         OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR = GetIndicator(mc, mh, ml, mv, k)
+
+                    if self.dict_condition:
+                        if 종목코드 not in self.dict_cond_indexn.keys():
+                            self.dict_cond_indexn[종목코드] = {}
+                        for k, v in self.dict_condition.items():
+                            exec(v)
 
                     BUY_LONG, SELL_SHORT = True, True
                     SELL_LONG, BUY_SHORT = False, False
@@ -482,6 +494,12 @@ class BackEngineBinanceMin2(BackEngineBinanceTick2):
                     k = list(self.indicator.values())
                     AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM, \
                         OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR = GetIndicator(mc, mh, ml, mv, k)
+
+                    if self.dict_condition:
+                        if 종목코드 not in self.dict_cond_indexn.keys():
+                            self.dict_cond_indexn[종목코드] = {}
+                        for k, v in self.dict_condition.items():
+                            exec(v)
 
                     BUY_LONG, SELL_SHORT = True, True
                     SELL_LONG, BUY_SHORT = False, False
@@ -540,6 +558,12 @@ class BackEngineBinanceMin2(BackEngineBinanceTick2):
             k = list(self.indicator.values())
             AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM, \
                 OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR = GetIndicator(mc, mh, ml, mv, k)
+
+            if self.dict_condition:
+                if 종목코드 not in self.dict_cond_indexn.keys():
+                    self.dict_cond_indexn[종목코드] = {}
+                for k, v in self.dict_condition.items():
+                    exec(v)
 
             BUY_LONG, SELL_SHORT = True, True
             SELL_LONG, BUY_SHORT = False, False
