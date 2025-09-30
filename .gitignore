@@ -6,8 +6,8 @@ _log
 *.zip
 *.7z
 
-*.png
-*.jpg
+# *.png
+# *.jpg
 
 # Added by Claude Task Master
 # Logs
@@ -56,6 +56,7 @@ Deep_Data/
 
 # etc
 백테스팅_가이드라인_비교_분석.md
+*.png
 
 
 
