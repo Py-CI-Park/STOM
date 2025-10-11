@@ -1,12 +1,44 @@
 {
   "permissions": {
     "allow": [
+      "Bash(for:*)",
+      "Bash(echo:*)",
+      "Bash(sed:*)",
+      "Bash(mkdir:*)",
+      "Bash(go:*)",
+      "Write(*)",
       "Bash(ls:*)",
-      "Bash(git log:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\n프로젝트 문서 구조 재편 및 .gitignore 정책 변경\n\n2025-09-30\n\n1. 문서 구조 대대적 재편성\n   - 기존 루트 레벨의 문서 디렉토리들을 docs/ 하위로 통합\n   - Condition/ → docs/Condition/ (전략 조건식 문서)\n   - Guideline/ → docs/Guideline/ (백테스팅 및 사용 가이드)\n   - Manual/ → docs/Manual/ (사용자 매뉴얼 및 시스템 문서)\n   - Idea/ → docs/Condition/Idea/ (전략 아이디어 문서)\n\n2. .gitignore 정책 변경\n   - PNG/JPG 파일 전역 제외 정책 주석 처리\n   - 백테스팅 결과 그래프(*.png)만 선택적으로 제외\n   - 문서화 목적의 이미지는 커밋 가능하도록 변경\n   - 백테스팅 가이드 비교 분석 파일 제외 유지\n\n3. 전략 및 조건식 문서 이관\n   - 분봉 전략: Condition_Find_1_Min.md, Condition_Study_*.md 등\n   - 틱 전략: Condition_Tick_902.md, Condition_Study_*.md 등  \n   - 전략 아이디어: Bollinger, MACD, RSI 관련 알고리즘 문서들\n   - Reference 자료: PyTrader 조건식, YouTube 호가창 분석 자료\n\n4. 가이드라인 문서 이관\n   - 백테스팅 가이드: Min/Tick 별 백테스팅 가이드라인\n   - 데이터베이스 정보: Stock_Database_Information.md\n   - 사용설명서: 1~4부 스크립트 및 요약본\n   - 매뉴얼 생성 가이드라인\n\n5. 시스템 매뉴얼 이관  \n   - 프로젝트 개요 및 아키텍처 문서\n   - 모듈 분석 및 API 통합 문서\n   - UI/UX 분석 및 데이터 관리 문서\n   - 트레이딩 엔진 및 백테스팅 시스템 문서\n\n변경 영향:\n- 문서 관리 효율성 향상 (중앙집중화)\n- 백테스팅 그래프 버전 관리 제외로 저장소 크기 최적화\n- 문서 이미지는 버전 관리 가능하도록 개선\n- 프로젝트 구조의 명확성 및 유지보수성 개선\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)"
+      "Bash(git:*)",
+      "Update(*:*)",
+      "Bash(mv:*)",
+      "Bash(source:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(pkill:*)",
+      "Bash(touch:*)",
+      "Bash(grep:*)",
+      "Bash(deadcode:*)",
+      "Bash(sqlite3:*)",
+      "Bash(curl:*)",
+      "Bash(rg:*)",
+      "Bash(chmod:*)",
+      "Bash(lsof:*)",
+      "Bash(make:*)",
+      "Bash(PORT=:*)",
+      "Bash(find:*)",
+      "Bash(docker:*)",
+      "Bash(poetry:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git reset:*)",
+      "Bash(git mv:*)",
+      "Bash(tree:*)"
     ],
-    "deny": []
+    "deny": [],
+    "ask": [],
+    "defaultMode": "bypassPermissions"
   }
 }
