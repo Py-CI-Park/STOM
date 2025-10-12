@@ -4,6 +4,7 @@ import sqlite3
 import pandas as pd
 from traceback import print_exc
 from cryptography import fernet
+from multiprocessing import current_process
 from utility.static import read_key, de_text
 
 # ============================================
@@ -16,13 +17,16 @@ if VENV_MODE:
     # 가상환경 경로
     PYTHON_32BIT = os.path.join(PROJECT_ROOT, 'venv_32bit', 'Scripts', 'python.exe')
     PYTHON_64BIT = os.path.join(PROJECT_ROOT, 'venv_64bit', 'Scripts', 'python.exe')
-    print(f'[가상환경 모드] 32bit: {PYTHON_32BIT}')
-    print(f'[가상환경 모드] 64bit: {PYTHON_64BIT}')
+    # 메인 프로세스에서만 출력 (자식 프로세스 반복 출력 방지)
+    if current_process().name == 'MainProcess':
+        print(f'[가상환경 모드] 32bit: {PYTHON_32BIT}')
+        print(f'[가상환경 모드] 64bit: {PYTHON_64BIT}')
 else:
     # 레거시 모드 (기존 python/python64 시스템)
     PYTHON_32BIT = 'python'
     PYTHON_64BIT = 'python64'
-    print('[레거시 모드] python / python64 사용')
+    if current_process().name == 'MainProcess':
+        print('[레거시 모드] python / python64 사용')
 
 OPENAPI_PATH       = 'C:/OpenAPI'
 ICON_PATH          = './icon'
