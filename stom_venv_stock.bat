@@ -9,7 +9,7 @@ REM ============================================
 REM 가상환경 경로
 set VENV_32BIT=%~dp0venv_32bit
 set VENV_64BIT=%~dp0venv_64bit
-set PYTHON_32BIT=%VENV_32BIT%\Scripts\python.exe
+set PYTHON_32BIT=%VENV_32BIT%\Scripts\python32.exe
 set PYTHON_64BIT=%VENV_64BIT%\Scripts\python.exe
 
 REM 환경 검증

@@ -59,7 +59,7 @@ echo ----------------------------------------
 echo.
 
 REM Python 32비트 및 64비트 경로 지정
-set PYTHON32_CMD=C:\Python\32\Python3119\python.exe
+set PYTHON32_CMD=C:\Python\32\Python3119\python32.exe
 set PYTHON64_CMD=C:\Python\64\Python3119\python.exe
 
 echo Python 32비트 확인 중...
@@ -185,9 +185,9 @@ echo [3/7] pip 업그레이드 중...
 echo ----------------------------------------
 echo.
 
-if exist "%~dp0venv_32bit\Scripts\python.exe" (
+if exist "%~dp0venv_32bit\Scripts\python32.exe" (
     echo 32비트 환경 pip 업그레이드...
-    "%~dp0venv_32bit\Scripts\python.exe" -m pip install --upgrade pip setuptools wheel
+    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install --upgrade pip setuptools wheel
     echo.
 )
 
@@ -203,21 +203,21 @@ echo.
 REM ============================================
 REM 4단계: 32비트 환경 의존성 설치
 REM ============================================
-if exist "%~dp0venv_32bit\Scripts\python.exe" (
+if exist "%~dp0venv_32bit\Scripts\python32.exe" (
     echo [4/7] 32비트 환경 의존성 설치 중...
     echo ----------------------------------------
     echo.
 
     echo 기본 패키지 설치 중...
-    "%~dp0venv_32bit\Scripts\python.exe" -m pip install numpy==1.26.4 pandas==2.0.3 python-telegram-bot==13.15
+    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install numpy==1.26.4 pandas==2.0.3 python-telegram-bot==13.15
 
     echo 시스템 패키지 설치 중...
-    "%~dp0venv_32bit\Scripts\python.exe" -m pip install psutil pyqt5 pyzmq pywin32 cryptography
+    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install psutil pyqt5 pyzmq pywin32 cryptography
 
     echo TA-Lib 설치 확인 중...
     if exist "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl" (
         echo TA-Lib 휠 파일 발견, 설치 중...
-        "%~dp0venv_32bit\Scripts\python.exe" -m pip install "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl"
+        "%~dp0venv_32bit\Scripts\python32.exe" -m pip install "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl"
     ) else (
         echo [정보] TA-Lib 32비트 휠 파일이 없습니다.
     )
@@ -274,7 +274,7 @@ echo ----------------------------------------
 echo.
 
 echo 가상환경 존재 확인:
-if exist "%~dp0venv_32bit\Scripts\python.exe" (
+if exist "%~dp0venv_32bit\Scripts\python32.exe" (
     echo   [OK] 32비트 가상환경 존재
 ) else (
     echo   [--] 32비트 가상환경 없음
@@ -288,8 +288,8 @@ if exist "%~dp0venv_64bit\Scripts\python.exe" (
 echo.
 
 echo Python 아키텍처 검증:
-if exist "%~dp0venv_32bit\Scripts\python.exe" (
-    "%~dp0venv_32bit\Scripts\python.exe" -c "import sys; arch='32-bit' if sys.maxsize <= 2**32 else '64-bit'; print(f'  32비트 환경: {arch}')"
+if exist "%~dp0venv_32bit\Scripts\python32.exe" (
+    "%~dp0venv_32bit\Scripts\python32.exe" -c "import sys; arch='32-bit' if sys.maxsize <= 2**32 else '64-bit'; print(f'  32비트 환경: {arch}')"
 )
 
 if exist "%~dp0venv_64bit\Scripts\python.exe" (
@@ -298,8 +298,8 @@ if exist "%~dp0venv_64bit\Scripts\python.exe" (
 echo.
 
 echo 필수 패키지 테스트:
-if exist "%~dp0venv_32bit\Scripts\python.exe" (
-    "%~dp0venv_32bit\Scripts\python.exe" -c "import numpy, pandas; print('  [OK] 32비트 핵심 패키지')" 2>nul
+if exist "%~dp0venv_32bit\Scripts\python32.exe" (
+    "%~dp0venv_32bit\Scripts\python32.exe" -c "import numpy, pandas; print('  [OK] 32비트 핵심 패키지')" 2>nul
     if %errorlevel% neq 0 (
         echo   [경고] 32비트 패키지 설치 실패
     )
@@ -323,10 +323,10 @@ echo [7/7] 설치 요약
 echo ----------------------------------------
 echo.
 
-if exist "%~dp0venv_32bit\Scripts\python.exe" (
+if exist "%~dp0venv_32bit\Scripts\python32.exe" (
     echo 32비트 환경:
-    "%~dp0venv_32bit\Scripts\python.exe" -c "import sys; print(f'  Python: {sys.version.split()[0]}')"
-    "%~dp0venv_32bit\Scripts\python.exe" -c "import pkg_resources; print(f'  패키지: {len(list(pkg_resources.working_set))}개')"
+    "%~dp0venv_32bit\Scripts\python32.exe" -c "import sys; print(f'  Python: {sys.version.split()[0]}')"
+    "%~dp0venv_32bit\Scripts\python32.exe" -c "import pkg_resources; print(f'  패키지: {len(list(pkg_resources.working_set))}개')"
     echo.
 )
 
@@ -349,7 +349,7 @@ if exist "%PYTHON32_CMD%" echo   - 32비트: %PYTHON32_CMD%
 if exist "%PYTHON64_CMD%" echo   - 64비트: %PYTHON64_CMD%
 echo.
 echo [설치된 가상환경]
-if exist "%~dp0venv_32bit\Scripts\python.exe" echo   - 32비트: venv_32bit (Kiwoom API용)
+if exist "%~dp0venv_32bit\Scripts\python32.exe" echo   - 32비트: venv_32bit (Kiwoom API용)
 if exist "%~dp0venv_64bit\Scripts\python.exe" echo   - 64비트: venv_64bit (메인 시스템)
 echo.
 echo [가상환경 모드 감지]

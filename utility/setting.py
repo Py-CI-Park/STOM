@@ -21,12 +21,12 @@ VENV_MODE = os.path.exists(os.path.join(PROJECT_ROOT, 'venv_64bit'))
 
 if VENV_MODE:
     # 가상환경 경로
-    PYTHON_32BIT = os.path.join(PROJECT_ROOT, 'venv_32bit', 'Scripts', 'python.exe')
+    PYTHON_32BIT = os.path.join(PROJECT_ROOT, 'venv_32bit', 'Scripts', 'python32.exe')
     PYTHON_64BIT = os.path.join(PROJECT_ROOT, 'venv_64bit', 'Scripts', 'python.exe')
 else:
     # 레거시 모드 (기존 python/python64 시스템)
-    PYTHON_32BIT = 'python'
-    PYTHON_64BIT = 'python64'
+    PYTHON_32BIT = 'python32'
+    PYTHON_64BIT = 'python'
 
 OPENAPI_PATH       = 'C:/OpenAPI'
 ICON_PATH          = './icon'
