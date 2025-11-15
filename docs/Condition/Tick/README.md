@@ -53,6 +53,7 @@ C_T_[시작시간]_[종료시간]_[업데이트버전]_[매수/매도]
 |--------|--------|-----------|------|-----------|
 | [Condition_Tick_902_905_update_2.md](./Condition_Tick_902_905_update_2.md) | 09:02~09:05 | 시가등락율 + 체결강도 기반 급등주 포착 | ✅ 프로덕션 | ⭐⭐⭐⭐⭐ |
 | [Condition_Tick_900_920.md](./Condition_Tick_900_920.md) | 09:00~09:20 | 4구간 분할 다중 시간대 전략 | ✅ 프로덕션 | ⭐⭐⭐⭐⭐ |
+| [Condition_Tick_900_920_Enhanced.md](./Condition_Tick_900_920_Enhanced.md) | 09:00~09:20 | 900_920 대폭 고도화 - 시가총액 3티어 × 4시간대 = 12전략 조합 | ✅ 프로덕션 | ⭐⭐⭐⭐⭐ |
 | [Condition_Tick_900_930_Composite_Study.md](./Condition_Tick_900_930_Composite_Study.md) | 09:00~09:30 | 종합 조건식 (복합 지표) | ✅ 프로덕션 | ⭐⭐⭐⭐ |
 
 **특징**:
