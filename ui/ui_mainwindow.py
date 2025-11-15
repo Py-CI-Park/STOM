@@ -4,6 +4,8 @@ import subprocess
 from PyQt5.QtWidgets import QCompleter
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
 
+from utility.setting import PYTHON_32BIT
+
 from ui.set_icon import SetIcon
 from ui.set_table import SetTable
 from ui.set_logtap import SetLogTap
@@ -603,7 +605,7 @@ class MainWindow(QMainWindow):
             else:
                 break
 
-        subprocess.Popen(f'python ./stock/kiwoom_manager.py {port_num}')
+        subprocess.Popen(f'{PYTHON_32BIT} ./stock/kiwoom_manager.py {port_num}')
 
         self.update_textedit    = UpdateTextedit(self)
         self.update_tablewidget = UpdateTablewidget(self)
