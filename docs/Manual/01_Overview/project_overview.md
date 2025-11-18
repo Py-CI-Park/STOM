@@ -128,4 +128,10 @@ STOM_V1/
 
 ---
 
-*다음: [02. 시스템 아키텍처](../02_Architecture/system_architecture.md)* 
+*다음: [02. 시스템 아키텍처](../02_Architecture/system_architecture.md)*
+
+---
+
+**작성일**: 2025-01-01
+**최종 수정일**: 2025-11-17
+**버전**: v1.0
