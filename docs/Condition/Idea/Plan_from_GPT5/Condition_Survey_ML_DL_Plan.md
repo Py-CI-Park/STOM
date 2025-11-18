@@ -128,8 +128,9 @@ def objective(trial):
         'rsi_th_buy': trial.suggest_int('rsi_th_buy', 20, 50),
         'rsi_th_sell': trial.suggest_int('rsi_th_sell', 50, 80),
     }
-    # TODO: 기존 백테스터 엔진을 함수로 래핑해 호출 (수익·샤프 계산)
-    sharpe = run_backtest_and_return_sharpe(params)  # 사용자 구현
+    # NOTE: 실제 구현 시 기존 백테스터 엔진을 함수로 래핑하여 호출
+    # (수익률, 샤프 비율 등 성과 지표 계산)
+    sharpe = run_backtest_and_return_sharpe(params)  # 사용자 구현 필요
     return sharpe
 
 study = optuna.create_study(direction='maximize')

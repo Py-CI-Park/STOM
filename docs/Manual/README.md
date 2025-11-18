@@ -21,45 +21,19 @@
 - [유틸리티 모듈 (utility/)](03_Modules/utility_module.md)
 - [백테스터 모듈 (backtester/)](03_Modules/backtester_module.md)
 
-### [04. API 연동 분석](04_APIs/api_integration.md)
-- [키움증권 OpenAPI](04_APIs/kiwoom_api.md)
-- [업비트 API](04_APIs/upbit_api.md)
-- [바이낸스 API](04_APIs/binance_api.md)
-- [실시간 데이터 처리](04_APIs/realtime_data.md)
+### [04. API 연동 분석](04_API/api_integration.md)
 
-### [05. UI/UX 분석](05_UI_Analysis/ui_analysis.md)
-- [메인 윈도우 구조](05_UI_Analysis/main_window.md)
-- [차트 시스템](05_UI_Analysis/chart_system.md)
-- [사용자 인터페이스 플로우](05_UI_Analysis/ui_flow.md)
-- [이벤트 처리](05_UI_Analysis/event_handling.md)
+### [05. UI/UX 분석](05_UI_UX/ui_ux_analysis.md)
 
-### [06. 데이터 관리](06_Data_Management/data_management.md)
-- [데이터베이스 구조](06_Data_Management/database_structure.md)
-- [데이터 수집 및 저장](06_Data_Management/data_collection.md)
-- [성능 최적화](06_Data_Management/performance_optimization.md)
+### [06. 데이터 관리](06_Data/data_management.md)
 
-### [07. 트레이딩 엔진](07_Trading_Engine/trading_engine.md)
-- [전략 실행 로직](07_Trading_Engine/strategy_execution.md)
-- [주문 관리 시스템](07_Trading_Engine/order_management.md)
-- [리스크 관리](07_Trading_Engine/risk_management.md)
-- [포지션 관리](07_Trading_Engine/position_management.md)
+### [07. 트레이딩 엔진](07_Trading/trading_engine.md)
 
 ### [08. 백테스팅 시스템](08_Backtesting/backtesting_system.md)
-- [백테스팅 엔진](08_Backtesting/backtest_engine.md)
-- [최적화 시스템](08_Backtesting/optimization_system.md)
-- [성과 분석](08_Backtesting/performance_analysis.md)
 
 ### [09. 사용자 매뉴얼](09_Manual/user_manual.md)
-- [설치 및 설정](09_Manual/installation_setup.md)
-- [기본 사용법](09_Manual/basic_usage.md)
-- [전략 개발 가이드](09_Manual/strategy_development.md)
-- [트러블슈팅](09_Manual/troubleshooting.md)
 
-### [10. 부록](10_Appendix/appendix.md)
-- [코드 구조 다이어그램](10_Appendix/code_diagrams.md)
-- [API 레퍼런스](10_Appendix/api_reference.md)
-- [용어집](10_Appendix/glossary.md)
-- [참고 자료](10_Appendix/references.md)
+### [10. 결론](10_Conclusion/conclusion.md)
 
 ---
 
@@ -85,4 +59,10 @@
 
 ---
 
-*본 분석 보고서는 파이퀀트 강좌 수강생을 위한 학습 자료로 작성되었습니다.* 
+*본 분석 보고서는 파이퀀트 강좌 수강생을 위한 학습 자료로 작성되었습니다.*
+
+---
+
+**작성일**: 2025-01-01
+**최종 수정일**: 2025-11-17
+**버전**: v1.1
