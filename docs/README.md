@@ -3,7 +3,7 @@
 > STOM (System Trading Optimization Manager) 프로젝트의 모든 문서를 체계적으로 관리하는 중앙 저장소
 
 **📍 위치**: `docs/`
-**📅 최종 업데이트**: 2025-01-15
+**📅 최종 업데이트**: 2025-01-18
 **🔖 버전**: STOM V1
 
 ---
@@ -123,29 +123,71 @@ docs/
 
 **목적**: 모든 트레이딩 전략 조건식 문서 저장소
 
-**하위 폴더**:
+**📈 전체 통계**:
+- **총 문서 수**: **170개** (Tick 73 + Min 65 + Idea 24 + Reference 8)
+- **전략 카테고리**: **18개** (Tick 8개 + Min 10개)
+- **검증 완료 전략**: **96개** (프로덕션 배포 가능)
+- **골드 스탠다드 (⭐⭐⭐⭐⭐)**: 4개
 
-#### 📂 [Condition/Tick](./Condition/Tick/) - 틱 조건식
-- **문서 수**: 30개
-- **주요 문서**:
-  - [Condition_Tick_902_905_update_2.md](./Condition/Tick/Condition_Tick_902_905_update_2.md) ⭐⭐⭐⭐⭐
-  - [Condition_Tick_900_920.md](./Condition/Tick/Condition_Tick_900_920.md) ⭐⭐⭐⭐⭐
-  - [Condition_Tick_900_930_Composite_Study.md](./Condition/Tick/Condition_Tick_900_930_Composite_Study.md) ⭐⭐⭐⭐
-- **특징**: 초 단위 고빈도 트레이딩, 급등주 포착
+---
 
-#### 📂 [Condition/Min](./Condition/Min/) - 분봉 조건식
-- **문서 수**: 20개
-- **주요 문서**:
-  - [Condition_Find_1_Min.md](./Condition/Min/Condition_Find_1_Min.md)
-  - [Condition_MACD_Precision_System.md](./Condition/Min/Idea/Condition_MACD_Precision_System.md)
-  - [Condition_Triple_Confirmation.md](./Condition/Min/Idea/Condition_Triple_Confirmation.md)
-- **특징**: 1분봉 캔들 데이터, TA-Lib 지표 활용
+#### 📂 [Condition/Tick](./Condition/Tick/) - 틱 조건식 (**73개**)
 
-#### 📂 [Condition/Idea](./Condition/Idea/) - 전략 아이디어
+초(秒) 단위 틱 데이터 기반 고빈도 트레이딩 전략
+
+**8가지 카테고리**:
+- 🌅 **시간대별 전략 (27개)**: 장 초반(18), 오전장(5), 오후장(4)
+- 🚀 **모멘텀 기반 (8개)**: 체결강도, 등락율, 급등 속도
+- 📊 **거래량 기반 (6개)**: 초당거래대금, 거래량 폭발
+- 📈 **호가창 기반 (7개)**: 매수/매도벽, 호가 불균형
+- 🎯 **갭/돌파 (7개)**: 시가 갭, 고가 돌파
+- 🔄 **반전/스캘핑 (6개)**: 빠른 반전, 초단타
+- ⚡ **특수 지표 (5개)**: 시가총액 차등, 각도 분석
+- 🔬 **연구/AI (17개)**: 연구 13개, AI 2개
+
+**골드 스탠다드**:
+- ⭐⭐⭐⭐⭐ [Condition_Tick_902_905_update_2.md](./Condition/Tick/Condition_Tick_902_905_update_2.md) - 시가등락율 + 체결강도
+- ⭐⭐⭐⭐⭐ [Condition_Tick_900_920_Enhanced.md](./Condition/Tick/Condition_Tick_900_920_Enhanced.md) - 시가총액 3티어 × 4시간대
+- ⭐⭐⭐⭐⭐ [Condition_Tick_925_935_Angle_Strategy.md](./Condition/Tick/Condition_Tick_925_935_Angle_Strategy.md) - 각도 지표 삼각 검증
+
+**특징**: 초 단위 고빈도 트레이딩, 장 초반 급등주 포착, 호가창 분석
+
+**자세히 보기**: [Tick/README.md](./Condition/Tick/README.md)
+
+---
+
+#### 📂 [Condition/Min](./Condition/Min/) - 분봉 조건식 (**65개**)
+
+1분봉 캔들 데이터 기반 기술적 지표 활용 전략
+
+**10가지 카테고리**:
+- 📈 **MACD 기반 (5개)**: 골든크로스, 크로스오버
+- 📉 **RSI 기반 (4개)**: 다이버전스, 과매수/과매도
+- 🔵 **Bollinger Bands (6개)**: 스퀴즈, 반등, 돌파
+- 📊 **Moving Average (5개)**: 정배열, 골든크로스
+- 📦 **Volume 기반 (4개)**: 거래량 돌파, 모멘텀
+- 🔄 **Stochastic (3개)**: 크로스, 과매도
+- 🎯 **복합 지표 (3개)**: 다중 지표 융합
+- ⚙️ **기타 지표 (7개)**: ADX, ATR, CCI, MFI, ROC, Williams %R
+- 📐 **패턴/추세 (6개)**: 캔들 패턴, 지지/저항, 갭
+- 🔬 **연구/아이디어 (22개)**
+
+**추천 문서**:
+- [Condition_Min_MACD_Cross.md](./Condition/Min/Condition_Min_MACD_Cross.md) - MACD 크로스 + RSI
+- [Condition_Min_RSI_Divergence.md](./Condition/Min/Condition_Min_RSI_Divergence.md) - RSI 다이버전스
+- [Condition_Min_Volume_Breakout.md](./Condition/Min/Condition_Min_Volume_Breakout.md) - 거래량 돌파
+
+**특징**: 1분봉 캔들 데이터, TA-Lib 지표 활용, 기술적 분석 중심
+
+**자세히 보기**: [Min/README.md](./Condition/Min/README.md)
+
+---
+
+#### 📂 [Condition/Idea](./Condition/Idea/) - 전략 아이디어 (24개)
 - **Plan_from_GPT5**: GPT-5 기반 전략 계획 (13개 문서)
 - **Plan_from_claude_opus**: Claude Opus 기반 전략 계획 (11개 문서)
 
-#### 📂 [Condition/Reference](./Condition/Reference/) - 참고 자료
+#### 📂 [Condition/Reference](./Condition/Reference/) - 참고 자료 (8개)
 - **PyTrader**: PyTrader 참고 자료 (2개)
 - **YouTube**: 호가창 분석 자료 (6개)
 
@@ -355,23 +397,39 @@ graph LR
 ## 📊 문서 통계
 
 ### 전체 문서 수
-- **Guideline**: 5개 핵심 문서 + 8개 사용설명서
-- **Condition**: 87개 문서
-  - Tick: 30개
-  - Min: 20개
-  - Idea: 29개
+- **Guideline**: 5개 핵심 문서 + 8개 사용설명서 = **13개**
+- **Condition**: **170개 문서**
+  - Tick: **73개** (시간대별 27, 모멘텀 8, 거래량 6, 호가창 7, 갭/돌파 7, 반전 6, 특수 5, 연구 17)
+  - Min: **65개** (MACD 5, RSI 4, BBand 6, MA 5, Volume 4, Stochastic 3, 복합 3, 기타지표 7, 패턴/추세 6, 연구/아이디어 22)
+  - Idea: 24개
   - Reference: 8개
 - **Manual**: 10개 섹션 (다수 하위 문서)
 - **CodeReview**: 1개
-- **총계**: 100+ 문서
+- **가상환경구축연구**: 1개
+- **총계**: **185+ 문서**
 
 ### 문서 품질 분포
-- ⭐⭐⭐⭐⭐ (골드 스탠다드): 3개
-- ⭐⭐⭐⭐ (검증 완료): 6개
-- 📊 (연구 단계): 16개
-- 💡 (아이디어 단계): 15개
+- ⭐⭐⭐⭐⭐ (골드 스탠다드): **4개**
+- ⭐⭐⭐⭐ (검증 완료): 1개
+- ✅ (프로덕션 배포 가능): **96개**
+- 📊 (연구 단계): 26개
+- 💡 (아이디어 단계): 39개
+- 🔍 (AI 생성): 2개
 - 📘 (가이드라인): 13개
 - 📖 (매뉴얼): 10개 섹션
+
+### 전략 카테고리 분포
+**Tick 전략 (73개)**:
+- 시간대별 특화: 37% (27개)
+- 모멘텀/거래량: 19% (14개)
+- 호가창 분석: 10% (7개)
+- 갭/돌파/반전: 18% (13개)
+- 연구/기타: 23% (17개)
+
+**Min 전략 (65개)**:
+- 기술적 지표 (단일): 54% (35개)
+- 복합 지표/패턴: 14% (9개)
+- 연구/아이디어: 34% (22개)
 
 ---
 

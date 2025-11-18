@@ -3,7 +3,7 @@
 > 1분봉 캔들 데이터 기반 스윙/단타 트레이딩 전략 조건식 문서
 
 **📍 위치**: `docs/Condition/Min/`
-**📅 최종 업데이트**: 2025-01-15
+**📅 최종 업데이트**: 2025-01-18
 
 ---
 
@@ -49,24 +49,167 @@
 
 ## 조건식 문서 목록
 
-### 프로덕션 조건식 (Production)
+### 📊 전체 통계
 
-✅ 검증 완료 및 실전 배포 가능한 조건식
-
-| 파일명 | 시간대 | 전략 개요 | 상태 |
-|--------|--------|-----------|------|
-| [Condition_Find_1_Min.md](./Condition_Find_1_Min.md) | 전체 | 분봉 기반 조건 탐색 1차 | ✅ 프로덕션 |
-| [Condition_Stomer_Min.md](./Condition_Stomer_Min.md) | 전체 | Stomer 분봉 전략 | ✅ 프로덕션 |
+- **전체 조건식**: 50개
+- **카테고리**: 10개 (기술적 지표별)
+- **주요 지표**: MACD, RSI, Bollinger Bands, Moving Average, Volume, Stochastic 등
 
 ---
 
-### 연구 및 스터디 조건식
+## 카테고리별 조건식 목록
+
+### 1️⃣ MACD 기반 전략 (5개)
+
+MACD(Moving Average Convergence Divergence) 지표를 활용한 추세 전환 및 골든크로스 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_MACD_GoldenCross.md](./Condition_MACD_GoldenCross.md) | MACD 골든크로스 패턴 | ✅ |
+| [Condition_MACD_Golden_Cross.md](./Condition_MACD_Golden_Cross.md) | MACD 골든크로스 변형 | ✅ |
+| [Condition_Min_MACD_Cross.md](./Condition_Min_MACD_Cross.md) | MACD 크로스오버 + RSI 필터 | ✅ |
+| [Condition_Min_MACD_Crossover.md](./Condition_Min_MACD_Crossover.md) | MACD 크로스오버 기본 | ✅ |
+| [Condition_Min_MACD_GoldenCross.md](./Condition_Min_MACD_GoldenCross.md) | MACD 골든크로스 + BBand 필터 | ✅ |
+
+**특징**: 추세 전환 포착, 골든크로스/데드크로스 활용, 히스토그램 분석
+
+---
+
+### 2️⃣ RSI 기반 전략 (4개)
+
+RSI(Relative Strength Index)를 활용한 과매수/과매도 및 다이버전스 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_Min_RSI_Divergence.md](./Condition_Min_RSI_Divergence.md) | RSI 다이버전스 (가격-지표 괴리) | ✅ |
+| [Condition_Min_RSI_Oversold.md](./Condition_Min_RSI_Oversold.md) | RSI 과매도 구간 반등 | ✅ |
+| [Condition_Min_RSI_Reversal.md](./Condition_Min_RSI_Reversal.md) | RSI 반전 신호 | ✅ |
+| [Condition_RSI_Oversold_Rebound.md](./Condition_RSI_Oversold_Rebound.md) | RSI 과매도 리바운드 | ✅ |
+
+**특징**: 과매수/과매도 구간 활용, 다이버전스 탐지, 반전 신호 포착
+
+---
+
+### 3️⃣ 볼린저 밴드 기반 전략 (6개)
+
+Bollinger Bands를 활용한 변동성 돌파 및 반등 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_Bollinger_Reversal.md](./Condition_Bollinger_Reversal.md) | 볼린저 밴드 반전 | ✅ |
+| [Condition_Min_BB_Squeeze.md](./Condition_Min_BB_Squeeze.md) | 볼린저 밴드 스퀴즈 (변동성 수축) | ✅ |
+| [Condition_Min_BBand_Reversal.md](./Condition_Min_BBand_Reversal.md) | BBand 하단 반등 | ✅ |
+| [Condition_Min_Bollinger_Bounce.md](./Condition_Min_Bollinger_Bounce.md) | 볼린저 밴드 바운스 | ✅ |
+| [Condition_Min_Bollinger_Breakout_Strategy.md](./Condition_Min_Bollinger_Breakout_Strategy.md) | BBand 상단 돌파 | ✅ |
+| [Condition_Min_Bollinger_Squeeze.md](./Condition_Min_Bollinger_Squeeze.md) | 스퀴즈 후 확장 | ✅ |
+
+**특징**: 변동성 분석, 밴드 상/하단 터치 전략, 스퀴즈 패턴 활용
+
+---
+
+### 4️⃣ 이동평균 기반 전략 (5개)
+
+Moving Average를 활용한 추세 추종 및 골든크로스 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_MA_Alignment_Momentum.md](./Condition_MA_Alignment_Momentum.md) | 이동평균 정배열 + 모멘텀 | ✅ |
+| [Condition_Min_MA_Alignment.md](./Condition_Min_MA_Alignment.md) | 다중 이동평균 정배열 | ✅ |
+| [Condition_Min_MA_Convergence.md](./Condition_Min_MA_Convergence.md) | 이동평균 수렴 패턴 | ✅ |
+| [Condition_Min_Moving_Average_Golden_Cross.md](./Condition_Min_Moving_Average_Golden_Cross.md) | MA 골든크로스 | ✅ |
+| [Condition_Min_Multi_MA_Cross.md](./Condition_Min_Multi_MA_Cross.md) | 다중 MA 크로스 | ✅ |
+
+**특징**: 추세 추종, 골든크로스/데드크로스, 정배열/역배열 분석
+
+---
+
+### 5️⃣ 거래량 기반 전략 (4개)
+
+Volume 분석을 통한 매집/매도 세력 파악 및 돌파 확인 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_Min_Volume_Breakout.md](./Condition_Min_Volume_Breakout.md) | 거래량 급증 + 가격 돌파 | ✅ |
+| [Condition_Min_Volume_Momentum.md](./Condition_Min_Volume_Momentum.md) | 거래량 모멘텀 | ✅ |
+| [Condition_Min_Volume_Price_Trend.md](./Condition_Min_Volume_Price_Trend.md) | 거래량-가격 추세 | ✅ |
+| [Condition_Min_Volume_Weighted.md](./Condition_Min_Volume_Weighted.md) | 거래량 가중 분석 | ✅ |
+
+**특징**: 거래량 급증 감지, 매집/매도 세력 분석, 거래량-가격 다이버전스
+
+---
+
+### 6️⃣ Stochastic 기반 전략 (3개)
+
+Stochastic Oscillator를 활용한 과매수/과매도 및 크로스 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_Min_Stochastic_Cross.md](./Condition_Min_Stochastic_Cross.md) | 스토캐스틱 크로스 | ✅ |
+| [Condition_Min_Stochastic_Crossover.md](./Condition_Min_Stochastic_Crossover.md) | %K/%D 크로스오버 | ✅ |
+| [Condition_Min_Stochastic_Oversold.md](./Condition_Min_Stochastic_Oversold.md) | 스토캐스틱 과매도 반등 | ✅ |
+
+**특징**: %K/%D 크로스 활용, 과매도 구간 반등, 빠른 반전 신호
+
+---
+
+### 7️⃣ 복합 지표 전략 (3개)
+
+여러 기술적 지표를 조합한 다층 필터링 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_Min_900_1000_BB_RSI.md](./Condition_Min_900_1000_BB_RSI.md) | BBand + RSI 복합 (09:00-10:00) | ✅ |
+| [Condition_Min_MultiIndicator_Composite.md](./Condition_Min_MultiIndicator_Composite.md) | 다중 지표 종합 전략 | ✅ |
+| [Condition_Min_Multi_Indicator_Fusion.md](./Condition_Min_Multi_Indicator_Fusion.md) | 지표 융합 시스템 | ✅ |
+
+**특징**: 다중 지표 조합, 신뢰도 향상, 거짓 신호 필터링
+
+---
+
+### 8️⃣ 기타 기술적 지표 전략 (7개)
+
+ADX, ATR, CCI, MFI, ROC, SAR, Williams %R 등 특수 지표 활용
+
+| 파일명 | 지표 | 전략 핵심 | 상태 |
+|--------|------|-----------|------|
+| [Condition_Min_ADX_TrendStrength.md](./Condition_Min_ADX_TrendStrength.md) | ADX | 추세 강도 측정 | ✅ |
+| [Condition_Min_ATR_Breakout.md](./Condition_Min_ATR_Breakout.md) | ATR | 변동성 돌파 | ✅ |
+| [Condition_Min_CCI_Extreme.md](./Condition_Min_CCI_Extreme.md) | CCI | 극단적 과매수/과매도 | ✅ |
+| [Condition_Min_MFI_MoneyFlow.md](./Condition_Min_MFI_MoneyFlow.md) | MFI | 자금 흐름 분석 | ✅ |
+| [Condition_Min_MFI_Money_Flow.md](./Condition_Min_MFI_Money_Flow.md) | MFI | 자금 흐름 (변형) | ✅ |
+| [Condition_Min_ROC_Momentum.md](./Condition_Min_ROC_Momentum.md) | ROC | 변화율 모멘텀 | ✅ |
+| [Condition_Min_WilliamsR_Oversold.md](./Condition_Min_WilliamsR_Oversold.md) | Williams %R | 과매도 반등 | ✅ |
+
+**특징**: 전문 지표 활용, 특수 시장 상황 대응, 고급 기술적 분석
+
+---
+
+### 9️⃣ 패턴 및 추세 전략 (6개)
+
+캔들 패턴, 지지/저항, 갭, 추세 추종 등 프라이스 액션 기반 전략
+
+| 파일명 | 전략 핵심 | 상태 |
+|--------|-----------|------|
+| [Condition_Gap_Up_Breakout.md](./Condition_Gap_Up_Breakout.md) | 갭 상승 후 돌파 | ✅ |
+| [Condition_Min_0930_1000_Trend.md](./Condition_Min_0930_1000_Trend.md) | 09:30-10:00 추세 전략 | ✅ |
+| [Condition_Min_Candle_Pattern.md](./Condition_Min_Candle_Pattern.md) | 캔들 패턴 인식 | ✅ |
+| [Condition_Min_SAR_Reversal.md](./Condition_Min_SAR_Reversal.md) | Parabolic SAR 반전 | ✅ |
+| [Condition_Min_SupportResistance.md](./Condition_Min_SupportResistance.md) | 지지/저항 레벨 | ✅ |
+| [Condition_Min_Trend_Following.md](./Condition_Min_Trend_Following.md) | 추세 추종 시스템 | ✅ |
+
+**특징**: 프라이스 액션, 캔들 패턴, 지지/저항 분석, 추세 추종
+
+---
+
+### 🔟 연구 및 스터디 조건식 (6개)
 
 🔬 백테스팅 및 분석 단계의 연구용 조건식
 
 | 파일명 | 주요 연구 내용 | 상태 |
 |--------|---------------|------|
-| [Condition_Study_1_Min.md](./Condition_Study_1_Min.md) | 기본 분봉 전략 연구 | 📊 연구 |
+| [Condition_Find_1_Min.md](./Condition_Find_1_Min.md) | 기본 분봉 전략 탐색 | 📊 연구 |
+| [Condition_Stomer_Min.md](./Condition_Stomer_Min.md) | Stomer 분봉 전략 | 📊 연구 |
+| [Condition_Study_1_Min.md](./Condition_Study_1_Min.md) | 1차 연구 | 📊 연구 |
 | [Condition_Study_2_Min.md](./Condition_Study_2_Min.md) | 2차 개선 연구 | 📊 연구 |
 | [Condition_Study_3_902_min.md](./Condition_Study_3_902_min.md) | 09:02 분봉 집중 연구 | 📊 연구 |
 | [Condition_Study_3_9010_min.md](./Condition_Study_3_9010_min.md) | 09:10 분봉 집중 연구 | 📊 연구 |
@@ -224,9 +367,18 @@ else:  # 11:00 이후 (오후장)
 
 ## 📊 통계
 
-- **전체 문서 수**: 20개
-- **프로덕션 조건식**: 2개
-- **연구 조건식**: 5개
+- **전체 문서 수**: 50개 (Main) + 15개 (Idea) = **65개**
+- **카테고리별 분포**:
+  - MACD 기반: 5개
+  - RSI 기반: 4개
+  - Bollinger Bands 기반: 6개
+  - Moving Average 기반: 5개
+  - Volume 기반: 4개
+  - Stochastic 기반: 3개
+  - 복합 지표: 3개
+  - 기타 기술적 지표: 7개
+  - 패턴/추세: 6개
+  - 연구/스터디: 7개
 - **아이디어 조건식**: 15개
   - 기술적 지표 기반: 4개
   - 시장 상황별: 5개
