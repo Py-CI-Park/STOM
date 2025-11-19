@@ -135,9 +135,9 @@ C_T_[시작시간]_[종료시간]_[업데이트버전]_[매수/매도]
 
 | 파일명 | 설명 |
 |--------|------|
-| [Condition_Tick_902_905_update_2_soruce.md](./Condition_Tick_902_905_update_2_soruce.md) | update_2의 원본 소스 코드 |
-| [Condition_Tick_902_905_update_soruce.md](./Condition_Tick_902_905_update_soruce.md) | update_1의 원본 소스 코드 |
-| [Condition_Tick_902_update_soruce.md](./Condition_Tick_902_update_soruce.md) | 902 업데이트의 원본 소스 코드 |
+| [Condition_Tick_902_905_update_2_source.md](./Condition_Tick_902_905_update_2_source.md) | update_2의 원본 소스 코드 |
+| [Condition_Tick_902_905_update_source.md](./Condition_Tick_902_905_update_source.md) | update_1의 원본 소스 코드 |
+| [Condition_Tick_902_update_source.md](./Condition_Tick_902_update_source.md) | 902 업데이트의 원본 소스 코드 |
 
 ---
 
@@ -329,9 +329,9 @@ C_T_[시작시간]_[종료시간]_[업데이트버전]_[매수/매도]
 | [Condition_Study_By_GPT_o1.md](./Condition_Study_By_GPT_o1.md) | AI (GPT-o1) | 🔍 |
 | [Condition_Study_By_Grok3.md](./Condition_Study_By_Grok3.md) | AI (Grok3) | 🔍 |
 | [Condition_Test_Template.md](./Condition_Test_Template.md) | 템플릿 | 🧪 |
-| [Condition_Tick_902_905_update_2_soruce.md](./Condition_Tick_902_905_update_2_soruce.md) | 소스 | 📄 |
-| [Condition_Tick_902_905_update_soruce.md](./Condition_Tick_902_905_update_soruce.md) | 소스 | 📄 |
-| [Condition_Tick_902_update_soruce.md](./Condition_Tick_902_update_soruce.md) | 소스 | 📄 |
+| [Condition_Tick_902_905_update_2_source.md](./Condition_Tick_902_905_update_2_source.md) | 소스 | 📄 |
+| [Condition_Tick_902_905_update_source.md](./Condition_Tick_902_905_update_source.md) | 소스 | 📄 |
+| [Condition_Tick_902_update_source.md](./Condition_Tick_902_update_source.md) | 소스 | 📄 |
 | [Condition_Study_Open_Breakout.md](./20250808_study/Condition_Study_Open_Breakout.md) | 연구 (2025-08-08) | 📊 |
 
 ---

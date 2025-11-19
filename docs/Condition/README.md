@@ -149,7 +149,7 @@ Claude Opus 기반으로 생성된 전략 계획 및 프로젝트 문서
 | `Stock_Database_Information.md` | 주식 데이터베이스 정보 (Claude 버전) |
 
 **프로그램 개발 문서**:
-- `00_Smmary.md` - 요약
+- `00_Summary.md` - 요약
 - `01_project_overview.md` - 프로젝트 개요
 - `02_data_pipeline.md` - 데이터 파이프라인
 - `03_model_development.md` - 모델 개발
@@ -270,6 +270,14 @@ graph TD
 | 백테스팅 완료 | `Condition_*.md` (메인) | Condition_Tick_902_905.md |
 | 프로덕션 배포 | `Condition_*_update_*.md` | Condition_Tick_902_905_update_2.md |
 | 참고 자료 | `Reference/` 폴더 | Reference/PyTrader/, Reference/YouTube/ |
+
+---
+
+## 최근 문서 검수 메모 (2025-01-18)
+
+- 파일 오탈자 수정: Tick/Min 소스 파일(`*_source.md`) 및 Claude 계획 문서(`00_Summary.md`) 이름을 통일해 링크 오류를 방지했습니다.
+- 소스/연구 자료 분리: Tick·Min README의 소스 파일 섹션을 다시 점검해 연구/템플릿과 혼동되지 않도록 표기했습니다.
+- 향후 검수 체크포인트: 신규 조건식은 템플릿 준수 여부, 파일명 규칙(C_·Condition_ 접두어) 일관성, 상위 README 링크 정상 동작을 필수 확인하세요.
 
 ---
 
