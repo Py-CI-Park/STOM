@@ -1,7 +1,8 @@
-# 조건식 (Condition)
+# 조건식 (Condition) - 분봉(Minute) 기반
 
-- STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Min.md 가이드라인 반영
+- STOM 주식 자동거래에 사용하기 위한 분봉 조건식 문서
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition)](#조건식-condition)
@@ -18,6 +19,17 @@
 ## 소개
 
 이 문서는 STOM 주식 자동거래 시스템에서 MACD 골든크로스 전략(MACD Golden Cross)을 위한 조건식과 최적화 범위를 제공합니다. MACD가 시그널선을 상향 돌파하는 순간을 포착하여 매수하는 추세 전환 전략입니다.
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **MACD 골든크로스 기반 추세 전환 포착 전략**을 정의한다.
+
+- **대상 시간 구간**: 09:30:00 ~ 15:00:00 (장중 전체)
+- **대상 종목**: 시가총액 3,000억 미만, 가격대 1,000원~50,000원
+- **전략 타입**: MACD 골든크로스 추세 전환 (Trend Reversal)
+- **핵심 변수**: MACD, MACDS, MACDH, RSI, 이동평균(20), 체결강도, 분당거래대금
+- **업데이트 이력**:
+  - 초기 문서 작성
 
 ## 가이드라인
 
