@@ -23,189 +23,313 @@ STOM 시스템은 **고성능 실시간 데이터 처리**를 위한 다층 데�
 
 ### SQLite 기반 데이터 저장소
 
-#### 1. 데이터베이스 구조 (`utility/setting.py`)
+#### 1. 데이터베이스 구조 (`utility/setting.py:31-49`)
 ```python
 # 데이터베이스 경로 설정
-DATABASE_PATHS = {
-    'stock': {
-        'tick': 'database/stock_tick.db',
-        'min': 'database/stock_min.db',
-        'day': 'database/stock_day.db'
-    },
-    'coin': {
-        'tick': 'database/coin_tick.db', 
-        'min': 'database/coin_min.db',
-        'day': 'database/coin_day.db'
-    },
-    'backtest': 'database/backtest.db',
-    'strategy': 'database/strategy.db'
-}
-
-def get_database_path(market, timeframe):
-    """데이터베이스 경로 반환"""
-    return DATABASE_PATHS.get(market, {}).get(timeframe)
+OPENAPI_PATH       = 'C:/OpenAPI'
+ICON_PATH          = './icon'
+LOGIN_PATH         = './stock/login_kiwoom'
+GRAPH_PATH         = './backtester/graph'
+BACK_TEMP          = './backtester/temp'
+DB_PATH            = './_database'
+DB_SETTING         = './_database/setting.db'
+DB_BACKTEST        = './_database/backtest.db'
+DB_TRADELIST       = './_database/tradelist.db'
+DB_STOCK_TICK      = './_database/stock_tick.db'
+DB_STOCK_MIN       = './_database/stock_min.db'
+DB_STOCK_BACK_TICK = './_database/stock_tick_back.db'
+DB_STOCK_BACK_MIN  = './_database/stock_min_back.db'
+DB_COIN_TICK       = './_database/coin_tick.db'
+DB_COIN_MIN        = './_database/coin_min.db'
+DB_COIN_BACK_TICK  = './_database/coin_tick_back.db'
+DB_COIN_BACK_MIN   = './_database/coin_min_back.db'
+DB_STRATEGY        = './_database/strategy.db'
+DB_OPTUNA          = 'sqlite:///./_database/optuna.db'
 ```
 
-#### 2. 테이블 스키마 설계
+**데이터베이스 파일 목록:**
+- **설정 DB**: `setting.db` - 시스템 설정 및 암호화된 계정 정보
+- **거래 DB**: `tradelist.db` - 체결, 잔고, 거래 내역
+- **전략 DB**: `strategy.db` - 매매 전략 코드 및 조건식
+- **백테스트 DB**: `backtest.db` - 백테스팅 결과 데이터
+- **주식 데이터 DB**: `stock_tick.db`, `stock_min.db` - 실시간 주식 시장 데이터
+- **암호화폐 데이터 DB**: `coin_tick.db`, `coin_min.db` - 실시간 암호화폐 시장 데이터
+- **백테스트용 DB**: `stock_tick_back.db`, `stock_min_back.db`, `coin_tick_back.db`, `coin_min_back.db`
+- **최적화 DB**: `optuna.db` - Optuna 최적화 결과
 
-##### 주식 틱 데이터 테이블
-```sql
-CREATE TABLE IF NOT EXISTS stock_tick (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    code TEXT NOT NULL,                 -- 종목코드
-    name TEXT,                          -- 종목명
-    current_price INTEGER,              -- 현재가
-    open_price INTEGER,                 -- 시가
-    high_price INTEGER,                 -- 고가
-    low_price INTEGER,                  -- 저가
-    volume INTEGER,                     -- 거래량
-    volume_price REAL,                  -- 거래대금
-    change_rate REAL,                   -- 등락률
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_code_timestamp (code, timestamp),
-    INDEX idx_timestamp (timestamp)
-);
+#### 2. 테이블 스키마 설계 (`utility/database_check.py`)
+
+##### 설정 DB 테이블 (`setting.db`)
+
+**main 테이블** - 시스템 주요 설정
+```python
+columns = [
+    'index', '증권사', '주식리시버', '주식트레이더', '주식데이터저장', '거래소',
+    '코인리시버', '코인트레이더', '코인데이터저장', '바이낸스선물고정레버리지',
+    '바이낸스선물고정레버리지값', '바이낸스선물변동레버리지값', '바이낸스선물마진타입',
+    '바이낸스선물포지션', '버전업', '리시버공유'
+]
 ```
 
-##### 암호화폐 틱 데이터 테이블
-```sql
-CREATE TABLE IF NOT EXISTS coin_tick (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    market TEXT NOT NULL,               -- 마켓 (KRW-BTC)
-    trade_price REAL,                   -- 체결가
-    trade_volume REAL,                  -- 체결량
-    acc_trade_price REAL,               -- 누적거래대금
-    acc_trade_volume REAL,              -- 누적거래량
-    prev_closing_price REAL,            -- 전일종가
-    change_rate REAL,                   -- 등락률
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_market_timestamp (market, timestamp)
-);
+**sacc 테이블** - 주식 계정 정보 (암호화됨)
+```python
+columns = ["index", "아이디", "비밀번호", "인증서비밀번호", "계좌비밀번호"]
+# 1~8번까지 최대 8개 계정 지원
 ```
 
-##### 분봉 데이터 테이블
-```sql
-CREATE TABLE IF NOT EXISTS ohlcv_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    symbol TEXT NOT NULL,               -- 심볼
-    timeframe TEXT NOT NULL,            -- 시간프레임 (1m, 5m, 1h, 1d)
-    open_price REAL,                    -- 시가
-    high_price REAL,                    -- 고가
-    low_price REAL,                     -- 저가
-    close_price REAL,                   -- 종가
-    volume REAL,                        -- 거래량
-    timestamp DATETIME,                 -- 시간
-    UNIQUE(symbol, timeframe, timestamp),
-    INDEX idx_symbol_timeframe_timestamp (symbol, timeframe, timestamp)
-);
+**cacc 테이블** - 암호화폐 API 키 (암호화됨)
+```python
+columns = ["index", "Access_key", "Secret_key"]
+# Upbit, Binance 등 거래소 API 키 저장
+```
+
+**stock 테이블** - 주식 거래 설정
+```python
+columns = [
+    "index", "주식모의투자", "주식알림소리", "주식매수전략", "주식매도전략",
+    "주식타임프레임", "주식평균값계산틱수", "주식최대매수종목수", "주식전략종료시간",
+    "주식잔고청산", "주식프로세스종료", "주식컴퓨터종료", "주식투자금고정", "주식투자금",
+    "주식손실중지", "주식손실중지수익률", "주식수익중지", "주식수익중지수익률", "주식경과틱수설정"
+]
+```
+
+**coin 테이블** - 암호화폐 거래 설정
+```python
+columns = [
+    "index", "코인모의투자", "코인알림소리", "코인매수전략", "코인매도전략",
+    "코인타임프레임", "코인평균값계산틱수", "코인최대매수종목수", "코인전략종료시간",
+    "코인잔고청산", "코인프로세스종료", "코인컴퓨터종료", "코인투자금고정", "코인투자금",
+    "코인손실중지", "코인손실중지수익률", "코인수익중지", "코인수익중지수익률", "코인경과틱수설정"
+]
+```
+
+**stockbuyorder/stocksellorder 테이블** - 주식 매수/매도 주문 설정
+```python
+# 매수 주문 설정: 주문구분, 분할횟수, 분할방법, 취소조건, 금지조건 등
+# 매도 주문 설정: 손절수익률, 수익금 설정, 취소조건 등
+```
+
+##### 거래 DB 테이블 (`tradelist.db`) (`utility/database_check.py:244-318`)
+
+**s_chegeollist / c_chegeollist** - 주식/코인 체결 내역
+```python
+query = 'CREATE TABLE "s_chegeollist" (
+    "index" TEXT, "종목명" TEXT, "주문구분" TEXT, "주문수량" INTEGER,
+    "체결수량" INTEGER, "미체결수량" INTEGER, "체결가" INTEGER,
+    "체결시간" TEXT, "주문가격" INTEGER, "주문번호" TEXT
+)'
+```
+
+**s_jangolist / c_jangolist** - 주식/코인 잔고 내역
+```python
+query = 'CREATE TABLE "s_jangolist" (
+    "index" TEXT, "종목명" TEXT, "매입가" INTEGER, "현재가" INTEGER,
+    "수익률" REAL, "평가손익" INTEGER, "매입금액" INTEGER, "평가금액" INTEGER,
+    "보유수량" INTEGER, "분할매수횟수" INTEGER, "분할매도횟수" INTEGER, "매수시간" TEXT
+)'
+```
+
+**c_jangolist_future** - 코인 선물 잔고 (바이낸스)
+```python
+query = 'CREATE TABLE "c_jangolist_future" (
+    "index" TEXT, "종목명" TEXT, "포지션" TEXT, "매입가" REAL, "현재가" REAL,
+    "수익률" REAL, "평가손익" INTEGER, "매입금액" INTEGER, "평가금액" INTEGER,
+    "보유수량" REAL, "레버리지" INTEGER, "분할매수횟수" INTEGER,
+    "분할매도횟수" INTEGER, "매수시간" TEXT
+)'
+```
+
+**s_tradelist / c_tradelist** - 주식/코인 거래 내역
+```python
+query = 'CREATE TABLE "s_tradelist" (
+    "index" TEXT, "종목명" TEXT, "매수금액" INTEGER, "매도금액" INTEGER,
+    "주문수량" INTEGER, "수익률" REAL, "수익금" INTEGER, "체결시간" TEXT
+)'
+```
+
+**s_totaltradelist / c_totaltradelist** - 총 거래 집계
+```python
+query = 'CREATE TABLE "s_totaltradelist" (
+    "index" TEXT, "총매수금액" INTEGER, "총매도금액" INTEGER,
+    "총수익금액" INTEGER, "총손실금액" INTEGER, "수익률" REAL, "수익금합계" INTEGER
+)'
+```
+
+##### 전략 DB 테이블 (`strategy.db`) (`utility/database_check.py:166-241`)
+
+**stockbuy/stocksell, coinbuy/coinsell** - 매매 전략 코드
+```python
+cur.execute('CREATE TABLE "stockbuy" ( "index" TEXT, "전략코드" TEXT )')
+cur.execute('CREATE INDEX "ix_stockbuy_index" ON "stockbuy" ("index")')
+```
+
+**stockbuyconds/stocksellconds** - 매매 조건식
+```python
+cur.execute('CREATE TABLE "stockbuyconds" ( "index" TEXT, "전략코드" TEXT )')
+```
+
+**stockvars/coinvars** - 전략 변수
+```python
+cur.execute('CREATE TABLE "stockvars" ( "index" TEXT, "전략코드" TEXT )')
+```
+
+**stockoptibuy/stockoptisell** - 최적화용 전략
+```python
+query = 'CREATE TABLE "stockoptibuy" ( "index" TEXT, "전략코드" TEXT, "변수값" TEXT )'
+```
+
+##### 시장 데이터 DB 테이블 (동적 생성)
+
+**moneytop 테이블** - 거래대금 순위 (모든 tick/min DB에 존재)
+```python
+# index: 시간 (YYYYMMDDHHMMSS)
+# 거래대금순위: 세미콜론으로 구분된 종목코드/마켓 리스트
+```
+
+**[종목코드/마켓] 테이블** - 개별 종목 데이터 (동적 생성)
+```python
+# 주식 틱: index, 현재가, 시가, 고가, 저가, 등락률, 당일거래대금,
+#          체결강도, 호가총잔량, 매수호가1~10, 매도호가1~10, 매수잔량1~10, 매도잔량1~10
+# 코인 틱: index, 현재가, 시가, 고가, 저가, 등락률, 당일거래대금,
+#          누적매수량, 누적매도량, 매수호가1~10, 매도호가1~10, 매수잔량1~10, 매도잔량1~10
+# 분봉: index, 시가, 고가, 저가, 종가, 거래량, 거래대금
 ```
 
 ### 데이터베이스 연결 관리
 
-#### 1. 연결 풀링 시스템
+#### 1. Query 프로세스 (`utility/query.py:12-89`)
+
+STOM은 별도의 프로세스로 **Query** 클래스를 실행하여 모든 데이터베이스 작업을 처리합니다.
+
 ```python
-class DatabaseManager:
-    """데이터베이스 연결 관리자"""
-    
-    def __init__(self):
-        self.connections = {}
-        self.connection_lock = threading.Lock()
-        
-    def get_connection(self, db_path):
-        """데이터베이스 연결 반환"""
-        thread_id = threading.get_ident()
-        key = f"{db_path}_{thread_id}"
-        
-        with self.connection_lock:
-            if key not in self.connections:
-                conn = sqlite3.connect(
-                    db_path, 
-                    check_same_thread=False,
-                    timeout=30.0
-                )
-                conn.execute("PRAGMA journal_mode=WAL")
-                conn.execute("PRAGMA synchronous=NORMAL")
-                conn.execute("PRAGMA cache_size=10000")
-                self.connections[key] = conn
-                
-        return self.connections[key]
-    
-    def execute_query(self, db_path, query, params=None):
-        """쿼리 실행"""
-        conn = self.get_connection(db_path)
-        cursor = conn.cursor()
-        
-        try:
-            if params:
-                cursor.execute(query, params)
-            else:
-                cursor.execute(query)
-            conn.commit()
-            return cursor.fetchall()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            cursor.close()
+class Query:
+    def __init__(self, qlist):
+        """
+        멀티프로세스 환경에서 DB 작업을 전담하는 Query 프로세스
+        - windowQ, queryQ 등의 큐를 통해 다른 프로세스와 통신
+        """
+        self.windowQ  = qlist[0]
+        self.queryQ   = qlist[2]
+
+        # 3개의 주요 데이터베이스 연결
+        self.con1     = sqlite3.connect(DB_SETTING)     # 설정 DB
+        self.cur1     = self.con1.cursor()
+        self.con2     = sqlite3.connect(DB_TRADELIST)   # 거래 DB
+        self.cur2     = self.con2.cursor()
+        self.con3     = sqlite3.connect(DB_STRATEGY)    # 전략 DB
+        self.cur3     = self.con3.cursor()
+
+        self.dict_set = DICT_SET
+        self.Start()
+
+    def __del__(self):
+        """프로세스 종료 시 모든 DB 연결 종료"""
+        self.con1.close()
+        self.con2.close()
+        self.con3.close()
+
+    def Start(self):
+        """메인 루프: 큐에서 쿼리 요청을 받아 처리"""
+        while True:
+            query = self.queryQ.get()
+
+            if query[0] == '설정변경':
+                self.dict_set = query[1]
+
+            elif query[0] == '설정디비':
+                try:
+                    if len(query) == 2:
+                        # 직접 SQL 실행
+                        self.cur1.execute(query[1])
+                        self.con1.commit()
+                    elif len(query) == 4:
+                        # DataFrame을 SQL 테이블로 저장
+                        # query[1]: DataFrame, query[2]: 테이블명, query[3]: 'append'/'replace'
+                        query[1].to_sql(query[2], self.con1, if_exists=query[3], chunksize=1000)
+                except Exception as e:
+                    self.windowQ.put((ui_num['S로그텍스트'], f'오류 - Query 설정디비 {e}'))
+
+            elif query[0] == '거래디비':
+                try:
+                    if len(query) == 2:
+                        self.cur2.execute(query[1])
+                        self.con2.commit()
+                    elif len(query) == 4:
+                        query[1].to_sql(query[2], self.con2, if_exists=query[3], chunksize=1000)
+                except Exception as e:
+                    ui_text = 'S로그텍스트' if 's_' in query[2] else 'C로그텍스트'
+                    self.windowQ.put((ui_num[ui_text], f'오류 - Query 거래디비 {e}'))
+
+            elif query[0] == '전략디비':
+                try:
+                    if len(query) == 2:
+                        self.cur3.execute(query[1])
+                        self.con3.commit()
+                    elif len(query) == 4:
+                        query[1].to_sql(query[2], self.con3, if_exists=query[3], chunksize=1000)
+                except Exception as e:
+                    self.windowQ.put((ui_num['S로그텍스트'], f'오류 - Query 전략디비 {e}'))
+
+            elif query[0] == '백테디비':
+                try:
+                    con = sqlite3.connect(DB_BACKTEST)
+                    cur = con.cursor()
+                    cur.execute(query[1])
+                    con.commit()
+                    con.close()
+                except Exception as e:
+                    self.windowQ.put((ui_num['S로그텍스트'], f'오류 - Query 백테디비 {e}'))
+
+            elif query == '프로세스종료':
+                break
+
+            self.windowQ.put((ui_num['DB관리'], 'DB업데이트완료'))
 ```
 
-#### 2. 배치 삽입 최적화
+**사용 예시:**
 ```python
-class BatchInserter:
-    """배치 삽입 최적화"""
-    
-    def __init__(self, db_manager, batch_size=1000):
-        self.db_manager = db_manager
-        self.batch_size = batch_size
-        self.buffers = {}
-        
-    def add_data(self, table_name, data):
-        """데이터 추가"""
-        if table_name not in self.buffers:
-            self.buffers[table_name] = []
-            
-        self.buffers[table_name].append(data)
-        
-        # 배치 크기 도달 시 자동 플러시
-        if len(self.buffers[table_name]) >= self.batch_size:
-            self.flush_buffer(table_name)
-            
-    def flush_buffer(self, table_name):
-        """버퍼 플러시"""
-        if table_name not in self.buffers or not self.buffers[table_name]:
-            return
-            
-        data_list = self.buffers[table_name]
-        
-        # 배치 삽입 쿼리 생성
-        if table_name == 'stock_tick':
-            query = """
-            INSERT INTO stock_tick 
-            (code, name, current_price, open_price, high_price, low_price, 
-             volume, volume_price, change_rate, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-        elif table_name == 'coin_tick':
-            query = """
-            INSERT INTO coin_tick 
-            (market, trade_price, trade_volume, acc_trade_price, 
-             acc_trade_volume, prev_closing_price, change_rate, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """
-            
-        # 배치 실행
-        conn = self.db_manager.get_connection(self.get_db_path(table_name))
-        cursor = conn.cursor()
-        
-        try:
-            cursor.executemany(query, data_list)
-            conn.commit()
-            self.buffers[table_name] = []  # 버퍼 클리어
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            cursor.close()
+# 설정 DB에 데이터 저장
+queryQ.put(('설정디비', df, 'codename', 'replace'))
+
+# 거래 DB에 체결 내역 저장
+queryQ.put(('거래디비', df_chegol, 's_chegeollist', 'append'))
+
+# 직접 SQL 실행
+queryQ.put(('전략디비', f"DELETE FROM stockbuy WHERE index='{strategy_name}'"))
+```
+
+#### 2. 데이터베이스 최적화 설정
+
+SQLite 성능 최적화를 위한 PRAGMA 설정 (일반적으로 사용):
+```python
+conn = sqlite3.connect(db_path, check_same_thread=False, timeout=30.0)
+conn.execute("PRAGMA journal_mode=WAL")        # Write-Ahead Logging
+conn.execute("PRAGMA synchronous=NORMAL")      # 동기화 모드
+conn.execute("PRAGMA cache_size=10000")        # 캐시 크기
+conn.execute("PRAGMA temp_store=MEMORY")       # 임시 저장소를 메모리에
+```
+
+#### 3. 데이터베이스 관리 기능 (`utility/query.py:87-256`)
+
+Query 프로세스는 다음과 같은 DB 관리 기능을 제공합니다:
+
+**백테DB생성**: 날짜별 DB 파일들을 하나의 백테스트용 DB로 통합
+```python
+elif '백테DB생성' in query[0]:
+    # _database/stock_tick_20240101.db, stock_tick_20240102.db 등을
+    # _database/stock_tick_back.db로 통합
+```
+
+**일자DB분리**: 당일 DB를 날짜별로 분리하여 저장
+```python
+elif '일자DB분리' in query[0]:
+    # stock_tick.db에서 날짜별로 stock_tick_20240101.db, stock_tick_20240102.db로 분리
+```
+
+**지정시간이후삭제**: 특정 시간 이후 데이터 삭제 (디버깅/테스트용)
+```python
+elif '당일데이터지정시간이후삭제' in query[0]:
+    # 예: 093000 이후 데이터 삭제
 ```
 
 ---
@@ -214,748 +338,436 @@ class BatchInserter:
 
 ### 주식 데이터 수신 시스템
 
-#### 1. Kiwoom API 데이터 수신 (`stock/kiwoom_receiver_tick.py`)
+#### 1. Kiwoom 리시버 구조 (`stock/kiwoom_receiver_tick.py:41-118`)
+
 ```python
-class KiwoomReceiverTick(QAxWidget):
-    """키움 틱 데이터 수신기"""
-    
-    def __init__(self):
-        super().__init__()
-        self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
-        
-        # 이벤트 핸들러 연결
-        self.OnReceiveTrData.connect(self.receive_tr_data)
-        self.OnReceiveRealData.connect(self.receive_real_data)
-        
-        # 데이터 버퍼
-        self.tick_buffer = deque(maxlen=10000)
-        self.batch_inserter = BatchInserter(db_manager)
-        
-    def receive_real_data(self, code, real_type, real_data):
-        """실시간 데이터 수신"""
-        if real_type == "주식체결":
-            tick_data = self.parse_stock_tick(code, real_data)
-            self.process_tick_data(tick_data)
-            
-    def parse_stock_tick(self, code, real_data):
-        """주식 틱 데이터 파싱"""
-        current_price = abs(int(self.GetCommRealData(code, 10)))
-        volume = int(self.GetCommRealData(code, 15))
-        change_rate = float(self.GetCommRealData(code, 12))
-        
-        return {
-            'code': code,
-            'current_price': current_price,
-            'volume': volume,
-            'change_rate': change_rate,
-            'timestamp': datetime.now()
-        }
-        
-    def process_tick_data(self, tick_data):
-        """틱 데이터 처리"""
-        # 메모리 버퍼에 추가
-        self.tick_buffer.append(tick_data)
-        
-        # 데이터베이스 배치 삽입
-        self.batch_inserter.add_data('stock_tick', (
-            tick_data['code'],
-            tick_data.get('name', ''),
-            tick_data['current_price'],
-            tick_data.get('open_price', 0),
-            tick_data.get('high_price', 0),
-            tick_data.get('low_price', 0),
-            tick_data['volume'],
-            tick_data.get('volume_price', 0),
-            tick_data['change_rate'],
-            tick_data['timestamp']
-        ))
-        
-        # 실시간 차트 업데이트
-        self.send_to_ui(tick_data)
+class KiwoomReceiverTick:
+    """키움 틱 데이터 수신기 - 독립 프로세스로 실행"""
+
+    def __init__(self, qlist):
+        """
+        qlist: [kwzservQ, sreceivQ, straderQ, sstgQs, ...]
+        - kwzservQ: 메인 윈도우로 메시지 전송
+        - sreceivQ: 내부 업데이트용 큐
+        - straderQ: 트레이더 프로세스로 데이터 전송
+        - sstgQs: 전략 프로세스들로 데이터 전송
+        """
+        app = QApplication(sys.argv)
+
+        self.kwzservQ = qlist[0]
+        self.sreceivQ = qlist[1]
+        self.straderQ = qlist[2]
+        self.sstgQs   = qlist[3]
+        self.dict_set = DICT_SET
+
+        # 데이터 저장용 딕셔너리
+        self.dict_name   = {}  # {종목코드: 종목명}
+        self.dict_code   = {}  # {종목명: 종목코드}
+        self.dict_data   = {}  # {종목코드: 실시간 데이터}
+        self.dict_mtop   = {}  # {시간: 거래대금 순위}
+
+        # Kiwoom API 객체 생성 및 로그인
+        self.kw = Kiwoom(self, 'Receiver')
+        self.KiwoomLogin()
+
+        # ZMQ 서버 시작 (리시버 공유 모드)
+        if self.dict_set['리시버공유'] == 1:
+            self.zmqserver = ZmqServ(self.recvservQ)
+            self.zmqserver.start()
+
+        # 업데이터 스레드 시작
+        self.updater = Updater(self.sreceivQ)
+        self.updater.signal.connect(self.UpdateTuple)
+        self.updater.start()
+
+        # 스케줄러 타이머
+        self.qtimer = QTimer()
+        self.qtimer.setInterval(1 * 1000)
+        self.qtimer.timeout.connect(self.Scheduler)
+        self.qtimer.start()
+
+        app.exec_()
+
+    def KiwoomLogin(self):
+        """키움 로그인 및 초기 데이터 로드"""
+        self.kw.CommConnect()  # 로그인
+        qtest_qwait(5)
+        self.kw.GetConditionLoad()  # 조건검색식 로드
+
+        # 코스닥, 코스피, ETF 종목 리스트
+        self.tuple_kosd = tuple(self.kw.GetCodeListByMarket('10'))
+        list_code = (self.kw.GetCodeListByMarket('0') +    # 코스피
+                     self.kw.GetCodeListByMarket('8') +    # ETF
+                     list(self.tuple_kosd))                # 코스닥
+
+        # 종목 구분 번호 (전략 분산용)
+        self.dict_sgbn = {code: i % 8 for i, code in enumerate(list_code)}
+
+        # 종목명 딕셔너리 생성
+        self.dict_name = {code: self.kw.GetMasterCodeName(code) for code in list_code}
+        self.dict_code = {name: code for code, name in self.dict_name.items()}
+
+        # 다른 프로세스에 종목 정보 전송
+        self.kwzservQ.put(('window', (ui_num['종목명데이터'],
+                                      self.dict_name, self.dict_code, self.dict_sgbn, '더미')))
+        self.straderQ.put(('종목구분번호', self.dict_sgbn))
+        for q in self.sstgQs:
+            q.put(('종목구분번호', self.dict_sgbn))
+            q.put(('코스닥목록', self.tuple_kosd))
+
+        # 종목명을 DB에 저장
+        df = pd.DataFrame(self.dict_name.values(), columns=['종목명'],
+                          index=list(self.dict_name.keys()))
+        df['코스닥'] = [True if x in self.tuple_kosd else False for x in df.index]
+        self.kwzservQ.put(('query', ('설정디비', df, 'codename', 'replace')))
+```
+
+**실시간 등록 및 데이터 처리:**
+```python
+# stock/kiwoom_receiver_tick.py:203-235
+def OperationRealreg(self):
+    """장 시작 시 실시간 데이터 등록"""
+    self.dict_bool['리시버시작'] = True
+
+    # 장운영시간 등록
+    self.kw.SetRealReg([sn_oper, ' ', '215;20;214', 0])
+
+    # 업종지수 등록
+    self.kw.SetRealReg([sn_oper, '001;101', '10;15;20', 1])
+
+    # 조건검색식으로 종목 검색 및 실시간 등록
+    self.list_code = self.kw.SendCondition([sn_cond, self.list_cond[1][1],
+                                            self.list_cond[1][0], 0])
+
+    # 100개씩 묶어서 실시간 등록
+    k = 0
+    for i in range(0, len(self.list_code), 100):
+        rreg = [sn_gsjm + k, ';'.join(self.list_code[i:i + 100]),
+                '10;12;14;30;228;41;61;71;81', 1]
+        self.kw.SetRealReg(rreg)
+        k += 1
+
+# stock/kiwoom_receiver_tick.py:295-320
+def SaveData(self):
+    """종료 시 데이터를 DB에 저장"""
+    if len(self.dict_mtop) > 0:
+        if self.dict_set['주식타임프레임']:
+            codes = list(set(';'.join(list(self.dict_mtop.values())[29:]).split(';')))
+        else:
+            codes = list(set(';'.join(list(self.dict_mtop.values())).split(';')))
+
+        # moneytop 테이블 저장
+        df = pd.DataFrame({'index': list(self.dict_mtop.keys()),
+                           '거래대금순위': list(self.dict_mtop.values())})
+        con = sqlite3.connect(DB_STOCK_TICK if self.dict_set['주식타임프레임']
+                              else DB_STOCK_MIN)
+        df.to_sql('moneytop', con, index=False, if_exists='append', chunksize=1000)
+
+        # 각 종목 데이터 저장
+        last = len(codes)
+        for i, code in enumerate(codes):
+            if code in self.dict_data:
+                df = pd.DataFrame(self.dict_data[code])
+                df.to_sql(code, con, index=False, if_exists='append', chunksize=1000)
+        con.close()
 ```
 
 ### 암호화폐 데이터 수신 시스템
 
-#### 1. Upbit WebSocket 수신 (`coin/upbit_receiver.py`)
+#### 1. Upbit 리시버 구조 (`coin/upbit_receiver_tick.py:30-150`)
+
 ```python
-class UpbitReceiver:
-    """업비트 실시간 데이터 수신기"""
-    
-    def __init__(self):
-        self.ws = None
-        self.tick_buffer = deque(maxlen=10000)
-        self.batch_inserter = BatchInserter(db_manager)
-        
-    async def connect_websocket(self):
-        """웹소켓 연결"""
-        uri = "wss://api.upbit.com/websocket/v1"
-        
-        # 구독 메시지
-        subscribe_message = [
-            {"ticket": "test"},
-            {
-                "type": "ticker",
-                "codes": ["KRW-BTC", "KRW-ETH", "KRW-XRP"]
-            }
-        ]
-        
-        async with websockets.connect(uri) as websocket:
-            await websocket.send(json.dumps(subscribe_message))
-            
-            while True:
-                try:
-                    data = await websocket.recv()
-                    tick_data = self.parse_upbit_tick(data)
-                    self.process_tick_data(tick_data)
-                except Exception as e:
-                    print(f"WebSocket 오류: {e}")
-                    break
-                    
-    def parse_upbit_tick(self, raw_data):
-        """업비트 틱 데이터 파싱"""
-        data = json.loads(raw_data)
-        
-        return {
-            'market': data['code'],
-            'trade_price': data['trade_price'],
-            'trade_volume': data['trade_volume'],
-            'acc_trade_price': data['acc_trade_price_24h'],
-            'acc_trade_volume': data['acc_trade_volume_24h'],
-            'prev_closing_price': data['prev_closing_price'],
-            'change_rate': data['signed_change_rate'],
-            'timestamp': datetime.fromtimestamp(data['timestamp'] / 1000)
-        }
+class UpbitReceiverTick:
+    """업비트 틱 데이터 수신기 - 독립 프로세스로 실행"""
+
+    def __init__(self, qlist):
+        """
+        qlist: [windowQ, soundQ, queryQ, teleQ, chartQ, hogaQ, webcQ, backQ,
+                creceivQ, ctraderQ, cstgQ, liveQ, kimpQ, wdzservQ, totalQ]
+        """
+        self.windowQ  = qlist[0]
+        self.soundQ   = qlist[1]
+        self.queryQ   = qlist[2]
+        self.teleQ    = qlist[3]
+        self.hogaQ    = qlist[5]
+        self.creceivQ = qlist[8]  # WebSocket 수신용 큐
+        self.ctraderQ = qlist[9]
+        self.cstgQ    = qlist[10]
+        self.dict_set = DICT_SET
+
+        # 데이터 저장용 딕셔너리
+        self.dict_tmdt   = {}  # {종목: 시간별 데이터}
+        self.dict_data   = {}  # {종목: 실시간 데이터}
+        self.dict_mtop   = {}  # {시간: 거래대금 순위}
+
+        # 거래소 티커 정보 로드
+        self.GetTickers()
+
+        # WebSocket 시작
+        self.WebSocketsStart(self.creceivQ)
+
+        self.MainLoop()
+
+    def MainLoop(self):
+        """메인 루프: WebSocket에서 수신한 데이터 처리"""
+        text = '코인 리시버를 시작하였습니다.'
+        if self.dict_set['코인알림소리']: self.soundQ.put(text)
+        self.teleQ.put(text)
+        self.windowQ.put((ui_num['C단순텍스트'], '시스템 명령 실행 알림 - 리시버 시작'))
+
+        while True:
+            data = self.creceivQ.get()
+            curr_time = now()
+
+            if type(data) == tuple:
+                # UI/트레이더/전략 프로세스로부터의 명령 처리
+                self.UpdateTuple(data)
+
+            elif type(data) == dict:
+                # WebSocket으로부터 수신한 데이터
+                if data['type'] == 'ticker':
+                    try:
+                        # UTC 시간을 한국 시간으로 변환 (-32400초 = -9시간)
+                        dt   = int(strf_time('%Y%m%d%H%M%S',
+                                             from_timestamp(int(data['timestamp'] / 1000 - 32400))))
+                        if self.dict_set['코인전략종료시간'] < int(str(dt)[8:]): continue
+
+                        code = data['code']         # KRW-BTC
+                        c    = data['trade_price']  # 현재가
+                        o    = data['opening_price']
+                        h    = data['high_price']
+                        low  = data['low_price']
+                        per  = round(data['signed_change_rate'] * 100, 2)
+                        tbids = data['acc_bid_volume']   # 누적매수량
+                        tasks = data['acc_ask_volume']   # 누적매도량
+                        dm   = data['acc_trade_price']   # 당일거래대금
+
+                        self.UpdateTickData(code, c, o, h, low, per, dm, tbids, tasks, dt)
+
+                    except Exception as e:
+                        self.windowQ.put((ui_num['C단순텍스트'],
+                                         f'시스템 명령 오류 알림 - 웹소켓 ticker {e}'))
+
+                elif data['type'] == 'orderbook':
+                    # 호가 데이터 처리
+                    try:
+                        dt   = int(strf_time('%Y%m%d%H%M%S',
+                                             from_timestamp(int(data['timestamp'] / 1000 - 32400))))
+                        code = data['code']
+                        hoga_tamount = (data['total_ask_size'], data['total_bid_size'])
+                        data = data['orderbook_units']
+
+                        # 매도호가 10~1 (역순)
+                        hoga_seprice = (data[9]['ask_price'], data[8]['ask_price'], ..., data[0]['ask_price'])
+                        # 매수호가 1~10
+                        hoga_buprice = (data[0]['bid_price'], data[1]['bid_price'], ..., data[9]['bid_price'])
+                        # 매도잔량 10~1, 매수잔량 1~10
+                        hoga_samount = (...)
+                        hoga_bamount = (...)
+
+                        self.UpdateHogaData(dt, hoga_tamount, hoga_seprice, hoga_buprice,
+                                            hoga_samount, hoga_bamount, code, curr_time)
+
+                    except Exception as e:
+                        self.windowQ.put((ui_num['C단순텍스트'],
+                                         f'시스템 명령 오류 알림 - 웹소켓 orderbook {e}'))
+
+            elif data == '프로세스종료':
+                self.SysExit()
+                break
+
+            # 1초마다 거래대금 순위 전송
+            if curr_time > self.dict_time['거래대금순위전송']:
+                self.UpdateMoneyTop()
+                self.dict_time['거래대금순위전송'] = timedelta_sec(1)
 ```
 
-#### 2. Binance WebSocket 수신 (`coin/binance_receiver.py`)
+**WebSocket 시작:**
 ```python
-class BinanceReceiver:
-    """바이낸스 실시간 데이터 수신기"""
-    
-    def __init__(self):
-        self.client = Client()
-        self.tick_buffer = deque(maxlen=10000)
-        
-    def start_ticker_socket(self, symbols):
-        """티커 소켓 시작"""
-        def handle_socket_message(msg):
-            tick_data = self.parse_binance_tick(msg)
-            self.process_tick_data(tick_data)
-            
-        # 멀티 심볼 스트림
-        streams = [f"{symbol.lower()}@ticker" for symbol in symbols]
-        self.bm = BinanceSocketManager(self.client)
-        self.conn_key = self.bm.start_multiplex_socket(streams, handle_socket_message)
-        self.bm.start()
-        
-    def parse_binance_tick(self, msg):
-        """바이낸스 틱 데이터 파싱"""
-        data = msg['data']
-        
-        return {
-            'symbol': data['s'],
-            'price': float(data['c']),
-            'volume': float(data['v']),
-            'change_percent': float(data['P']),
-            'timestamp': datetime.fromtimestamp(int(data['E']) / 1000)
-        }
+# coin/upbit_receiver_tick.py
+def WebSocketsStart(self, creceivQ):
+    """Upbit WebSocket 프로세스 시작"""
+    codes = [x for x in self.dict_daym.keys()]  # 거래 가능한 종목 리스트
+    self.proc_webs = Process(target=WebSocketReceiver, args=(creceivQ, codes), daemon=True)
+    self.proc_webs.start()
+
+# coin/upbit_websocket.py
+class WebSocketReceiver:
+    """Upbit WebSocket 전담 프로세스"""
+    async def connect_websocket(self):
+        uri = "wss://api.upbit.com/websocket/v1"
+        async with websockets.connect(uri) as websocket:
+            subscribe_msg = [
+                {"ticket": "stom"},
+                {"type": "ticker", "codes": self.codes},
+                {"type": "orderbook", "codes": self.codes}
+            ]
+            await websocket.send(json.dumps(subscribe_msg))
+
+            while True:
+                data = await websocket.recv()
+                data = json.loads(data.decode('utf-8'))
+                self.recvQ.put(data)  # 메인 리시버로 데이터 전송
+```
+
+#### 2. Binance 리시버 구조 (`coin/binance_receiver_tick.py:31-100`)
+
+```python
+class BinanceReceiverTick:
+    """바이낸스 선물 틱 데이터 수신기"""
+
+    def __init__(self, qlist):
+        self.windowQ  = qlist[0]
+        self.creceivQ = qlist[8]
+        self.ctraderQ = qlist[9]
+        self.cstgQ    = qlist[10]
+        self.binance  = binance.Client()  # 바이낸스 API 클라이언트
+
+        # 거래 가능한 선물 종목 로드
+        self.codes = self.GetTickers()
+
+        # WebSocket 시작
+        self.WebSocketsStart(self.creceivQ)
+        self.MainLoop()
+
+    def MainLoop(self):
+        """메인 루프: WebSocket 데이터 처리"""
+        while True:
+            data = self.creceivQ.get()
+
+            if type(data) == list:
+                if data[0] == 'trade':
+                    # 실시간 체결 데이터
+                    code = data[1]['s']  # BTCUSDT
+                    c = float(data[1]['p'])  # 체결가
+                    # ... 데이터 처리 ...
+
+                elif data[0] == 'depth':
+                    # 호가 데이터
+                    code = data[1]['s']
+                    asks = data[1]['a']  # [[price, qty], ...]
+                    bids = data[1]['b']
+                    # ... 호가 처리 ...
+
+            elif type(data) == tuple:
+                self.UpdateTuple(data)
+
+            elif data == '프로세스종료':
+                self.SysExit()
+                break
 ```
 
 ---
 
 ## 🔄 데이터 전처리 및 검증
 
-### 데이터 품질 관리
+STOM 시스템은 실시간 데이터 수신 시 자동으로 데이터 전처리와 검증을 수행합니다.
 
-#### 1. 데이터 검증 시스템
-```python
-class DataValidator:
-    """데이터 검증 클래스"""
-    
-    def __init__(self):
-        self.validation_rules = {
-            'stock_tick': {
-                'current_price': {'min': 1, 'max': 1000000},
-                'volume': {'min': 0, 'max': 999999999},
-                'change_rate': {'min': -30.0, 'max': 30.0}
-            },
-            'coin_tick': {
-                'trade_price': {'min': 0.0001, 'max': 1000000},
-                'trade_volume': {'min': 0, 'max': 999999999},
-                'change_rate': {'min': -50.0, 'max': 50.0}
-            }
-        }
-        
-    def validate_data(self, data_type, data):
-        """데이터 검증"""
-        rules = self.validation_rules.get(data_type, {})
-        errors = []
-        
-        for field, rule in rules.items():
-            if field in data:
-                value = data[field]
-                
-                # 범위 검증
-                if 'min' in rule and value < rule['min']:
-                    errors.append(f"{field} 값이 최소값({rule['min']})보다 작음: {value}")
-                    
-                if 'max' in rule and value > rule['max']:
-                    errors.append(f"{field} 값이 최대값({rule['max']})보다 큼: {value}")
-                    
-                # 타입 검증
-                if 'type' in rule and not isinstance(value, rule['type']):
-                    errors.append(f"{field} 타입 오류: {type(value)} != {rule['type']}")
-                    
-        return len(errors) == 0, errors
-        
-    def clean_data(self, data_type, data):
-        """데이터 정제"""
-        if data_type == 'stock_tick':
-            # 가격 데이터 절댓값 처리
-            if 'current_price' in data:
-                data['current_price'] = abs(data['current_price'])
-                
-            # 거래량 0 이하 값 처리
-            if 'volume' in data and data['volume'] <= 0:
-                data['volume'] = 0
-                
-        elif data_type == 'coin_tick':
-            # 소수점 정밀도 조정
-            if 'trade_price' in data:
-                data['trade_price'] = round(data['trade_price'], 8)
-                
-        return data
-```
+### 데이터 정제 및 필터링
 
-#### 2. 이상치 탐지 시스템
+**주식 데이터 전처리** (`stock/kiwoom_receiver_tick.py`):
+- 가격 데이터 절댓값 변환
+- VI(변동성완화장치) 발동 종목 처리
+- 상한가/하한가 정보 계산 및 저장
+- 거래정지 종목 필터링
+- 블랙리스트 종목 제외
+
+**암호화폐 데이터 전처리** (`coin/upbit_receiver_tick.py`, `coin/binance_receiver_tick.py`):
+- UTC 시간 → KST 시간 변환 (-32400초)
+- 소수점 정밀도 조정
+- 거래량 0인 종목 필터링
+- 거래 정지 마켓 제외
+
+### 거래대금 순위 기반 필터링
+
 ```python
-class OutlierDetector:
-    """이상치 탐지 클래스"""
-    
-    def __init__(self, window_size=100):
-        self.window_size = window_size
-        self.price_history = {}
-        
-    def detect_price_outlier(self, symbol, current_price):
-        """가격 이상치 탐지"""
-        if symbol not in self.price_history:
-            self.price_history[symbol] = deque(maxlen=self.window_size)
-            
-        history = self.price_history[symbol]
-        
-        if len(history) < 10:  # 최소 데이터 필요
-            history.append(current_price)
-            return False
-            
-        # 통계적 이상치 탐지 (Z-score)
-        mean_price = np.mean(history)
-        std_price = np.std(history)
-        
-        if std_price == 0:
-            return False
-            
-        z_score = abs((current_price - mean_price) / std_price)
-        
-        # Z-score > 3이면 이상치로 판단
-        is_outlier = z_score > 3
-        
-        if not is_outlier:
-            history.append(current_price)
-            
-        return is_outlier
-        
-    def detect_volume_spike(self, symbol, current_volume):
-        """거래량 급증 탐지"""
-        if symbol not in self.volume_history:
-            self.volume_history[symbol] = deque(maxlen=self.window_size)
-            
-        history = self.volume_history[symbol]
-        
-        if len(history) < 10:
-            history.append(current_volume)
-            return False
-            
-        avg_volume = np.mean(history)
-        
-        # 평균 거래량의 5배 이상이면 급증으로 판단
-        is_spike = current_volume > avg_volume * 5
-        
-        history.append(current_volume)
-        return is_spike
+# 거래대금 상위 종목만 DB에 저장 (메모리/스토리지 최적화)
+# 틱 모드: 거래대금 순위 30위 이후 종목만 저장
+# 분봉 모드: 모든 거래대금 순위 종목 저장
 ```
 
 ---
 
 ## 📈 시계열 데이터 처리
 
-### OHLCV 데이터 생성
+### 틱/분봉 데이터 집계
 
-#### 1. 틱 데이터 집계 시스템
-```python
-class OHLCVAggregator:
-    """OHLCV 데이터 집계기"""
-    
-    def __init__(self):
-        self.tick_buffers = {}
-        self.timeframes = ['1m', '5m', '15m', '1h', '4h', '1d']
-        
-    def add_tick(self, symbol, tick_data):
-        """틱 데이터 추가"""
-        if symbol not in self.tick_buffers:
-            self.tick_buffers[symbol] = {tf: [] for tf in self.timeframes}
-            
-        # 모든 시간프레임에 틱 추가
-        for timeframe in self.timeframes:
-            self.tick_buffers[symbol][timeframe].append(tick_data)
-            
-        # 시간프레임별 집계 확인
-        self.check_aggregation(symbol, tick_data['timestamp'])
-        
-    def check_aggregation(self, symbol, timestamp):
-        """집계 시점 확인"""
-        for timeframe in self.timeframes:
-            if self.should_aggregate(timeframe, timestamp):
-                ohlcv = self.aggregate_ticks(symbol, timeframe)
-                if ohlcv:
-                    self.save_ohlcv(symbol, timeframe, ohlcv)
-                    self.tick_buffers[symbol][timeframe] = []
-                    
-    def should_aggregate(self, timeframe, timestamp):
-        """집계 필요 여부 확인"""
-        if timeframe == '1m':
-            return timestamp.second == 0
-        elif timeframe == '5m':
-            return timestamp.minute % 5 == 0 and timestamp.second == 0
-        elif timeframe == '15m':
-            return timestamp.minute % 15 == 0 and timestamp.second == 0
-        elif timeframe == '1h':
-            return timestamp.minute == 0 and timestamp.second == 0
-        elif timeframe == '4h':
-            return timestamp.hour % 4 == 0 and timestamp.minute == 0 and timestamp.second == 0
-        elif timeframe == '1d':
-            return timestamp.hour == 0 and timestamp.minute == 0 and timestamp.second == 0
-            
-    def aggregate_ticks(self, symbol, timeframe):
-        """틱 데이터 집계"""
-        ticks = self.tick_buffers[symbol][timeframe]
-        
-        if not ticks:
-            return None
-            
-        prices = [tick['price'] for tick in ticks]
-        volumes = [tick['volume'] for tick in ticks]
-        
-        ohlcv = {
-            'symbol': symbol,
-            'timeframe': timeframe,
-            'open': prices[0],
-            'high': max(prices),
-            'low': min(prices),
-            'close': prices[-1],
-            'volume': sum(volumes),
-            'timestamp': self.get_candle_timestamp(ticks[0]['timestamp'], timeframe)
-        }
-        
-        return ohlcv
-        
-    def get_candle_timestamp(self, timestamp, timeframe):
-        """캔들 타임스탬프 계산"""
-        if timeframe == '1m':
-            return timestamp.replace(second=0, microsecond=0)
-        elif timeframe == '5m':
-            minute = (timestamp.minute // 5) * 5
-            return timestamp.replace(minute=minute, second=0, microsecond=0)
-        # ... 다른 시간프레임 처리
-```
+STOM은 틱 데이터와 분봉 데이터를 별도로 수집하고 저장합니다.
 
-### 기술적 지표 계산
+**틱 데이터** (`주식타임프레임=1`, `코인타임프레임=1`):
+- 실시간 체결 발생 시마다 데이터 저장
+- 시간: YYYYMMDDHHMMSS (초 단위)
 
-#### 1. 이동평균 계산
-```python
-class TechnicalIndicators:
-    """기술적 지표 계산"""
-    
-    @staticmethod
-    def simple_moving_average(prices, period):
-        """단순 이동평균"""
-        if len(prices) < period:
-            return None
-            
-        return sum(prices[-period:]) / period
-        
-    @staticmethod
-    def exponential_moving_average(prices, period, alpha=None):
-        """지수 이동평균"""
-        if alpha is None:
-            alpha = 2 / (period + 1)
-            
-        ema = prices[0]
-        for price in prices[1:]:
-            ema = alpha * price + (1 - alpha) * ema
-            
-        return ema
-        
-    @staticmethod
-    def bollinger_bands(prices, period=20, std_dev=2):
-        """볼린저 밴드"""
-        if len(prices) < period:
-            return None, None, None
-            
-        sma = TechnicalIndicators.simple_moving_average(prices, period)
-        std = np.std(prices[-period:])
-        
-        upper_band = sma + (std_dev * std)
-        lower_band = sma - (std_dev * std)
-        
-        return upper_band, sma, lower_band
-        
-    @staticmethod
-    def rsi(prices, period=14):
-        """RSI 계산"""
-        if len(prices) < period + 1:
-            return None
-            
-        deltas = np.diff(prices)
-        gains = np.where(deltas > 0, deltas, 0)
-        losses = np.where(deltas < 0, -deltas, 0)
-        
-        avg_gain = np.mean(gains[-period:])
-        avg_loss = np.mean(losses[-period:])
-        
-        if avg_loss == 0:
-            return 100
-            
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        return rsi
-```
+**분봉 데이터** (`주식타임프레임=0`, `코인타임프레임=0`):
+- 1분마다 OHLCV 데이터 생성 및 저장
+- 시간: YYYYMMDDHHMM00 (분 단위, 초는 00 고정)
+
+**기술적 지표 계산**:
+- 전략 프로세스(`*_strategy_*.py`)에서 필요한 지표 계산
+- TA-Lib 라이브러리 활용
+- 이동평균, RSI, MACD, 볼린저밴드 등
 
 ---
 
-## 💾 데이터 압축 및 아카이빙
+## 💾 데이터 백업 및 관리
 
-### 데이터 압축 시스템
+### 날짜별 DB 분리 시스템 (`utility/query.py:343-383`)
 
-#### 1. 시계열 데이터 압축
-```python
-class DataCompressor:
-    """데이터 압축 관리"""
-    
-    def __init__(self):
-        self.compression_rules = {
-            'tick_data': {
-                'retention_days': 30,
-                'compression_after_days': 7
-            },
-            'minute_data': {
-                'retention_days': 365,
-                'compression_after_days': 30
-            },
-            'daily_data': {
-                'retention_days': 3650,  # 10년
-                'compression_after_days': 365
-            }
-        }
-        
-    def compress_old_data(self, data_type):
-        """오래된 데이터 압축"""
-        rules = self.compression_rules.get(data_type)
-        if not rules:
-            return
-            
-        cutoff_date = datetime.now() - timedelta(days=rules['compression_after_days'])
-        
-        # 압축 대상 데이터 조회
-        query = f"""
-        SELECT * FROM {data_type} 
-        WHERE timestamp < ? AND compressed = 0
-        ORDER BY timestamp
-        """
-        
-        data = db_manager.execute_query(query, (cutoff_date,))
-        
-        if data:
-            # 데이터 압축 및 저장
-            compressed_data = self.compress_data_chunk(data)
-            self.save_compressed_data(data_type, compressed_data)
-            
-            # 원본 데이터 삭제 또는 압축 플래그 설정
-            self.mark_as_compressed(data_type, cutoff_date)
-            
-    def compress_data_chunk(self, data):
-        """데이터 청크 압축"""
-        # pandas DataFrame으로 변환
-        df = pd.DataFrame(data)
-        
-        # 파케트 형식으로 압축
-        buffer = io.BytesIO()
-        df.to_parquet(buffer, compression='gzip')
-        
-        return buffer.getvalue()
-        
-    def decompress_data_chunk(self, compressed_data):
-        """압축 데이터 해제"""
-        buffer = io.BytesIO(compressed_data)
-        df = pd.read_parquet(buffer)
-        
-        return df.to_dict('records')
+STOM은 당일 거래 종료 후 데이터를 날짜별로 분리하여 저장합니다:
+
+```
+_database/stock_tick.db (당일 거래 데이터)
+  ↓ 일자DB분리
+_database/stock_tick_20240101.db
+_database/stock_tick_20240102.db
+_database/stock_tick_20240103.db
+...
 ```
 
-### 데이터 아카이빙
-
-#### 1. 자동 아카이빙 시스템
-```python
-class DataArchiver:
-    """데이터 아카이빙 관리"""
-    
-    def __init__(self, archive_path="archive/"):
-        self.archive_path = archive_path
-        self.ensure_archive_directory()
-        
-    def archive_old_data(self, data_type, retention_days):
-        """오래된 데이터 아카이빙"""
-        cutoff_date = datetime.now() - timedelta(days=retention_days)
-        
-        # 아카이빙 대상 데이터 조회
-        query = f"""
-        SELECT * FROM {data_type} 
-        WHERE timestamp < ?
-        ORDER BY timestamp
-        """
-        
-        data = db_manager.execute_query(query, (cutoff_date,))
-        
-        if data:
-            # 월별로 그룹화하여 아카이빙
-            grouped_data = self.group_by_month(data)
-            
-            for month_key, month_data in grouped_data.items():
-                archive_file = f"{self.archive_path}/{data_type}_{month_key}.parquet.gz"
-                self.save_archive_file(archive_file, month_data)
-                
-            # 아카이빙된 데이터 삭제
-            self.delete_archived_data(data_type, cutoff_date)
-            
-    def group_by_month(self, data):
-        """월별 데이터 그룹화"""
-        grouped = {}
-        
-        for record in data:
-            timestamp = record['timestamp']
-            month_key = timestamp.strftime('%Y_%m')
-            
-            if month_key not in grouped:
-                grouped[month_key] = []
-                
-            grouped[month_key].append(record)
-            
-        return grouped
-        
-    def restore_archived_data(self, data_type, start_date, end_date):
-        """아카이빙된 데이터 복원"""
-        restored_data = []
-        
-        # 해당 기간의 아카이브 파일 찾기
-        archive_files = self.find_archive_files(data_type, start_date, end_date)
-        
-        for archive_file in archive_files:
-            file_data = self.load_archive_file(archive_file)
-            
-            # 날짜 범위 필터링
-            filtered_data = [
-                record for record in file_data
-                if start_date <= record['timestamp'] <= end_date
-            ]
-            
-            restored_data.extend(filtered_data)
-            
-        return restored_data
+**백테DB생성** (`utility/query.py:222-256`):
+날짜별 DB 파일들을 하나의 백테스트용 DB로 통합:
 ```
+stock_tick_20240101.db + stock_tick_20240102.db + ...
+  ↓ 백테DB생성
+stock_tick_back.db (백테스트용 통합 DB)
+```
+
+### 데이터 정리 기능
+
+- **지정시간이후삭제**: 특정 시간 이후 데이터 삭제 (테스트/디버깅용)
+- **VACUUM**: SQLite DB 파일 크기 최적화
 
 ---
 
-## 🔍 데이터 조회 및 분석
+## 🔍 데이터 조회 및 활용
 
-### 고성능 데이터 조회
+### 백테스팅 시스템 데이터 로딩
 
-#### 1. 인덱스 최적화 쿼리
+백테스팅 엔진(`backtester/backengine_*.py`)은 다음과 같이 데이터를 로딩합니다:
+
+**종목별 분류 방식** (기본):
 ```python
-class DataQueryOptimizer:
-    """데이터 조회 최적화"""
-    
-    def __init__(self, db_manager):
-        self.db_manager = db_manager
-        self.query_cache = {}
-        
-    def get_ohlcv_data(self, symbol, timeframe, start_date, end_date, limit=None):
-        """OHLCV 데이터 조회"""
-        cache_key = f"{symbol}_{timeframe}_{start_date}_{end_date}_{limit}"
-        
-        if cache_key in self.query_cache:
-            return self.query_cache[cache_key]
-            
-        query = """
-        SELECT timestamp, open_price, high_price, low_price, close_price, volume
-        FROM ohlcv_data 
-        WHERE symbol = ? AND timeframe = ? 
-        AND timestamp BETWEEN ? AND ?
-        ORDER BY timestamp ASC
-        """
-        
-        params = [symbol, timeframe, start_date, end_date]
-        
-        if limit:
-            query += " LIMIT ?"
-            params.append(limit)
-            
-        result = self.db_manager.execute_query(query, params)
-        
-        # 결과 캐싱 (최대 1000개 쿼리)
-        if len(self.query_cache) < 1000:
-            self.query_cache[cache_key] = result
-            
-        return result
-        
-    def get_latest_tick_data(self, symbols, limit=100):
-        """최신 틱 데이터 조회"""
-        placeholders = ','.join(['?' for _ in symbols])
-        
-        query = f"""
-        SELECT * FROM (
-            SELECT *, ROW_NUMBER() OVER (
-                PARTITION BY code ORDER BY timestamp DESC
-            ) as rn
-            FROM stock_tick 
-            WHERE code IN ({placeholders})
-        ) WHERE rn <= ?
-        ORDER BY code, timestamp DESC
-        """
-        
-        params = symbols + [limit]
-        return self.db_manager.execute_query(query, params)
-        
-    def get_volume_profile(self, symbol, start_date, end_date, price_bins=50):
-        """거래량 프로파일 조회"""
-        query = """
-        SELECT 
-            ROUND(current_price / ? ) * ? as price_level,
-            SUM(volume) as total_volume,
-            COUNT(*) as tick_count
-        FROM stock_tick 
-        WHERE code = ? AND timestamp BETWEEN ? AND ?
-        GROUP BY price_level
-        ORDER BY price_level
-        """
-        
-        # 가격 구간 계산
-        price_data = self.db_manager.execute_query(
-            "SELECT MIN(current_price), MAX(current_price) FROM stock_tick WHERE code = ?",
-            [symbol]
-        )
-        
-        min_price, max_price = price_data[0]
-        bin_size = (max_price - min_price) / price_bins
-        
-        params = [bin_size, bin_size, symbol, start_date, end_date]
-        return self.db_manager.execute_query(query, params)
+# 각 종목의 전체 기간 데이터를 한 번에 로딩
+con = sqlite3.connect(DB_STOCK_BACK_TICK)
+df = pd.read_sql(f'SELECT * FROM "{code}" WHERE `index` LIKE "{day}%"', con)
 ```
 
-### 데이터 분석 도구
-
-#### 1. 통계 분석 함수
+**일자별 분류 방식** (메모리 효율적):
 ```python
-class DataAnalyzer:
-    """데이터 분석 도구"""
-    
-    def __init__(self, query_optimizer):
-        self.query_optimizer = query_optimizer
-        
-    def calculate_volatility(self, symbol, timeframe, period_days=30):
-        """변동성 계산"""
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=period_days)
-        
-        data = self.query_optimizer.get_ohlcv_data(
-            symbol, timeframe, start_date, end_date
-        )
-        
-        if len(data) < 2:
-            return None
-            
-        # 일일 수익률 계산
-        returns = []
-        for i in range(1, len(data)):
-            prev_close = data[i-1][4]  # close_price
-            curr_close = data[i][4]
-            daily_return = (curr_close - prev_close) / prev_close
-            returns.append(daily_return)
-            
-        # 연율화 변동성
-        volatility = np.std(returns) * np.sqrt(252)  # 252 trading days
-        return volatility
-        
-    def calculate_correlation(self, symbol1, symbol2, timeframe, period_days=30):
-        """상관관계 계산"""
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=period_days)
-        
-        data1 = self.query_optimizer.get_ohlcv_data(symbol1, timeframe, start_date, end_date)
-        data2 = self.query_optimizer.get_ohlcv_data(symbol2, timeframe, start_date, end_date)
-        
-        # 공통 시간대 데이터 추출
-        common_data = self.align_time_series(data1, data2)
-        
-        if len(common_data) < 10:
-            return None
-            
-        prices1 = [row[4] for row in common_data['data1']]  # close_price
-        prices2 = [row[4] for row in common_data['data2']]
-        
-        correlation = np.corrcoef(prices1, prices2)[0, 1]
-        return correlation
-        
-    def detect_support_resistance(self, symbol, timeframe, period_days=90):
-        """지지/저항선 탐지"""
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=period_days)
-        
-        data = self.query_optimizer.get_ohlcv_data(symbol, timeframe, start_date, end_date)
-        
-        highs = [row[2] for row in data]  # high_price
-        lows = [row[3] for row in data]   # low_price
-        
-        # 지지선 (저점들의 클러스터)
-        support_levels = self.find_price_clusters(lows, tolerance=0.02)
-        
-        # 저항선 (고점들의 클러스터)
-        resistance_levels = self.find_price_clusters(highs, tolerance=0.02)
-        
-        return {
-            'support_levels': support_levels,
-            'resistance_levels': resistance_levels
-        }
-        
-    def find_price_clusters(self, prices, tolerance=0.02):
-        """가격 클러스터 찾기"""
-        clusters = []
-        sorted_prices = sorted(prices)
-        
-        current_cluster = [sorted_prices[0]]
-        
-        for price in sorted_prices[1:]:
-            if abs(price - current_cluster[-1]) / current_cluster[-1] <= tolerance:
-                current_cluster.append(price)
-            else:
-                if len(current_cluster) >= 3:  # 최소 3개 이상의 터치
-                    clusters.append({
-                        'level': np.mean(current_cluster),
-                        'strength': len(current_cluster),
-                        'prices': current_cluster
-                    })
-                current_cluster = [price]
-                
-        return sorted(clusters, key=lambda x: x['strength'], reverse=True)
+# 각 날짜별로 모든 종목 데이터 로딩
+con = sqlite3.connect(f'{DB_PATH}/stock_tick_{day}.db')
+df = pd.read_sql(f'SELECT * FROM "{code}"', con)
+```
+
+### 실시간 데이터 활용
+
+리시버 → 전략 → 트레이더로 데이터 전송:
+```python
+# 리시버: 실시간 데이터 수신 및 전처리
+# ↓ Queue를 통해 전송
+# 전략: 매매 시그널 생성
+# ↓ Queue를 통해 전송
+# 트레이더: 주문 실행
 ```
 
 ---
