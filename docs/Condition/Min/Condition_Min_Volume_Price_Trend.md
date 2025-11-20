@@ -1,7 +1,8 @@
 # 조건식 (Condition) - Volume Price Trend Strategy (분봉)
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Min.md에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition) - Volume Price Trend Strategy (분봉)](#조건식-condition---volume-price-trend-strategy-분봉)
@@ -17,6 +18,17 @@
 ## 소개
 
 이 문서는 **거래량-가격 추세 전략(Volume Price Trend Strategy)**을 설명합니다. 거래량과 가격의 상관관계를 분석하여 진짜 추세와 거짓 추세를 구분하고, 거래량이 뒷받침하는 상승 추세에 진입하는 전략입니다.
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **Volume Price Trend Strategy (거래량-가격 추세 전략)**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 15:18:00 (장 전체)
+- **대상 종목**: 시가총액 2,000억 차등 기준
+- **전략 타입**: 분봉 기반 거래량-가격 추세 전략
+- **핵심 변수**: OBV, AD, ADOSC, 분당거래대금
+- **업데이트 이력**:
+  - 초기 문서 작성: 거래량-가격 추세 전략
 
 ### 전략 개요
 - **거래 시간**: 900 ~ 1518 (9시 ~ 15시 18분)

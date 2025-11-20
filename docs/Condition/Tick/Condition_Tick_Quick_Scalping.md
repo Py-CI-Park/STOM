@@ -1,7 +1,8 @@
 # 조건식 (Condition) - Quick Scalping Strategy
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Tick.md에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Tick]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition) - Quick Scalping Strategy](#조건식-condition---quick-scalping-strategy)
@@ -17,6 +18,17 @@
 ## 소개
 
 이 문서는 **빠른 스캘핑 전략(Quick Scalping Strategy)**을 설명합니다. 장 초반(09:00:00 ~ 09:20:00) 짧은 시간 내에 작은 수익을 반복적으로 획득하는 초단타 전략입니다.
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **Quick Scalping Strategy (빠른 스캘핑 전략)**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 09:20:00 (장 초반 20분)
+- **대상 종목**: 시가총액 2,000억 차등 기준
+- **전략 타입**: 초단타 스캘핑 (3~5분 극초단타)
+- **핵심 변수**: 초당거래대금, 체결강도, 즉시 반응 지표
+- **업데이트 이력**:
+  - 2025-01-18: 초기 문서 작성 (빠른 스캘핑 전략)
 
 ### 전략 개요
 - **거래 시간**: 90000 ~ 92000 (9시 ~ 9시 20분)

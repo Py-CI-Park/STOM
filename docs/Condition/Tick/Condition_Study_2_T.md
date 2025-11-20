@@ -1,7 +1,19 @@
 # 조건식 (Condition)
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline.md 에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Tick]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **Study 2_T 전략**을 정의한다.
+
+- **대상 시간 구간**: 틱 데이터 기반 (시간대별)
+- **대상 종목**: 전 종목 대상
+- **전략 타입**: 틱 기반 연구용 전략
+- **핵심 변수**: 초당거래대금, 체결강도, 등락율
+- **업데이트 이력**:
+  - 초기 문서 작성: Study 2_T 전략
 
 ## 목차
 - [조건식 (Condition)](#조건식-condition)
