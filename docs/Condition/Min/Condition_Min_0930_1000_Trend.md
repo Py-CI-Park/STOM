@@ -1,8 +1,8 @@
 # 조건식(Condition) - 분봉(Minute) 기반 추세 전략
 
 - STOM 주식 자동거래에 사용하기 위한 분봉 조건식 문서
-- [Back_Testing_Guideline_Min](../../Guideline/Back_Testing_Guideline_Min.md) 을(를) 기반으로 작성
-- [Condition_Document_Template_Guideline](../../Guideline/Condition_Document_Template_Guideline.md) 을(를) 바탕으로 템플릿 구조를 적용한 문서
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식(Condition) - 분봉(Minute) 기반 추세 전략](#조건식condition---분봉minute-기반-추세-전략)
