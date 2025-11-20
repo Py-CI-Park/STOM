@@ -124,7 +124,7 @@ docs/
 **목적**: 모든 트레이딩 전략 조건식 문서 저장소
 
 **📈 전체 통계**:
-- **총 문서 수**: **170개** (Tick 73 + Min 65 + Idea 24 + Reference 8)
+- **총 문서 수**: **173개** (Tick 73 + Min 66 + Idea 26 + Reference 8)
 - **전략 카테고리**: **18개** (Tick 8개 + Min 10개)
 - **검증 완료 전략**: **96개** (프로덕션 배포 가능)
 - **골드 스탠다드 (⭐⭐⭐⭐⭐)**: 4개
@@ -156,7 +156,7 @@ docs/
 
 ---
 
-#### 📂 [Condition/Min](./Condition/Min/) - 분봉 조건식 (**65개**)
+#### 📂 [Condition/Min](./Condition/Min/) - 분봉 조건식 (**66개**)
 
 1분봉 캔들 데이터 기반 기술적 지표 활용 전략
 
@@ -170,7 +170,7 @@ docs/
 - 🎯 **복합 지표 (3개)**: 다중 지표 융합
 - ⚙️ **기타 지표 (7개)**: ADX, ATR, CCI, MFI, ROC, Williams %R
 - 📐 **패턴/추세 (6개)**: 캔들 패턴, 지지/저항, 갭
-- 🔬 **연구/아이디어 (22개)**
+- 🔬 **연구/아이디어 (15개)**
 
 **추천 문서**:
 - [Condition_Min_MACD_Cross.md](./Condition/Min/Condition_Min_MACD_Cross.md) - MACD 크로스 + RSI
@@ -183,9 +183,9 @@ docs/
 
 ---
 
-#### 📂 [Condition/Idea](./Condition/Idea/) - 전략 아이디어 (24개)
-- **Plan_from_GPT5**: GPT-5 기반 전략 계획 (13개 문서)
-- **Plan_from_claude_opus**: Claude Opus 기반 전략 계획 (11개 문서)
+#### 📂 [Condition/Idea](./Condition/Idea/) - 전략 아이디어 (26개)
+- **Plan_from_GPT5**: GPT-5 기반 전략 계획 (14개 문서)
+- **Plan_from_claude_opus**: Claude Opus 기반 전략 계획 (12개 문서)
 
 #### 📂 [Condition/Reference](./Condition/Reference/) - 참고 자료 (8개)
 - **PyTrader**: PyTrader 참고 자료 (2개)
@@ -398,15 +398,15 @@ graph LR
 
 ### 전체 문서 수
 - **Guideline**: 5개 핵심 문서 + 8개 사용설명서 = **13개**
-- **Condition**: **170개 문서**
+- **Condition**: **173개 문서**
   - Tick: **73개** (시간대별 27, 모멘텀 8, 거래량 6, 호가창 7, 갭/돌파 7, 반전 6, 특수 5, 연구 17)
-  - Min: **65개** (MACD 5, RSI 4, BBand 6, MA 5, Volume 4, Stochastic 3, 복합 3, 기타지표 7, 패턴/추세 6, 연구/아이디어 22)
-  - Idea: 24개
+  - Min: **66개** (메인 51개: MACD/RSI/BBand/MA/Volume/Stochastic/복합/기타지표/패턴·추세 + 아이디어 15개)
+  - Idea: **26개** (Plan_from_GPT5 14개, Plan_from_claude_opus 12개)
   - Reference: 8개
 - **Manual**: 10개 섹션 (다수 하위 문서)
 - **CodeReview**: 1개
 - **가상환경구축연구**: 1개
-- **총계**: **185+ 문서**
+- **총계**: **188+ 문서**
 
 ### 문서 품질 분포
 - ⭐⭐⭐⭐⭐ (골드 스탠다드): **4개**

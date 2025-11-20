@@ -51,9 +51,10 @@
 
 ### 📊 전체 통계
 
-- **전체 조건식**: 50개
+- **전체 조건식**: 51개 (메인) + 15개 (아이디어) = **66개**
 - **카테고리**: 10개 (기술적 지표별)
 - **주요 지표**: MACD, RSI, Bollinger Bands, Moving Average, Volume, Stochastic 등
+- **집계 근거**: `find docs/Condition/Min -name '*.md'` 기준 실제 파일 개수 반영
 
 ---
 
