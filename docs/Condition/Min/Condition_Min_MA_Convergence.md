@@ -1,7 +1,8 @@
 # 조건식 (Condition) - Moving Average Convergence Strategy (분봉)
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Min.md에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성한 Min 조건식
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition) - Moving Average Convergence Strategy (분봉)](#조건식-condition---moving-average-convergence-strategy-분봉)
@@ -13,6 +14,17 @@
   - [조건식](#조건식)
     - [매수 조건식](#매수-조건식)
     - [매도 조건식](#매도-조건식)
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **장중 전체(09:00~15:18) 이동평균선 수렴/발산 전략**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 15:18:00 (장중 전체)
+- **대상 종목**: 가격대 1,800원~52,000원, 등락율 1.2~28.5%
+- **전략 타입**: 이동평균선 정배열 + 골든크로스 포착 (MA Convergence)
+- **핵심 변수**: 이동평균(5/20/60), KAMA, APO, 체결강도, 분당거래대금
+- **업데이트 이력**:
+  - 초기 문서 작성
 
 ## 소개
 
