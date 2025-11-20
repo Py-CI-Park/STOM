@@ -1,8 +1,8 @@
 # 조건식 (Condition) - Tick 기반 모멘텀 전략
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- [Back_Testing_Guideline_Tick](../../Guideline/Back_Testing_Guideline_Tick.md) 을(를) 기반으로 작성한 Tick 조건식
-- [Condition_Document_Template_Guideline](../../Guideline/Condition_Document_Template_Guideline.md) 을(를) 바탕으로 템플릿 구조를 적용한 문서
+- [[Back_Testing_Guideline_Tick]] 을(를) 기반으로 작성한 Tick 조건식
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition) - Tick 기반 모멘텀 전략](#조건식-condition---tick-기반-모멘텀-전략)
