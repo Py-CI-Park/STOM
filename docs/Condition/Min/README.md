@@ -214,7 +214,7 @@ ADX, ATR, CCI, MFI, ROC, SAR, Williams %R 등 특수 지표 활용
 | [Condition_Study_2_Min.md](./Condition_Study_2_Min.md) | 2차 개선 연구 | 📊 연구 |
 | [Condition_Study_3_902_min.md](./Condition_Study_3_902_min.md) | 09:02 분봉 집중 연구 | 📊 연구 |
 | [Condition_Study_3_9010_min.md](./Condition_Study_3_9010_min.md) | 09:10 분봉 집중 연구 | 📊 연구 |
-| [Condition_Min_Study_soruce.md](./Condition_Min_Study_soruce.md) | 분봉 연구 원본 소스 | 📄 소스 |
+| [Condition_Min_Study_source.md](./Condition_Min_Study_source.md) | 분봉 연구 원본 소스 | 📄 소스 |
 
 ---
 
