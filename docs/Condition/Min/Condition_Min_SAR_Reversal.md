@@ -1,9 +1,25 @@
 # 조건식 - Parabolic SAR 반전 전략
 
+- STOM 주식 자동거래에 사용하기 위한 조건식 문서
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
+
 ## 소개
+
 **조건식 이름**: Parabolic SAR 반전 전략
-**거래 시간**: 900 ~ 1518
-**목표**: SAR 전환점에서 추세 반전 포착
+
+이 문서는 Parabolic SAR 지표의 반전점에서 추세 전환을 포착하는 전략을 설명합니다.
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **Parabolic SAR Reversal (SAR 반전 전략)**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 15:18:00 (장 전체)
+- **대상 종목**: 시가총액 차등 기준 (1,500억, 3,000억)
+- **전략 타입**: 분봉 기반 SAR 반전 포착 전략
+- **핵심 변수**: Parabolic SAR, RSI, MACD, 분당거래대금
+- **업데이트 이력**:
+  - 초기 문서 작성: Parabolic SAR 반전 전략
 
 ## 조건식
 

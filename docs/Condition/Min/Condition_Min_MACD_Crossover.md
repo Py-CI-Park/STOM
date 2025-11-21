@@ -1,7 +1,8 @@
 # 조건식 (Condition) - MACD Crossover Strategy (분봉)
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Min.md에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition) - MACD Crossover Strategy (분봉)](#조건식-condition---macd-crossover-strategy-분봉)
@@ -14,15 +15,20 @@
     - [매수 조건식](#매수-조건식)
     - [매도 조건식](#매도-조건식)
 
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **MACD 크로스오버 전략**을 정의한다.
+
+- **대상 시간 구간**: 09:00 ~ 15:18 (장 전체)
+- **대상 종목**: 전 종목 대상
+- **전략 타입**: MACD 골든크로스/데드크로스 전략
+- **핵심 변수**: MACD, MACDS, MACDH, RSI
+- **업데이트 이력**:
+  - 초기 문서 작성: MACD 크로스오버 전략
+
 ## 소개
 
 이 문서는 **MACD 크로스오버 전략(MACD Crossover Strategy)**을 설명합니다. 분봉 데이터에서 MACD와 시그널 라인의 골든크로스를 포착하여 매수하고, 데드크로스 발생 시 매도하는 전략입니다.
-
-### 전략 개요
-- **거래 시간**: 900 ~ 1518 (9시 ~ 15시 18분)
-- **목표**: MACD 골든크로스 포착
-- **핵심 지표**: MACD, MACDS, MACDH, RSI
-- **리스크 관리**: 기술적 지표 확인 후 진입
 
 ## 가이드라인
 

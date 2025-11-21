@@ -1,7 +1,8 @@
 # 조건식 (Condition) - Opening Momentum Strategy
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Tick.md에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Tick]] 을(를) 기반으로 작성한 Tick 조건식
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition) - Opening Momentum Strategy](#조건식-condition---opening-momentum-strategy)
@@ -13,6 +14,17 @@
   - [조건식](#조건식)
     - [매수 조건식](#매수-조건식)
     - [매도 조건식](#매도-조건식)
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **장 초반(09:00~09:20) 개장 모멘텀 전략(Opening Momentum)**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 09:20:00 (장 시작 20분)
+- **대상 종목**: 시가총액 차등 (3,500억 기준), 가격대 2,000원~45,000원
+- **전략 타입**: 갭 상승 + 강한 모멘텀 포착 (Opening Momentum)
+- **핵심 변수**: 시가등락율, 시가대비등락율, 고가대비하락율, 등락율각도, 초당거래대금
+- **업데이트 이력**:
+  - 초기 문서 작성
 
 ## 소개
 
