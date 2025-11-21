@@ -1,7 +1,8 @@
-# 조건식 (Condition)
+# 조건식 (Condition) - 분봉(Minute) 기반
 
-- STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Min.md 가이드라인을 준수하여 작성
+- STOM 주식 자동거래에 사용하기 위한 분봉 조건식 문서
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition)](#조건식-condition)
@@ -29,9 +30,16 @@
 
 이 문서는 STOM 주식 자동거래 시스템에서 09:00:00 ~ 10:00:00 구간의 볼린저밴드와 RSI를 활용한 분봉 전략을 연구하기 위한 조건식과 최적화 범위를 제공합니다. 장 시작 1시간 동안 볼린저밴드 하단 터치 후 반등과 RSI 과매도 구간 탈출을 포착하는 역추세 전략입니다.
 
-본 문서는 다음 문서들의 형식을 준수합니다:
-- docs/Guideline/Back_Testing_Guideline_Min.md
-- docs/Condition/Tick/Condition_Tick_900_930_Composite_Study.md
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **장 초반 볼린저밴드 + RSI 역추세 전략**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 10:00:00 (장 시작 1시간)
+- **대상 종목**: 시가총액 3,000억 미만, 가격대 1,000원~30,000원
+- **전략 타입**: 볼린저밴드 하단 반등 + RSI 과매도 탈출 (Mean Reversion)
+- **핵심 변수**: BBU, BBM, BBL, RSI, MACD, 이동평균(20/60), 체결강도, 분당거래대금
+- **업데이트 이력**:
+  - 초기 문서 작성
 
 ## 가이드라인
 

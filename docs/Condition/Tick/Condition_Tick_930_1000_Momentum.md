@@ -1,7 +1,8 @@
 # 조건식 (Condition)
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Tick.md 가이드라인을 준수하여 작성
+- [[Back_Testing_Guideline_Tick]] 을(를) 기반으로 작성한 Tick 조건식
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition)](#조건식-condition)
@@ -29,10 +30,16 @@
 
 이 문서는 STOM 주식 자동거래 시스템에서 09:30:00 ~ 10:00:00 구간의 모멘텀 지속 전략을 연구하기 위한 조건식과 최적화 범위를 제공합니다. 장 시작 30분 이후 안정화되는 구간에서 지속적인 상승 모멘텀을 포착하여 진입하는 전략입니다.
 
-본 문서는 다음 문서들의 형식을 준수합니다:
-- docs/Guideline/Back_Testing_Guideline_Tick.md
-- docs/Condition/Tick/Condition_Tick_900_930_Composite_Study.md
-- docs/Condition/Tick/Condition_Tick_902_905_update_2.md
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **장중 안정화 구간(09:30 ~ 10:00)**의 모멘텀 지속 전략을 정의한다.
+
+- **대상 시간 구간**: 09:30:00 ~ 10:00:00 (장 시작 30분 이후 안정화 구간)
+- **대상 종목**: 시가총액 3,000억 미만 중소형주, 가격대 1,000원~30,000원
+- **전략 타입**: 모멘텀 지속 추종 (Momentum Continuation)
+- **핵심 변수**: 체결강도, 이동평균정배열, 등락율각도(60/120), 당일거래대금각도, RSI, MACD
+- **업데이트 이력**:
+  - 2025-01-17: 초기 문서 작성, TA-Lib 지표(RSI, MACD) 통합
 
 ## 가이드라인
 
