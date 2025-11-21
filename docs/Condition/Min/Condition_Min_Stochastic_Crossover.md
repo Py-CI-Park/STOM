@@ -1,7 +1,8 @@
 # 조건식 (Condition)
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- Back_Testing_Guideline_Min.md 가이드라인 반영
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 - [조건식 (Condition)](#조건식-condition)
@@ -18,6 +19,17 @@
 ## 소개
 
 이 문서는 STOM 주식 자동거래 시스템에서 스토캐스틱 교차 전략(Stochastic Crossover Strategy)을 위한 조건식을 제공합니다. 스토캐스틱 지표의 %K와 %D 라인 교차를 활용한 모멘텀 매매 전략입니다.
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **Stochastic Crossover (스토캐스틱 교차 전략)**을 정의한다.
+
+- **대상 시간 구간**: 09:00:00 ~ 15:18:00 (장 전체)
+- **대상 종목**: 시가총액 3,000억 차등 기준
+- **전략 타입**: 분봉 기반 스토캐스틱 교차 전략
+- **핵심 변수**: STOCH_K, STOCH_D, 과매도구간, RSI
+- **업데이트 이력**:
+  - 초기 문서 작성: 스토캐스틱 교차 전략
 
 ## 가이드라인
 

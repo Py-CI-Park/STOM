@@ -13,7 +13,8 @@ creation date: 2025-07-15
 # 조건식 (Condition) - 분봉(Minute) 기준
 
 - STOM 주식 자동거래에 사용하기 위한 조건식 문서
-- [Back_Testing_Guideline_Min](../../Guideline/Back_Testing_Guideline_Min.md) 에 있는 조건식을 사용하여 만든 조건식
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성한 Min 조건식
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
 
 ## 목차
 
@@ -32,6 +33,17 @@ creation date: 2025-07-15
     - [매도 최적화 조건식 - C_S_2_SO_T_Min](#매도-최적화-조건식---c_s_2_so_t_min)
     - [매도 최적화 범위 - C_S_2_SOR_T1_Min](#매도-최적화-범위---c_s_2_sor_t1_min)
     - [매수 매도 최적화 범위 - C_S_2_OR_T1_Min](#매수-매도-최적화-범위---c_s_2_or_t1_min)
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **분봉 기반 Study 5 전략 (09:10 기준)**을 정의한다.
+
+- **대상 시간 구간**: 09:10:00 이후
+- **대상 종목**: 관심종목, 시가총액 및 가격대 필터링 적용
+- **전략 타입**: 분봉 데이터 기반 조건식 (Minute Study 5)
+- **핵심 변수**: 분당거래대금, 분당매수수량, 분당순매수금액, RSI, 이동평균, 체결강도
+- **업데이트 이력**:
+  - 2025-07-15: 초기 문서 작성 (틱 데이터 기반에서 분봉 데이터 기반으로 변환)
 
 ## 소개
 
