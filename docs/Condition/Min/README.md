@@ -3,7 +3,7 @@
 > 1분봉 캔들 데이터 기반 스윙/단타 트레이딩 전략 조건식 문서
 
 **📍 위치**: `docs/Condition/Min/`
-**📅 최종 업데이트**: 2025-01-18
+**📅 최종 업데이트**: 2025-01-21
 
 ---
 
@@ -44,6 +44,73 @@
 | 보조지표 | 제한적 | 풍부한 TA-Lib 지표 |
 | 시간 표기 | hhmmss | hhmmss |
 | 주요 용도 | 초단타, 급등주 즉시 포착 | 단타, 스윙, 기술적 분석 |
+
+---
+
+## 📊 전체 Min 조건식 상세 목록 (49개)
+
+> **표준화 완료 (2025-01-21)**: 모든 Min 조건식이 [[Condition_Document_Template_Guideline]] 표준 형식을 준수합니다.
+
+아래 표는 **모든 Min 조건식의 핵심 특징**을 한눈에 볼 수 있도록 정리한 것입니다. 각 조건식의 대상 시간 구간, 대상 종목, 전략 타입, 핵심 변수를 비교하여 적합한 전략을 선택할 수 있습니다.
+
+| 파일명 | 대상 시간 구간 | 대상 종목 | 전략 타입 | 핵심 변수 |
+|--------|----------------|-----------|-----------|-----------|
+| [Condition_Bollinger_Reversal](./Condition_Bollinger_Reversal.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 2,000억 차등 기준 | 분봉 기반 볼린저밴드 하단 반등 전략 | 볼린저밴드(BBU, BBM, BBL), 분당거래대금, 체결강도 |
+| [Condition_Find_1_Min](./Condition_Find_1_Min.md) | 09:30:00 ~ 15:30:00 (장 안정화 이후 전체) | 가격대 1,000~30,000원, 시가총액 2,500억 차등 기준 | 분봉 기반 종합 탐색 전략 (눌림목, 상향 돌파, 볼륨 급증, 호가 불균형) | 분당거래대금, 분당순매수금액, 체결강도, 이동평균, 등락율각도, 호가잔량, TA-Lib 지표 |
+| [Condition_Gap_Up_Breakout](./Condition_Gap_Up_Breakout.md) | 09:00:00 ~ 10:00:00 (장 시작 1시간) | 가격대 2,000원~50,000원, 등락율 2~20% | 갭상승 + 고가 돌파 포착 (Gap Up Breakout) | 시가갭상승율, 최고현재가(5), MACD, RSI, 체결강도 |
+| [Condition_MACD_GoldenCross](./Condition_MACD_GoldenCross.md) | 09:30:00 ~ 14:30:00 | 시가총액 1,000억~3,000억 중형주 | 분봉 기반 MACD 골든크로스 추세 추종 전략 | MACD, MACD Signal, 이동평균선, 볼린저밴드 |
+| [Condition_MACD_Golden_Cross](./Condition_MACD_Golden_Cross.md) | 09:30:00 ~ 15:00:00 | 시가총액 2,000억 차등 기준 | 분봉 기반 MACD 골든크로스 추세 추종 전략 | MACD, MACD Signal, 분당거래대금, 체결강도 |
+| [Condition_MA_Alignment_Momentum](./Condition_MA_Alignment_Momentum.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 2,000억 차등 기준 | 분봉 기반 이동평균 정배열 추세 추종 전략 | 이동평균선 정배열, 분당거래대금, 체결강도, RSI |
+| [Condition_Min_0930_1000_Trend](./Condition_Min_0930_1000_Trend.md) | N/A | 시가총액 1,000억 ~ 1조 원, 분당거래대금 상위 종목 | 이동평균선 정배열 + RSI/MACD 복합 지표 + 분당거래대금 추세 추종 | 이동평균(20/60), RSI, MACD, 분당거래대금, 분봉고가/저가, 체결강도 |
+| [Condition_Min_900_1000_BB_RSI](./Condition_Min_900_1000_BB_RSI.md) | 09:00:00 ~ 10:00:00 (장 시작 1시간) | 시가총액 3,000억 미만, 가격대 1,000원~30,000원 | 볼린저밴드 하단 반등 + RSI 과매도 탈출 (Mean Reversion) | BBU, BBM, BBL, RSI, MACD, 이동평균(20/60), 체결강도, 분당거래대금 |
+| [Condition_Min_ADX_TrendStrength](./Condition_Min_ADX_TrendStrength.md) | 09:00 ~ 15:18 (장 전체) | 가격대 1,000~50,000원, 시가총액 조건 | ADX 추세 강도 기반 방향성 전략 | ADX, PLUS_DI, MINUS_DI, 방향성 명확도 |
+| [Condition_Min_ATR_Breakout](./Condition_Min_ATR_Breakout.md) | 09:30:00 ~ 14:30:00 | 가격대 3,000원~25,000원, 등락율 3%~20% | 분봉 기반 ATR 변동성 돌파 전략 | ATR, 분봉고가 돌파, 볼린저밴드, 분당거래대금 |
+| [Condition_Min_BB_Squeeze](./Condition_Min_BB_Squeeze.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 볼린저밴드 압축(Squeeze) 이후 돌파 전략 | 볼린저밴드 폭(BBU-BBL), 변동성, 돌파 강도 |
+| [Condition_Min_BBand_Reversal](./Condition_Min_BBand_Reversal.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 볼린저밴드 하단 반등 및 상단 반락 전략 | BBL, BBU, BBM, RSI, 밴드 터치 여부 |
+| [Condition_Min_Bollinger_Bounce](./Condition_Min_Bollinger_Bounce.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 볼린저밴드 하단 반등 포착 전략 | BBL, BBU, BBM, 밴드 하단 접촉 여부 |
+| [Condition_Min_Bollinger_Breakout_Strategy](./Condition_Min_Bollinger_Breakout_Strategy.md) | 09:30:00 ~ 15:00:00 (장중 전체) | 시가총액별 3단계 분류 (중소형 <2500억, 중형 2500~5000억, 대형 >=5000억), 가격대 1,000원~50,000원 | 볼린저 밴드 돌파 + 추세 확인 복합 전략 | BBU, BBM, BBL, BB_WIDTH, BB_POSITION, MACD, RSI, 이동평균(5/20/60), 체결강도, 분당거래대금 |
+| [Condition_Min_Bollinger_Squeeze](./Condition_Min_Bollinger_Squeeze.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 볼린저밴드 압축 후 확장 시점 포착 전략 | 볼린저밴드 폭(BBU-BBL), 변동성 증가 |
+| [Condition_Min_CCI_Extreme](./Condition_Min_CCI_Extreme.md) | 09:00 ~ 15:18 (장 전체) | 가격대 950~42,000원, 시가총액 차등 (1,500억/3,000억 기준) | CCI 과매도 극단값 반등 포착 전략 | CCI, RSI, 분당거래대금, 체결강도, 등락율각도 |
+| [Condition_Min_Candle_Pattern](./Condition_Min_Candle_Pattern.md) | 09:00 ~ 15:18 (장 전체) | 가격대 900~45,000원, 시가총액 차등 (1,500억/3,000억 기준) | 분봉 캔들 패턴 인식 및 반전 포착 전략 | 분봉실체, 분봉전체, 실체비율, 양봉/강한양봉 패턴 |
+| [Condition_Min_MACD_Cross](./Condition_Min_MACD_Cross.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | MACD 크로스 기반 추세 전환 전략 | MACD, MACDS, MACDH |
+| [Condition_Min_MACD_Crossover](./Condition_Min_MACD_Crossover.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | MACD 골든크로스/데드크로스 전략 | MACD, MACDS, MACDH, RSI |
+| [Condition_Min_MACD_GoldenCross](./Condition_Min_MACD_GoldenCross.md) | 09:30:00 ~ 15:00:00 (장중 전체) | 시가총액 3,000억 미만, 가격대 1,000원~50,000원 | MACD 골든크로스 추세 전환 (Trend Reversal) | MACD, MACDS, MACDH, RSI, 이동평균(20), 체결강도, 분당거래대금 |
+| [Condition_Min_MA_Alignment](./Condition_Min_MA_Alignment.md) | 장중 전체 (시간 필터링 필요) | 관심종목, 가격대 및 등락율 필터링 적용 | 이동평균선 정배열 + 추세 추종 (MA Alignment) | 이동평균(5/20/60), 분당거래대금, 체결강도, RSI |
+| [Condition_Min_MA_Convergence](./Condition_Min_MA_Convergence.md) | 09:00:00 ~ 15:18:00 (장중 전체) | 가격대 1,800원~52,000원, 등락율 1.2~28.5% | 이동평균선 정배열 + 골든크로스 포착 (MA Convergence) | 이동평균(5/20/60), KAMA, APO, 체결강도, 분당거래대금 |
+| [Condition_Min_MFI_MoneyFlow](./Condition_Min_MFI_MoneyFlow.md) | 09:00 ~ 15:18 (장 전체) | 가격대 1,050~47,000원, 시가총액 차등 (1,500억/3,000억 기준) | MFI 기반 자금 유입 감지 및 모멘텀 전략 | MFI, OBV, 분당매수수량, 분당거래대금, 체결강도 |
+| [Condition_Min_MFI_Money_Flow](./Condition_Min_MFI_Money_Flow.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | MFI 과매도/과매수 기반 자금 흐름 분석 전략 | MFI, OBV, RSI, 거래대금, 체결강도 |
+| [Condition_Min_Moving_Average_Golden_Cross](./Condition_Min_Moving_Average_Golden_Cross.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 이동평균선 골든크로스/데드크로스 기반 추세 전환 전략 | 이동평균(단기/장기), 골든크로스 발생 시점 |
+| [Condition_Min_MultiIndicator_Composite](./Condition_Min_MultiIndicator_Composite.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 다중 기술적 지표 복합 활용 전략 | RSI, MACD, 볼린저밴드, 이동평균, 종합 신호 평가 |
+| [Condition_Min_Multi_Indicator_Fusion](./Condition_Min_Multi_Indicator_Fusion.md) | 09:00 ~ 15:18 (장 전체) | 가격대 1,150~49,000원, 시가총액 차등 (1,500억/3,000억 기준) | RSI+MACD+BBand 복합 신호 융합 전략 | RSI, MACD, 볼린저밴드, 복합 신호 생성 |
+| [Condition_Min_Multi_MA_Cross](./Condition_Min_Multi_MA_Cross.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 다중 이동평균선(5/20/60분) 정배열 및 교차 전략 | 이동평균(5), 이동평균(20), 이동평균(60), 정배열 여부 |
+| [Condition_Min_ROC_Momentum](./Condition_Min_ROC_Momentum.md) | 09:00 ~ 15:18 (장 전체) | 가격대 1,000~48,000원, 시가총액 차등 (1,500억/3,000억 기준) | ROC 가속도 기반 모멘텀 포착 전략 | ROC, MOM, RSI, 등락율각도, 분당거래대금, 체결강도 |
+| [Condition_Min_RSI_Divergence](./Condition_Min_RSI_Divergence.md) | 09:00 ~ 15:18 (장 전체) | 전 종목 대상 | 가격-RSI 다이버전스 기반 반전 포착 전략 | RSI, 가격 고점/저점, 다이버전스 감지 |
+| [Condition_Min_RSI_Oversold](./Condition_Min_RSI_Oversold.md) | 09:30:00 ~ 15:00:00 (장중) | 관심종목, 시가총액 차등 (3,000억 기준), 가격대 1,000원~50,000원 | RSI 과매도 반등 + 스토캐스틱 확인 (RSI Oversold) | RSI, STOCHSK, STOCHSD, 이동평균(20), 체결강도, 분당거래대금 |
+| [Condition_Min_RSI_Reversal](./Condition_Min_RSI_Reversal.md) | 09:00:00 ~ 15:18:00 (장중 전체) | 시가총액 차등 (2,500억 기준), 등락율 -5~15% | RSI 과매도 반전 + 스토캐스틱 동반 확인 (RSI Reversal) | RSI, STOCHSK, MFI, 체결강도, 분당매수수량, 분봉고가 |
+| [Condition_Min_SAR_Reversal](./Condition_Min_SAR_Reversal.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 차등 기준 (1,500억, 3,000억) | 분봉 기반 SAR 반전 포착 전략 | Parabolic SAR, RSI, MACD, 분당거래대금 |
+| [Condition_Min_Stochastic_Cross](./Condition_Min_Stochastic_Cross.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 차등 기준 (1,500억, 3,000억) | 분봉 기반 스토캐스틱 골든크로스 전략 | STOCHSK, STOCHSD, RSI, MACD, 분당거래대금 |
+| [Condition_Min_Stochastic_Crossover](./Condition_Min_Stochastic_Crossover.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 3,000억 차등 기준 | 분봉 기반 스토캐스틱 교차 전략 | STOCH_K, STOCH_D, 과매도구간, RSI |
+| [Condition_Min_Stochastic_Oversold](./Condition_Min_Stochastic_Oversold.md) | 09:30:00 ~ 14:50:00 | 시가총액 1,000억~3,000억 중소형주 | 분봉 기반 스토캐스틱 과매도 반등 전략 | Stochastic %K/%D, RSI, 분당거래대금 |
+| [Condition_Min_SupportResistance](./Condition_Min_SupportResistance.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 3,000억 차등 기준 | 분봉 기반 지지/저항 레벨 전략 | 지지레벨, 저항레벨, 반등 패턴, 분당거래대금 |
+| [Condition_Min_Trend_Following](./Condition_Min_Trend_Following.md) | 09:00:00 ~ 15:18:00 (장중 전체) | 시가총액 2,500억 기준 대형/소형 분류, 가격대 1,000원~30,000원 | 이동평균선 정배열 기반 트렌드 추종 (Trend Following) | 이동평균(20/60/120), 등락율각도(30), 당일거래대금각도(30), 체결강도, 분당거래대금, 회전율 |
+| [Condition_Min_Volume_Breakout](./Condition_Min_Volume_Breakout.md) | 09:05:00 ~ 14:30:00 (장중) | 관심종목, 가격대 1,000원~50,000원 | 거래량 급증 + 가격 돌파 포착 (Volume Breakout) | 분당거래대금, 최고현재가(20), 분당매수수량, 체결강도 |
+| [Condition_Min_Volume_Momentum](./Condition_Min_Volume_Momentum.md) | 09:30:00 ~ 14:20:00 (장중) | 시가총액 차등 (1,800억/3,600억 기준), 가격대 2,800원~24,000원 | 거래량 폭발 + 모멘텀 포착 (Volume Momentum) | 분당거래대금, 분당매수수량, 체결강도, 등락율각도, 전일비각도 |
+| [Condition_Min_Volume_Price_Trend](./Condition_Min_Volume_Price_Trend.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 2,000억 차등 기준 | 분봉 기반 거래량-가격 추세 전략 | OBV, AD, ADOSC, 분당거래대금 |
+| [Condition_Min_Volume_Weighted](./Condition_Min_Volume_Weighted.md) | 09:00 ~ 15:18 (장중 전체) | 시가총액 차등 (1,500억/3,000억 기준), 가격대 1,200원~50,000원 | 거래량 급증 + OBV 활용 (Volume Weighted) | 분당거래대금, OBV, AD, MFI, RSI, 체결강도, 등락율각도 |
+| [Condition_Min_WilliamsR_Oversold](./Condition_Min_WilliamsR_Oversold.md) | 09:00:00 ~ 15:18:00 (장 전체) | 시가총액 차등 기준 (1,500억, 3,000억) | 분봉 기반 Williams %R 과매도 반등 전략 | Williams %R, RSI, 분당거래대금, 체결강도 |
+| [Condition_RSI_Oversold_Rebound](./Condition_RSI_Oversold_Rebound.md) | 09:00:00 ~ 15:18:00 (장중 전체) | 가격대 2,000원~50,000원, 등락율 -8~12% | RSI 과매도 탈출 반등 포착 (RSI Oversold Rebound) | RSI, MACD, 이동평균(20), 체결강도, 분당거래대금 |
+| [Condition_Stomer_Min](./Condition_Stomer_Min.md) | 09:00:00 ~ 15:30:00 (장 전체) | 시가총액 3,000억 차등 기준 | 분봉 기반 종합 전략 (거래대금, 순매수금액, 체결강도, TA-Lib 지표 활용) | 분당거래대금, 분당순매수금액, 체결강도, RSI, MACD, 볼린저밴드 |
+| [Condition_Study_1_Min](./Condition_Study_1_Min.md) | 장 시작 후 30분 이후 (09:30 이후) | 가격대 1,000원~30,000원, 등락율 1~20% | 분봉 데이터 기반 조건식 탐색 (Minute Study 1) | 분당거래대금, 분당매수수량, 이동평균, 체결강도, 호가정보 |
+| [Condition_Study_2_Min](./Condition_Study_2_Min.md) | 09:10:00 이후 | 관심종목, 가격대 1,000원~30,000원, 등락율 1~20% | 분봉 데이터 기반 조건식 탐색 (Minute Study 2) | 분당거래대금, 분당매수수량, 고저평균대비등락율, 체결강도, 호가정보 |
+| [Condition_Study_3_9010_min](./Condition_Study_3_9010_min.md) | 09:10:00 이후 | 관심종목, 시가총액 및 가격대 필터링 적용 | 분봉 데이터 기반 조건식 (Minute Study 5) | 분당거래대금, 분당매수수량, 분당순매수금액, RSI, 이동평균, 체결강도 |
+| [Condition_Study_3_902_min](./Condition_Study_3_902_min.md) | 09:02:00 이전 (개장 초반) | 시가총액 3,000억 미만, 가격대 1,000원~50,000원 | 갭상승 + 거래대금 가속 모멘텀 포착 | RSI, 시가등락율, 시가대비등락율, 분당순매수금액, 당일거래대금각도, 체결강도, 회전율 |
+
+**총 49개의 Min 조건식**이 표준화되어 있습니다.
+
+💡 **활용 팁**:
+- **지표별 선택**: MACD는 추세 전환, RSI는 과매도/과매수, 볼린저밴드는 변동성 분석에 활용
+- **시간대별 선택**: 장 초반(09:00~10:00)은 갭 전략, 장중은 추세 추종, 장 마감 전은 포지션 정리 전략 활용
+- **복합 지표 활용**: 다중 지표를 조합한 MultiIndicator 전략으로 신뢰도 향상
 
 ---
 
