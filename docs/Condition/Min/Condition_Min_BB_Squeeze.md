@@ -4,6 +4,21 @@ tags: [StockTrading, AutomatedTrading, MinuteBacktesting, BollingerBand, Squeeze
 
 # 조건식 (Condition) - 분봉 백테스팅
 
+- STOM 주식 자동거래에 사용하기 위한 분봉 조건식 문서
+- [[Back_Testing_Guideline_Min]] 을(를) 기반으로 작성
+- [[Condition_Document_Template_Guideline]] 을(를) 바탕으로 템플릿 구조를 적용한 문서
+
+## 개요
+
+본 문서는 STOM 주식 자동거래 시스템에서 **볼린저밴드 압축 돌파 전략**을 정의한다.
+
+- **대상 시간 구간**: 09:00 ~ 15:18 (장 전체)
+- **대상 종목**: 전 종목 대상
+- **전략 타입**: 볼린저밴드 압축(Squeeze) 이후 돌파 전략
+- **핵심 변수**: 볼린저밴드 폭(BBU-BBL), 변동성, 돌파 강도
+- **업데이트 이력**:
+  - 초기 문서 작성: 볼린저밴드 압축 돌파 전략
+
 ## 📋 Answer Instructions
 
 This document presents a Bollinger Band Squeeze Breakout strategy for minute-based (1-minute candlestick) backtesting, based on the guidelines provided in `Back_Testing_Guideline_Min.md`. The strategy identifies periods of low volatility (squeeze) followed by significant breakouts.
