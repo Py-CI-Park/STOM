@@ -123,6 +123,113 @@ else:
 
 ## 최적화 조건식
 
+### 매수 최적화 조건식 - C_MMA_M_BO
+
+```python
+분당순매수금액 = (분당매수수량 - 분당매도수량) * 현재가 / 1_000_000
+
+if not (93000 <= 시분초 < 143000):
+    매수 = False
+elif not (self.vars[0] < 현재가 <= self.vars[1]):    # 현재가 범위 최적화
+    매수 = False
+elif not (self.vars[2] < 등락율 <= self.vars[3]):     # 등락율 범위 최적화
+    매수 = False
+elif not (현재가 < VI아래5호가):
+    매수 = False
+elif not (이동평균(5) > 이동평균(20)):
+    매수 = False
+elif not (이동평균(20) > 이동평균(60)):
+    매수 = False
+elif not (현재가 > 이동평균(5)):
+    매수 = False
+elif not (이동평균(5) > 이동평균(5, 1)):
+    매수 = False
+elif not (이동평균(20) > 이동평균(20, 1)):
+    매수 = False
+elif not (이동평균(5, 1) <= 이동평균(20, 1) and 이동평균(5) > 이동평균(20)):
+    매수 = False
+elif not (분당거래대금 > 분당거래대금평균(30)):
+    매수 = False
+elif not (체결강도 > self.vars[4]):  # 체결강도 최적화
+    매수 = False
+elif not (MACD > MACDS):
+    매수 = False
+elif not (RSI > self.vars[5] and RSI < self.vars[6]):  # RSI 범위 최적화
+    매수 = False
+elif not (분당순매수금액 > self.vars[7]):  # 분당순매수금액 최적화
+    매수 = False
+elif 시가총액 < 1500:
+    if not (전일비 > 50):
+        매수 = False
+    elif not (회전율 > 2.2):
+        매수 = False
+    elif not (당일거래대금 > 300):
+        매수 = False
+elif 시가총액 < 3500:
+    if not (전일비 > 40):
+        매수 = False
+    elif not (회전율 > 1.8):
+        매수 = False
+    elif not (당일거래대금 > 500):
+        매수 = False
+else:
+    if not (전일비 > 30):
+        매수 = False
+    elif not (회전율 > 1.3):
+        매수 = False
+    elif not (당일거래대금 > 700):
+        매수 = False
+```
+
+### 매도 최적화 조건식 - C_MMA_M_SO
+
+```python
+if 등락율 > 29.5:
+    매도 = True
+elif 수익률 >= self.vars[20]:  # 목표 수익률 최적화
+    매도 = True
+elif 수익률 <= self.vars[21]:  # 손절 수익률 최적화
+    매도 = True
+elif 최고수익률 - 수익률 >= self.vars[22]:  # 고점 대비 하락폭 최적화
+    매도 = True
+elif 현재가 < 이동평균(5) and 현재가_N(1) >= 이동평균(5, 1) and 수익률 > 0.8:
+    매도 = True
+elif 이동평균(5) < 이동평균(20) and 이동평균(5, 1) >= 이동평균(20, 1) and 수익률 > 0.5:
+    매도 = True
+elif MACD < MACDS and MACD_N(1) >= MACDS_N(1) and 수익률 > 0.5:
+    매도 = True
+elif RSI > self.vars[23] and 수익률 > 1.0:  # RSI 과매수 기준 최적화
+    매도 = True
+elif 보유시간 > self.vars[24]:  # 보유시간 제한 최적화
+    매도 = True
+elif 시가총액 < 3500:
+    if 체결강도 < 체결강도평균(20) - 18 and 수익률 > 0.3:
+        매도 = True
+    elif (분당매도수량 - 분당매수수량) >= 매수총잔량 * 0.6 and 수익률 > 0:
+        매도 = True
+else:
+    if 체결강도 < 체결강도평균(20) - 12 and 수익률 > 0.3:
+        매도 = True
+    elif (분당매도수량 - 분당매수수량) >= 매수총잔량 * 0.5 and 수익률 > 0:
+        매도 = True
+```
+
+### 통합 최적화 범위 - C_MMA_M_OR
+
+```python
+self.vars[0] = [[2000, 2500, 3000], 2500]         # 현재가 하한
+self.vars[1] = [[20000, 22000, 24000], 22000]     # 현재가 상한
+self.vars[2] = [[0.5, 1.0, 1.5], 1.0]             # 등락율 하한
+self.vars[3] = [[16.0, 18.0, 20.0], 18.0]         # 등락율 상한
+self.vars[4] = [[110, 115, 120], 115]             # 체결강도
+self.vars[5] = [[48, 50, 52], 50]                 # RSI 하한
+self.vars[6] = [[73, 75, 77], 75]                 # RSI 상한
+self.vars[20] = [[2.8, 3.2, 3.6], 3.2]            # 목표 수익률
+self.vars[21] = [[-2.7, -2.3, -1.9], -2.3]        # 손절 수익률
+self.vars[22] = [[1.6, 1.8, 2.0], 1.8]            # 고점 대비 하락폭
+self.vars[23] = [[70, 72, 74], 72]                # RSI 과매수 기준
+```
+
 ### 매수 최적화 범위
 
 ```python

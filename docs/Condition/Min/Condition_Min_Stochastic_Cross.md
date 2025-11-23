@@ -100,6 +100,103 @@ elif RSI > 72:
     매도 = True
 ```
 
+## 최적화 조건식
+
+### 매수 최적화 조건식 - C_SC_M_BO
+
+```python
+스토캐스틱상승 = (STOCHSK > STOCHSD and STOCHSK_N(1) <= STOCHSD_N(1))
+과매도구간 = (STOCHSK_N(1) < self.vars[5] and STOCHSD_N(1) < self.vars[6])  # 과매도 기준 최적화
+
+if not (900 <= 시분초 <= 1518):
+    매수 = False
+elif not (self.vars[0] < 현재가 <= self.vars[1]):    # 현재가 범위 최적화
+    매수 = False
+elif not (self.vars[2] < 등락율 <= self.vars[3]):     # 등락율 범위 최적화
+    매수 = False
+elif not 스토캐스틱상승:
+    매수 = False
+elif not 과매도구간:
+    매수 = False
+elif 시가총액 < 1500:
+    if not (RSI > self.vars[7] and RSI < self.vars[8]):  # RSI 범위 최적화
+        매수 = False
+    elif not (MACD_N(1) < MACDS_N(1)):
+        매수 = False
+    elif not (분당거래대금 > 분당거래대금평균(25) * self.vars[9]):  # 분당거래대금/평균 배수 최적화
+        매수 = False
+    elif not (체결강도 > self.vars[10]):  # 체결강도 최적화
+        매수 = False
+    elif not (전일비 > self.vars[11]):  # 전일비 최적화
+        매수 = False
+    elif not (현재가 > 이동평균(20)):
+        매수 = False
+elif 시가총액 < 3000:
+    if not (RSI > 38 and RSI < self.vars[8]):
+        매수 = False
+    elif not (MACD_N(1) < MACDS_N(1)):
+        매수 = False
+    elif not (분당거래대금 > 분당거래대금평균(25) * 1.4):
+        매수 = False
+    elif not (체결강도 > 118):
+        매수 = False
+    elif not (전일비 > 30):
+        매수 = False
+    elif not (현재가 > 이동평균(20)):
+        매수 = False
+else:
+    if not (RSI > 40 and RSI < self.vars[8]):
+        매수 = False
+    elif not (MACD_N(1) < MACDS_N(1)):
+        매수 = False
+    elif not (분당거래대금 > 분당거래대금평균(25) * 1.3):
+        매수 = False
+    elif not (체결강도 > 115):
+        매수 = False
+    elif not (전일비 > 35):
+        매수 = False
+    elif not (현재가 > 이동평균(20)):
+        매수 = False
+```
+
+### 매도 최적화 조건식 - C_SC_M_SO
+
+```python
+스토캐스틱하락 = (STOCHSK < STOCHSD and STOCHSK_N(1) >= STOCHSD_N(1))
+과매수구간 = (STOCHSK > self.vars[17] and STOCHSD > self.vars[18])  # 과매수 기준 최적화
+
+if 등락율 > self.vars[12]:  # 최대 등락율 최적화
+    매도 = True
+elif 수익률 >= self.vars[13]:  # 목표 수익률 최적화
+    매도 = True
+elif 수익률 <= self.vars[14]:  # 손절 수익률 최적화
+    매도 = True
+elif 최고수익률 - 수익률 >= self.vars[15]:  # 고점 대비 하락폭 최적화
+    매도 = True
+elif 보유시간 > self.vars[16]:  # 보유시간 제한 최적화
+    매도 = True
+elif 스토캐스틱하락 and 과매수구간:
+    매도 = True
+elif RSI > self.vars[19]:  # RSI 과매수 기준 최적화
+    매도 = True
+```
+
+### 통합 최적화 범위 - C_SC_M_OR
+
+```python
+self.vars[0] = [[800, 1200, 1800], 1200]          # 현재가 하한
+self.vars[1] = [[35000, 45000, 55000], 45000]     # 현재가 상한
+self.vars[2] = [[0.3, 0.6, 1.2], 0.6]             # 등락율 하한
+self.vars[3] = [[22.0, 24.0, 26.0], 24.0]         # 등락율 상한
+self.vars[5] = [[20, 25, 30], 25]                 # STOCHSK 과매도 기준
+self.vars[7] = [[30, 35, 45], 35]                 # RSI 하한
+self.vars[9] = [[1.2, 1.5, 1.8], 1.5]             # 분당거래대금/평균 배수
+self.vars[13] = [[2.5, 3.8, 5.5], 3.8]            # 목표 수익률
+self.vars[14] = [[-4.5, -3.2, -2.0], -3.2]        # 손절 수익률
+self.vars[15] = [[1.5, 2.3, 3.5], 2.3]            # 고점 대비 하락폭
+self.vars[16] = [[80, 100, 140], 100]             # 보유시간 제한
+```
+
 ## 최적화 범위
 ```python
 # BOR
