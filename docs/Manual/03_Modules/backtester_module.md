@@ -29,6 +29,9 @@ backtester/
 ### 주식 틱 백테스트 (backengine_kiwoom_tick.py)
 
 #### 엔진 구조
+
+**소스**: 예제 코드 (실제: `backtester/backengine_kiwoom_tick.py:14-900`)
+
 ```python
 class BackEngineKiwoomTick:
     """주식 틱 백테스트 엔진"""
@@ -191,6 +194,9 @@ class BackEngineKiwoomTick:
 ### 주식 분봉 백테스트 (backengine_kiwoom_min.py)
 
 #### 캔들 데이터 처리
+
+**소스**: 예제 코드 (실제: `backtester/backengine_kiwoom_min.py:14-700`)
+
 ```python
 class BackEngineKiwoomMin:
     """주식 분봉 백테스트 엔진"""
@@ -266,6 +272,9 @@ class BackEngineKiwoomMin:
 ### 업비트 틱 백테스트 (backengine_upbit_tick.py)
 
 #### 수수료 및 슬리피지 반영
+
+**소스**: 예제 코드 (실제: `backtester/backengine_upbit_tick.py:14-900`)
+
 ```python
 class BackEngineUpbitTick:
     """업비트 틱 백테스트 엔진"""
@@ -376,6 +385,8 @@ class BackEngineUpbitTick:
 
 ### Optuna 기반 최적화
 
+**소스**: 예제 코드 (실제: `backtester/optimiz.py:372-850`)
+
 ```python
 import optuna
 from optuna.samplers import TPESampler
@@ -452,6 +463,8 @@ def Strategy(code, price, volume, timestamp):
 ## 📊 전진분석 (rolling_walk_forward_test.py)
 
 ### Walk Forward 검증
+
+**소스**: 예제 코드 (실제: `backtester/rolling_walk_forward_test.py:16-600`)
 
 ```python
 class WalkForwardTest:
@@ -534,6 +547,8 @@ class WalkForwardTest:
 ## 📈 성과 분석 (performance_analyzer.py)
 
 ### 성과 지표 계산
+
+**소스**: 예제 코드 (실제: `backtester/back_static.py`에 분산)
 
 ```python
 import numpy as np
@@ -676,6 +691,8 @@ class PerformanceAnalyzer:
 ## 🚀 백테스트 실행
 
 ### 메인 실행 파일 (backtest.py)
+
+**소스**: 예제 코드 (실제: `backtester/backtest.py:1-400`)
 
 ```python
 def main():

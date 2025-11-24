@@ -28,6 +28,8 @@ STOM은 **다중 API 통합 아키텍처**를 통해 주식과 암호화폐 시�
 ### 핵심 클래스 구조
 
 #### 1. Kiwoom 래퍼 클래스 (`kiwoom.py`)
+
+**소스**: 예제 코드 (실제: `stock/kiwoom.py`)
 ```python
 class Kiwoom:
     """키움 OpenAPI 래퍼 클래스"""
@@ -46,6 +48,9 @@ class Kiwoom:
 ```
 
 #### 2. 로그인 및 인증
+
+**소스**: 예제 코드 (실제: `stock/kiwoom.py`)
+
 ```python
 def CommConnect(self):
     """OpenAPI 로그인"""
@@ -65,6 +70,9 @@ def OnEventConnect(self, err_code):
 ### 실시간 데이터 수신
 
 #### 1. 체결 데이터 (`주식체결`)
+
+**소스**: 예제 코드 (실제: `stock/kiwoom_receiver_tick.py`)
+
 ```python
 def OnReceiveRealData(self, code, realtype, realdata):
     """실시간 데이터 수신"""
@@ -79,6 +87,9 @@ def OnReceiveRealData(self, code, realtype, realdata):
 ```
 
 #### 2. 호가 데이터 (`주식호가잔량`)
+
+**소스**: 예제 코드
+
 ```python
 def ProcessHogaData(self, code):
     """호가 데이터 처리"""
@@ -95,6 +106,9 @@ def ProcessHogaData(self, code):
 ### 주문 실행
 
 #### 1. 주문 전송
+
+**소스**: 예제 코드 (실제: `stock/kiwoom_trader.py`)
+
 ```python
 def SendOrder(self, rqname, screen_no, acc_no, order_type, code, qty, price, hoga_gb, order_no):
     """주문 전송"""
@@ -116,6 +130,9 @@ ORDER_TYPE = {
 ```
 
 #### 2. 체결 확인
+
+**소스**: 예제 코드
+
 ```python
 def OnReceiveChejanData(self, gubun, item_cnt, fid_list):
     """체결 데이터 수신"""
@@ -133,6 +150,9 @@ def OnReceiveChejanData(self, gubun, item_cnt, fid_list):
 ### 조건검색
 
 #### 1. 조건식 로드
+
+**소스**: 예제 코드
+
 ```python
 def GetConditionLoad(self):
     """조건검색식 로드"""
@@ -151,6 +171,9 @@ def GetConditionNameList(self):
 ```
 
 #### 2. 실시간 조건검색
+
+**소스**: 예제 코드
+
 ```python
 def SendCondition(self, screen_no, cond_name, cond_index, search_type):
     """조건검색 실행"""
@@ -181,6 +204,9 @@ def OnReceiveRealCondition(self, code, type, cond_name, cond_index):
 ### REST API 구조
 
 #### 1. 인증 시스템
+
+**소스**: 예제 코드
+
 ```python
 import jwt
 import hashlib
@@ -213,6 +239,9 @@ class UpbitAPI:
 ```
 
 #### 2. 시장 데이터 조회
+
+**소스**: 예제 코드
+
 ```python
 def get_ticker(self, markets):
     """현재가 조회"""
@@ -243,6 +272,9 @@ def get_candles_minutes(self, unit, market, count=1):
 ```
 
 #### 3. 거래 API
+
+**소스**: 예제 코드
+
 ```python
 def place_order(self, market, side, volume, price, ord_type):
     """주문 생성"""
@@ -277,6 +309,9 @@ def cancel_order(self, uuid):
 ### WebSocket 실시간 데이터
 
 #### 1. WebSocket 연결
+
+**소스**: 예제 코드
+
 ```python
 import websocket
 import json
@@ -307,6 +342,9 @@ class UpbitWebSocket:
 ```
 
 #### 2. 구독 메시지
+
+**소스**: 예제 코드
+
 ```python
 def subscribe_ticker(self, codes):
     """현재가 구독"""
@@ -349,6 +387,9 @@ def subscribe_trade(self, codes):
 ```
 
 #### 3. 데이터 처리
+
+**소스**: 예제 코드
+
 ```python
 def on_message(self, ws, message):
     """메시지 수신 처리"""
@@ -392,6 +433,9 @@ def process_ticker_data(self, data):
 ### REST API 구조
 
 #### 1. 인증 시스템
+
+**소스**: 예제 코드
+
 ```python
 import hmac
 import hashlib
@@ -420,6 +464,9 @@ class BinanceAPI:
 ```
 
 #### 2. 시장 데이터 조회
+
+**소스**: 예제 코드
+
 ```python
 def get_ticker_24hr(self, symbol=None):
     """24시간 가격 변동 통계"""
@@ -456,6 +503,9 @@ def get_klines(self, symbol, interval, limit=500):
 ```
 
 #### 3. 거래 API
+
+**소스**: 예제 코드
+
 ```python
 def place_order(self, symbol, side, type, quantity, price=None):
     """주문 생성"""
@@ -485,6 +535,9 @@ def place_order(self, symbol, side, type, quantity, price=None):
 ### WebSocket 스트림
 
 #### 1. 개별 심볼 스트림
+
+**소스**: 예제 코드
+
 ```python
 class BinanceWebSocket:
     def __init__(self):
@@ -507,6 +560,9 @@ class BinanceWebSocket:
 ```
 
 #### 2. 멀티 스트림
+
+**소스**: 예제 코드
+
 ```python
 def create_multi_stream(self, streams):
     """다중 스트림 생성"""
@@ -531,6 +587,9 @@ ws_url = create_multi_stream(streams)
 ### 김프 계산 시스템
 
 #### 1. 가격 차이 계산
+
+**소스**: 예제 코드
+
 ```python
 class KimpCalculator:
     def __init__(self):
@@ -562,6 +621,9 @@ class KimpCalculator:
 ```
 
 #### 2. 실시간 김프 모니터링
+
+**소스**: 예제 코드
+
 ```python
 class KimpMonitor:
     def __init__(self, callback):
@@ -619,6 +681,9 @@ class KimpMonitor:
 ### 통합 API 매니저
 
 #### 1. API 팩토리 패턴
+
+**소스**: 예제 코드
+
 ```python
 class APIFactory:
     """API 팩토리"""
@@ -666,6 +731,9 @@ class APIManager:
 ```
 
 #### 2. 에러 처리 및 재연결
+
+**소스**: 예제 코드
+
 ```python
 class APIErrorHandler:
     """API 에러 처리"""
@@ -719,6 +787,9 @@ class RateLimiter:
 ### 데이터 정규화
 
 #### 1. 통합 데이터 포맷
+
+**소스**: 예제 코드
+
 ```python
 class DataNormalizer:
     """데이터 정규화"""
@@ -766,6 +837,9 @@ class DataNormalizer:
 ## 📊 성능 모니터링
 
 ### API 성능 지표
+
+**소스**: 예제 코드
+
 ```python
 class APIPerformanceMonitor:
     """API 성능 모니터링"""

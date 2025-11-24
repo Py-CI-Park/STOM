@@ -24,6 +24,9 @@ STOM의 트레이딩 엔진은 **고성능 실시간 주문 처리**와 **다중
 ### 전략 기본 구조
 
 #### 1. 기본 전략 클래스 (`strategy_base.py`)
+
+**소스**: 예제 코드
+
 ```python
 class StrategyBase:
     """전략 기본 클래스"""
@@ -63,6 +66,9 @@ class StrategyBase:
 ```
 
 #### 2. 이동평균 전략 구현
+
+**소스**: 예제 코드
+
 ```python
 class MovingAverageStrategy(StrategyBase):
     """이동평균 전략"""
@@ -116,6 +122,9 @@ class MovingAverageStrategy(StrategyBase):
 ### 주식 전략 시스템
 
 #### 1. Kiwoom 전략 엔진 (`stock/kiwoom_strategy_tick.py`)
+
+**소스**: 예제 코드
+
 ```python
 class KiwoomStrategyTick(QAxWidget):
     """키움 틱 전략 엔진"""
@@ -170,6 +179,9 @@ class KiwoomStrategyTick(QAxWidget):
 ### 암호화폐 전략 시스템
 
 #### 1. Upbit 전략 엔진 (`coin/upbit_strategy_tick.py`)
+
+**소스**: 예제 코드
+
 ```python
 class UpbitStrategyTick:
     """업비트 틱 전략 엔진"""
@@ -217,6 +229,9 @@ class UpbitStrategyTick:
 ### 주문 관리자
 
 #### 1. 주문 관리 클래스
+
+**소스**: 예제 코드 (실제: `*_trader.py`)
+
 ```python
 class OrderManager:
     """주문 관리자"""
@@ -277,6 +292,9 @@ class OrderManager:
 ### 포지션 관리
 
 #### 1. 포지션 관리자
+
+**소스**: 예제 코드
+
 ```python
 class PositionManager:
     """포지션 관리자"""
@@ -335,6 +353,9 @@ class PositionManager:
 ### 리스크 관리자
 
 #### 1. 리스크 체크 시스템
+
+**소스**: 예제 코드
+
 ```python
 class RiskManager:
     """리스크 관리자"""
@@ -396,6 +417,9 @@ class RiskManager:
 ### 손절/익절 시스템
 
 #### 1. 자동 손절/익절
+
+**소스**: 예제 코드
+
 ```python
 class StopLossManager:
     """손절/익절 관리자"""
@@ -465,6 +489,9 @@ class StopLossManager:
 ### 멀티스레딩 처리
 
 #### 1. 스레드 풀 관리
+
+**소스**: 예제 코드
+
 ```python
 class TradingThreadPool:
     """트레이딩 스레드 풀"""
@@ -507,6 +534,9 @@ class TradingThreadPool:
 ### 지연시간 최적화
 
 #### 1. 저지연 처리
+
+**소스**: 예제 코드
+
 ```python
 class LowLatencyProcessor:
     """저지연 처리기"""

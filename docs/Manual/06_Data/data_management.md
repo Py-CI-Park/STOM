@@ -24,6 +24,9 @@ STOM 시스템은 **고성능 실시간 데이터 처리**를 위한 다층 데�
 ### SQLite 기반 데이터 저장소
 
 #### 1. 데이터베이스 구조 (`utility/setting.py:31-49`)
+
+**소스**: 예제 코드
+
 ```python
 # 데이터베이스 경로 설정
 OPENAPI_PATH       = 'C:/OpenAPI'
@@ -62,6 +65,9 @@ DB_OPTUNA          = 'sqlite:///./_database/optuna.db'
 ##### 설정 DB 테이블 (`setting.db`)
 
 **main 테이블** - 시스템 주요 설정
+
+**소스**: 예제 코드
+
 ```python
 columns = [
     'index', '증권사', '주식리시버', '주식트레이더', '주식데이터저장', '거래소',
@@ -72,18 +78,27 @@ columns = [
 ```
 
 **sacc 테이블** - 주식 계정 정보 (암호화됨)
+
+**소스**: 예제 코드
+
 ```python
 columns = ["index", "아이디", "비밀번호", "인증서비밀번호", "계좌비밀번호"]
 # 1~8번까지 최대 8개 계정 지원
 ```
 
 **cacc 테이블** - 암호화폐 API 키 (암호화됨)
+
+**소스**: 예제 코드
+
 ```python
 columns = ["index", "Access_key", "Secret_key"]
 # Upbit, Binance 등 거래소 API 키 저장
 ```
 
 **stock 테이블** - 주식 거래 설정
+
+**소스**: 예제 코드
+
 ```python
 columns = [
     "index", "주식모의투자", "주식알림소리", "주식매수전략", "주식매도전략",
@@ -94,6 +109,9 @@ columns = [
 ```
 
 **coin 테이블** - 암호화폐 거래 설정
+
+**소스**: 예제 코드
+
 ```python
 columns = [
     "index", "코인모의투자", "코인알림소리", "코인매수전략", "코인매도전략",
@@ -104,6 +122,9 @@ columns = [
 ```
 
 **stockbuyorder/stocksellorder 테이블** - 주식 매수/매도 주문 설정
+
+**소스**: 예제 코드
+
 ```python
 # 매수 주문 설정: 주문구분, 분할횟수, 분할방법, 취소조건, 금지조건 등
 # 매도 주문 설정: 손절수익률, 수익금 설정, 취소조건 등
@@ -112,6 +133,9 @@ columns = [
 ##### 거래 DB 테이블 (`tradelist.db`) (`utility/database_check.py:244-318`)
 
 **s_chegeollist / c_chegeollist** - 주식/코인 체결 내역
+
+**소스**: 예제 코드
+
 ```python
 query = 'CREATE TABLE "s_chegeollist" (
     "index" TEXT, "종목명" TEXT, "주문구분" TEXT, "주문수량" INTEGER,
@@ -121,6 +145,9 @@ query = 'CREATE TABLE "s_chegeollist" (
 ```
 
 **s_jangolist / c_jangolist** - 주식/코인 잔고 내역
+
+**소스**: 예제 코드
+
 ```python
 query = 'CREATE TABLE "s_jangolist" (
     "index" TEXT, "종목명" TEXT, "매입가" INTEGER, "현재가" INTEGER,
@@ -130,6 +157,9 @@ query = 'CREATE TABLE "s_jangolist" (
 ```
 
 **c_jangolist_future** - 코인 선물 잔고 (바이낸스)
+
+**소스**: 예제 코드
+
 ```python
 query = 'CREATE TABLE "c_jangolist_future" (
     "index" TEXT, "종목명" TEXT, "포지션" TEXT, "매입가" REAL, "현재가" REAL,
@@ -140,6 +170,9 @@ query = 'CREATE TABLE "c_jangolist_future" (
 ```
 
 **s_tradelist / c_tradelist** - 주식/코인 거래 내역
+
+**소스**: 예제 코드
+
 ```python
 query = 'CREATE TABLE "s_tradelist" (
     "index" TEXT, "종목명" TEXT, "매수금액" INTEGER, "매도금액" INTEGER,
@@ -148,6 +181,9 @@ query = 'CREATE TABLE "s_tradelist" (
 ```
 
 **s_totaltradelist / c_totaltradelist** - 총 거래 집계
+
+**소스**: 예제 코드
+
 ```python
 query = 'CREATE TABLE "s_totaltradelist" (
     "index" TEXT, "총매수금액" INTEGER, "총매도금액" INTEGER,
@@ -158,22 +194,34 @@ query = 'CREATE TABLE "s_totaltradelist" (
 ##### 전략 DB 테이블 (`strategy.db`) (`utility/database_check.py:166-241`)
 
 **stockbuy/stocksell, coinbuy/coinsell** - 매매 전략 코드
+
+**소스**: 예제 코드
+
 ```python
 cur.execute('CREATE TABLE "stockbuy" ( "index" TEXT, "전략코드" TEXT )')
 cur.execute('CREATE INDEX "ix_stockbuy_index" ON "stockbuy" ("index")')
 ```
 
 **stockbuyconds/stocksellconds** - 매매 조건식
+
+**소스**: 예제 코드
+
 ```python
 cur.execute('CREATE TABLE "stockbuyconds" ( "index" TEXT, "전략코드" TEXT )')
 ```
 
 **stockvars/coinvars** - 전략 변수
+
+**소스**: 예제 코드
+
 ```python
 cur.execute('CREATE TABLE "stockvars" ( "index" TEXT, "전략코드" TEXT )')
 ```
 
 **stockoptibuy/stockoptisell** - 최적화용 전략
+
+**소스**: 예제 코드
+
 ```python
 query = 'CREATE TABLE "stockoptibuy" ( "index" TEXT, "전략코드" TEXT, "변수값" TEXT )'
 ```
@@ -181,12 +229,18 @@ query = 'CREATE TABLE "stockoptibuy" ( "index" TEXT, "전략코드" TEXT, "변�
 ##### 시장 데이터 DB 테이블 (동적 생성)
 
 **moneytop 테이블** - 거래대금 순위 (모든 tick/min DB에 존재)
+
+**소스**: 예제 코드
+
 ```python
 # index: 시간 (YYYYMMDDHHMMSS)
 # 거래대금순위: 세미콜론으로 구분된 종목코드/마켓 리스트
 ```
 
 **[종목코드/마켓] 테이블** - 개별 종목 데이터 (동적 생성)
+
+**소스**: 예제 코드
+
 ```python
 # 주식 틱: index, 현재가, 시가, 고가, 저가, 등락률, 당일거래대금,
 #          체결강도, 호가총잔량, 매수호가1~10, 매도호가1~10, 매수잔량1~10, 매도잔량1~10
@@ -200,6 +254,8 @@ query = 'CREATE TABLE "stockoptibuy" ( "index" TEXT, "전략코드" TEXT, "변�
 #### 1. Query 프로세스 (`utility/query.py:12-89`)
 
 STOM은 별도의 프로세스로 **Query** 클래스를 실행하여 모든 데이터베이스 작업을 처리합니다.
+
+**소스**: 예제 코드
 
 ```python
 class Query:
@@ -287,6 +343,9 @@ class Query:
 ```
 
 **사용 예시:**
+
+**소스**: 예제 코드
+
 ```python
 # 설정 DB에 데이터 저장
 queryQ.put(('설정디비', df, 'codename', 'replace'))
@@ -301,6 +360,9 @@ queryQ.put(('전략디비', f"DELETE FROM stockbuy WHERE index='{strategy_name}'
 #### 2. 데이터베이스 최적화 설정
 
 SQLite 성능 최적화를 위한 PRAGMA 설정 (일반적으로 사용):
+
+**소스**: 예제 코드
+
 ```python
 conn = sqlite3.connect(db_path, check_same_thread=False, timeout=30.0)
 conn.execute("PRAGMA journal_mode=WAL")        # Write-Ahead Logging
@@ -314,6 +376,9 @@ conn.execute("PRAGMA temp_store=MEMORY")       # 임시 저장소를 메모리�
 Query 프로세스는 다음과 같은 DB 관리 기능을 제공합니다:
 
 **백테DB생성**: 날짜별 DB 파일들을 하나의 백테스트용 DB로 통합
+
+**소스**: 예제 코드
+
 ```python
 elif '백테DB생성' in query[0]:
     # _database/stock_tick_20240101.db, stock_tick_20240102.db 등을
@@ -321,12 +386,18 @@ elif '백테DB생성' in query[0]:
 ```
 
 **일자DB분리**: 당일 DB를 날짜별로 분리하여 저장
+
+**소스**: 예제 코드
+
 ```python
 elif '일자DB분리' in query[0]:
     # stock_tick.db에서 날짜별로 stock_tick_20240101.db, stock_tick_20240102.db로 분리
 ```
 
 **지정시간이후삭제**: 특정 시간 이후 데이터 삭제 (디버깅/테스트용)
+
+**소스**: 예제 코드
+
 ```python
 elif '당일데이터지정시간이후삭제' in query[0]:
     # 예: 093000 이후 데이터 삭제
@@ -339,6 +410,8 @@ elif '당일데이터지정시간이후삭제' in query[0]:
 ### 주식 데이터 수신 시스템
 
 #### 1. Kiwoom 리시버 구조 (`stock/kiwoom_receiver_tick.py:41-118`)
+
+**소스**: 예제 코드
 
 ```python
 class KiwoomReceiverTick:
@@ -423,6 +496,9 @@ class KiwoomReceiverTick:
 ```
 
 **실시간 등록 및 데이터 처리:**
+
+**소스**: 예제 코드
+
 ```python
 # stock/kiwoom_receiver_tick.py:203-235
 def OperationRealreg(self):
@@ -475,6 +551,8 @@ def SaveData(self):
 ### 암호화폐 데이터 수신 시스템
 
 #### 1. Upbit 리시버 구조 (`coin/upbit_receiver_tick.py:30-150`)
+
+**소스**: 예제 코드
 
 ```python
 class UpbitReceiverTick:
@@ -583,6 +661,9 @@ class UpbitReceiverTick:
 ```
 
 **WebSocket 시작:**
+
+**소스**: 예제 코드
+
 ```python
 # coin/upbit_receiver_tick.py
 def WebSocketsStart(self, creceivQ):
@@ -611,6 +692,8 @@ class WebSocketReceiver:
 ```
 
 #### 2. Binance 리시버 구조 (`coin/binance_receiver_tick.py:31-100`)
+
+**소스**: 예제 코드
 
 ```python
 class BinanceReceiverTick:
@@ -680,6 +763,8 @@ STOM 시스템은 실시간 데이터 수신 시 자동으로 데이터 전처�
 
 ### 거래대금 순위 기반 필터링
 
+**소스**: 예제 코드
+
 ```python
 # 거래대금 상위 종목만 DB에 저장 (메모리/스토리지 최적화)
 # 틱 모드: 거래대금 순위 30위 이후 종목만 저장
@@ -689,6 +774,8 @@ STOM 시스템은 실시간 데이터 수신 시 자동으로 데이터 전처�
 ### 데이터 검증 시스템 (학습용 예제)
 
 실시간 데이터의 품질을 보장하기 위한 검증 시스템 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 class DataValidator:
@@ -778,6 +865,8 @@ else:
 ### 이상치 탐지 시스템 (학습용 예제)
 
 통계적 방법을 사용한 이상치 탐지 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 from collections import deque
@@ -912,6 +1001,8 @@ STOM은 틱 데이터와 분봉 데이터를 별도로 수집하고 저장합니
 ### OHLCV 데이터 집계 시스템 (학습용 예제)
 
 틱 데이터를 시간프레임별 OHLCV 캔들로 집계하는 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 from datetime import datetime
@@ -1075,6 +1166,8 @@ for tick in sample_ticks:
 ### 기술적 지표 계산 (학습용 예제)
 
 주요 기술적 지표 계산 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 import numpy as np
@@ -1292,6 +1385,8 @@ stock_tick_back.db (백테스트용 통합 DB)
 
 오래된 데이터를 압축하여 저장 공간을 절약하는 예제입니다:
 
+**소스**: 예제 코드
+
 ```python
 import io
 import pandas as pd
@@ -1393,6 +1488,8 @@ compressor.compress_old_data('tick_data', db_manager)
 ### 데이터 아카이빙 (학습용 예제)
 
 장기 보관을 위한 데이터 아카이빙 시스템 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 import os
@@ -1546,6 +1643,9 @@ print(f"복원된 데이터: {len(restored)} rows")
 
 - **지정시간이후삭제**: 특정 시간 이후 데이터 삭제 (테스트/디버깅용)
 - **VACUUM**: SQLite DB 파일 크기 최적화
+
+**소스**: 예제 코드
+
 ```python
 # VACUUM 예제
 import sqlite3
@@ -1563,6 +1663,9 @@ conn.close()
 백테스팅 엔진(`backtester/backengine_*.py`)은 다음과 같이 데이터를 로딩합니다:
 
 **종목별 분류 방식** (기본):
+
+**소스**: 예제 코드
+
 ```python
 # 각 종목의 전체 기간 데이터를 한 번에 로딩
 con = sqlite3.connect(DB_STOCK_BACK_TICK)
@@ -1570,6 +1673,9 @@ df = pd.read_sql(f'SELECT * FROM "{code}" WHERE `index` LIKE "{day}%"', con)
 ```
 
 **일자별 분류 방식** (메모리 효율적):
+
+**소스**: 예제 코드
+
 ```python
 # 각 날짜별로 모든 종목 데이터 로딩
 con = sqlite3.connect(f'{DB_PATH}/stock_tick_{day}.db')
@@ -1579,6 +1685,8 @@ df = pd.read_sql(f'SELECT * FROM "{code}"', con)
 ### 고성능 데이터 조회 (학습용 예제)
 
 인덱스 최적화와 캐싱을 활용한 고성능 조회 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 import sqlite3
@@ -1737,6 +1845,8 @@ volume_profile = query_optimizer.get_volume_profile(
 ### 데이터 분석 도구 (학습용 예제)
 
 통계 분석 및 기술적 분석 도구 예제입니다:
+
+**소스**: 예제 코드
 
 ```python
 import numpy as np
@@ -1946,6 +2056,9 @@ print(f"주요 저항선: {[l['level'] for l in levels['resistance_levels'][:3]]
 ### 실시간 데이터 활용
 
 리시버 → 전략 → 트레이더로 데이터 전송:
+
+**소스**: 예제 코드
+
 ```python
 # 리시버: 실시간 데이터 수신 및 전처리
 # ↓ Queue를 통해 전송
