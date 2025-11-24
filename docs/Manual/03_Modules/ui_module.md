@@ -39,6 +39,9 @@ ui/
 ### MainWindow 클래스
 
 #### 1. 초기화 및 큐 시스템
+
+**소스**: `ui/ui_mainwindow.py:413-1083`
+
 ```python
 class MainWindow(QMainWindow):
     """메인 윈도우"""
@@ -92,6 +95,9 @@ class MainWindow(QMainWindow):
 ```
 
 #### 2. 프로세스 관리
+
+**소스**: `ui/ui_process_starter.py` (프로세스 시작 로직)
+
 ```python
 def StartProcesses(self):
     """프로세스 시작"""
@@ -142,6 +148,9 @@ def StartProcesses(self):
 ### Writer 스레드
 
 #### 1. pyqtSignal 정의
+
+**소스**: `ui/ui_mainwindow.py:282-411`
+
 ```python
 class Writer(QThread):
     """UI 업데이트 전용 스레드"""
@@ -195,6 +204,9 @@ class Writer(QThread):
 ### 1. 정적 차트 (ui_draw_chart.py)
 
 #### matplotlib 기반 캔들스틱 차트
+
+**소스**: `ui/ui_draw_chart.py`
+
 ```python
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -255,6 +267,9 @@ class ChartWidget(FigureCanvas):
 ```
 
 #### 기술적 지표 오버레이
+
+**소스**: 예제 코드 (`ui/ui_draw_chart.py` 참조)
+
 ```python
 def DrawChartWithIndicators(self, df):
     """기술적 지표가 포함된 차트"""
@@ -291,6 +306,9 @@ def DrawChartWithIndicators(self, df):
 ### 2. 실시간 차트 (ui_draw_realchart.py)
 
 #### pyqtgraph 기반 실시간 차트
+
+**소스**: `ui/ui_draw_realchart.py`
+
 ```python
 import pyqtgraph as pg
 from pyqtgraph import PlotWidget
@@ -350,6 +368,9 @@ class RealChartWidget(PlotWidget):
 ## 📋 테이블 업데이트 (ui_update_tablewidget.py)
 
 ### 거래 내역 테이블
+
+**소스**: `ui/ui_update_tablewidget.py`
+
 ```python
 class TableUpdater:
     """테이블 업데이트 관리"""
@@ -400,6 +421,9 @@ class TableUpdater:
 ## 🎨 스타일 설정 (set_style.py)
 
 ### QSS 스타일시트
+
+**소스**: `ui/set_style.py`
+
 ```python
 class StyleSheet:
     """스타일시트 관리"""
@@ -456,6 +480,9 @@ class StyleSheet:
 ## 🔔 이벤트 핸들러
 
 ### 버튼 클릭 이벤트 (ui_button_clicked_s1.py)
+
+**소스**: `ui/ui_button_clicked_*.py` 파일들 (각 탭별 이벤트 핸들러)
+
 ```python
 class StockTabEventHandler:
     """주식 탭 이벤트 핸들러"""
@@ -499,6 +526,9 @@ class StockTabEventHandler:
 ## 📱 다이얼로그
 
 ### 전략 설정 다이얼로그 (dialog_strategy.py)
+
+**소스**: 예제 코드 (`ui/set_dialog_*.py` 파일들 참조)
+
 ```python
 class StrategyDialog(QDialog):
     """전략 설정 다이얼로그"""
@@ -542,6 +572,9 @@ class StrategyDialog(QDialog):
 ## 🚀 성능 최적화
 
 ### 1. 논블로킹 UI
+
+**소스**: 예제 코드 (UI 업데이트 패턴)
+
 ```python
 def UpdateUI(self, data):
     """UI 업데이트 (논블로킹)"""
@@ -555,6 +588,9 @@ def _update_ui_internal(self, data):
 ```
 
 ### 2. 배치 업데이트
+
+**소스**: 예제 코드 (테이블 업데이트 최적화 패턴)
+
 ```python
 def BatchUpdateTable(self, data_list):
     """테이블 배치 업데이트"""

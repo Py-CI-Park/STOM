@@ -52,26 +52,28 @@ graph TB
   - 자동 실행 모드 처리 (주식/코인)
   - 시간 동기화
 
+**소스**: `stom.py:9-34`
+
 ```python
 # stom.py 핵심 구조
 if __name__ == '__main__':
     # 콘솔 모드 설정
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
-    
+
     # 자동 실행 모드 확인
     auto_run = 0
     if len(sys.argv) > 1:
         if sys.argv[1] == 'stock':  auto_run = 1
         elif sys.argv[1] == 'coin': auto_run = 2
-    
+
     # 시간 동기화
     timesync()
-    
+
     # PyQt5 애플리케이션 생성
     app = QApplication(sys.argv)
     app.setStyle('fusion')
-    
+
     # 메인 윈도우 실행
     mainwindow = MainWindow(auto_run)
     mainwindow.show()
@@ -185,6 +187,9 @@ Level 4: stom.py (메인 실행)
 ## 🚀 프로세스 간 통신
 
 ### 1. ZeroMQ 기반 통신
+
+**소스**: `ui/ui_mainwindow.py:346-390`
+
 ```python
 class ZmqServ(QThread):
     """ZeroMQ 서버 - 데이터 송신"""
@@ -192,7 +197,7 @@ class ZmqServ(QThread):
         super().__init__()
         self.wdzservQ = wdzservQ_
         self.port_num = port_num
-        
+
     def run(self):
         context = zmq.Context()
         socket = context.socket(zmq.PUB)
@@ -205,7 +210,7 @@ class ZmqRecv(QThread):
         super().__init__()
         self.qlist = qlist_
         self.port_num = port_num
-        
+
     def run(self):
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
@@ -215,6 +220,9 @@ class ZmqRecv(QThread):
 
 ### 2. Queue 시스템
 총 15개의 전용 큐로 모듈 간 통신:
+
+**소스**: `ui/ui_mainwindow.py:417-425`
+
 ```python
 # 큐 인덱스 정의
 qlist = [
@@ -237,6 +245,9 @@ qlist = [
 ```
 
 ### 3. 실시간 데이터 스트리밍
+
+**소스**: `ui/ui_mainwindow.py:80-100`
+
 ```python
 class LiveSender(Thread):
     """실시간 데이터 송신"""
@@ -251,25 +262,28 @@ class LiveSender(Thread):
 ## 🔧 시스템 설정 관리
 
 ### 설정 파일 구조
+
+**소스**: `utility/setting.py:93-150` (일부)
+
 ```python
 # utility/setting.py
 DICT_SET = {
     # 기본 설정
     '증권사': '키움증권',
     '거래소': '업비트',
-    
+
     # 프로세스 설정
     '주식리시버': True,
     '주식트레이더': True,
     '코인리시버': True,
     '코인트레이더': True,
-    
+
     # 투자 설정
     '주식투자금': 10000000,
     '코인투자금': 1000000,
     '주식최대매수종목수': 10,
     '코인최대매수종목수': 5,
-    
+
     # 리스크 관리
     '주식손실중지': True,
     '주식손실중지수익률': -5.0,
@@ -279,6 +293,9 @@ DICT_SET = {
 ```
 
 ### 데이터베이스 구조
+
+**소스**: 예제 코드 (실제 테이블은 각 모듈에서 동적 생성)
+
 ```sql
 -- 설정 데이터베이스 (setting.db)
 CREATE TABLE main (설정명, 값);
@@ -314,6 +331,9 @@ CREATE TABLE coin_min (코인분봉데이터);
 - 큐 기반 메시지 패싱
 
 ### 3. 에러 처리
+
+**소스**: 예제 코드 (공통 패턴)
+
 ```python
 # 예외 처리 패턴
 try:
