@@ -25,6 +25,9 @@ STOM은 **PyQt5 기반의 데스크톱 애플리케이션**으로, 고성능 시
 ### 메인 윈도우 구조
 
 #### 1. MainWindow 클래스 (`ui_mainwindow.py`)
+
+**소스**: 예제 코드 (실제: `ui/ui_mainwindow.py`)
+
 ```python
 class MainWindow(QMainWindow):
     """메인 윈도우 클래스"""
@@ -69,6 +72,9 @@ MainWindow
 ### 멀티 윈도우 시스템
 
 #### 1. 차트 윈도우 (`dialog_chart`)
+
+**소스**: 예제 코드
+
 ```python
 class ChartDialog(QDialog):
     """독립 차트 윈도우"""
@@ -80,6 +86,9 @@ class ChartDialog(QDialog):
 ```
 
 #### 2. 백테스팅 윈도우 (`dialog_backtest`)
+
+**소스**: 예제 코드
+
 ```python
 class BacktestDialog(QDialog):
     """백테스팅 전용 윈도우"""
@@ -97,6 +106,9 @@ class BacktestDialog(QDialog):
 ### PyQtGraph 기반 고성능 차트
 
 #### 1. 차트 렌더링 엔진 (`ui_draw_chart.py`)
+
+**소스**: 예제 코드
+
 ```python
 class DrawChart:
     """차트 그리기 클래스"""
@@ -124,6 +136,9 @@ class DrawChart:
 ```
 
 #### 2. 캔들스틱 차트 구현
+
+**소스**: 예제 코드
+
 ```python
 class CandlestickItem(pg.GraphicsObject):
     """커스텀 캔들스틱 아이템"""
@@ -152,6 +167,9 @@ class CandlestickItem(pg.GraphicsObject):
 ```
 
 #### 3. 실시간 차트 업데이트
+
+**소스**: 예제 코드
+
 ```python
 class RealTimeChart:
     """실시간 차트 업데이트"""
@@ -177,6 +195,9 @@ class RealTimeChart:
 ### 기술적 지표 시각화
 
 #### 1. 이동평균선
+
+**소스**: 예제 코드
+
 ```python
 def draw_moving_averages(self, data, xticks):
     """이동평균선 그리기"""
@@ -189,6 +210,9 @@ def draw_moving_averages(self, data, xticks):
 ```
 
 #### 2. 볼륨 차트
+
+**소스**: 예제 코드
+
 ```python
 class VolumeBarsItem(pg.GraphicsObject):
     """볼륨 바 차트"""
@@ -216,6 +240,9 @@ class VolumeBarsItem(pg.GraphicsObject):
 ### 실시간 데이터 테이블
 
 #### 1. 관심종목 테이블
+
+**소스**: 예제 코드
+
 ```python
 class WatchlistTable(QTableWidget):
     """관심종목 테이블"""
@@ -249,6 +276,9 @@ class WatchlistTable(QTableWidget):
 ```
 
 #### 2. 호가창 테이블
+
+**소스**: 예제 코드
+
 ```python
 class OrderbookTable(QTableWidget):
     """호가창 테이블"""
@@ -292,6 +322,9 @@ class OrderbookTable(QTableWidget):
 ### 백테스팅 결과 테이블
 
 #### 1. 거래 내역 테이블
+
+**소스**: 예제 코드
+
 ```python
 class TradeHistoryTable(QTableWidget):
     """거래 내역 테이블"""
@@ -340,6 +373,9 @@ class TradeHistoryTable(QTableWidget):
 ### 주문 입력 패널
 
 #### 1. 주문 위젯
+
+**소스**: 예제 코드
+
 ```python
 class OrderWidget(QWidget):
     """주문 입력 위젯"""
@@ -392,6 +428,9 @@ class OrderWidget(QWidget):
 ### 전략 설정 패널
 
 #### 1. 전략 파라미터 위젯
+
+**소스**: 예제 코드
+
 ```python
 class StrategyWidget(QWidget):
     """전략 설정 위젯"""
@@ -441,6 +480,9 @@ class StrategyWidget(QWidget):
 ### 다크 테마 구현
 
 #### 1. 스타일시트 정의 (`set_style.py`)
+
+**소스**: 예제 코드
+
 ```python
 # 색상 정의
 color_fg_bt = 'color: white'
@@ -487,6 +529,9 @@ QHeaderView::section {{
 ```
 
 #### 2. 동적 색상 시스템
+
+**소스**: 예제 코드
+
 ```python
 class ColorManager:
     """색상 관리 클래스"""
@@ -532,6 +577,9 @@ class ColorManager:
 ### 멀티스레드 UI 업데이트
 
 #### 1. Writer 스레드 (`ui_mainwindow.py`)
+
+**소스**: 예제 코드
+
 ```python
 class Writer(QThread):
     """UI 업데이트 전용 스레드"""
@@ -569,6 +617,9 @@ class Writer(QThread):
 ```
 
 #### 2. 시그널-슬롯 연결
+
+**소스**: 예제 코드
+
 ```python
 def connect_signals(self):
     """시그널-슬롯 연결"""
@@ -596,6 +647,9 @@ def update_table_data(self, table_name, row_data):
 ### 성능 최적화
 
 #### 1. 차트 렌더링 최적화
+
+**소스**: 예제 코드
+
 ```python
 class OptimizedChart:
     """최적화된 차트 클래스"""
@@ -628,6 +682,9 @@ class OptimizedChart:
 ```
 
 #### 2. 메모리 관리
+
+**소스**: 예제 코드
+
 ```python
 class MemoryManager:
     """메모리 관리 클래스"""
@@ -669,6 +726,9 @@ class MemoryManager:
 ### 마우스 및 키보드 이벤트
 
 #### 1. 차트 상호작용
+
+**소스**: 예제 코드
+
 ```python
 class ChartInteraction:
     """차트 상호작용 처리"""
@@ -714,6 +774,9 @@ class ChartInteraction:
 ```
 
 #### 2. 컨텍스트 메뉴
+
+**소스**: 예제 코드
+
 ```python
 class ContextMenuManager:
     """컨텍스트 메뉴 관리"""
@@ -756,6 +819,9 @@ class ContextMenuManager:
 ### 동적 레이아웃 관리
 
 #### 1. 스플리터 기반 레이아웃
+
+**소스**: 예제 코드
+
 ```python
 class ResponsiveLayout:
     """반응형 레이아웃 관리"""
@@ -807,6 +873,9 @@ class ResponsiveLayout:
 ```
 
 #### 2. 창 크기 변경 대응
+
+**소스**: 예제 코드
+
 ```python
 def resizeEvent(self, event):
     """창 크기 변경 이벤트"""
@@ -840,6 +909,9 @@ def adjust_panel_sizes(self):
 ### 크로스헤어 구현
 
 #### 1. CrossHair 클래스 (`ui_crosshair.py`)
+
+**소스**: 예제 코드
+
 ```python
 class CrossHair:
     """차트 십자선 구현"""

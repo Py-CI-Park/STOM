@@ -34,6 +34,9 @@ coin/
 ### 1. WebSocket 연결 (upbit_websocket.py)
 
 #### WebSocket 클라이언트 구현
+
+**소스**: `coin/upbit_websocket.py:9-50`
+
 ```python
 import websockets
 import json
@@ -80,6 +83,9 @@ class UpbitWebSocket:
 ```
 
 #### 호가 데이터 구독
+
+**소스**: `coin/upbit_websocket.py:46-53` (예제 코드, 실제 connect_orderb 메서드 참조)
+
 ```python
 async def subscribe_orderbook(self, codes):
     """호가창 구독"""
@@ -96,6 +102,9 @@ async def subscribe_orderbook(self, codes):
 ### 2. 데이터 수신기 (upbit_receiver_tick.py)
 
 #### 실시간 데이터 처리
+
+**소스**: `coin/upbit_receiver_tick.py:30-144`
+
 ```python
 class UpbitReceiverTick:
     def __init__(self, qlist):
@@ -137,6 +146,9 @@ class UpbitReceiverTick:
 ### 3. 주문 실행기 (upbit_trader.py)
 
 #### REST API 주문
+
+**소스**: `coin/upbit_trader.py:11-779`
+
 ```python
 import pyupbit
 import jwt
@@ -224,6 +236,9 @@ class UpbitTrader:
 ### 4. 매매 전략 (upbit_strategy_tick.py)
 
 #### 전략 구조
+
+**소스**: `coin/upbit_strategy_tick.py:15-701`
+
 ```python
 class UpbitStrategyTick:
     def __init__(self, qlist):
@@ -287,6 +302,9 @@ class UpbitStrategyTick:
 ### 1. WebSocket 연결 (binance_websocket.py)
 
 #### WebSocket 스트림
+
+**소스**: `coin/binance_websocket.py:8-116`
+
 ```python
 from binance.client import Client
 from binance.streams import BinanceSocketManager
@@ -350,6 +368,9 @@ class BinanceWebSocket:
 ### 2. 주문 실행기 (binance_trader.py)
 
 #### 선물 거래 지원
+
+**소스**: `coin/binance_trader.py:15-933`
+
 ```python
 from binance.client import Client
 
@@ -417,6 +438,8 @@ class BinanceTrader:
 ## 💰 김프 모니터링 (kimp_upbit_binance.py)
 
 ### 김치프리미엄 계산
+
+**소스**: `coin/kimp_upbit_binance.py:17-148`
 
 ```python
 class KimpMonitor:
@@ -498,6 +521,9 @@ graph TB
 ## 🔧 주요 파라미터
 
 ### 업비트 전략 파라미터
+
+**소스**: 예제 코드 (실제 파라미터는 `utility/setting.py`의 DICT_SET 참조)
+
 ```python
 UPBIT_PARAMS = {
     # 이동평균선
@@ -521,6 +547,9 @@ UPBIT_PARAMS = {
 ```
 
 ### 바이낸스 선물 파라미터
+
+**소스**: 예제 코드 (실제 파라미터는 `utility/setting.py`의 DICT_SET 참조)
+
 ```python
 BINANCE_FUTURES_PARAMS = {
     # 레버리지
@@ -541,6 +570,9 @@ BINANCE_FUTURES_PARAMS = {
 ## 🛡 리스크 관리
 
 ### 1. API Rate Limit 관리
+
+**소스**: 예제 코드 (실제 구현 참조 필요)
+
 ```python
 class RateLimiter:
     """API 호출 제한 관리"""
@@ -569,6 +601,9 @@ class RateLimiter:
 ```
 
 ### 2. 주문 검증
+
+**소스**: 예제 코드 (실제 검증 로직은 `coin/upbit_trader.py:201-277` CheckOrder 메서드 참조)
+
 ```python
 def validate_order(self, market, side, volume, price):
     """주문 유효성 검증"""
@@ -596,6 +631,9 @@ def validate_order(self, market, side, volume, price):
 ## 🚀 성능 최적화
 
 ### 1. WebSocket 연결 관리
+
+**소스**: `coin/kimp_upbit_binance.py:83-148` (유사한 WebSocketManager 클래스)
+
 ```python
 class WebSocketManager:
     """WebSocket 연결 풀 관리"""
@@ -617,6 +655,9 @@ class WebSocketManager:
 ```
 
 ### 2. 데이터 압축
+
+**소스**: 예제 코드 (실제 데이터 저장은 `coin/upbit_strategy_tick.py:662-701` SaveData 메서드 참조)
+
 ```python
 def compress_tick_data(self, ticks):
     """틱 데이터 압축"""

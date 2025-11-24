@@ -29,6 +29,8 @@ utility/
 
 ### 전역 설정 딕셔너리
 
+**소스**: 예제 코드 (실제: `utility/setting.py:93-200`)
+
 ```python
 # 거래 설정
 DICT_SET = {
@@ -71,6 +73,9 @@ DICT_SET = {
 ```
 
 ### 데이터베이스 경로
+
+**소스**: `utility/setting.py:31-49`
+
 ```python
 # 데이터베이스 경로
 BASE_DIR = 'C:/System_Trading/STOM/STOM_V1'
@@ -93,6 +98,9 @@ DB_COIN_DAY = f'{BASE_DIR}/DB/coin_day.db'
 ```
 
 ### API 키 관리
+
+**소스**: 예제 코드 (실제 암호화 기능: `utility/static.py:187-194`)
+
 ```python
 from cryptography.fernet import Fernet
 
@@ -162,6 +170,9 @@ class APIKeyManager:
 ## 🔧 정적 함수 (static.py)
 
 ### 시간 관련 함수
+
+**소스**: `utility/static.py:87-128`
+
 ```python
 from datetime import datetime, timedelta
 import time
@@ -192,6 +203,9 @@ def strf_ymdhm():
 ```
 
 ### 수학 함수
+
+**소스**: `utility/static.py:233-580` (GetHogaunit, GetVIPrice 등)
+
 ```python
 import math
 
@@ -231,6 +245,9 @@ def GetUpjongJisu(upjong_code):
 ```
 
 ### 데이터 변환 함수
+
+**소스**: `utility/static.py:135-168` (change_format, comma2int, comma2float)
+
 ```python
 def comma_format(x):
     """천단위 콤마 포맷"""
@@ -250,6 +267,9 @@ def datetime_to_timestamp(dt):
 ```
 
 ### 종목 코드 관련
+
+**소스**: 예제 코드
+
 ```python
 def get_stock_name(code):
     """종목 코드로 종목명 조회"""
@@ -267,6 +287,9 @@ def get_stock_code(name):
 ## 💾 데이터베이스 쿼리 (query.py)
 
 ### 쿼리 정의
+
+**소스**: 예제 코드 (실제: `utility/query.py:12-32`)
+
 ```python
 import sqlite3
 from threading import Lock
@@ -318,6 +341,9 @@ class QueryManager:
 ```
 
 ### 주요 쿼리 정의
+
+**소스**: 예제 코드
+
 ```python
 # 틱 데이터 삽입
 INSERT_TICK = """
@@ -359,6 +385,9 @@ WHERE strategy_name = ?
 ## 🔍 데이터베이스 검증 (database_check.py)
 
 ### 무결성 검증
+
+**소스**: 예제 코드 (실제: `utility/database_check.py:1-100`)
+
 ```python
 class DatabaseChecker:
     """데이터베이스 무결성 검증"""
@@ -427,6 +456,9 @@ class DatabaseChecker:
 ## 📡 ZeroMQ 통신
 
 ### ZeroMQ 서버 (zmq_server.py)
+
+**소스**: `ui/ui_mainwindow.py:346-363`
+
 ```python
 import zmq
 from PyQt5.QtCore import QThread
@@ -466,6 +498,9 @@ class ZmqServ(QThread):
 ```
 
 ### ZeroMQ 클라이언트 (zmq_client.py)
+
+**소스**: `ui/ui_mainwindow.py:366-410`
+
 ```python
 class ZmqRecv(QThread):
     """ZeroMQ 클라이언트"""
@@ -514,6 +549,9 @@ class ZmqRecv(QThread):
 ## 📱 텔레그램 봇 (telegram_bot.py)
 
 ### 텔레그램 알림
+
+**소스**: `utility/telegram_msg.py:7-143`
+
 ```python
 import requests
 
@@ -586,6 +624,9 @@ class TelegramBot:
 ## 🔊 알림 소리 (sound.py)
 
 ### 소리 재생
+
+**소스**: 예제 코드 (실제: `utility/sound.py:4-23`)
+
 ```python
 from PyQt5.QtMultimedia import QSound
 
@@ -628,6 +669,9 @@ class SoundPlayer:
 ## 📊 코드 통계 (total_code_line.py)
 
 ### 코드 라인 계산
+
+**소스**: 예제 코드 (실제: `utility/total_code_line.py:1-51`)
+
 ```python
 import os
 

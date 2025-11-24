@@ -40,6 +40,8 @@ STOM의 백테스팅 시스템은 **초고정밀도 틱 데이터 기반 시뮬�
 
 **실제 코드 위치**: `backtester/backtest.py`
 
+**소스**: 예제 코드
+
 ```python
 class Total:
     """백테스팅 총괄 프로세스 - 모든 백테스팅 결과를 수집하고 통합"""
@@ -118,6 +120,8 @@ class Total:
 #### 1. Kiwoom 틱 백테스팅 엔진 (`backtester/backengine_kiwoom_tick.py:14-240`)
 
 **실제 코드 위치**: `backtester/backengine_kiwoom_tick.py`
+
+**소스**: 예제 코드
 
 ```python
 class BackEngineKiwoomTick:
@@ -241,6 +245,9 @@ class BackEngineKiwoomTick:
 ### 암호화폐 백테스팅 엔진
 
 #### 1. Upbit 백테스팅 (`backtester/backengine_upbit_tick.py`)
+
+**소스**: 예제 코드
+
 ```python
 class BackEngineUpbitTick:
     """업비트 틱 데이터 백테스팅 엔진"""
@@ -316,6 +323,9 @@ class BackEngineUpbitTick:
 ### 성과 지표 계산
 
 #### 1. 성과 분석기
+
+**소스**: 예제 코드
+
 ```python
 class PerformanceAnalyzer:
     """성과 분석기"""
@@ -446,6 +456,9 @@ class PerformanceAnalyzer:
 ### 벤치마크 비교
 
 #### 1. 벤치마크 분석
+
+**소스**: 예제 코드
+
 ```python
 class BenchmarkAnalyzer:
     """벤치마크 비교 분석"""
@@ -510,6 +523,8 @@ STOM의 최적화 시스템은 전략 파라미터를 자동으로 튜닝하여 
 ### 파라미터 최적화 프로세스 (`backtester/optimiz.py:16-200`)
 
 **실제 코드 위치**: `backtester/optimiz.py`
+
+**소스**: 예제 코드
 
 ```python
 class Total:
@@ -630,6 +645,9 @@ class Total:
 ### 몬테카를로 시뮬레이션
 
 #### 1. 몬테카를로 분석
+
+**소스**: 예제 코드
+
 ```python
 class MonteCarloAnalyzer:
     """몬테카를로 시뮬레이션"""
@@ -692,6 +710,9 @@ class MonteCarloAnalyzer:
 ### 백테스팅 리포트
 
 #### 1. 리포트 생성기
+
+**소스**: 예제 코드
+
 ```python
 class BacktestReportGenerator:
     """백테스팅 리포트 생성기"""
@@ -856,6 +877,8 @@ class BacktestReportGenerator:
 
 **단계 1: 기본 아이디어 정의**
 
+**소스**: 예제 코드
+
 ```python
 """
 전략 아이디어: RSI 과매도 구간 매수
@@ -865,6 +888,8 @@ class BacktestReportGenerator:
 ```
 
 **단계 2: 백테스팅으로 기본 성능 확인**
+
+**소스**: 예제 코드
 
 ```python
 # 고정 파라미터로 백테스팅 (backtester/backtest.py 사용)
@@ -884,6 +909,8 @@ if 보유중:
 **결과**: 연간 수익률 8%, Sharpe 0.9, MDD -15% → 개선 필요
 
 **단계 3: 조건식 최적화로 더 나은 조건 찾기**
+
+**소스**: 예제 코드
 
 ```python
 # 다양한 매수/매도 조건 시도 (backtester/optimiz_conditions.py)
@@ -908,6 +935,8 @@ if 보유중:
 
 **단계 4: 파라미터 최적화 (Optuna)**
 
+**소스**: 예제 코드
+
 ```python
 # 발견한 조건식의 파라미터 튜닝 (backtester/optimiz.py)
 
@@ -924,6 +953,8 @@ if 보유중:
 
 **단계 5: 교차 검증 (Train/Valid/Test)**
 
+**소스**: 예제 코드
+
 ```python
 # V최적화로 과최적화 방지 (backtester/optimiz.py)
 # 데이터 분할: Train 70% + Valid 30%
@@ -935,6 +966,8 @@ Valid 성능: 연간 18%, Sharpe 1.5, MDD -12%
 **평가**: Train-Valid 성능 차이 28% → 약간의 과최적화 의심
 
 **단계 6: 전진 분석 (Walk Forward)**
+
+**소스**: 예제 코드
 
 ```python
 # 롤링 윈도우로 실전 성능 예측 (backtester/rolling_walk_forward_test.py)
@@ -960,6 +993,8 @@ Valid 성능: 연간 18%, Sharpe 1.5, MDD -12%
 ---
 
 ### 예제 2: 과최적화를 피하는 10가지 원칙 (학습용 가이드)
+
+**소스**: 예제 코드
 
 ```python
 """

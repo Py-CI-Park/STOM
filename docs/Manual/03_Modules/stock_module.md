@@ -25,6 +25,9 @@ stock/
 ### 핵심 기능
 
 #### 1. API 초기화 및 로그인
+
+**소스**: `stock/kiwoom.py:36-70`
+
 ```python
 class Kiwoom(QAxWidget):
     """키움증권 OpenAPI 래퍼"""
@@ -46,6 +49,9 @@ class Kiwoom(QAxWidget):
 ```
 
 #### 2. TR 데이터 조회
+
+**소스**: `stock/kiwoom.py:83-98`
+
 ```python
 def set_input_value(self, key, value):
     """입력값 설정"""
@@ -58,6 +64,9 @@ def comm_rq_data(self, rqname, trcode, next, scr_no):
 ```
 
 #### 3. 실시간 데이터 등록
+
+**소스**: `stock/kiwoom.py:155-156`
+
 ```python
 def set_real_reg(self, scr_no, code_list, fid_list, opt_type):
     """실시간 시세 등록"""
@@ -66,6 +75,9 @@ def set_real_reg(self, scr_no, code_list, fid_list, opt_type):
 ```
 
 #### 4. 주문 전송
+
+**소스**: `stock/kiwoom.py:181-182`
+
 ```python
 def send_order(self, rqname, scr_no, acc_no, order_type, code, qty, price, hoga, order_no):
     """매매 주문 전송"""
@@ -82,6 +94,9 @@ def send_order(self, rqname, scr_no, acc_no, order_type, code, qty, price, hoga,
 #### 주요 기능
 
 1. **실시간 체결 데이터 수신**
+
+**소스**: `stock/kiwoom_receiver_tick.py:327-357`
+
 ```python
 class KiwoomReceiverTick:
     def OnReceiveRealData(self, code, realtype, realdata):
@@ -100,6 +115,9 @@ class KiwoomReceiverTick:
 ```
 
 2. **호가 데이터 수신**
+
+**소스**: 예제 코드 (실제는 OnReceiveRealData 내에서 처리)
+
 ```python
 def receive_hoga_data(self, code):
     """호가창 데이터 수신"""
@@ -113,6 +131,9 @@ def receive_hoga_data(self, code):
 ```
 
 3. **VI 발동 감지**
+
+**소스**: 예제 코드 (실제는 OnReceiveRealData 내에서 처리)
+
 ```python
 def detect_vi(self, code, realtype):
     """변동성완화장치 감지"""
@@ -129,6 +150,9 @@ def detect_vi(self, code, realtype):
 #### 주요 기능
 
 1. **분봉 데이터 생성**
+
+**소스**: 예제 코드 (분봉은 틱 데이터 집계로 생성)
+
 ```python
 class KiwoomReceiverMin:
     def generate_minute_candle(self, code, tick_data):
@@ -153,6 +177,9 @@ class KiwoomReceiverMin:
 ### 틱 기반 전략 (kiwoom_strategy_tick.py)
 
 #### 전략 구조
+
+**소스**: `stock/kiwoom_strategy_tick.py:18-100`
+
 ```python
 class StrategyKiwoomTick:
     def __init__(self, qlist):
@@ -182,6 +209,9 @@ class StrategyKiwoomTick:
 ```
 
 #### 기술적 분석 예시
+
+**소스**: 예제 코드 (전략은 사용자 정의 코드로 DB에서 동적 로드)
+
 ```python
 def analyze_technical(self, code, price):
     """기술적 지표 계산"""
@@ -209,6 +239,9 @@ def analyze_technical(self, code, price):
 ### 분봉 기반 전략 (kiwoom_strategy_min.py)
 
 #### 전략 구조
+
+**소스**: 예제 코드 (전략은 사용자 정의 코드로 DB에서 동적 로드)
+
 ```python
 class StrategyKiwoomMin:
     def Strategy(self, code, candle):
@@ -236,6 +269,9 @@ class StrategyKiwoomMin:
 ### 주문 관리 시스템
 
 #### 1. 주문 딕셔너리 관리
+
+**소스**: `stock/kiwoom_trader.py:27-102`
+
 ```python
 class KiwoomTrader:
     def __init__(self, qlist):
@@ -250,6 +286,9 @@ class KiwoomTrader:
 ```
 
 #### 2. 주문 전송
+
+**소스**: 예제 코드 (실제는 CheckOrder 메서드 내에서 처리)
+
 ```python
 def SendOrder(self, 주문구분, 종목코드, 주문수량, 주문가격):
     """주문 전송"""
@@ -283,6 +322,9 @@ def SendOrder(self, 주문구분, 종목코드, 주문수량, 주문가격):
 ```
 
 #### 3. 체결 처리
+
+**소스**: `stock/kiwoom_trader.py:621-650`
+
 ```python
 def OnReceiveChejanData(self, gubun, item_cnt, fid_list):
     """체결 데이터 수신"""
@@ -300,6 +342,9 @@ def OnReceiveChejanData(self, gubun, item_cnt, fid_list):
 ```
 
 #### 4. 리스크 관리
+
+**소스**: 예제 코드 (리스크 관리는 각 전략에서 처리)
+
 ```python
 def check_risk_limit(self, code, order_type):
     """리스크 한도 검증"""
@@ -340,6 +385,9 @@ graph TB
 ## 🔧 주요 파라미터
 
 ### 전략 파라미터
+
+**소스**: 예제 코드 (실제는 데이터베이스에서 로드)
+
 ```python
 STRATEGY_PARAMS = {
     # 이동평균선
@@ -361,6 +409,9 @@ STRATEGY_PARAMS = {
 ```
 
 ### 리스크 파라미터
+
+**소스**: 예제 코드 (실제는 utility/setting.py의 DICT_SET에서 관리)
+
 ```python
 RISK_PARAMS = {
     # 손실 관리
@@ -382,6 +433,9 @@ RISK_PARAMS = {
 ## 🛡 보안 및 안정성
 
 ### 1. API 에러 처리
+
+**소스**: 예제 코드 (에러 처리는 각 메서드에서 개별 처리)
+
 ```python
 def handle_api_error(self, error_code):
     """API 에러 처리"""
@@ -399,6 +453,9 @@ def handle_api_error(self, error_code):
 ```
 
 ### 2. 재연결 로직
+
+**소스**: 예제 코드 (재연결은 CommConnect 실패 시 자동 재시도)
+
 ```python
 def auto_reconnect(self):
     """자동 재연결"""
@@ -419,6 +476,9 @@ def auto_reconnect(self):
 ## 📊 성능 최적화
 
 ### 1. 데이터 캐싱
+
+**소스**: 예제 코드 (캐싱은 dict_arry 등으로 구현)
+
 ```python
 class DataCache:
     """데이터 캐시 관리"""
