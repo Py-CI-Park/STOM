@@ -24,10 +24,10 @@ docs/Guideline/Condition_Document_Template_Guideline.md 기준으로 조건식 �
 
 | Condition | Path | Type | Plan Status | C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8 | C9 | C10 | C11 | C12 | C13 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Condition_Early_Momentum_Surge | docs/Condition/Tick/Condition_Early_Momentum_Surge.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Condition_Find_1 | docs/Condition/Tick/Condition_Find_1.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Condition_MA_Breakout_Scalping | docs/Condition/Tick/Condition_MA_Breakout_Scalping.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| Condition_Order_Book_Imbalance | docs/Condition/Tick/Condition_Order_Book_Imbalance.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Condition_Early_Momentum_Surge | docs/Condition/Tick/Condition_Early_Momentum_Surge.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Condition_Find_1 | docs/Condition/Tick/Condition_Find_1.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Condition_MA_Breakout_Scalping | docs/Condition/Tick/Condition_MA_Breakout_Scalping.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Condition_Order_Book_Imbalance | docs/Condition/Tick/Condition_Order_Book_Imbalance.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Condition_RSI_Reversal | docs/Condition/Tick/Condition_RSI_Reversal.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Condition_Stomer | docs/Condition/Tick/Condition_Stomer.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Condition_Strength_Reversal | docs/Condition/Tick/Condition_Strength_Reversal.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
