@@ -28,7 +28,7 @@ docs/Guideline/Condition_Document_Template_Guideline.md 기준으로 조건식 �
 | Condition_Find_1 | docs/Condition/Tick/Condition_Find_1.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Condition_MA_Breakout_Scalping | docs/Condition/Tick/Condition_MA_Breakout_Scalping.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Condition_Order_Book_Imbalance | docs/Condition/Tick/Condition_Order_Book_Imbalance.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Condition_RSI_Reversal | docs/Condition/Tick/Condition_RSI_Reversal.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| Condition_RSI_Reversal | docs/Condition/Tick/Condition_RSI_Reversal.md | Tick | Completed | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Condition_Stomer | docs/Condition/Tick/Condition_Stomer.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Condition_Strength_Reversal | docs/Condition/Tick/Condition_Strength_Reversal.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | Condition_Study_1 | docs/Condition/Tick/Condition_Study_1.md | Tick | Not started | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
