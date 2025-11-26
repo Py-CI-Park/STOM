@@ -219,30 +219,35 @@ class ZmqRecv(QThread):
 ```
 
 ### 2. Queue 시스템
-총 15개의 전용 큐로 모듈 간 통신:
+UI 메인 윈도우에서 관리하는 큐 시스템:
 
-**소스**: `ui/ui_mainwindow.py:417-425`
+**소스**: `ui/ui_mainwindow.py:422-425`
 
 ```python
-# 큐 인덱스 정의
-qlist = [
-    windowQ,     # 0: UI 업데이트
-    soundQ,      # 1: 알림 소리
-    queryQ,      # 2: DB 쿼리
-    teleQ,       # 3: 텔레그램
-    chartQ,      # 4: 차트 데이터
-    hogaQ,       # 5: 호가 데이터
-    webcQ,       # 6: 웹 크롤링
-    backQ,       # 7: 백테스팅
-    sreceivQ,    # 8: 주식 수신
-    straderQ,    # 9: 주식 거래
-    sstgQ,       # 10: 주식 전략
-    creceivQ,    # 11: 코인 수신
-    ctraderQ,    # 12: 코인 거래
-    cstgQ,       # 13: 코인 전략
-    totalQ       # 14: 통합 데이터
+# UI 메인 윈도우의 큐 리스트
+self.qlist = [
+    self.windowQ,    # 0: UI 업데이트
+    self.soundQ,     # 1: 알림 소리
+    self.queryQ,     # 2: DB 쿼리
+    self.teleQ,      # 3: 텔레그램
+    self.chartQ,     # 4: 차트 데이터
+    self.hogaQ,      # 5: 호가 데이터
+    self.webcQ,      # 6: 웹 크롤링
+    self.backQ,      # 7: 백테스팅
+    self.creceivQ,   # 8: 코인 수신
+    self.ctraderQ,   # 9: 코인 거래
+    self.cstgQ,      # 10: 코인 전략
+    self.liveQ,      # 11: 실시간 라이브
+    self.kimpQ,      # 12: 김프 (프리미엄)
+    self.wdzservQ,   # 13: ZMQ 서버
+    self.totalQ      # 14: 통합 데이터
 ]
 ```
+
+**주의**:
+- 주식(stock) 모듈은 **별도의 독립적인 큐 시스템**을 사용합니다 (`stock/kiwoom_trader.py` 참조)
+- UI의 qlist는 주로 **코인 거래와 공통 유틸리티**를 위한 큐입니다
+- 총 15개 큐로 프로세스 간 통신을 관리합니다
 
 ### 3. 실시간 데이터 스트리밍
 
@@ -250,13 +255,27 @@ qlist = [
 
 ```python
 class LiveSender(Thread):
-    """실시간 데이터 송신"""
+    """실시간 데이터 송신 스레드"""
+    def __init__(self, sock, liveQ):
+        super().__init__()
+        self.sock = sock
+        self.liveQ = liveQ
+
     def run(self):
+        send_time = timedelta_sec(5)
         while True:
-            if not self.liveQ.empty():
-                data = self.liveQ.get()
-                # 실시간 데이터 전송
-                self.sock.sendall(data.encode('utf-8'))
+            try:
+                if not self.liveQ.empty():
+                    data = self.liveQ.get()
+                    if type(data) == tuple:
+                        if self.liveQ.empty() and now() > send_time:
+                            gubun, df = data
+                            # 데이터를 문자열로 변환하여 전송
+                            text = f"{gubun};{';'.join(...)}"
+                            self.sock.sendall(text.encode('utf-8'))
+                            send_time = timedelta_sec(5)
+            except:
+                break
 ```
 
 ## 🔧 시스템 설정 관리
