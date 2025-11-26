@@ -29,49 +29,95 @@ stock/
 **소스**: `stock/kiwoom.py:36-70`
 
 ```python
-class Kiwoom(QAxWidget):
-    """키움증권 OpenAPI 래퍼"""
-    def __init__(self):
-        super().__init__()
-        self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
+class Kiwoom:
+    """키움증권 OpenAPI 래퍼 (Composition 패턴 사용)"""
+    def __init__(self, user_class, gubun):
+        # 상태 관리 딕셔너리
+        self.dict_bool = {
+            '로그인': False,
+            'TR수신': False,
+            'TR다음': False,
+            'CD로딩': False,
+            'CD수신': False
+        }
 
-        # 이벤트 슬롯 연결
-        self.OnEventConnect.connect(self.event_connect)
-        self.OnReceiveTrData.connect(self.receive_tr_data)
-        self.OnReceiveRealData.connect(self.receive_real_data)
-        self.OnReceiveChejanData.connect(self.receive_chejan_data)
+        # QAxWidget 인스턴스를 내부에 포함 (상속이 아님)
+        self.ocx = QAxWidget('KHOPENAPI.KHOpenAPICtrl.1')
 
-    def comm_connect(self):
+        # 이벤트 핸들러 연결
+        self.ocx.OnEventConnect.connect(self.OnEventConnect)
+        self.ocx.OnReceiveTrData.connect(self.OnReceiveTrData)
+
+        # 사용 목적에 따라 추가 이벤트 연결
+        if gubun == 'Receiver':
+            self.ocx.OnReceiveRealData.connect(user_class.OnReceiveRealData)
+        elif gubun == 'Trader':
+            self.ocx.OnReceiveChejanData.connect(user_class.OnReceiveChejanData)
+
+    def CommConnect(self):
         """로그인 요청"""
-        self.dynamicCall("CommConnect()")
-        self.login_event_loop = QEventLoop()
-        self.login_event_loop.exec_()
+        self.ocx.dynamicCall('CommConnect()')
+        while not self.dict_bool['로그인']:
+            pythoncom.PumpWaitingMessages()
 ```
+
+**주요 특징**:
+- **Composition 패턴**: QAxWidget을 상속받지 않고 `self.ocx`로 포함
+- **gubun 파라미터**: 'Receiver', 'Trader', 'Downloader' 등 용도별 초기화
+- **이벤트 기반**: pythoncom.PumpWaitingMessages()로 동기식 처리
 
 #### 2. TR 데이터 조회
 
-**소스**: `stock/kiwoom.py:83-98`
+**소스**: `stock/kiwoom.py:83-100`
 
 ```python
-def set_input_value(self, key, value):
-    """입력값 설정"""
-    self.dynamicCall("SetInputValue(QString, QString)", key, value)
+def Block_Request(self, *args, **kwargs):
+    """TR 블록 데이터 요청 (동기식)"""
+    trcode = args[0].lower()
+    self.dict_item = parseDat(trcode)  # .enc 파일에서 TR 구조 파싱
+    self.tr_name = kwargs['output']
+    nnext = kwargs['next']
 
-def comm_rq_data(self, rqname, trcode, next, scr_no):
-    """TR 데이터 요청"""
-    self.dynamicCall("CommRqData(QString, QString, int, QString)",
-                     rqname, trcode, next, scr_no)
+    # 입력값 설정
+    for i in kwargs:
+        if i.lower() != 'output' and i.lower() != 'next':
+            self.ocx.dynamicCall('SetInputValue(QString, QString)', i, kwargs[i])
+
+    # TR 요청 및 응답 대기
+    self.dict_bool['TR수신'] = False
+    self.ocx.dynamicCall('CommRqData(QString, QString, int, QString)',
+                         self.tr_name, trcode, nnext, sn_brrq)
+
+    # 동기식 대기
+    while not self.dict_bool['TR수신']:
+        pythoncom.PumpWaitingMessages()
+
+    return self.tr_df
 ```
+
+**특징**:
+- **parseDat()**: OpenAPI의 .enc 파일에서 TR 구조 자동 파싱
+- **동기식 처리**: PumpWaitingMessages()로 응답 대기
+- **DataFrame 반환**: pandas DataFrame 형태로 결과 반환
 
 #### 3. 실시간 데이터 등록
 
-**소스**: `stock/kiwoom.py:155-156`
+**소스**: `stock/kiwoom.py:155-159`
 
 ```python
-def set_real_reg(self, scr_no, code_list, fid_list, opt_type):
+def SetRealReg(self, rreg):
     """실시간 시세 등록"""
-    self.dynamicCall("SetRealReg(QString, QString, QString, QString)",
-                     scr_no, code_list, fid_list, opt_type)
+    self.ocx.dynamicCall('SetRealReg(QString, QString, QString, QString)', rreg)
+
+def SetRealRemove(self, rreg):
+    """실시간 시세 해제"""
+    self.ocx.dynamicCall('SetRealRemove(QString, QString)', rreg)
+```
+
+**사용 예**:
+```python
+# 실시간 시세 등록: (화면번호, 종목코드, FID, 등록구분)
+kiwoom.SetRealReg(['1000', '005930;000660', '10;20', '0'])
 ```
 
 #### 4. 주문 전송
@@ -79,10 +125,28 @@ def set_real_reg(self, scr_no, code_list, fid_list, opt_type):
 **소스**: `stock/kiwoom.py:181-182`
 
 ```python
-def send_order(self, rqname, scr_no, acc_no, order_type, code, qty, price, hoga, order_no):
+def SendOrder(self, order):
     """매매 주문 전송"""
-    self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-                     [rqname, scr_no, acc_no, order_type, code, qty, price, hoga, order_no])
+    return self.ocx.dynamicCall(
+        'SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)',
+        order
+    )
+```
+
+**주문 파라미터 형식** (리스트):
+```python
+order = [
+    '매수주문',        # rqname: 주문명
+    '1000',          # screen_no: 화면번호
+    '1234567890',    # acc_no: 계좌번호
+    1,               # order_type: 1=신규매수, 2=신규매도, 3=매수취소 등
+    '005930',        # code: 종목코드
+    10,              # qty: 수량
+    0,               # price: 가격 (0=시장가)
+    '03',            # hoga_gb: 호가구분 ('00'=지정가, '03'=시장가)
+    ''               # order_no: 원주문번호 (정정/취소시)
+]
+kiwoom.SendOrder(order)
 ```
 
 ---
