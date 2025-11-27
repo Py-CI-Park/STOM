@@ -36,39 +36,41 @@ cd STOM
 python -m venv venv
 venv\Scripts\activate
 
-# 3. 의존성 설치
-pip install -r requirements.txt
+# 3. 의존성 설치 (64비트 Python 사용)
+pip_install_64.bat
+# 또는
+pip install -r requirements_64bit.txt
 
-# 4. 설정 파일 생성
-python setup.py
+# 4. 데이터베이스 무결성 검사 (자동 실행됨)
+python64 utility/database_check.py
 ```
 
 #### 2. API 키 설정
+STOM은 API 키를 암호화하여 데이터베이스에 저장합니다. GUI를 통해 설정하거나 `utility/setting.py`에서 관리됩니다.
+
+**GUI를 통한 설정**:
+1. 프로그램 실행 후 `설정` 탭 선택
+2. 각 거래소별 API 키 입력
+3. 키는 자동으로 암호화되어 `_database/setting.db`에 저장됨
+
+**프로그래밍 방식 설정** (`utility/setting.py` 참조):
 ```python
-# config/api_config.py
-API_KEYS = {
-    'kiwoom': {
-        'app_key': 'YOUR_KIWOOM_APP_KEY',
-        'app_secret': 'YOUR_KIWOOM_APP_SECRET'
-    },
-    'upbit': {
-        'access_key': 'YOUR_UPBIT_ACCESS_KEY',
-        'secret_key': 'YOUR_UPBIT_SECRET_KEY'
-    },
-    'binance': {
-        'api_key': 'YOUR_BINANCE_API_KEY',
-        'secret_key': 'YOUR_BINANCE_SECRET_KEY'
-    }
+# utility/setting.py에서 암호화된 형태로 관리
+DICT_SET = {
+    '증권사': '키움증권',
+    '거래소': '업비트',
+    # API 키는 암호화되어 데이터베이스에 저장
 }
 ```
 
 #### 3. 데이터베이스 초기화
 ```bash
-# 데이터베이스 테이블 생성
-python utility/create_database.py
+# 데이터베이스 무결성 검사 및 자동 생성
+python64 utility/database_check.py
 
-# 초기 데이터 로드 (선택사항)
-python utility/load_initial_data.py
+# 과거 데이터 업데이트 (선택사항)
+python64 utility/db_update_back.py
+python64 utility/db_update_day.py
 ```
 
 ---
@@ -77,23 +79,31 @@ python utility/load_initial_data.py
 
 ### 프로그램 실행
 
-#### 1. 기본 실행
+#### 1. 배치 파일을 통한 실행 (권장)
 ```bash
-# 메인 프로그램 실행
-python main.py
+# 기본 실행 (관리자 권한 필요)
+stom.bat
+
+# 주식 전용 모드
+stom_stock.bat
+
+# 암호화폐 전용 모드
+stom_coin.bat
 ```
 
-#### 2. 모드별 실행
+#### 2. Python 직접 실행
 ```bash
-# 실거래 모드
-python main.py --mode live
+# 기본 실행
+python64 stom.py
 
-# 백테스팅 모드
-python main.py --mode backtest
+# 주식 자동 실행 모드
+python64 stom.py stock
 
-# 데모 모드
-python main.py --mode demo
+# 암호화폐 자동 실행 모드
+python64 stom.py coin
 ```
+
+**참고**: STOM은 64비트 Python이 필요하며, 관리자 권한으로 실행해야 합니다.
 
 ### 메인 화면 구성
 

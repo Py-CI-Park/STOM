@@ -10,22 +10,24 @@
 
 ```
 coin/
-├── upbit/
-│   ├── upbit_receiver_tick.py       # 업비트 틱 데이터 수신
-│   ├── upbit_receiver_min.py        # 업비트 분봉 데이터 수신
-│   ├── upbit_trader.py              # 업비트 주문 실행
-│   ├── upbit_strategy_tick.py       # 업비트 틱 전략
-│   ├── upbit_strategy_min.py        # 업비트 분봉 전략
-│   └── upbit_websocket.py           # WebSocket 연결 관리
-├── binance/
-│   ├── binance_receiver_tick.py     # 바이낸스 틱 데이터 수신
-│   ├── binance_receiver_min.py      # 바이낸스 분봉 데이터 수신
-│   ├── binance_trader.py            # 바이낸스 주문 실행
-│   ├── binance_strategy_tick.py     # 바이낸스 틱 전략
-│   ├── binance_strategy_min.py      # 바이낸스 분봉 전략
-│   └── binance_websocket.py         # WebSocket 연결 관리
-└── kimp_upbit_binance.py            # 김프 모니터링
+├── upbit_receiver_tick.py           # 업비트 틱 데이터 수신
+├── upbit_receiver_min.py            # 업비트 분봉 데이터 수신
+├── upbit_receiver_client.py         # 업비트 클라이언트 수신기
+├── upbit_trader.py                  # 업비트 주문 실행
+├── upbit_strategy_tick.py           # 업비트 틱 전략
+├── upbit_strategy_min.py            # 업비트 분봉 전략
+├── upbit_websocket.py               # 업비트 WebSocket 연결
+├── binance_receiver_tick.py         # 바이낸스 틱 데이터 수신
+├── binance_receiver_min.py          # 바이낸스 분봉 데이터 수신
+├── binance_receiver_client.py       # 바이낸스 클라이언트 수신기
+├── binance_trader.py                # 바이낸스 주문 실행
+├── binance_strategy_tick.py         # 바이낸스 틱 전략
+├── binance_strategy_min.py          # 바이낸스 분봉 전략
+├── binance_websocket.py             # 바이낸스 WebSocket 연결
+└── kimp_upbit_binance.py            # 김프(프리미엄) 모니터링
 ```
+
+**참고**: 업비트와 바이낸스 파일들이 모두 `coin/` 디렉토리에 직접 위치합니다. 별도의 서브폴더는 없습니다.
 
 ---
 

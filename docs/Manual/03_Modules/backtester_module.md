@@ -11,16 +11,29 @@
 ```
 backtester/
 ├── backtest.py                      # 백테스트 메인 실행
-├── optimiz.py                       # 파라미터 최적화
-├── rolling_walk_forward_test.py    # 전진분석
-├── backengine_kiwoom_tick.py        # 주식 틱 백테스트
-├── backengine_kiwoom_min.py         # 주식 분봉 백테스트
-├── backengine_upbit_tick.py         # 업비트 틱 백테스트
-├── backengine_upbit_min.py          # 업비트 분봉 백테스트
-├── backengine_binance_tick.py       # 바이낸스 틱 백테스트
-├── backengine_binance_min.py        # 바이낸스 분봉 백테스트
-└── performance_analyzer.py          # 성과 분석
+├── optimiz.py                       # 파라미터 최적화 (Optuna)
+├── optimiz_genetic_algorithm.py     # 유전 알고리즘 최적화
+├── optimiz_conditions.py            # 조건 최적화
+├── rolling_walk_forward_test.py    # 전진분석 (Rolling Walk-Forward)
+├── backfinder.py                    # 백테스트 결과 검색
+├── back_static.py                   # 백테스트 정적 함수
+├── back_code_test.py                # 전략 코드 검증
+├── back_subtotal.py                 # 부분 합계 계산
+├── backengine_kiwoom_tick.py        # 주식 틱 백테스트 (버전1)
+├── backengine_kiwoom_tick2.py       # 주식 틱 백테스트 (버전2)
+├── backengine_kiwoom_min.py         # 주식 분봉 백테스트 (버전1)
+├── backengine_kiwoom_min2.py        # 주식 분봉 백테스트 (버전2)
+├── backengine_upbit_tick.py         # 업비트 틱 백테스트 (버전1)
+├── backengine_upbit_tick2.py        # 업비트 틱 백테스트 (버전2)
+├── backengine_upbit_min.py          # 업비트 분봉 백테스트 (버전1)
+├── backengine_upbit_min2.py         # 업비트 분봉 백테스트 (버전2)
+├── backengine_binance_tick.py       # 바이낸스 틱 백테스트 (버전1)
+├── backengine_binance_tick2.py      # 바이낸스 틱 백테스트 (버전2)
+├── backengine_binance_min.py        # 바이낸스 분봉 백테스트 (버전1)
+└── backengine_binance_min2.py       # 바이낸스 분봉 백테스트 (버전2)
 ```
+
+**참고**: 각 시장/시간프레임별로 2개 버전의 백테스트 엔진이 존재합니다 (tick, tick2, min, min2).
 
 ---
 

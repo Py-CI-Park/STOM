@@ -10,18 +10,25 @@
 
 ```
 utility/
-├── setting.py                    # 전역 설정 및 상수
+├── setting.py                    # 전역 설정 및 상수 관리
 ├── static.py                     # 정적 함수 모음
-├── query.py                      # 데이터베이스 쿼리
+├── query.py                      # 데이터베이스 쿼리 프로세스
+├── chart.py                      # 차트 데이터 처리
+├── chart_items.py                # 차트 아이템 정의
+├── hoga.py                       # 호가 데이터 처리
+├── sound.py                      # 알림 소리 재생
+├── telegram_msg.py               # 텔레그램 메시지 전송
+├── webcrawling.py                # 웹 크롤링 유틸리티
+├── timesync.py                   # 시간 동기화
+├── syntax.py                     # 전략 구문 검증
 ├── database_check.py             # DB 무결성 검증
 ├── db_update_day.py              # 일간 데이터 업데이트
 ├── db_update_back.py             # 과거 데이터 업데이트
-├── zmq_server.py                 # ZeroMQ 서버
-├── zmq_client.py                 # ZeroMQ 클라이언트
-├── telegram_bot.py               # 텔레그램 봇
-├── sound.py                      # 알림 소리
-└── total_code_line.py            # 코드 통계
+├── db_distinct.py                # 데이터 중복 제거
+└── total_code_line.py            # 전체 코드 라인 수 계산
 ```
+
+**참고**: ZeroMQ 통신은 `ui/ui_mainwindow.py`의 ZmqServ/ZmqRecv 클래스로 처리됩니다.
 
 ---
 

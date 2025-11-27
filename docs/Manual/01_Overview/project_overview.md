@@ -70,7 +70,7 @@
 ## 📁 프로젝트 구조
 
 ```
-STOM_V1/
+STOM/
 ├── stom.py                 # 메인 실행 파일
 ├── stock/                  # 주식 거래 모듈
 │   ├── kiwoom.py          # 키움증권 API 기본 클래스
