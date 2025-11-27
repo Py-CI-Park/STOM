@@ -99,17 +99,20 @@ STOM은 **이중 Python 아키텍처**를 사용합니다:
 
 #### 64-bit Python (필수)
 - **용도**: 메인 시스템, 암호화폐 트레이딩, 백테스팅, 최적화
-- **설치 경로**: `C:\Python\64\Python3119\python.exe`
-- **명령어**: `python64` (PATH에 등록 필요)
+- **설치 경로**: `C:\Python\64\Python3119\python.exe` (표준)
+- **명령어**: `python` (기본 명령어)
 - **TA-Lib**: `TA_Lib-0.4.25-cp311-cp311-win_amd64.whl`
 
 #### 32-bit Python (선택 - 키움 전용)
 - **용도**: 키움증권 OpenAPI (32-bit 전용)
-- **설치 경로**: `C:\Python\32\Python3119\python32.exe`
-- **명령어**: `python` 또는 `python32`
+- **설치 경로**: `C:\Python\32\Python3119\`
+- **설정 방법**: `python.exe` → `python32.exe`로 파일명 변경
+- **명령어**: `python32` (변경된 실행 파일 사용)
 - **TA-Lib**: `TA_Lib-0.4.27-cp311-cp311-win32.whl`
 
 **이유**: 키움증권 OpenAPI는 32-bit 전용이므로, 주식 트레이딩 사용 시 32-bit Python이 필요합니다. 암호화폐만 사용하는 경우 64-bit Python만으로 충분합니다.
+
+**중요**: 64-bit Python을 표준 `python` 명령어로 사용하고, 32-bit Python은 `python.exe`를 `python32.exe`로 이름 변경하여 구분합니다.
 
 ### 주식 트레이딩 (키움증권)
 
@@ -176,6 +179,8 @@ stom_venv_coin.bat      # 암호화폐 전용 (가상환경)
 python64 utility/database_check.py
 ```
 
+**참고**: `python64`는 PATH에 등록된 64-bit Python 별칭입니다. 직접 실행하려면 `python utility/database_check.py`를 사용하세요.
+
 ### 4. 시스템 실행
 
 **통합 모드** (주식 + 코인):
@@ -195,8 +200,10 @@ stom_coin.bat
 
 **Python 직접 실행**:
 ```bash
-python64 stom.py [stock|coin]
+python stom.py [stock|coin]
 ```
+
+**참고**: 배치 파일 내부에서는 `python64` 별칭을 사용하지만, 직접 실행 시에는 표준 `python` 명령어를 사용하세요.
 
 ### 5. 첫 실행 설정
 
@@ -455,7 +462,7 @@ STOM은 키움증권 OpenAPI의 32-bit 제약과 현대적인 데이터 처리 �
 │                                                               │
 │  ┌──────────────────┐          ┌──────────────────┐          │
 │  │  64-bit Python   │          │  32-bit Python   │          │
-│  │   (python64)     │          │  (python/32)     │          │
+│  │    (python)      │          │   (python32)     │          │
 │  ├──────────────────┤          ├──────────────────┤          │
 │  │ • 메인 시스템    │          │ • 키움 API       │          │
 │  │ • 암호화폐       │          │ • 주식 수신      │          │
@@ -472,16 +479,21 @@ STOM은 키움증권 OpenAPI의 32-bit 제약과 현대적인 데이터 처리 �
 │               │  (큐, ZMQ, DB)     │                          │
 │               └────────────────────┘                          │
 └─────────────────────────────────────────────────────────────┘
+
+**실행 파일 구분 방법**:
+- 64-bit: `python.exe` (표준 이름 사용)
+- 32-bit: `python.exe` → `python32.exe` (파일명 변경하여 구분)
 ```
 
 ### 실행 명령어 구분
 
 | 구분 | 64-bit | 32-bit |
 |------|--------|--------|
-| **명령어** | `python64` | `python` 또는 `python32` |
-| **설치 경로** | `C:\Python\64\Python3119\python.exe` | `C:\Python\32\Python3119\python32.exe` |
+| **명령어** | `python` (표준) | `python32` (파일명 변경 후) |
+| **설치 경로** | `C:\Python\64\Python3119\python.exe` | `C:\Python\32\Python3119\` |
+| **실행 파일** | `python.exe` (원본 이름) | `python32.exe` (변경된 이름) |
 | **가상환경** | `venv_64bit\Scripts\python.exe` | `venv_32bit\Scripts\python32.exe` |
-| **PATH 등록** | `python64` 별칭 필요 | 표준 `python` 명령 |
+| **설정 방법** | 표준 설치 | `python.exe` → `python32.exe` 이름 변경 |
 
 ### 패키지 차이
 
@@ -565,22 +577,29 @@ if '%errorlevel%' NEQ '0' (
 
 #### 실행 배치 파일
 
-| 파일명 | Python | 용도 |
-|--------|--------|------|
-| `stom.bat` | 64-bit | 통합 모드 (주식+코인) |
-| `stom_stock.bat` | 64-bit | 주식 전용 |
-| `stom_coin.bat` | 64-bit | 암호화폐 전용 |
-| `stom_venv.bat` | 64-bit (venv) | 통합 모드 (가상환경) |
-| `stom_venv_stock.bat` | 32/64-bit (venv) | 주식 전용 (가상환경) |
-| `stom_venv_coin.bat` | 64-bit (venv) | 암호화폐 전용 (가상환경) |
+| 파일명 | Python | 내부 명령어 | 용도 |
+|--------|--------|-------------|------|
+| `stom.bat` | 64-bit | `python64` | 통합 모드 (주식+코인) |
+| `stom_stock.bat` | 64-bit | `python64` | 주식 전용 |
+| `stom_coin.bat` | 64-bit | `python64` | 암호화폐 전용 |
+| `stom_venv.bat` | 64-bit (venv) | `venv_64bit\Scripts\python.exe` | 통합 모드 (가상환경) |
+| `stom_venv_stock.bat` | 32/64-bit (venv) | `venv_32bit\Scripts\python32.exe` | 주식 전용 (가상환경) |
+| `stom_venv_coin.bat` | 64-bit (venv) | `venv_64bit\Scripts\python.exe` | 암호화폐 전용 (가상환경) |
+
+**참고**: 배치 파일 내부에서는 `python64` 명령어를 사용하지만, 이는 PATH에 등록된 별칭이거나 직접 경로입니다.
 
 #### 설치 배치 파일
 
-| 파일명 | 대상 | 실행 내용 |
-|--------|------|-----------|
-| `pip_install_64.bat` | 64-bit | TA-Lib (amd64), numba, websockets, optuna 등 |
-| `pip_install_32.bat` | 32-bit | TA-Lib (win32), pywin32 등 |
-| `setup_venv.bat` | 32/64-bit | 양쪽 가상환경 자동 생성 + 패키지 설치 |
+| 파일명 | 대상 | 내부 명령어 | 실행 내용 |
+|--------|------|-------------|-----------|
+| `pip_install_64.bat` | 64-bit | `python64` | TA-Lib (amd64), numba, websockets, optuna 등 |
+| `pip_install_32.bat` | 32-bit | `python` | TA-Lib (win32), pywin32 등 |
+| `setup_venv.bat` | 32/64-bit | 직접 경로 | 양쪽 가상환경 자동 생성 + 패키지 설치 |
+
+**명령어 설명**:
+- `python64`: 64-bit Python 실행 (PATH 별칭 또는 `C:\Python\64\Python3119\python.exe`)
+- `python`: 32-bit Python 실행 (`python32.exe`를 표준 PATH에 등록하지 않는 경우)
+- `python32`: 32-bit Python 실행 (파일명 변경 후)
 
 ### TA-Lib Wheel 파일 차이
 
@@ -695,21 +714,23 @@ stom.bat  # 또는 stom_venv.bat
 
 ```bash
 # 코드 라인 수 통계
-python64 utility/total_code_line.py
+python utility/total_code_line.py
 
 # 데이터베이스 업데이트
-python64 utility/db_update_day.py
-python64 utility/db_update_back.py
+python utility/db_update_day.py
+python utility/db_update_back.py
 
 # 백테스팅 실행
-python64 backtester/backtest.py
+python backtester/backtest.py
 
 # 파라미터 최적화
-python64 backtester/optimiz.py
+python backtester/optimiz.py
 
 # 유전 알고리즘 최적화
-python64 backtester/optimiz_genetic_algorithm.py
+python backtester/optimiz_genetic_algorithm.py
 ```
+
+**참고**: 명령줄에서는 표준 `python` 명령어를 사용하세요 (64-bit Python이 기본입니다).
 
 ### 가상환경 사용 (권장)
 
@@ -743,8 +764,10 @@ pip_install_64.bat
 # 가상환경 구축
 setup_venv.bat
 
-# 데이터베이스 무결성 검사
+# 데이터베이스 무결성 검사 (배치 파일은 python64 사용)
 python64 utility/database_check.py
+# 또는 직접 실행
+python utility/database_check.py
 ```
 
 ### 시스템 실행
@@ -760,25 +783,27 @@ stom_stock.bat
 stom_coin.bat
 
 # Python 직접 실행
-python64 stom.py [stock|coin]
+python stom.py [stock|coin]
 ```
 
 ### 개발 및 테스팅
 
 ```bash
 # 백테스팅 실행
-python64 backtester/backtest.py
+python backtester/backtest.py
 
 # 파라미터 최적화
-python64 backtester/optimiz.py
+python backtester/optimiz.py
 
 # 유전 알고리즘 최적화
-python64 backtester/optimiz_genetic_algorithm.py
+python backtester/optimiz_genetic_algorithm.py
 
 # 데이터베이스 작업
-python64 utility/db_update_day.py
-python64 utility/db_update_back.py
+python utility/db_update_day.py
+python utility/db_update_back.py
 ```
+
+**참고**: 배치 파일 내부에서는 `python64` 별칭을 사용하지만, 직접 명령줄 실행 시에는 표준 `python` (64-bit) 명령어를 사용하세요.
 
 ---
 
