@@ -35,6 +35,8 @@
     - self.vars 형식: `[[시작, 끝, 간격], 초기값]` 준수
     - 범위 값 개수: 각 변수당 최대 20개 이하 (`(끝값 - 시작값) / 간격 + 1 ≤ 20`)
     - 간격 부호: 시작값 < 끝값이면 양수, 시작값 > 끝값이면 음수
+    - **Range Step 정합성**: `(끝값 - 시작값) % 간격 == 0` 필수 (Optuna 호환성)
+    - **NumPy 호환성**: 연쇄 비교 금지 (`a < b < c` → `a < b and b < c`)
 
 ---
 
@@ -823,6 +825,180 @@ self.vars[1] = [[3.0, 8.0, 0.5], 5.0]   # 11개 → 정상
 # 해결: 간격 부호를 시작/끝값 관계에 맞게 수정
 # 잘못됨: [[1.0, 10.0, -1.0], 5.0]
 # 올바름: [[1.0, 10.0, 1.0], 5.0]  또는  [[10.0, 1.0, -1.0], 5.0]
+```
+
+#### 규칙 6: Range Step 정합성 검증 (Optuna 호환성)
+
+**Optuna 최적화 엔진은 범위가 간격으로 정확히 나누어떨어지는지 검증합니다**. 나누어떨어지지 않으면 경고 메시지와 함께 범위가 자동 조정됩니다.
+
+**정합성 공식**:
+```python
+(끝값 - 시작값) % 간격 == 0.0
+```
+
+**✅ 올바른 범위 설정**:
+```python
+# (3.0 - 1.5) / 0.5 = 3.0 → 정수 ✅
+self.vars[1] = [[1.5, 3.0, 0.5], 2.0]   # 1.5, 2.0, 2.5, 3.0
+
+# (10.0 - 6.0) / 1.0 = 4.0 → 정수 ✅
+self.vars[2] = [[6.0, 10.0, 1.0], 8.0]  # 6.0, 7.0, 8.0, 9.0, 10.0
+
+# (0.9 - 0.3) / 0.2 = 3.0 → 정수 ✅
+self.vars[3] = [[0.3, 0.9, 0.2], 0.5]   # 0.3, 0.5, 0.7, 0.9
+```
+
+**❌ 잘못된 범위 설정**:
+```python
+# (1.0 - 0.3) / 0.2 = 3.5 → 정수 아님 ❌
+self.vars[1] = [[0.3, 1.0, 0.2], 0.5]
+# Optuna 경고: "The range is not divisible by step. It will be replaced by [0.3, 0.9]"
+
+# (5.0 - 1.5) / 1.0 = 3.5 → 정수 아님 ❌
+self.vars[2] = [[1.5, 5.0, 1.0], 3.0]
+# Optuna 경고: "The range is not divisible by step. It will be replaced by [1.5, 4.5]"
+
+# (10.0 - 6.0) / 0.3 = 13.333... → 정수 아님 ❌
+self.vars[3] = [[6.0, 10.0, 0.3], 8.0]
+# Optuna 경고: "The range is not divisible by step. It will be replaced by [6.0, 9.9]"
+```
+
+**Optuna 경고 메시지**:
+```
+UserWarning: The distribution is specified by [0.3, 1.0] and step=0.2,
+but the range is not divisible by `step`.
+It will be replaced by [0.3, 0.9].
+```
+
+**검증 방법**:
+```python
+# 모든 BOR/SOR/OR 범위에 대해 아래 검증 수행
+def validate_range_step(start, end, step):
+    if (end - start) % step != 0.0:
+        print(f"❌ Range 오류: ({end} - {start}) % {step} = {(end - start) % step}")
+        # 올바른 끝값 계산
+        correct_end = start + int((end - start) / step) * step
+        print(f"✅ 권장 수정: [[{start}, {correct_end}, {step}], ...]")
+        return False
+    return True
+
+# 사용 예시
+validate_range_step(0.3, 1.0, 0.2)   # ❌ False
+validate_range_step(0.3, 0.9, 0.2)   # ✅ True
+validate_range_step(6.0, 10.0, 1.0)  # ✅ True
+```
+
+**수정 방법**:
+```python
+# ❌ 원래 설정: (1.0 - 0.3) / 0.2 = 3.5
+self.vars[4] = [[0.3, 1.0, 0.2], 0.5]
+
+# ✅ 해결 방법 1: 끝값 조정 (아래로)
+self.vars[4] = [[0.3, 0.9, 0.2], 0.5]  # (0.9 - 0.3) / 0.2 = 3.0
+
+# ✅ 해결 방법 2: 끝값 조정 (위로)
+self.vars[4] = [[0.3, 1.1, 0.2], 0.5]  # (1.1 - 0.3) / 0.2 = 4.0
+
+# ✅ 해결 방법 3: 간격 조정
+self.vars[4] = [[0.3, 1.0, 0.1], 0.5]  # (1.0 - 0.3) / 0.1 = 7.0
+```
+
+#### 규칙 7: NumPy 배열 호환성 (연쇄 비교 금지)
+
+**NumPy 배열과 함께 사용하는 조건식에서는 Python의 연쇄 비교 구문이 작동하지 않습니다**. 백테스트 엔진에서 `ValueError: setting an array element with a sequence` 오류가 발생합니다.
+
+**오류 원인**:
+- Python 연쇄 비교: `a < b < c`는 `(a < b) and (b < c)`로 확장됨
+- NumPy 배열에서는 중간 결과가 배열이 되어 불균일한 shape 생성
+
+**❌ 잘못된 조건문 (연쇄 비교)**:
+```python
+# 단일 부등호 체인 - NumPy 배열에서 오류 발생
+elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30) < 누적초당매수수량(30) * 1.0):
+    매수 = False
+
+# 최적화 조건식에서도 동일한 오류
+elif not (누적초당매수수량(30) * self.vars[22] < 누적초당매도수량(30) < 누적초당매수수량(30) * self.vars[23]):
+    매수 = False
+
+# 다른 예시
+if 5 < 등락율 < 10:  # ❌ NumPy 배열일 경우 오류
+    매수 = True
+```
+
+**오류 메시지**:
+```python
+ValueError: setting an array element with a sequence.
+The requested array has an inhomogeneous shape after 1 dimensions.
+The detected shape was (2,) + inhomogeneous part.
+```
+
+**✅ 올바른 조건문 (AND 연산자 분리)**:
+```python
+# AND 연산자로 명시적 분리
+elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30) and
+          누적초당매도수량(30) < 누적초당매수수량(30) * 1.0):
+    매수 = False
+
+# 최적화 조건식
+elif not (누적초당매수수량(30) * self.vars[22] < 누적초당매도수량(30) and
+          누적초당매도수량(30) < 누적초당매수수량(30) * self.vars[23]):
+    매수 = False
+
+# 다른 예시
+if 5 < 등락율 and 등락율 < 10:  # ✅ 올바름
+    매수 = True
+
+# 또는 더 명확하게
+if (등락율 > 5) and (등락율 < 10):  # ✅ 올바름
+    매수 = True
+```
+
+**단순화 가능한 경우**:
+```python
+# 연쇄 비교가 불필요한 경우 - 단순화 권장
+# ❌ 복잡함
+elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30) and
+          누적초당매도수량(30) < 누적초당매수수량(30) * 1.0):
+    매수 = False
+
+# ✅ 단순화 (논리적으로 동일하다면)
+elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30)):
+    매수 = False
+elif not (누적초당매도수량(30) < 누적초당매수수량(30)):
+    매수 = False
+```
+
+**검증 체크리스트**:
+- [ ] 모든 조건식에서 `a < b < c` 패턴 검색
+- [ ] 연쇄 비교를 `a < b and b < c`로 변경
+- [ ] 중복 계산이 있는 경우 변수로 추출하여 최적화
+- [ ] 백테스트 실행하여 `ValueError` 오류 확인
+
+**변경 전후 예시**:
+```python
+# ===== 변경 전 =====
+# Line 204-206 (매수 조건식)
+elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30) * 1.0):
+    매수 = False
+elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+    매수 = False
+
+# Line 383 (매수 최적화 조건식)
+elif not (누적초당매수수량(30) * self.vars[22] < 누적초당매도수량(30) < 누적초당매수수량(30) * self.vars[23]):
+    매수 = False
+
+# ===== 변경 후 =====
+# Line 204-206 (매수 조건식) - 단순화
+elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30)):
+    매수 = False
+elif not (누적초당매도수량(30) < 누적초당매수수량(30)):
+    매수 = False
+
+# Line 383 (매수 최적화 조건식) - AND 분리
+elif not (누적초당매수수량(30) * self.vars[22] < 누적초당매도수량(30) and
+          누적초당매도수량(30) < 누적초당매수수량(30) * self.vars[23]):
+    매수 = False
 ```
 
 ---
