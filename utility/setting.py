@@ -24,7 +24,7 @@ if VENV_MODE:
     PYTHON_32BIT = os.path.join(PROJECT_ROOT, 'venv_32bit', 'Scripts', 'python32.exe')
     PYTHON_64BIT = os.path.join(PROJECT_ROOT, 'venv_64bit', 'Scripts', 'python.exe')
 else:
-    # 레거시 모드 (기존 python/python64 시스템)
+    # 레거시 모드 (기존 python32/python 시스템)
     PYTHON_32BIT = 'python32'
     PYTHON_64BIT = 'python'
 

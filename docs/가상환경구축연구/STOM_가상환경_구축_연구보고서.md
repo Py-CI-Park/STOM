@@ -20,13 +20,13 @@ STOM V1은 현재 다음과 같은 독특한 파이썬 환경 구조를 사용�
 
 ```
 시스템 구성:
-├── Python 32-bit (기본 설치)
+├── Python 64-bit (표준 설치)
 │   └── 실행 명령어: python
-│   └── 용도: Kiwoom OpenAPI (32비트 전용 DLL)
+│   └── 용도: 주 트레이딩 시스템 (메모리 효율성)
 │
-└── Python 64-bit (python64로 리네임)
-    └── 실행 명령어: python64
-    └── 용도: 주 트레이딩 시스템 (메모리 효율성)
+└── Python 32-bit (python32.exe로 리네임)
+    └── 실행 명령어: python32
+    └── 용도: Kiwoom OpenAPI (32비트 전용 DLL)
 ```
 
 ### 1.2 현재 의존성 관리 방식
@@ -40,11 +40,11 @@ python -m pip install ./utility/TA_Lib-0.4.27-cp311-cp311-win32.whl
 
 **64비트 환경** (`pip_install_64.bat`):
 ```batch
-python64 -m pip install numpy==1.26.4 pandas==2.0.3 python-telegram-bot==13.15 numba
-python64 -m pip install websockets cryptography psutil pyqt5 PyQtWebEngine BeautifulSoup4
-python64 -m pip install optuna optuna-dashboard cmaes lxml squarify matplotlib
-python64 -m pip install pyqtgraph pyupbit ntplib python-dateutil python-binance pyzmq pyttsx3
-python64 -m pip install ./utility/TA_Lib-0.4.25-cp311-cp311-win_amd64.whl
+python -m pip install numpy==1.26.4 pandas==2.0.3 python-telegram-bot==13.15 numba
+python -m pip install websockets cryptography psutil pyqt5 PyQtWebEngine BeautifulSoup4
+python -m pip install optuna optuna-dashboard cmaes lxml squarify matplotlib
+python -m pip install pyqtgraph pyupbit ntplib python-dateutil python-binance pyzmq pyttsx3
+python -m pip install ./utility/TA_Lib-0.4.25-cp311-cp311-win_amd64.whl
 ```
 
 ### 1.3 핵심 제약사항
@@ -62,7 +62,7 @@ python64 -m pip install ./utility/TA_Lib-0.4.25-cp311-cp311-win_amd64.whl
 #### 메인 프로세스 (64비트)
 ```mermaid
 graph TD
-    A[stom.bat] --> B[python64 stom.py]
+    A[stom.bat] --> B[python stom.py]
     B --> C[MainWindow 초기화]
     C --> D[subprocess.Popen - kiwoom_manager.py]
     D --> E[KiwoomManager 64비트 프로세스]
@@ -325,7 +325,7 @@ pause
 
 #### 현재 설치 방식
 ```batch
-python64 -m pip install ./utility/TA_Lib-0.4.25-cp311-cp311-win_amd64.whl
+python -m pip install ./utility/TA_Lib-0.4.25-cp311-cp311-win_amd64.whl
 ```
 
 #### 가상환경에서의 처리 전략
@@ -496,9 +496,9 @@ if %errorlevel% neq 0 (
 )
 
 REM 64비트 Python 확인
-python64 --version >nul 2>&1
+python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [오류] 64비트 Python (python64)이 설치되지 않았습니다.
+    echo [오류] 64비트 Python (python)이 설치되지 않았습니다.
     exit /b 1
 )
 
@@ -528,7 +528,7 @@ echo [완료] venv_32bit 생성 완료
 
 echo.
 echo [2/4] 64비트 가상환경 생성 중...
-python64 -m venv venv_64bit --clear
+python -m venv venv_64bit --clear
 if %errorlevel% neq 0 (
     echo [오류] 64비트 가상환경 생성 실패
     exit /b 1
@@ -842,10 +842,10 @@ if VENV_MODE:
     print(f'[가상환경 모드] 32bit: {PYTHON_32BIT}')
     print(f'[가상환경 모드] 64bit: {PYTHON_64BIT}')
 else:
-    # 레거시 모드 (기존 python/python64 시스템)
-    PYTHON_32BIT = 'python'
-    PYTHON_64BIT = 'python64'
-    print('[레거시 모드] python / python64 사용')
+    # 레거시 모드 (기존 python32/python 시스템)
+    PYTHON_32BIT = 'python32'
+    PYTHON_64BIT = 'python'
+    print('[레거시 모드] python32 / python 사용')
 ```
 
 **Step 2: ui/ui_mainwindow.py:606 수정**
@@ -1140,8 +1140,8 @@ pause
 **작업**:
 1. 현재 시스템에서 의존성 추출
 ```batch
-python -m pip freeze > requirements_current_32bit.txt
-python64 -m pip freeze > requirements_current_64bit.txt
+python32 -m pip freeze > requirements_current_32bit.txt
+python -m pip freeze > requirements_current_64bit.txt
 ```
 
 2. 수동으로 `requirements_32bit.txt`, `requirements_64bit.txt` 정제
@@ -1338,7 +1338,7 @@ REM 가상환경 생성 (32비트)
 python -m venv venv_32bit
 
 REM 가상환경 생성 (64비트)
-python64 -m venv venv_64bit
+python -m venv venv_64bit
 
 REM 가상환경 활성화
 venv_64bit\Scripts\activate.bat

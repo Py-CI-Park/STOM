@@ -19,5 +19,5 @@ if '%errorlevel%' NEQ '0' (
 :gotAdmin
     pushd "%CD%"
     CD /D "%~dp0"
-    python64 ./db_update_back.py
+    python ./db_update_back.py
     pause

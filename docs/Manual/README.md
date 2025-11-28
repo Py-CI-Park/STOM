@@ -78,7 +78,7 @@
 
 **주요 수정 이력** (2025-11-26):
 - 프로젝트 경로: `STOM_V1/` → `STOM/`
-- 실행 명령어: `python main.py` → `python64 stom.py`
+- 실행 명령어: `python main.py` → `python stom.py`
 - Kiwoom 클래스 구조: 상속 → Composition 패턴
 - qlist 큐 시스템: 실제 구현 반영 (15개 큐)
 - 모듈 파일 구조: 실제 파일명과 개수 정확히 반영
