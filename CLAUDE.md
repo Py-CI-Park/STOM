@@ -21,7 +21,7 @@ STOM (System Trading Optimization Manager) V1은 한국 주식시장(키움증�
 pip_install_64.bat
 
 # 데이터베이스 무결성 검사 (시작 시 자동 실행)
-python64 ./utility/database_check.py
+python ./utility/database_check.py
 ```
 
 ### 시스템 실행
@@ -36,20 +36,20 @@ stom_stock.bat
 stom_coin.bat
 
 # Python 직접 실행
-python64 stom.py [stock|coin]
+python stom.py [stock|coin]
 ```
 
 ### 개발 및 테스팅
 ```bash
 # 백테스팅 실행
-python64 backtester/backtest.py
+python backtester/backtest.py
 
 # 파라미터 최적화
-python64 backtester/optimiz.py
+python backtester/optimiz.py
 
 # 데이터베이스 작업
-python64 utility/db_update_day.py
-python64 utility/db_update_back.py
+python utility/db_update_day.py
+python utility/db_update_back.py
 ```
 
 ## 아키텍처 개요
@@ -243,7 +243,7 @@ qlist = [
 - 자동화된 최적화 섹션 생성 구현
 - 코드-문서 추적성 확립
 - 경로 수정: `STOM_V1/` → `STOM/`
-- 명령어 업데이트: `python main.py` → `python64 stom.py`
+- 명령어 업데이트: `python main.py` → `python stom.py`
 
 **검증 프로세스**:
 1. `DOCUMENTATION_GUIDE.md`를 통한 자동화 검사

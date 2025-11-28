@@ -42,7 +42,7 @@ pip_install_64.bat
 pip install -r requirements_64bit.txt
 
 # 4. 데이터베이스 무결성 검사 (자동 실행됨)
-python64 utility/database_check.py
+python utility/database_check.py
 ```
 
 #### 2. API 키 설정
@@ -66,11 +66,11 @@ DICT_SET = {
 #### 3. 데이터베이스 초기화
 ```bash
 # 데이터베이스 무결성 검사 및 자동 생성
-python64 utility/database_check.py
+python utility/database_check.py
 
 # 과거 데이터 업데이트 (선택사항)
-python64 utility/db_update_back.py
-python64 utility/db_update_day.py
+python utility/db_update_back.py
+python utility/db_update_day.py
 ```
 
 ---
@@ -94,13 +94,13 @@ stom_coin.bat
 #### 2. Python 직접 실행
 ```bash
 # 기본 실행
-python64 stom.py
+python stom.py
 
 # 주식 자동 실행 모드
-python64 stom.py stock
+python stom.py stock
 
 # 암호화폐 자동 실행 모드
-python64 stom.py coin
+python stom.py coin
 ```
 
 **참고**: STOM은 64비트 Python이 필요하며, 관리자 권한으로 실행해야 합니다.

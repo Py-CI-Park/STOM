@@ -140,7 +140,7 @@ ls /home/user/STOM/stom_coin.bat
 ```
 
 **주의사항**:
-- ✅ 올바름: `python64 stom.py`
+- ✅ 올바름: `python stom.py`
 - ❌ 잘못됨: `python main.py`
 
 ---

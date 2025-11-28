@@ -38,8 +38,8 @@ STOM_V1/
 
 ### 1. 사전 요구사항
 
-- Python 3.11 (32-bit): Kiwoom API 용
-- Python 3.11 (64-bit): 메인 시스템 용 (python64로 설치)
+- Python 3.11 (32-bit): Kiwoom API 용 (`python32.exe`로 리네임)
+- Python 3.11 (64-bit): 메인 시스템 용 (표준 `python.exe`)
 - Windows 관리자 권한
 
 ### 2. 통합 설치 스크립트 실행
@@ -97,8 +97,8 @@ stom_coin.bat
   - `PYTHON_64BIT`: `venv_64bit/Scripts/python.exe`
 
 - **레거시 모드**: `venv_64bit` 폴더 없을 시
-  - `PYTHON_32BIT`: `python`
-  - `PYTHON_64BIT`: `python64`
+  - `PYTHON_32BIT`: `python32`
+  - `PYTHON_64BIT`: `python`
 
 ### 프로세스 실행 흐름
 
@@ -174,7 +174,7 @@ deactivate
 
 **확인사항**:
 1. Python 32비트와 64비트가 모두 설치되어 있는지 확인
-2. `python --version` 및 `python64 --version` 실행 가능 여부 확인
+2. `python --version` 및 `python32 --version` 실행 가능 여부 확인
 3. 관리자 권한으로 실행하는지 확인
 
 **해결방법**:

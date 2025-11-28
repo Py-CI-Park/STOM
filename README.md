@@ -176,10 +176,8 @@ stom_venv_coin.bat      # 암호화폐 전용 (가상환경)
 ### 3. 데이터베이스 초기화
 
 ```bash
-python64 utility/database_check.py
+python utility/database_check.py
 ```
-
-**참고**: `python64`는 PATH에 등록된 64-bit Python 별칭입니다. 직접 실행하려면 `python utility/database_check.py`를 사용하세요.
 
 ### 4. 시스템 실행
 
@@ -202,8 +200,6 @@ stom_coin.bat
 ```bash
 python stom.py [stock|coin]
 ```
-
-**참고**: 배치 파일 내부에서는 `python64` 별칭을 사용하지만, 직접 실행 시에는 표준 `python` 명령어를 사용하세요.
 
 ### 5. 첫 실행 설정
 
@@ -379,7 +375,7 @@ STOM/
 #### 데이터베이스 무결성 검사
 
 ```bash
-python64 utility/database_check.py
+python utility/database_check.py
 ```
 
 시작 시 자동으로 실행되어 데이터 무결성 검증.
@@ -579,27 +575,24 @@ if '%errorlevel%' NEQ '0' (
 
 | 파일명 | Python | 내부 명령어 | 용도 |
 |--------|--------|-------------|------|
-| `stom.bat` | 64-bit | `python64` | 통합 모드 (주식+코인) |
-| `stom_stock.bat` | 64-bit | `python64` | 주식 전용 |
-| `stom_coin.bat` | 64-bit | `python64` | 암호화폐 전용 |
+| `stom.bat` | 64-bit | `python` | 통합 모드 (주식+코인) |
+| `stom_stock.bat` | 64-bit | `python` | 주식 전용 |
+| `stom_coin.bat` | 64-bit | `python` | 암호화폐 전용 |
 | `stom_venv.bat` | 64-bit (venv) | `venv_64bit\Scripts\python.exe` | 통합 모드 (가상환경) |
 | `stom_venv_stock.bat` | 32/64-bit (venv) | `venv_32bit\Scripts\python32.exe` | 주식 전용 (가상환경) |
 | `stom_venv_coin.bat` | 64-bit (venv) | `venv_64bit\Scripts\python.exe` | 암호화폐 전용 (가상환경) |
-
-**참고**: 배치 파일 내부에서는 `python64` 명령어를 사용하지만, 이는 PATH에 등록된 별칭이거나 직접 경로입니다.
 
 #### 설치 배치 파일
 
 | 파일명 | 대상 | 내부 명령어 | 실행 내용 |
 |--------|------|-------------|-----------|
-| `pip_install_64.bat` | 64-bit | `python64` | TA-Lib (amd64), numba, websockets, optuna 등 |
+| `pip_install_64.bat` | 64-bit | `python` | TA-Lib (amd64), numba, websockets, optuna 등 |
 | `pip_install_32.bat` | 32-bit | `python` | TA-Lib (win32), pywin32 등 |
 | `setup_venv.bat` | 32/64-bit | 직접 경로 | 양쪽 가상환경 자동 생성 + 패키지 설치 |
 
 **명령어 설명**:
-- `python64`: 64-bit Python 실행 (PATH 별칭 또는 `C:\Python\64\Python3119\python.exe`)
-- `python`: 32-bit Python 실행 (`python32.exe`를 표준 PATH에 등록하지 않는 경우)
-- `python32`: 32-bit Python 실행 (파일명 변경 후)
+- **64-bit Python**: `python` 명령어 사용 (표준 설치, `C:\Python\64\Python3119\python.exe`)
+- **32-bit Python**: `python` 명령어 사용 (일부 배치 파일), 또는 `python32` (파일명 변경 후)
 
 ### TA-Lib Wheel 파일 차이
 
@@ -764,9 +757,7 @@ pip_install_64.bat
 # 가상환경 구축
 setup_venv.bat
 
-# 데이터베이스 무결성 검사 (배치 파일은 python64 사용)
-python64 utility/database_check.py
-# 또는 직접 실행
+# 데이터베이스 무결성 검사
 python utility/database_check.py
 ```
 
@@ -802,8 +793,6 @@ python backtester/optimiz_genetic_algorithm.py
 python utility/db_update_day.py
 python utility/db_update_back.py
 ```
-
-**참고**: 배치 파일 내부에서는 `python64` 별칭을 사용하지만, 직접 명령줄 실행 시에는 표준 `python` (64-bit) 명령어를 사용하세요.
 
 ---
 
