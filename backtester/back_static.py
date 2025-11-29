@@ -515,34 +515,34 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
         else:
             if 'P' in optistd:
                 if optistd == 'TP':
-                    std = tpp
+                    std = tpp if std_true else std_false_point
                 elif optistd == 'TPI':
-                    std = tpi
+                    std = tpi if std_true else std_false_point
                 elif optistd == 'PM':
-                    std = pm = round(tpp / mdd, 2)
+                    std = pm = round(tpp / mdd, 2) if std_true else std_false_point
                 elif optistd == 'P2M':
-                    std = p2m = round(tpp * tpp / mdd / 100, 2)
+                    std = p2m = round(tpp * tpp / mdd / 100, 2) if std_true else std_false_point
                 elif optistd == 'PAM':
-                    std = pam = round(tpp * app / mdd, 2)
+                    std = pam = round(tpp * app / mdd, 2) if std_true else std_false_point
                 elif optistd == 'PWM':
-                    std = pwm = round(tpp * wr / mdd / 100, 2)
+                    std = pwm = round(tpp * wr / mdd / 100, 2) if std_true else std_false_point
                 elif optistd == 'PTM':
-                    std = ptm = round(tpp * app * wr * tpi * cagr / mdd / 10000, 2)
+                    std = ptm = round(tpp * app * wr * tpi * cagr / mdd / 10000, 2) if std_true else std_false_point
             elif 'G' in optistd:
                 if optistd == 'TG':
-                    std = tsg
+                    std = tsg if std_true else std_false_point
                 elif optistd == 'GM':
-                    std = gm = round(tsg / mdd_, 2)
+                    std = gm = round(tsg / mdd_, 2) if std_true else std_false_point
                 elif optistd == 'G2M':
-                    std = g2m = round(tsg * tsg / mdd_ / betting, 2)
+                    std = g2m = round(tsg * tsg / mdd_ / betting, 2) if std_true else std_false_point
                 elif optistd == 'GAM':
-                    std = gam = round(tsg * app / mdd_, 2)
+                    std = gam = round(tsg * app / mdd_, 2) if std_true else std_false_point
                 elif optistd == 'GWM':
-                    std = gwm = round(tsg * wr / mdd_ / 100, 2)
+                    std = gwm = round(tsg * wr / mdd_ / 100, 2) if std_true else std_false_point
                 elif optistd == 'GTM':
-                    std = gtm = round(tsg * app * wr * tpi * cagr / mdd_ / 10000, 2)
+                    std = gtm = round(tsg * app * wr * tpi * cagr / mdd_ / 10000, 2) if std_true else std_false_point
                 elif optistd == 'CAGR':
-                    std = cagr
+                    std = cagr if std_true else std_false_point
 
     if optistd == 'TP':
         text = pre_text
