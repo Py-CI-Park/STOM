@@ -452,10 +452,15 @@ def GetText3(std, stdp):
 
 
 def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
-    std = 0
-    count = len(train_data)
     """
-    가중치(exponential) 예제
+    교차검증 최적화 표준값 계산
+
+    변경사항 (2025-11-29):
+    - std_false_point (-2,222,222,222) 데이터는 계산에서 제외
+    - 유효한 데이터 쌍만으로 평균 계산
+    - 모든 데이터가 조건 불만족이면 std_false_point 반환
+
+    가중치(exponential) 예제:
     10개 : 2.00, 1.80, 1.60, 1.40, 1.20, 1.00, 0.80, 0.60, 0.40, 0.20
     8개  : 2.00, 1.75, 1.50, 1.25, 1.00, 0.75, 0.50, 0.25
     7개  : 2.00, 1.71, 1.42, 1.14, 0.86, 0.57, 0.29
@@ -465,11 +470,43 @@ def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
     3개  : 2.00, 1.33, 0.66
     2개  : 2.00, 1.0
     """
-    for i in range(count):
-        ex = (count - i) * 2 / count
-        std_ = train_data[i] * valid_data[i] * ex if exponential and count > 1 else train_data[i] * valid_data[i]
-        std = std - std_ if train_data[i] < 0 and valid_data[i] < 0 else std + std_
-    std = round(std / count / betting, 2) if optistd == 'TG' else round(std / count, 2)
+    std = 0
+    valid_count = 0  # 유효한 데이터 쌍 개수
+    total_count = len(train_data)
+    std_false_point = -2_222_222_222
+
+    for i in range(total_count):
+        # 제한 조건 불만족 데이터는 건너뛰기
+        if train_data[i] == std_false_point or valid_data[i] == std_false_point:
+            continue
+
+        valid_count += 1
+
+        # 가중치 계산 (지수 가중치 옵션)
+        if exponential and total_count > 1:
+            ex = (total_count - i) * 2 / total_count
+        else:
+            ex = 1
+
+        # TRAIN × VALID 곱셈
+        std_ = train_data[i] * valid_data[i] * ex
+
+        # 누적 (둘 다 음수면 절댓값으로 처리)
+        if train_data[i] < 0 and valid_data[i] < 0:
+            std = std - std_
+        else:
+            std = std + std_
+
+    # 유효한 데이터가 없으면 조건 불만족 반환
+    if valid_count == 0:
+        return std_false_point
+
+    # 평균 계산 (유효 개수로 나눔)
+    if optistd == 'TG':
+        std = round(std / valid_count / betting, 2)
+    else:
+        std = round(std / valid_count, 2)
+
     return std
 
 

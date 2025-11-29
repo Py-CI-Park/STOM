@@ -715,7 +715,7 @@ class Optimize:
 
                     if self.dict_set['범위자동관리']:
                         turn_var_std[vturn][curr_var] = std
-                    elif std == -2_000_000_000:
+                    elif std == -2_222_222_222:  # std_false_point (조건 불만족)
                         del_vars_list[vturn].append(curr_var)
 
             list_turn_hvar = sorted(dict_turn_hvar.items(), key=operator.itemgetter(0))
@@ -725,6 +725,18 @@ class Optimize:
                     vars_[vturn][1] = high_var
                     data = (ui_num[f'{self.ui_gubun}백테스트'], f'self.vars[{vturn}]의 최적값 변경 [{high_var}]')
                     threading_timer(5, self.wq.put, data)
+
+            # 모든 파라미터가 VALID 조건 불만족 경고
+            if hstd <= -2_000_000_000:
+                warning_msg = (
+                    f'<font color=#f08080>[경고] [{k+1}]단계에서 모든 파라미터 조합이 검증 데이터(VALID) 제한 조건을 불만족합니다.</font><br>'
+                    f'<font color=#f0e68c>다음을 확인하세요:</font><br>'
+                    f'1. std_list 제한 조건이 너무 엄격하지 않은지<br>'
+                    f'2. 전략 자체가 과적합(Overfitting)되지 않았는지<br>'
+                    f'3. TRAIN/VALID 기간 설정이 적절한지'
+                )
+                self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], warning_msg))
+                # 최적화 중단 여부는 사용자가 결정하도록 계속 진행
 
             if self.dict_set['범위자동관리'] and hstd > 0:
                 for vturn, var_std in turn_var_std.items():
