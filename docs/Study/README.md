@@ -9,9 +9,10 @@ Study/
 ├── README.md (현재 문서)
 ├── DocumentationReviews/    # 문서 리뷰 및 검증 (1개)
 │   └── 2025-11-17_Documentation_Review_Report.md
-├── ResearchReports/          # 연구 보고서 (2개)
+├── ResearchReports/          # 연구 보고서 (3개)
 │   ├── AI_ML_Trading_Strategy_Automation_Research.md
-│   └── Research_Report_Automated_Condition_Finding.md
+│   ├── Research_Report_Automated_Condition_Finding.md
+│   └── AI_Driven_Condition_Automation_Circular_Research_System.md
 ├── SystemAnalysis/           # 시스템 분석 및 개선사항 (2개)
 │   ├── Optistd_System_Analysis.md
 │   └── STOM_Optimization_System_Improvements.md
@@ -22,7 +23,7 @@ Study/
     └── Condition_Optimization_and_Analysis_Guide.md
 ```
 
-**총 문서 수**: 8개 | **총 용량**: ~232KB
+**총 문서 수**: 9개 | **총 용량**: ~312KB
 
 ---
 
@@ -40,13 +41,14 @@ Study/
 | 6 | **Condition 902/905 Deep Analysis** | 조건 분석 | 2025-11-29 | 44KB | 장 시작 5분 전략 심층 분석 | • 17개 조건 과적합 위험<br>• 체결강도 50-300 범위<br>• 조건 충돌 문제 식별 | Technical Analysis | ✅ |
 | 7 | **Condition 902/905 Study** | 조건 분석 | 2025-11-29 | 10KB | 틱 조건 스터디 노트 | • 2단계 최적화 (Coarse→Fine)<br>• 조건 무력화 방법<br>• 조건 조합 아이디어 | Backtesting | ✅ |
 | 8 | **Optimization & Analysis Guide** | 가이드 | 2025-11-29 | 13KB | 전체 변수 사전 및 가이드 | • 826개 틱 변수 정리<br>• 7가지 카테고리 분류<br>• 무력화 설정값 제공 | Documentation | ✅ |
+| 9 | **AI Condition Automation Circular System** | 연구 보고서 | 2025-12-01 | 80KB | AI 기반 조건식 자동화 순환 연구 | • 133개 조건 분석 (826/752 변수)<br>• 4단계 순환 프로세스 설계<br>• LLM/GP/Feature Importance 통합 | LLM, DEAP, XGBoost, SHAP, SQLite | ✅ |
 
 ### 📊 스터디 주제별 분류
 
-#### 🤖 AI/ML 연구 (2개)
-- **자동화**: AI/ML 기반 전략 자동화, 조건식 자동 발굴
-- **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning
-- **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간)
+#### 🤖 AI/ML 연구 (3개)
+- **자동화**: AI/ML 기반 전략 자동화, 조건식 자동 발굴, 순환 연구 시스템
+- **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning, DEAP
+- **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간), 완전 자동화된 순환 개선 프로세스
 
 #### ⚙️ 시스템 최적화 (2개)
 - **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA
@@ -90,11 +92,14 @@ Study/
 |--------|--------|------|------|
 | [AI_ML_Trading_Strategy_Automation_Research.md](./ResearchReports/AI_ML_Trading_Strategy_Automation_Research.md) | 2025-11-27 | ✅ 완료 | AI/ML 기반 트레이딩 전략 자동화 연구 (73KB) |
 | [Research_Report_Automated_Condition_Finding.md](./ResearchReports/Research_Report_Automated_Condition_Finding.md) | 2025-11-27 | ✅ 완료 | 조건식 자동 탐색 시스템 연구 |
+| [AI_Driven_Condition_Automation_Circular_Research_System.md](./ResearchReports/AI_Driven_Condition_Automation_Circular_Research_System.md) | 2025-12-01 | ✅ 완료 | AI 기반 조건식 자동화 순환 연구 시스템 (80KB) |
 
 **주요 내용:**
 - AI/ML 트레이딩 전략 적용 방안
 - 자동화된 조건식 탐색 메커니즘
 - 머신러닝 기반 전략 생성 프로세스
+- 4단계 순환 개선 시스템 (생성→테스트→기록→개선)
+- LLM/GP/Feature Importance 통합 아키텍처
 - 실전 적용 가능성 검토
 
 ---
@@ -154,11 +159,11 @@ STOM 시스템의 성능, 구조, 최적화에 대한 심층 분석입니다.
 | 카테고리 | 문서 수 | 완료 | 진행 중 | 계획 |
 |----------|---------|------|---------|------|
 | Documentation Reviews | 1 | 1 | 0 | 0 |
-| Research Reports | 2 | 2 | 0 | 0 |
+| Research Reports | 3 | 3 | 0 | 0 |
 | System Analysis | 2 | 2 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
 | Guides | 1 | 1 | 0 | 0 |
-| **전체** | **8** | **8** | **0** | **0** |
+| **전체** | **9** | **9** | **0** | **0** |
 
 ## 🎯 문서 상태 범례
 
