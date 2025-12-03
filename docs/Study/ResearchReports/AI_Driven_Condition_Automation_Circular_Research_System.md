@@ -1,7 +1,9 @@
 # AI 기반 조건식 자동화 및 순환 연구 시스템
 
-**문서 버전**: 1.0
+**문서 버전**: 1.1
 **작성일**: 2025-12-01
+**최종 업데이트**: 2025-12-03
+**업데이트 내용**: GUI 프로세스 추가 (Section 3.3), DB 저장 단계 추가 (Section 5.4), 8단계 자동화 플로우 반영
 **연구 범위**: STOM V1 조건식 자동화 및 AI 기반 순환 개선 시스템
 **대상 시스템**: STOM (System Trading Optimization Manager) V1
 
@@ -20,7 +22,7 @@
 
 ---
 
-## 1. 연구 개요
+## 1. 연구 개요 💡 [제안사항]
 
 ### 1.1 연구 배경 및 동기
 
@@ -53,7 +55,7 @@ STOM 시스템은 현재 **133개의 트레이딩 조건식**을 보유하고 �
 
 ---
 
-## 2. 조건식 시스템 현황 분석
+## 2. 조건식 시스템 현황 분석 ✅ [실제 코드 분석]
 
 ### 2.1 조건식 문서 구조
 
@@ -317,7 +319,7 @@ def GetOptiValidStd(train_data, valid_data, optistd, betting, exponential):
 
 ---
 
-## 3. 코드 실행 메커니즘 심층 분석
+## 3. 코드 실행 메커니즘 심층 분석 ✅ [실제 코드 분석]
 
 ### 3.1 조건식 로딩 프로세스
 
@@ -549,9 +551,288 @@ exec(self.sellstg, globals(), locals_dict)
 - ⚠️ 타입 검증 부재: 런타임 오류 발생 가능
 - ⚠️ 보안 리스크: `exec()` 사용 시 주의 필요
 
+### 3.3 GUI 기반 조건식 관리 프로세스
+
+#### 3.3.1 전체 조건식 관리 흐름
+
+STOM 시스템은 조건식 MD 파일과 백테스팅 사이에 **GUI 기반 입력 및 DB 저장 프로세스**가 존재합니다. 이는 자동화 시스템 설계 시 반드시 고려해야 하는 중요한 단계입니다.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 STOM 조건식 관리 전체 프로세스                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  [1단계] 조건식 MD 파일 작성                                   │
+│  └─ docs/Condition/Tick/*.md                                 │
+│  └─ docs/Condition/Min/*.md                                  │
+│         │                                                     │
+│         ▼                                                     │
+│  [2단계] GUI에서 조건식 불러오기/편집 ⬅️ 중요!                  │
+│  └─ ui/ui_vars_change.py                                     │
+│     ├─ get_fix_strategy(): 매수/매도 포맷 정리                │
+│     ├─ get_stgtxt_to_varstxt(): "변수" → self.vars[N] 변환   │
+│     ├─ get_optivars_to_gavars(): 최적화 범위 → GA 범위        │
+│     └─ get_gavars_to_optivars(): GA 범위 → 최적화 범위        │
+│         │                                                     │
+│         ▼                                                     │
+│  [3단계] strategy.db에 저장 ⬅️ 중요!                          │
+│  └─ utility/query.py (추정)                                  │
+│  └─ _database/strategy.db                                    │
+│     ├─ 전략명, 매수조건, 매도조건 저장                         │
+│     ├─ 변수 범위 저장                                         │
+│     └─ 시간 범위, 대상 종목 등 메타데이터 저장                 │
+│         │                                                     │
+│         ▼                                                     │
+│  [4단계] 백테스팅 실행 (DB에서 조건식 로드)                     │
+│  └─ backtester/backengine_*.py                               │
+│     ├─ strategy.db에서 조건식 텍스트 로드                      │
+│     ├─ GetBuyStg/GetSellStg로 컴파일                          │
+│     └─ exec()로 실행                                          │
+│         │                                                     │
+│         ▼                                                     │
+│  [5단계] 최적화 실행                                           │
+│  └─ backtester/optimiz.py                                    │
+│     ├─ Grid Search                                           │
+│     ├─ Optuna (Bayesian Optimization)                        │
+│     └─ Genetic Algorithm                                     │
+│         │                                                     │
+│         ▼                                                     │
+│  [6단계] 결과 저장                                             │
+│  └─ _database/backtest.db                                    │
+│  └─ _database/optuna.db                                      │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 3.3.2 GUI 조건식 편집 코드 분석
+
+**파일**: `ui/ui_vars_change.py`
+**라인**: 6-42
+**목적**: 조건식 텍스트 포맷 정리 및 실행 코드 추가
+
+**핵심 함수 1: get_fix_strategy()**
+
+```python
+def get_fix_strategy(ui, strategy, gubun):
+    """
+    매수/매도 조건식에 실행 코드 추가
+
+    Args:
+        ui: UI 객체
+        strategy: 조건식 텍스트
+        gubun: '매수' or '매도'
+
+    Returns:
+        str: 포맷팅된 조건식
+    """
+    if gubun == '매수':
+        # 주식 매수
+        if ui.focusWidget() in (ui.svjb_pushButon_02, ...):
+            if '\nif 매수:' in strategy:
+                strategy = strategy.split('\nif 매수:')[0] + stock_buy_signal
+            elif 'self.tickdata' not in strategy:
+                strategy += '\n' + stock_buy_signal
+        # 코인 매수
+        else:
+            if ui.dict_set['거래소'] == '업비트':
+                if '\nif 매수:' in strategy:
+                    strategy = strategy.split('\nif 매수:')[0] + coin_buy_signal
+    else:
+        # 매도 로직 (유사)
+        # ...
+
+    return strategy
+```
+
+**stock_buy_signal 예시** (`ui/set_text.py`):
+```python
+stock_buy_signal = """
+if 매수:
+    self.Buy(vturn, vkey)
+"""
+```
+
+**파일**: `ui/ui_vars_change.py`
+**라인**: 104-158
+**목적**: "변수" 문자열을 `self.vars[N]`으로 자동 변환
+
+**핵심 함수 2: get_stgtxt_to_varstxt()**
+
+```python
+def get_stgtxt_to_varstxt(ui, buystg, sellstg):
+    """
+    조건식 텍스트의 '변수' 문자열을 'self.vars[N]'으로 변환
+
+    예시:
+        입력: "not (체결강도 < 변수 or 체결강도 > 변수)"
+        출력: "not (체결강도 < self.vars[1] or 체결강도 > self.vars[2])"
+
+    Args:
+        ui: UI 객체
+        buystg: 매수 조건식 텍스트
+        sellstg: 매도 조건식 텍스트
+
+    Returns:
+        tuple: (변환된 매수 조건식, 변환된 매도 조건식)
+    """
+    cnt = 1
+    sellstg_str, buystg_str = '', ''
+
+    # 매도 조건부터 처리 (일반적인 경우)
+    if sellstg != '' and '변수' in sellstg:
+        sellstg = sellstg.split('\n')
+        for line in sellstg:
+            if '변수' in line:
+                for text in line:
+                    sellstg_str += text
+                    if sellstg_str[-2:] == '변수':
+                        sellstg_str = sellstg_str.replace('변수', f'self.vars[{cnt}]')
+                        cnt += 1
+                sellstg_str += '\n'
+            else:
+                sellstg_str += line + '\n'
+
+    # 매수 조건 처리
+    if buystg != '' and '변수' in buystg:
+        # ... (유사한 로직)
+        pass
+
+    return buystg_str[:-1], sellstg_str[:-1]
+```
+
+**사용 예시**:
+```python
+# 사용자가 GUI에서 입력
+buystg = "not (체결강도 < 변수 or 체결강도 > 변수)"
+sellstg = "수익률 >= 변수"
+
+# 변환
+buystg_converted, sellstg_converted = get_stgtxt_to_varstxt(ui, buystg, sellstg)
+
+print(buystg_converted)
+# 출력: "not (체결강도 < self.vars[2] or 체결강도 > self.vars[3])"
+
+print(sellstg_converted)
+# 출력: "수익률 >= self.vars[1]"
+```
+
+**파일**: `ui/ui_vars_change.py`
+**라인**: 45-101
+**목적**: 최적화 범위와 GA 범위 간 상호 변환
+
+**핵심 함수 3: get_optivars_to_gavars()**
+
+```python
+def get_optivars_to_gavars(opti_vars_text):
+    """
+    최적화 범위 형식을 GA 범위 형식으로 변환
+
+    최적화 범위 형식:
+        self.vars[0] = [[60, 260, 20], 150]
+        # [시작, 끝, 간격], 초기값
+
+    GA 범위 형식:
+        self.vars[0] = [[60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260], 150]
+        # [모든 가능한 값들], 초기값
+
+    Args:
+        opti_vars_text: 최적화 범위 텍스트
+
+    Returns:
+        str: GA 범위 텍스트
+    """
+    ga_vars_text = ''
+    try:
+        vars_ = {}
+        opti_vars_text = opti_vars_text.replace('self.vars', 'vars_')
+        exec(compile(opti_vars_text, '<string>', 'exec'))
+
+        for i in range(len(vars_)):
+            ga_vars_text = f'{ga_vars_text}self.vars[{i}] = [['
+            vars_start, vars_last, vars_gap = vars_[i][0]
+            vars_high = vars_[i][1]
+            vars_curr = vars_start
+
+            if vars_start == vars_last:
+                ga_vars_text = f'{ga_vars_text}{vars_curr}], {vars_curr}]\n'
+            elif vars_start < vars_last:
+                while vars_curr <= vars_last:
+                    ga_vars_text = f'{ga_vars_text}{vars_curr}, '
+                    vars_curr += vars_gap
+                    if vars_gap < 0:
+                        vars_curr = round(vars_curr, 2)
+                ga_vars_text = f'{ga_vars_text[:-2]}], {vars_high}]\n'
+            # ... (역방향 로직 생략)
+    except:
+        print_exc()
+
+    ga_vars_text = ga_vars_text.replace('vars_', 'self.vars')
+    return ga_vars_text[:-1]
+```
+
+#### 3.3.3 strategy.db 스키마 (추정)
+
+현재 STOM 시스템은 `_database/strategy.db`에 조건식을 저장하는 것으로 추정됩니다. 정확한 스키마는 코드 조사가 필요하지만, 다음과 같은 구조일 것으로 예상됩니다:
+
+**추정 테이블 구조**:
+```sql
+-- 주식 틱 전략 테이블 (추정)
+CREATE TABLE strategy_tick (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    전략명 TEXT NOT NULL,
+    매수조건 TEXT,  -- 매수 조건식 Python 코드
+    매도조건 TEXT,  -- 매도 조건식 Python 코드
+    변수범위 TEXT,  -- self.vars 정의 (최적화 범위)
+    설명 TEXT,
+    시작시간 TEXT,  -- 예: "09:00:00"
+    종료시간 TEXT,  -- 예: "09:05:00"
+    대상종목 TEXT,  -- 예: "시가총액 3000억 미만"
+    생성일 TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    수정일 TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 주식 분봉 전략 테이블 (추정)
+CREATE TABLE strategy_min (
+    -- ... (유사한 구조)
+);
+
+-- 코인 전략 테이블 (추정)
+CREATE TABLE strategy_coin_tick (
+    -- ... (유사한 구조)
+);
+
+CREATE TABLE strategy_coin_min (
+    -- ... (유사한 구조)
+);
+```
+
+#### 3.3.4 자동화 시스템에서의 중요성
+
+**⚠️ 자동화 시스템 구현 시 필수 고려사항**:
+
+AI 기반 조건식 자동화 시스템은 다음 단계를 **모두 자동화**해야 합니다:
+
+1. ✅ **AI 조건식 생성** (Section 4에서 제안)
+2. ✅ **MD 파일 저장** (Section 5-6에서 제안)
+3. ⚠️ **strategy.db에 INSERT** ⬅️ **필수 구현 항목**
+   - 프로그래밍 방식으로 DB 접근
+   - `get_fix_strategy()`, `get_stgtxt_to_varstxt()` 로직 적용
+   - 변수 범위 자동 변환
+4. ✅ **백테스팅 실행** (기존 시스템 활용)
+5. ✅ **최적화 실행** (기존 시스템 활용)
+6. ✅ **결과 분석** (Section 5에서 제안)
+7. ✅ **피드백 생성** (Section 5에서 제안)
+
+**3단계 "strategy.db INSERT"를 건너뛰면**:
+- MD 파일만 생성되고 백테스팅 실행 불가
+- 기존 STOM 시스템과 연동 불가
+- 완전 자동화 불가능
+
+따라서 **Section 6 구현 방안에서 StrategyDBManager 클래스**를 반드시 설계해야 합니다.
+
 ---
 
-## 4. AI 기반 조건식 자동 생성 시스템
+## 4. AI 기반 조건식 자동 생성 시스템 💡 [제안사항]
 
 ### 4.1 시스템 아키텍처
 
@@ -1018,55 +1299,108 @@ print(f"생성된 조건식 수: {len(conditions)}")
 
 ---
 
-## 5. 자동화 순환 프로세스 설계
+## 5. 자동화 순환 프로세스 설계 💡 [제안사항]
 
-### 5.1 4단계 순환 시스템
+### 5.1 완전 자동화 플로우
+
+자동화 시스템은 다음 8단계 순환 프로세스를 구현해야 합니다 (Section 3.3에서 분석한 GUI 프로세스 포함):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              완전 자동화 순환 프로세스 (8단계)                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  [1단계] AI 조건식 생성                                        │
+│  └─ LLM / Genetic Programming / Template 기반                │
+│         │                                                     │
+│         ▼                                                     │
+│  [2단계] MD 파일 자동 생성                                     │
+│  └─ 가이드라인 준수 형식으로 저장                              │
+│  └─ docs/Condition/Tick/*.md or Min/*.md                     │
+│         │                                                     │
+│         ▼                                                     │
+│  [3단계] ⚠️ strategy.db 자동 INSERT ⬅️ 핵심!                  │
+│  └─ StrategyDBManager 클래스 (Section 6.2에서 설계)           │
+│     ├─ get_fix_strategy() 로직 적용                           │
+│     ├─ get_stgtxt_to_varstxt() 변수 변환                      │
+│     └─ INSERT INTO strategy_tick/min                         │
+│         │                                                     │
+│         ▼                                                     │
+│  [4단계] 백테스팅 자동 실행                                    │
+│  └─ DB에서 조건식 로드 → GetBuyStg/GetSellStg → exec()       │
+│  └─ 기존 STOM 백테스팅 엔진 활용                               │
+│         │                                                     │
+│         ▼                                                     │
+│  [5단계] 최적화 자동 실행                                      │
+│  └─ Grid Search / Optuna / GA                                │
+│  └─ 기존 STOM 최적화 엔진 활용                                 │
+│         │                                                     │
+│         ▼                                                     │
+│  [6단계] 결과 분석 및 기록                                     │
+│  └─ OPTISTD 14개 지표 계산                                    │
+│  └─ backtest.db, optuna.db에 저장                            │
+│  └─ 성공/실패 패턴 학습                                       │
+│         │                                                     │
+│         ▼                                                     │
+│  [7단계] 피드백 생성                                           │
+│  └─ 성과 기반 개선 방향 도출                                   │
+│  └─ Feature Importance 분석                                  │
+│  └─ 상관관계 분석                                             │
+│         │                                                     │
+│         ▼                                                     │
+│  [8단계] 다음 조건식 생성 (순환)                               │
+│  └─ 피드백 반영하여 [1단계]로 이동                             │
+│  └─ 목표 달성 시까지 반복                                      │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 순환 시스템 개요
+
+위의 8단계 완전 자동화 플로우는 다음과 같은 순환 구조로 동작합니다:
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                   순환 프로세스                             │
+│                  AI 조건식 순환 개선 시스템                 │
 │                                                             │
-│                                                             │
-│     ┌─────────────┐                                        │
-│     │             │                                        │
-│     │  1. 생성    │◀───────────────────┐                  │
-│     │  Generation │                     │                  │
-│     │             │                     │                  │
-│     └──────┬──────┘                     │                  │
-│            │                            │                  │
-│            │ 조건식                     │                  │
-│            ▼                            │                  │
-│     ┌─────────────┐                    │ 피드백            │
-│     │             │                     │                  │
-│     │  2. 테스트  │                     │                  │
-│     │  Testing    │                     │                  │
-│     │             │                     │                  │
-│     └──────┬──────┘                     │                  │
-│            │                            │                  │
-│            │ 결과                       │                  │
-│            ▼                            │                  │
-│     ┌─────────────┐                    │                  │
-│     │             │                     │                  │
-│     │  3. 기록    │                     │                  │
-│     │  Logging    │                     │                  │
-│     │             │                     │                  │
-│     └──────┬──────┘                     │                  │
-│            │                            │                  │
-│            │ 분석                       │                  │
-│            ▼                            │                  │
-│     ┌─────────────┐                    │                  │
-│     │             │                     │                  │
-│     │  4. 개선    │────────────────────┘                  │
-│     │  Improvement│                                        │
-│     │             │                                        │
-│     └─────────────┘                                        │
+│  ┌─────────────┐       ┌─────────────┐                    │
+│  │  1. AI 생성  │──────▶│  2. MD 작성  │                    │
+│  └─────────────┘       └──────┬──────┘                    │
+│         ▲                     │                            │
+│         │                     ▼                            │
+│         │              ┌─────────────┐                    │
+│    피드백 루프          │ 3. DB 저장   │                    │
+│         │              └──────┬──────┘                    │
+│         │                     │                            │
+│  ┌──────┴──────┐              ▼                            │
+│  │ 8. 순환결정  │       ┌─────────────┐                    │
+│  └─────────────┘       │ 4. 백테스팅  │                    │
+│         ▲              └──────┬──────┘                    │
+│         │                     │                            │
+│         │                     ▼                            │
+│  ┌──────┴──────┐       ┌─────────────┐                    │
+│  │ 7. 피드백    │◀──────│ 5. 최적화   │                    │
+│  └─────────────┘       └──────┬──────┘                    │
+│                               │                            │
+│                               ▼                            │
+│                        ┌─────────────┐                    │
+│                        │ 6. OPTISTD  │                    │
+│                        │    분석     │                    │
+│                        └─────────────┘                    │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 단계 1: 생성 (Generation)
+**핵심 개선 포인트:**
+1. **DB 저장 단계 명시**: MD 파일 → strategy.db INSERT → 백테스팅
+2. **GUI 프로세스 통합**: Section 3.3에서 설명한 GUI 프로세스 반영
+3. **완전 자동화**: 사용자 개입 최소화, AI가 전체 프로세스 관리
 
-#### 5.2.1 생성 전략 3가지
+---
+
+### 5.3 단계 1: AI 조건식 생성 (Generation)
+
+#### 5.3.1 생성 전략 3가지
 
 **전략 A: LLM 기반 생성**
 ```python
@@ -1150,7 +1484,7 @@ def generate_with_template(template_name, optimization_method="random"):
     return conditions
 ```
 
-#### 5.2.2 생성 파이프라인
+#### 5.3.2 생성 파이프라인
 
 ```python
 class ConditionGenerationPipeline:
@@ -1195,9 +1529,415 @@ class ConditionGenerationPipeline:
         return results
 ```
 
-### 5.3 단계 2: 테스트 (Testing)
+---
 
-#### 5.3.1 자동 백테스팅 파이프라인
+### 5.4 💡 [제안사항] 단계 2: MD 파일 작성 및 DB 저장
+
+#### 5.4.1 자동 MD 파일 생성기
+
+AI가 생성한 조건식 코드를 표준 템플릿에 맞춰 MD 파일로 작성합니다.
+
+```python
+class ConditionMDGenerator:
+    """
+    조건식 MD 파일 자동 생성기
+
+    참고: docs/Guideline/Condition_Document_Template_Guideline.md
+    """
+
+    def __init__(self, template_path="docs/Guideline/Condition_Document_Template_Guideline.md"):
+        self.template = self.load_template(template_path)
+        self.output_dir = "docs/Condition/"
+
+    def generate_md_file(self, condition_data, file_name):
+        """
+        조건식 데이터를 MD 파일로 변환
+
+        Args:
+            condition_data: dict {
+                'type': 'Tick' or 'Min',
+                'buy_code': str,
+                'sell_code': str,
+                'buy_vars': list,  # [[start, end, step], init]
+                'sell_vars': list,
+                'description': str,
+                'strategy_rationale': str
+            }
+            file_name: str (예: "Condition_Tick_AI_Gen_001.md")
+
+        Returns:
+            str: 생성된 MD 파일 경로
+        """
+        # 1. 템플릿 복사
+        md_content = self.template.copy()
+
+        # 2. 메타데이터 섹션 작성
+        md_content += f"# {file_name.replace('.md', '')}\n\n"
+        md_content += f"**생성 방법**: AI 자동 생성\n"
+        md_content += f"**생성 일시**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        md_content += f"**타입**: {condition_data['type']}\n"
+        md_content += f"**설명**: {condition_data['description']}\n\n"
+
+        # 3. BO (Buy Optimization) 섹션
+        md_content += "## BO (Buy Optimization)\n\n"
+        md_content += "```python\n"
+        md_content += condition_data['buy_code']
+        md_content += "\n```\n\n"
+
+        # 4. BOR (Buy Optimization Range) 섹션
+        md_content += "## BOR (Buy Optimization Range)\n\n"
+        md_content += "```python\n"
+        for i, var_range in enumerate(condition_data['buy_vars']):
+            md_content += f"self.vars[{i}] = {var_range}\n"
+        md_content += "```\n\n"
+
+        # 5. SO (Sell Optimization) 섹션
+        md_content += "## SO (Sell Optimization)\n\n"
+        md_content += "```python\n"
+        md_content += condition_data['sell_code']
+        md_content += "\n```\n\n"
+
+        # 6. SOR (Sell Optimization Range) 섹션
+        md_content += "## SOR (Sell Optimization Range)\n\n"
+        md_content += "```python\n"
+        for i, var_range in enumerate(condition_data['sell_vars']):
+            var_idx = i + len(condition_data['buy_vars'])
+            md_content += f"self.vars[{var_idx}] = {var_range}\n"
+        md_content += "```\n\n"
+
+        # 7. OR (Overall Range) - 상위 10개 변수만
+        md_content += "## OR (Overall Range)\n\n"
+        md_content += "상위 10개 주요 변수 (자동 선택됨)\n\n"
+        md_content += "```python\n"
+        all_vars = condition_data['buy_vars'] + condition_data['sell_vars']
+        for i, var_range in enumerate(all_vars[:10]):
+            md_content += f"self.vars[{i}] = {var_range}\n"
+        md_content += "```\n\n"
+
+        # 8. GAR (Genetic Algorithm Range) 섹션
+        md_content += "## GAR (Genetic Algorithm Range)\n\n"
+        md_content += "```python\n"
+        for i, var_range in enumerate(all_vars):
+            # [[start, end, step], init] → [[start, end], init]
+            gar_format = [[var_range[0][0], var_range[0][1]], var_range[1]]
+            md_content += f"self.vars[{i}] = {gar_format}\n"
+        md_content += "```\n\n"
+
+        # 9. 전략 설명 섹션
+        md_content += "## 전략 설명\n\n"
+        md_content += condition_data['strategy_rationale']
+        md_content += "\n\n"
+
+        # 10. 파일 저장
+        target_dir = os.path.join(self.output_dir, condition_data['type'])
+        os.makedirs(target_dir, exist_ok=True)
+
+        file_path = os.path.join(target_dir, file_name)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(md_content)
+
+        return file_path
+```
+
+#### 5.4.2 Strategy.db 자동 INSERT 시스템
+
+생성된 조건식을 STOM GUI 프로세스를 거쳐 strategy.db에 저장합니다.
+
+```python
+class StrategyDBManager:
+    """
+    strategy.db 자동 관리 시스템
+
+    Section 3.3에서 분석한 GUI 프로세스를 프로그래밍 방식으로 구현
+    """
+
+    def __init__(self, db_path=DB_STRATEGY):
+        self.db_path = db_path
+        self.conn = None
+
+    def connect(self):
+        """데이터베이스 연결"""
+        self.conn = sqlite3.connect(self.db_path)
+        return self.conn
+
+    def insert_strategy(self, md_file_path, strategy_name, strategy_type):
+        """
+        MD 파일에서 조건식을 읽어 strategy.db에 INSERT
+
+        Args:
+            md_file_path: str - MD 파일 경로
+            strategy_name: str - 전략 이름
+            strategy_type: str - 'Tick' or 'Min'
+
+        Returns:
+            int: 삽입된 전략 ID
+        """
+        # 1. MD 파일 파싱
+        buy_code, sell_code, buy_vars, sell_vars = self.parse_md_file(md_file_path)
+
+        # 2. GUI 프로세스 함수 적용 (Section 3.3.2 참조)
+        # 2-1. get_fix_strategy(): 실행 코드 추가
+        from ui.ui_vars_change import get_fix_strategy
+
+        # 가상 UI 객체 생성 (실제 GUI 없이 처리)
+        class MockUI:
+            def __init__(self):
+                self.dict_set = {'거래소': '키움'}
+                self.focusWidget = lambda: self.svjb_pushButon_02
+                self.svjb_pushButon_02 = object()
+                self.svjs_pushButon_02 = object()
+
+        mock_ui = MockUI()
+
+        buy_code_fixed = get_fix_strategy(mock_ui, buy_code, '매수')
+        sell_code_fixed = get_fix_strategy(mock_ui, sell_code, '매도')
+
+        # 2-2. get_stgtxt_to_varstxt(): '변수' → 'self.vars[N]' 변환
+        from ui.ui_vars_change import get_stgtxt_to_varstxt
+
+        buy_code_final, sell_code_final = get_stgtxt_to_varstxt(
+            mock_ui,
+            buy_code_fixed,
+            sell_code_fixed
+        )
+
+        # 3. 최적화 범위 변환
+        # get_optivars_to_gavars() 호출은 필요 시 사용
+        from ui.ui_vars_change import get_optivars_to_gavars
+
+        opti_vars_text = ""
+        for i, var in enumerate(buy_vars + sell_vars):
+            opti_vars_text += f"self.vars[{i}] = {var}\n"
+
+        ga_vars_text = get_optivars_to_gavars(opti_vars_text)
+
+        # 4. strategy.db INSERT (추정 스키마 사용)
+        cursor = self.conn.cursor()
+
+        insert_query = """
+        INSERT INTO strategies (
+            strategy_name,
+            strategy_type,
+            buy_conditions,
+            sell_conditions,
+            optimization_vars,
+            ga_vars,
+            created_at,
+            status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        cursor.execute(insert_query, (
+            strategy_name,
+            strategy_type,
+            buy_code_final,
+            sell_code_final,
+            opti_vars_text,
+            ga_vars_text,
+            datetime.now().strftime('%Y%m%d%H%M%S'),
+            'To_be_reviewed'
+        ))
+
+        self.conn.commit()
+        strategy_id = cursor.lastrowid
+
+        return strategy_id
+
+    def parse_md_file(self, md_file_path):
+        """
+        MD 파일에서 BO, BOR, SO, SOR 섹션 추출
+
+        Returns:
+            tuple: (buy_code, sell_code, buy_vars, sell_vars)
+        """
+        with open(md_file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 정규식으로 각 섹션 추출
+        import re
+
+        # BO 섹션
+        bo_match = re.search(r'## BO.*?```python\n(.*?)```', content, re.DOTALL)
+        buy_code = bo_match.group(1).strip() if bo_match else ""
+
+        # BOR 섹션
+        bor_match = re.search(r'## BOR.*?```python\n(.*?)```', content, re.DOTALL)
+        buy_vars_text = bor_match.group(1).strip() if bor_match else ""
+
+        # SO 섹션
+        so_match = re.search(r'## SO.*?```python\n(.*?)```', content, re.DOTALL)
+        sell_code = so_match.group(1).strip() if so_match else ""
+
+        # SOR 섹션
+        sor_match = re.search(r'## SOR.*?```python\n(.*?)```', content, re.DOTALL)
+        sell_vars_text = sor_match.group(1).strip() if sor_match else ""
+
+        # vars 텍스트를 리스트로 변환
+        buy_vars = self.parse_vars_text(buy_vars_text)
+        sell_vars = self.parse_vars_text(sell_vars_text)
+
+        return buy_code, sell_code, buy_vars, sell_vars
+
+    def parse_vars_text(self, vars_text):
+        """self.vars[N] = [[start, end, step], init] 형식 파싱"""
+        vars_list = []
+        vars_dict = {}
+
+        # 임시로 exec 사용 (안전성 검증 필요)
+        exec(vars_text.replace('self.vars', 'vars_dict'), {'vars_dict': vars_dict})
+
+        # 정렬하여 리스트로 변환
+        for i in sorted(vars_dict.keys()):
+            vars_list.append(vars_dict[i])
+
+        return vars_list
+
+    def batch_insert(self, md_files):
+        """
+        여러 MD 파일을 한 번에 DB에 삽입
+
+        Args:
+            md_files: list of dict [{
+                'path': str,
+                'name': str,
+                'type': str
+            }]
+
+        Returns:
+            list: 삽입된 전략 ID 리스트
+        """
+        self.connect()
+        strategy_ids = []
+
+        for md_file in md_files:
+            try:
+                strategy_id = self.insert_strategy(
+                    md_file['path'],
+                    md_file['name'],
+                    md_file['type']
+                )
+                strategy_ids.append(strategy_id)
+                print(f"✅ Inserted: {md_file['name']} (ID: {strategy_id})")
+
+            except Exception as e:
+                print(f"❌ Failed: {md_file['name']} - {str(e)}")
+                strategy_ids.append(None)
+
+        self.conn.close()
+        return strategy_ids
+```
+
+#### 5.4.3 통합 파이프라인
+
+MD 생성 → DB 저장을 하나의 파이프라인으로 통합합니다.
+
+```python
+class MDtoDBPipeline:
+    """
+    AI 생성 조건식 → MD 파일 → strategy.db 통합 파이프라인
+    """
+
+    def __init__(self):
+        self.md_generator = ConditionMDGenerator()
+        self.db_manager = StrategyDBManager()
+
+    def process_generated_conditions(self, conditions, batch_name="AI_Gen"):
+        """
+        AI 생성 조건식 배치를 MD 파일과 DB에 저장
+
+        Args:
+            conditions: list of dict - ConditionGenerationPipeline 출력
+            batch_name: str - 배치 이름 (파일명 prefix)
+
+        Returns:
+            list: 처리 결과 [{
+                'md_path': str,
+                'db_id': int,
+                'success': bool
+            }]
+        """
+        results = []
+        md_files = []
+
+        # 1. MD 파일 생성
+        for i, condition in enumerate(conditions):
+            file_name = f"Condition_{condition['type']}_{batch_name}_{i+1:03d}.md"
+
+            try:
+                md_path = self.md_generator.generate_md_file(condition, file_name)
+                md_files.append({
+                    'path': md_path,
+                    'name': file_name.replace('.md', ''),
+                    'type': condition['type']
+                })
+                print(f"✅ MD 생성: {file_name}")
+
+            except Exception as e:
+                print(f"❌ MD 생성 실패: {file_name} - {str(e)}")
+                results.append({
+                    'md_path': None,
+                    'db_id': None,
+                    'success': False,
+                    'error': str(e)
+                })
+                continue
+
+        # 2. DB 삽입 (배치)
+        strategy_ids = self.db_manager.batch_insert(md_files)
+
+        # 3. 결과 병합
+        for md_file, strategy_id in zip(md_files, strategy_ids):
+            results.append({
+                'md_path': md_file['path'],
+                'db_id': strategy_id,
+                'success': strategy_id is not None
+            })
+
+        return results
+
+    def run(self, generation_pipeline_output):
+        """
+        전체 파이프라인 실행
+
+        Args:
+            generation_pipeline_output: ConditionGenerationPipeline.run() 결과
+
+        Returns:
+            dict: {
+                'total': int,
+                'success': int,
+                'failed': int,
+                'results': list
+            }
+        """
+        results = self.process_generated_conditions(
+            generation_pipeline_output,
+            batch_name=f"Batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+
+        success_count = sum(1 for r in results if r['success'])
+
+        return {
+            'total': len(results),
+            'success': success_count,
+            'failed': len(results) - success_count,
+            'results': results
+        }
+```
+
+**중요 포인트:**
+1. **Section 3.3 GUI 프로세스 반영**: `get_fix_strategy()`, `get_stgtxt_to_varstxt()`, `get_optivars_to_gavars()` 함수 활용
+2. **표준 템플릿 준수**: `Condition_Document_Template_Guideline.md` 형식 준수
+3. **자동화**: 사용자 개입 없이 MD 생성 → DB 저장까지 완료
+4. **배치 처리**: 대량의 조건식을 효율적으로 처리
+
+---
+
+### 5.5 💡 [제안사항] 단계 3: 백테스팅 실행 (Backtesting)
+
+strategy.db에 저장된 조건식을 자동으로 백테스팅합니다.
+
+#### 5.5.1 자동 백테스팅 파이프라인
 
 ```python
 class AutoBacktestingPipeline:
@@ -1267,7 +2007,7 @@ class AutoBacktestingPipeline:
         return results
 ```
 
-#### 5.3.2 3단계 최적화 전략
+#### 5.5.2 파라미터 최적화 전략
 
 ```python
 class OptimizationPipeline:
@@ -1370,9 +2110,11 @@ class OptimizationPipeline:
         pass
 ```
 
-### 5.4 단계 3: 기록 (Logging)
+### 5.6 💡 [제안사항] 단계 4: OPTISTD 분석 및 결과 기록 (Analysis & Logging)
 
-#### 5.4.1 결과 데이터베이스 스키마
+백테스팅 및 최적화 결과를 OPTISTD 14개 지표로 분석하고 데이터베이스에 기록합니다.
+
+#### 5.6.1 결과 데이터베이스 스키마
 
 ```sql
 -- 조건식 테이블
@@ -1470,7 +2212,7 @@ JOIN backtest_results b ON c.id = b.condition_id
 WHERE b.created_at >= datetime('now', '-30 days');
 ```
 
-#### 5.4.2 자동 로깅 시스템
+#### 5.6.2 자동 로깅 시스템
 
 ```python
 class ResultLogger:
@@ -1560,9 +2302,11 @@ class ResultLogger:
         self.conn.commit()
 ```
 
-### 5.5 단계 4: 개선 (Improvement)
+### 5.7 💡 [제안사항] 단계 5: 피드백 루프 (Feedback Loop)
 
-#### 5.5.1 성과 분석 및 패턴 인식
+OPTISTD 분석 결과를 기반으로 AI에게 피드백을 제공하여 다음 생성 사이클을 개선합니다.
+
+#### 5.7.1 성과 분석 및 패턴 인식
 
 ```python
 class PerformanceAnalyzer:
@@ -1657,7 +2401,7 @@ class PerformanceAnalyzer:
         return correlation_matrix
 ```
 
-#### 5.5.2 LLM 피드백 루프
+#### 5.7.2 LLM 피드백 생성
 
 ```python
 class FeedbackLoop:
@@ -1731,7 +2475,7 @@ class FeedbackLoop:
         return improved_code
 ```
 
-#### 5.5.3 자동 진화 루프
+#### 5.7.3 자동 순환 결정
 
 ```python
 class EvolutionaryLoop:
@@ -1835,7 +2579,7 @@ class EvolutionaryLoop:
 
 ---
 
-## 6. 실제 구현 방안
+## 6. 💡 [제안사항] 실제 구현 방안
 
 ### 6.1 시스템 아키텍처
 
@@ -2205,7 +2949,7 @@ evolution:
 
 ---
 
-## 7. 리스크 및 완화 전략
+## 7. 💡 [제안사항] 리스크 및 완화 전략
 
 ### 7.1 주요 리스크
 
@@ -2307,7 +3051,7 @@ evolution:
 
 ---
 
-## 8. 결론 및 로드맵
+## 8. 💡 [제안사항] 결론 및 로드맵
 
 ### 8.1 연구 요약
 
