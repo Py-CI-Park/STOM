@@ -827,19 +827,49 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}_.png")
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}.png")
 
+    # [2025-12-08] 분석 차트 생성 및 텔레그램 전송
+    PltAnalysisCharts(df_tsg, save_file_name, teleQ)
+
     if not schedul and not plotgraph:
         plt.show()
 
 
 def GetResultDataframe(ui_gubun, list_tsg, arry_bct):
-    columns1 = [
-        'index', '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-        '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간'
-    ]
-    columns2 = [
-        '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간', '매수가', '매도가',
-        '매수금액', '매도금액', '수익률', '수익금', '수익금합계', '매도조건', '추가매수시간'
-    ]
+    # [2025-12-08] 백테스팅 상세기록 테이블 확장 - 매수 시점 시장 데이터 추가
+    # 확장된 데이터 여부 확인 (리스트가 비어있지 않고 첫 항목 길이로 판단)
+    is_extended = len(list_tsg) > 0 and len(list_tsg[0]) > 14
+
+    if is_extended:
+        columns1 = [
+            'index', '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+            '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간',
+            '매수일자', '매수시', '매수분', '매수초',
+            '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
+            '매수전일비', '매수회전율', '매수전일동시간비',
+            '매수고가', '매수저가', '매수고저평균대비등락율',
+            '매수매도총잔량', '매수매수총잔량', '매수호가잔량비',
+            '매수매도호가1', '매수매수호가1', '매수스프레드'
+        ]
+        columns2 = [
+            '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간', '매수가', '매도가',
+            '매수금액', '매도금액', '수익률', '수익금', '수익금합계', '매도조건', '추가매수시간',
+            '매수일자', '매수시', '매수분', '매수초',
+            '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
+            '매수전일비', '매수회전율', '매수전일동시간비',
+            '매수고가', '매수저가', '매수고저평균대비등락율',
+            '매수매도총잔량', '매수매수총잔량', '매수호가잔량비',
+            '매수매도호가1', '매수매수호가1', '매수스프레드'
+        ]
+    else:
+        columns1 = [
+            'index', '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
+            '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간'
+        ]
+        columns2 = [
+            '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간', '매수가', '매도가',
+            '매수금액', '매도금액', '수익률', '수익금', '수익금합계', '매도조건', '추가매수시간'
+        ]
+
     df_tsg = pd.DataFrame(list_tsg, columns=columns1)
     df_tsg.set_index('index', inplace=True)
     df_tsg.sort_index(inplace=True)
@@ -968,3 +998,235 @@ def GetIndicator(mc, mh, ml, mv, k):
         try:    WILLR              = stream.WILLR(   mh, ml, mc,     timeperiod=k[34])
         except: WILLR              = 0
     return AD, ADOSC, ADXR, APO, AROOND, AROONU, ATR, BBU, BBM, BBL, CCI, DIM, DIP, MACD, MACDS, MACDH, MFI, MOM, OBV, PPO, ROC, RSI, SAR, STOCHSK, STOCHSD, STOCHFK, STOCHFD, WILLR
+
+
+# [2025-12-08] 백테스팅 상세기록 테이블 확장 - 분석 차트 생성 함수
+def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
+    """
+    확장된 상세기록 데이터를 기반으로 분석 차트를 생성하고 텔레그램으로 전송
+
+    Args:
+        df_tsg: 확장된 상세기록 DataFrame (34개 컬럼)
+        save_file_name: 저장 파일명
+        teleQ: 텔레그램 전송 큐
+    """
+    # 확장 컬럼 존재 여부 확인
+    extended_columns = ['매수시', '매수등락율', '매수체결강도', '매수당일거래대금', '시가총액']
+    has_extended = all(col in df_tsg.columns for col in extended_columns)
+
+    if not has_extended or len(df_tsg) < 5:
+        return  # 데이터가 부족하거나 확장 컬럼이 없으면 건너뜀
+
+    try:
+        # 한글 폰트 설정
+        font_path = 'C:/Windows/Fonts/malgun.ttf'
+        try:
+            font_manager.fontManager.addfont(font_path)
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+        except:
+            pass
+        plt.rcParams['axes.unicode_minus'] = False
+
+        fig = plt.figure(figsize=(16, 20))
+        fig.suptitle(f'백테스팅 분석 차트 - {save_file_name}', fontsize=14, fontweight='bold')
+
+        gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.35, wspace=0.25)
+
+        # 색상 정의
+        color_profit = '#2ECC71'  # 녹색 (이익)
+        color_loss = '#E74C3C'    # 빨간색 (손실)
+        color_bar = '#3498DB'     # 파란색
+
+        # ============ Chart 1: 시간대별 수익 분포 ============
+        ax1 = fig.add_subplot(gs[0, 0])
+        df_hour = df_tsg.groupby('매수시').agg({'수익금': 'sum', '수익률': 'mean'}).reset_index()
+        colors = [color_profit if x >= 0 else color_loss for x in df_hour['수익금']]
+        bars = ax1.bar(df_hour['매수시'], df_hour['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+        ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax1.set_xlabel('매수 시간대 (시)')
+        ax1.set_ylabel('총 수익금')
+        ax1.set_title('시간대별 수익금 분포')
+        ax1.set_xticks(range(9, 16))
+        for bar, val in zip(bars, df_hour['수익금']):
+            if abs(val) > 0:
+                ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
+                        f'{val/10000:.0f}만', ha='center', va='bottom' if val >= 0 else 'top', fontsize=8)
+
+        # ============ Chart 2: 등락율별 수익 분포 ============
+        ax2 = fig.add_subplot(gs[0, 1])
+        bins = [0, 5, 10, 15, 20, 30, 100]
+        labels = ['0-5%', '5-10%', '10-15%', '15-20%', '20-30%', '30%+']
+        df_tsg['등락율구간'] = pd.cut(df_tsg['매수등락율'], bins=bins, labels=labels, right=False)
+        df_rate = df_tsg.groupby('등락율구간', observed=True).agg({
+            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
+        }).reset_index()
+        df_rate.columns = ['등락율구간', '수익금', '평균수익률', '거래횟수']
+
+        x = range(len(df_rate))
+        colors = [color_profit if x >= 0 else color_loss for x in df_rate['수익금']]
+        ax2.bar(x, df_rate['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+        ax2.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax2.set_xlabel('매수 등락율 구간')
+        ax2.set_ylabel('총 수익금')
+        ax2.set_title('등락율 구간별 수익금 분포')
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(df_rate['등락율구간'], rotation=45, ha='right')
+
+        # 거래횟수 표시
+        ax2_twin = ax2.twinx()
+        ax2_twin.plot(x, df_rate['거래횟수'], 'o-', color='orange', linewidth=2, markersize=6, label='거래횟수')
+        ax2_twin.set_ylabel('거래횟수', color='orange')
+        ax2_twin.tick_params(axis='y', labelcolor='orange')
+
+        # ============ Chart 3: 체결강도별 수익 분포 ============
+        ax3 = fig.add_subplot(gs[1, 0])
+        bins_ch = [0, 80, 100, 120, 150, 200, 500]
+        labels_ch = ['~80', '80-100', '100-120', '120-150', '150-200', '200+']
+        df_tsg['체결강도구간'] = pd.cut(df_tsg['매수체결강도'], bins=bins_ch, labels=labels_ch, right=False)
+        df_ch = df_tsg.groupby('체결강도구간', observed=True).agg({
+            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
+        }).reset_index()
+        df_ch.columns = ['체결강도구간', '수익금', '평균수익률', '거래횟수']
+
+        x = range(len(df_ch))
+        colors = [color_profit if x >= 0 else color_loss for x in df_ch['수익금']]
+        ax3.bar(x, df_ch['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+        ax3.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax3.set_xlabel('매수 체결강도 구간')
+        ax3.set_ylabel('총 수익금')
+        ax3.set_title('체결강도 구간별 수익금 분포')
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(df_ch['체결강도구간'], rotation=45, ha='right')
+
+        # 승률 계산 및 표시
+        ax3_twin = ax3.twinx()
+        win_rates = []
+        for grp in df_ch['체결강도구간']:
+            grp_data = df_tsg[df_tsg['체결강도구간'] == grp]
+            if len(grp_data) > 0:
+                wr = (grp_data['수익금'] > 0).sum() / len(grp_data) * 100
+                win_rates.append(wr)
+            else:
+                win_rates.append(0)
+        ax3_twin.plot(x, win_rates, 's--', color='purple', linewidth=2, markersize=6, label='승률')
+        ax3_twin.set_ylabel('승률 (%)', color='purple')
+        ax3_twin.tick_params(axis='y', labelcolor='purple')
+        ax3_twin.set_ylim(0, 100)
+
+        # ============ Chart 4: 거래대금별 수익 분포 ============
+        ax4 = fig.add_subplot(gs[1, 1])
+        # 거래대금을 로그 스케일 구간으로 나눔
+        df_tsg['거래대금구간'] = pd.cut(df_tsg['매수당일거래대금'],
+                                      bins=[0, 100, 500, 1000, 5000, 10000, float('inf')],
+                                      labels=['~100억', '100-500억', '500-1000억', '1000-5000억', '5000억-1조', '1조+'])
+        df_money = df_tsg.groupby('거래대금구간', observed=True).agg({
+            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
+        }).reset_index()
+        df_money.columns = ['거래대금구간', '수익금', '평균수익률', '거래횟수']
+
+        x = range(len(df_money))
+        colors = [color_profit if x >= 0 else color_loss for x in df_money['수익금']]
+        ax4.bar(x, df_money['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+        ax4.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax4.set_xlabel('매수 당일거래대금 구간')
+        ax4.set_ylabel('총 수익금')
+        ax4.set_title('거래대금 구간별 수익금 분포')
+        ax4.set_xticks(x)
+        ax4.set_xticklabels(df_money['거래대금구간'], rotation=45, ha='right')
+
+        # ============ Chart 5: 시가총액별 수익 분포 ============
+        ax5 = fig.add_subplot(gs[2, 0])
+        df_tsg['시총구간'] = pd.cut(df_tsg['시가총액'],
+                                   bins=[0, 1000, 3000, 10000, 50000, float('inf')],
+                                   labels=['~1000억', '1000-3000억', '3000억-1조', '1-5조', '5조+'])
+        df_cap = df_tsg.groupby('시총구간', observed=True).agg({
+            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
+        }).reset_index()
+        df_cap.columns = ['시총구간', '수익금', '평균수익률', '거래횟수']
+
+        x = range(len(df_cap))
+        colors = [color_profit if x >= 0 else color_loss for x in df_cap['수익금']]
+        ax5.bar(x, df_cap['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+        ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax5.set_xlabel('시가총액 구간')
+        ax5.set_ylabel('총 수익금')
+        ax5.set_title('시가총액 구간별 수익금 분포')
+        ax5.set_xticks(x)
+        ax5.set_xticklabels(df_cap['시총구간'], rotation=45, ha='right')
+
+        # ============ Chart 6: 보유시간별 수익 분포 ============
+        ax6 = fig.add_subplot(gs[2, 1])
+        df_tsg['보유시간구간'] = pd.cut(df_tsg['보유시간'],
+                                      bins=[0, 60, 180, 300, 600, 1800, float('inf')],
+                                      labels=['~1분', '1-3분', '3-5분', '5-10분', '10-30분', '30분+'])
+        df_hold = df_tsg.groupby('보유시간구간', observed=True).agg({
+            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
+        }).reset_index()
+        df_hold.columns = ['보유시간구간', '수익금', '평균수익률', '거래횟수']
+
+        x = range(len(df_hold))
+        colors = [color_profit if x >= 0 else color_loss for x in df_hold['수익금']]
+        ax6.bar(x, df_hold['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+        ax6.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax6.set_xlabel('보유시간 구간')
+        ax6.set_ylabel('총 수익금')
+        ax6.set_title('보유시간 구간별 수익금 분포')
+        ax6.set_xticks(x)
+        ax6.set_xticklabels(df_hold['보유시간구간'], rotation=45, ha='right')
+
+        # ============ Chart 7: 상관관계 히트맵 ============
+        ax7 = fig.add_subplot(gs[3, 0])
+        corr_columns = ['수익률', '매수등락율', '매수체결강도', '매수회전율', '매수전일비', '보유시간']
+        available_cols = [col for col in corr_columns if col in df_tsg.columns]
+
+        if len(available_cols) >= 3:
+            df_corr = df_tsg[available_cols].corr()
+            im = ax7.imshow(df_corr.values, cmap='RdYlGn', aspect='auto', vmin=-1, vmax=1)
+            ax7.set_xticks(range(len(available_cols)))
+            ax7.set_yticks(range(len(available_cols)))
+            ax7.set_xticklabels(available_cols, rotation=45, ha='right', fontsize=9)
+            ax7.set_yticklabels(available_cols, fontsize=9)
+            ax7.set_title('변수 간 상관관계')
+
+            # 상관계수 값 표시
+            for i in range(len(available_cols)):
+                for j in range(len(available_cols)):
+                    text = ax7.text(j, i, f'{df_corr.values[i, j]:.2f}',
+                                   ha='center', va='center', color='black', fontsize=8)
+
+            plt.colorbar(im, ax=ax7, shrink=0.8)
+
+        # ============ Chart 8: 산점도 (등락율 vs 수익률) ============
+        ax8 = fig.add_subplot(gs[3, 1])
+        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
+        ax8.scatter(df_tsg['매수등락율'], df_tsg['수익률'], c=colors, alpha=0.5, s=20, edgecolors='none')
+        ax8.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax8.axvline(x=df_tsg['매수등락율'].mean(), color='blue', linestyle=':', linewidth=0.8, alpha=0.5)
+        ax8.set_xlabel('매수 등락율 (%)')
+        ax8.set_ylabel('수익률 (%)')
+        ax8.set_title('등락율 vs 수익률 산점도')
+
+        # 추세선 추가
+        if len(df_tsg) > 10:
+            z = np.polyfit(df_tsg['매수등락율'], df_tsg['수익률'], 1)
+            p = np.poly1d(z)
+            x_line = np.linspace(df_tsg['매수등락율'].min(), df_tsg['매수등락율'].max(), 100)
+            ax8.plot(x_line, p(x_line), 'b--', linewidth=1, alpha=0.7, label=f'추세선')
+            ax8.legend(fontsize=8)
+
+        # 저장 및 전송
+        plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+        analysis_path = f"{GRAPH_PATH}/{save_file_name}_analysis.png"
+        plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        # 텔레그램 전송
+        if teleQ is not None:
+            teleQ.put(analysis_path)
+
+    except Exception as e:
+        print_exc()
+        try:
+            plt.close('all')
+        except:
+            pass
