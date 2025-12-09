@@ -782,6 +782,7 @@ class BackEngineKiwoomTick2(BackEngineKiwoomTick):
         보유중, 매수가, 매도가, 주문수량, 보유수량, 최고수익률, 최저수익률, 매수틱번호, 매수시간, 추가매수시간, 매수호가, 매도호가, \
             매수호가_, 매도호가_, 추가매수가, 매수호가단위, 매도호가단위, 매수정정횟수, 매도정정횟수, 매수분할횟수, 매도분할횟수, \
             매수주문취소시간, 매도주문취소시간 = self.trade_info[vturn][vkey].values()
+        [2025-12-08] 백테스팅 상세기록 테이블 확장 - 매수/매도 시점 시장 데이터 추가
         """
         _, bp, sp, oc, bc, _, _, bi, bdt, abt, _, _, _, _, _, _, _, _, _, _, _, _, _ = self.trade_info[vturn][vkey].values()
         bt, st, bg = int(self.arry_data[bi, 0]), self.index, oc * bp
@@ -793,7 +794,64 @@ class BackEngineKiwoomTick2(BackEngineKiwoomTick):
             ht = int((strp_time('%Y%m%d%H%M', str(self.index)) - bdt).total_seconds() / 60)
         sc = self.dict_sconds[self.sell_cond] if self.back_type != '조건최적화' else self.dict_sconds[vkey][self.sell_cond]
         abt, bcx = '^'.join(abt), bc - oc == 0
-        data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey)
+
+        # [2025-12-08] 매수 시점 시장 데이터 수집
+        bt_str = str(bt)
+        buy_date = bt_str[:8] if len(bt_str) >= 8 else ''
+        buy_hour = int(bt_str[8:10]) if len(bt_str) >= 10 else 0
+        buy_min = int(bt_str[10:12]) if len(bt_str) >= 12 else 0
+        buy_sec = int(bt_str[12:14]) if len(bt_str) >= 14 else 0
+
+        buy_등락율 = round(float(self.arry_data[bi, 5]), 2)
+        buy_시가 = float(self.arry_data[bi, 2])
+        buy_시가등락율 = round((bp - buy_시가) / buy_시가 * 100, 2) if buy_시가 > 0 else 0.0
+        buy_당일거래대금 = int(self.arry_data[bi, 6])
+        buy_체결강도 = round(float(self.arry_data[bi, 7]), 2)
+        buy_전일비 = round(float(self.arry_data[bi, 9]), 2)
+        buy_회전율 = round(float(self.arry_data[bi, 10]), 2)
+        buy_전일동시간비 = round(float(self.arry_data[bi, 11]), 2)
+        buy_고가 = int(self.arry_data[bi, 3])
+        buy_저가 = int(self.arry_data[bi, 4])
+        buy_고저평균대비등락율 = round(float(self.arry_data[bi, 17]), 2)
+        buy_매도총잔량 = int(self.arry_data[bi, 18])
+        buy_매수총잔량 = int(self.arry_data[bi, 19])
+        buy_호가잔량비 = round(buy_매수총잔량 / buy_매도총잔량 * 100, 2) if buy_매도총잔량 > 0 else 0.0
+        buy_매도호가1 = int(self.arry_data[bi, 24])
+        buy_매수호가1 = int(self.arry_data[bi, 25])
+        buy_스프레드 = round((buy_매도호가1 - buy_매수호가1) / buy_매수호가1 * 100, 4) if buy_매수호가1 > 0 else 0.0
+
+        # [2025-12-08] 매도 시점 시장 데이터 수집
+        si = self.indexn  # 매도 시점 인덱스
+        sell_등락율 = round(float(self.arry_data[si, 5]), 2)
+        sell_시가 = float(self.arry_data[si, 2])
+        sell_시가등락율 = round((sp - sell_시가) / sell_시가 * 100, 2) if sell_시가 > 0 else 0.0
+        sell_당일거래대금 = int(self.arry_data[si, 6])
+        sell_체결강도 = round(float(self.arry_data[si, 7]), 2)
+        sell_전일비 = round(float(self.arry_data[si, 9]), 2)
+        sell_회전율 = round(float(self.arry_data[si, 10]), 2)
+        sell_전일동시간비 = round(float(self.arry_data[si, 11]), 2)
+        sell_고가 = int(self.arry_data[si, 3])
+        sell_저가 = int(self.arry_data[si, 4])
+        sell_고저평균대비등락율 = round(float(self.arry_data[si, 17]), 2)
+        sell_매도총잔량 = int(self.arry_data[si, 18])
+        sell_매수총잔량 = int(self.arry_data[si, 19])
+        sell_호가잔량비 = round(sell_매수총잔량 / sell_매도총잔량 * 100, 2) if sell_매도총잔량 > 0 else 0.0
+        sell_매도호가1 = int(self.arry_data[si, 24])
+        sell_매수호가1 = int(self.arry_data[si, 25])
+        sell_스프레드 = round((sell_매도호가1 - sell_매수호가1) / sell_매수호가1 * 100, 4) if sell_매수호가1 > 0 else 0.0
+
+        data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey,
+                buy_date, buy_hour, buy_min, buy_sec,
+                buy_등락율, buy_시가등락율, buy_당일거래대금, buy_체결강도,
+                buy_전일비, buy_회전율, buy_전일동시간비,
+                buy_고가, buy_저가, buy_고저평균대비등락율,
+                buy_매도총잔량, buy_매수총잔량, buy_호가잔량비,
+                buy_매도호가1, buy_매수호가1, buy_스프레드,
+                sell_등락율, sell_시가등락율, sell_당일거래대금, sell_체결강도,
+                sell_전일비, sell_회전율, sell_전일동시간비,
+                sell_고가, sell_저가, sell_고저평균대비등락율,
+                sell_매도총잔량, sell_매수총잔량, sell_호가잔량비,
+                sell_매도호가1, sell_매수호가1, sell_스프레드)
         self.bstq_list[vkey if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
         self.sell_count += 1
 
