@@ -194,11 +194,13 @@ class UpdateTablewidget:
                                ui_num['C당일상세'], ui_num['C누적상세'], ui_num['스톰라이브1'], ui_num['스톰라이브3'],
                                ui_num['스톰라이브4'], ui_num['스톰라이브6'], ui_num['스톰라이브7'], ui_num['김프']):
                     value = str(arry[i, j])
-                    # [2025-12-08] 백테스팅 상세기록 테이블 확장 - 포맷팅 컬럼 추가
+                    # [2025-12-08] 백테스팅 상세기록 테이블 확장 - 매수/매도 시점 포맷팅 컬럼 추가
                     if column in ('수익률', '누적수익률', 'per', 'hlml_per', 'ch', 'ch_avg', 'ch_high', '대비(원)',
                                   '대비율(%)', 'aht', 'wr', 'app', 'tpp', 'mdd', 'cagr',
                                   '매수등락율', '매수시가등락율', '매수체결강도', '매수전일비', '매수회전율',
-                                  '매수전일동시간비', '매수고저평균대비등락율', '매수호가잔량비', '매수스프레드'):
+                                  '매수전일동시간비', '매수고저평균대비등락율', '매수호가잔량비', '매수스프레드',
+                                  '매도등락율', '매도시가등락율', '매도체결강도', '매도전일비', '매도회전율',
+                                  '매도전일동시간비', '매도고저평균대비등락율', '매도호가잔량비', '매도스프레드'):
                         item = NumericItem(change_format(value))
                     elif (gubun == ui_num['C상세기록'] and column in ('매수가', '매도가')) or column == '바이낸스(달러)':
                         item = NumericItem(change_format(value, dotdown8=True))
