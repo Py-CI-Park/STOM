@@ -1,9 +1,11 @@
-# 텔레그램 추가 차트 시스템 분석 문서
+# 텔레그램 추가 차트 시스템 분석 문서 (v2.0)
 
-**문서 버전**: v1.0
-**작성일**: 2025-12-09
+**문서 버전**: v2.0 (강화된 분석 기능 포함)
+**작성일**: 2025-12-10
 **대상 브랜치**: `feature/backtesting_result_update`
-**관련 파일**: `backtester/back_static.py`
+**관련 파일**:
+- `backtester/back_static.py` - 메인 분석 호출
+- `backtester/back_analysis_enhanced.py` - 강화된 분석 모듈 (NEW)
 
 ---
 
@@ -13,920 +15,758 @@
 
 백테스팅 결과에서 매수/매도 시점의 상세 시장 데이터를 분석하여 다음 정보를 텔레그램으로 전송합니다:
 
-1. **데이터 분석 차트**: 시간대별, 등락율별, 체결강도별 수익 분포 시각화
-2. **필터 추천**: 손실 거래를 줄이기 위한 조건 필터 분석
-3. **매수/매도 비교 차트**: 매수 시점과 매도 시점의 시장 상태 변화 분석
+1. **기본 분석 차트**: 시간대별, 등락율별, 체결강도별 수익 분포 시각화
+2. **강화된 필터 분석**: 통계적 유의성 검증 + 효과 크기 측정 (NEW)
+3. **필터 조합 분석**: 다중 필터 시너지 효과 분석 (NEW)
+4. **ML 특성 중요도**: Decision Tree 기반 변수 중요도 (NEW)
+5. **동적 임계값 탐색**: 최적 필터 임계값 자동 탐색 (NEW)
+6. **필터 안정성 검증**: 기간별 일관성 분석 (NEW)
+7. **조건식 코드 생성**: 실제 적용 가능한 코드 자동 생성 (NEW)
 
-### 1.2 시스템 구조
+### 1.2 v2.0 주요 개선 사항
+
+| 영역 | v1.0 | v2.0 |
+|------|------|------|
+| **필터 분석** | 단일 필터만 분석 | 필터 조합 시너지 분석 |
+| **통계 검증** | 없음 | t-test, Cohen's d, 신뢰구간 |
+| **특성 분석** | 상관관계만 | ML 기반 특성 중요도 |
+| **임계값** | 고정값 | 동적 최적값 탐색 |
+| **안정성** | 없음 | 기간별 일관성 검증 |
+| **코드 생성** | 없음 | 조건식 자동 생성 |
+| **파생 지표** | 10개 | 20개 (모멘텀, 거래품질 등) |
+
+### 1.3 시스템 아키텍처
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    백테스팅 엔진 (BackEngine)                     │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  CalculationEyun()                                        │  │
-│  │  • 매수 시점 시장 데이터 수집 (20개 컬럼)                    │  │
-│  │  • 매도 시점 시장 데이터 수집 (16개 컬럼)                    │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    결과 처리 (back_static.py)                    │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  PltShow()                                                │  │
-│  │  └─→ PltAnalysisCharts()    → 분석 차트 생성              │  │
-│  │  └─→ RunFullAnalysis()      → 전체 분석 실행              │  │
-│  │       ├─→ CalculateDerivedMetrics()  → 파생 지표 계산      │  │
-│  │       ├─→ ExportBacktestCSV()        → CSV 파일 출력       │  │
-│  │       ├─→ PltBuySellComparison()     → 비교 차트 생성      │  │
-│  │       └─→ AnalyzeFilterEffects()     → 필터 효과 분석      │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    텔레그램 전송 (teleQ)                         │
-│  • 텍스트 메시지: "백테스트 완료" 알림                            │
-│  • 이미지 1: {전략명}_analysis.png     (8개 서브차트)            │
-│  • 이미지 2: {전략명}_comparison.png   (11개 서브차트)           │
-│  • 텍스트: 필터 추천 메시지                                      │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 2. 데이터 수집 (BackEngine)
-
-### 2.1 데이터 수집 위치
-
-파일: `backtester/backengine_kiwoom_tick.py`
-함수: `CalculationEyun(self, vturn, vkey)`
-
-### 2.2 수집되는 데이터 구조
-
-#### 매수 시점 데이터 (20개 컬럼)
-
-```python
-# 시간 분해 데이터
-buy_date = bt_str[:8]                    # 매수일자 (YYYYMMDD)
-buy_hour = int(bt_str[8:10])             # 매수시 (0-23)
-buy_min = int(bt_str[10:12])             # 매수분 (0-59)
-buy_sec = int(bt_str[12:14])             # 매수초 (0-59)
-
-# 시장 데이터
-buy_등락율 = self.arry_data[bi, 5]       # 전일 대비 등락률
-buy_시가등락율 = (bp - buy_시가) / buy_시가 * 100  # 시가 대비 등락률
-buy_당일거래대금 = self.arry_data[bi, 6] # 당일 누적 거래대금 (억원)
-buy_체결강도 = self.arry_data[bi, 7]     # 체결강도 (매수/매도)
-buy_전일비 = self.arry_data[bi, 9]       # 전일 거래량 대비 비율
-buy_회전율 = self.arry_data[bi, 10]      # 상장주식 대비 거래량
-buy_전일동시간비 = self.arry_data[bi, 11] # 전일 동시간 대비
-
-# 가격 데이터
-buy_고가 = self.arry_data[bi, 3]         # 당일 고가
-buy_저가 = self.arry_data[bi, 4]         # 당일 저가
-buy_고저평균대비등락율 = self.arry_data[bi, 17]
-
-# 호가 데이터
-buy_매도총잔량 = self.arry_data[bi, 18]  # 매도호가 1~5 잔량합
-buy_매수총잔량 = self.arry_data[bi, 19]  # 매수호가 1~5 잔량합
-buy_호가잔량비 = buy_매수총잔량 / buy_매도총잔량 * 100
-buy_매도호가1 = self.arry_data[bi, 24]   # 최우선 매도호가
-buy_매수호가1 = self.arry_data[bi, 25]   # 최우선 매수호가
-buy_스프레드 = (buy_매도호가1 - buy_매수호가1) / buy_매수호가1 * 100
-```
-
-#### 매도 시점 데이터 (16개 컬럼)
-
-```python
-si = self.indexn  # 매도 시점 인덱스
-
-sell_등락율 = self.arry_data[si, 5]
-sell_시가등락율 = (sp - sell_시가) / sell_시가 * 100
-sell_당일거래대금 = self.arry_data[si, 6]
-sell_체결강도 = self.arry_data[si, 7]
-sell_전일비 = self.arry_data[si, 9]
-sell_회전율 = self.arry_data[si, 10]
-sell_전일동시간비 = self.arry_data[si, 11]
-sell_고가 = self.arry_data[si, 3]
-sell_저가 = self.arry_data[si, 4]
-sell_고저평균대비등락율 = self.arry_data[si, 17]
-sell_매도총잔량 = self.arry_data[si, 18]
-sell_매수총잔량 = self.arry_data[si, 19]
-sell_호가잔량비 = sell_매수총잔량 / sell_매도총잔량 * 100
-sell_매도호가1 = self.arry_data[si, 24]
-sell_매수호가1 = self.arry_data[si, 25]
-sell_스프레드 = (sell_매도호가1 - sell_매수호가1) / sell_매수호가1 * 100
-```
-
-### 2.3 데이터 전송 구조
-
-```python
-data = (
-    '백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey,
-    # 매수 시점 데이터 (20개)
-    buy_date, buy_hour, buy_min, buy_sec,
-    buy_등락율, buy_시가등락율, buy_당일거래대금, buy_체결강도,
-    buy_전일비, buy_회전율, buy_전일동시간비,
-    buy_고가, buy_저가, buy_고저평균대비등락율,
-    buy_매도총잔량, buy_매수총잔량, buy_호가잔량비,
-    buy_매도호가1, buy_매수호가1, buy_스프레드,
-    # 매도 시점 데이터 (16개)
-    sell_등락율, sell_시가등락율, sell_당일거래대금, sell_체결강도,
-    sell_전일비, sell_회전율, sell_전일동시간비,
-    sell_고가, sell_저가, sell_고저평균대비등락율,
-    sell_매도총잔량, sell_매수총잔량, sell_호가잔량비,
-    sell_매도호가1, sell_매수호가1, sell_스프레드
-)
+┌─────────────────────────────────────────────────────────────────────┐
+│                     백테스팅 엔진 (BackEngine)                        │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  CalculationEyun()                                          │    │
+│  │  • 매수 시점 시장 데이터 수집 (20개 컬럼)                      │    │
+│  │  • 매도 시점 시장 데이터 수집 (16개 컬럼)                      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      결과 처리 (back_static.py)                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  PltShow()                                                  │    │
+│  │  └─→ RunEnhancedAnalysis() [NEW - back_analysis_enhanced.py]│    │
+│  │       │                                                     │    │
+│  │       ├─→ CalculateEnhancedDerivedMetrics()                │    │
+│  │       │   • 모멘텀 점수, 거래품질 점수 등 20개 파생 지표      │    │
+│  │       │                                                     │    │
+│  │       ├─→ AnalyzeFilterEffectsEnhanced()                   │    │
+│  │       │   • t-test, Cohen's d, 95% 신뢰구간                 │    │
+│  │       │                                                     │    │
+│  │       ├─→ FindAllOptimalThresholds()                       │    │
+│  │       │   • 분위수 기반 최적 임계값 탐색                      │    │
+│  │       │                                                     │    │
+│  │       ├─→ AnalyzeFilterCombinations()                      │    │
+│  │       │   • 2-3개 필터 조합 시너지 분석                      │    │
+│  │       │                                                     │    │
+│  │       ├─→ AnalyzeFeatureImportance()                       │    │
+│  │       │   • Decision Tree 기반 Gini 중요도                  │    │
+│  │       │                                                     │    │
+│  │       ├─→ AnalyzeFilterStability()                         │    │
+│  │       │   • 5개 기간 분할 일관성 검증                        │    │
+│  │       │                                                     │    │
+│  │       ├─→ GenerateFilterCode()                             │    │
+│  │       │   • 조건식 코드 자동 생성                            │    │
+│  │       │                                                     │    │
+│  │       └─→ PltEnhancedAnalysisCharts()                      │    │
+│  │           • 14개 강화된 시각화 차트                          │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       텔레그램 전송 (teleQ)                          │
+│  • 이미지 1: {전략명}.png              (기본 수익곡선)               │
+│  • 이미지 2: {전략명}_.png             (부가정보)                    │
+│  • 이미지 3: {전략명}_enhanced.png     (강화된 분석 - 14개 차트) NEW │
+│  • 텍스트: 통계적 유의 필터 추천                                     │
+│  • 텍스트: 조합 필터 추천                                            │
+│  • 텍스트: 자동 생성 조건식 코드                                     │
+│  • CSV 5개: 상세분석, 필터분석, 임계값, 조합, 안정성                  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. 데이터 분석 차트 (PltAnalysisCharts)
+## 2. 강화된 파생 지표 (CalculateEnhancedDerivedMetrics)
+
+### 2.1 함수 개요
+
+파일: `backtester/back_analysis_enhanced.py`
+
+```python
+def CalculateEnhancedDerivedMetrics(df_tsg):
+    """
+    강화된 파생 지표를 계산합니다.
+
+    기존 10개 + 신규 10개 = 총 20개 파생 지표
+    """
+```
+
+### 2.2 신규 파생 지표
+
+#### 모멘텀 점수 (NEW)
+
+```python
+# 등락율과 체결강도를 정규화하여 모멘텀 점수 계산
+등락율_norm = (df['매수등락율'] - df['매수등락율'].mean()) / df['매수등락율'].std()
+체결강도_norm = (df['매수체결강도'] - 100) / 50  # 100을 기준으로 정규화
+df['모멘텀점수'] = round((등락율_norm * 0.4 + 체결강도_norm * 0.6) * 10, 2)
+```
+
+**해석**:
+- 양수: 상승 모멘텀
+- 음수: 하락 모멘텀
+- 절대값이 클수록 강한 모멘텀
+
+#### 변동성 지표 (NEW)
+
+```python
+df['매수변동폭비율'] = (df['매수고가'] - df['매수저가']) / df['매수저가'] * 100
+df['매도변동폭비율'] = (df['매도고가'] - df['매도저가']) / df['매도저가'] * 100
+df['변동성변화'] = df['매도변동폭비율'] - df['매수변동폭비율']
+```
+
+**해석**:
+- 양수: 보유 중 변동성 증가 (위험 증가)
+- 음수: 보유 중 변동성 감소 (안정화)
+
+#### 거래 품질 점수 (NEW)
+
+```python
+df['거래품질점수'] = 50  # 기본값
+
+# 긍정적 요소 가산
+df.loc[df['매수체결강도'] >= 120, '거래품질점수'] += 10
+df.loc[df['매수체결강도'] >= 150, '거래품질점수'] += 10
+df.loc[df['매수호가잔량비'] >= 100, '거래품질점수'] += 10
+df.loc[(df['시가총액'] >= 1000) & (df['시가총액'] <= 10000), '거래품질점수'] += 10
+
+# 부정적 요소 감산
+df.loc[df['매수등락율'] >= 25, '거래품질점수'] -= 15
+df.loc[df['매수등락율'] >= 30, '거래품질점수'] -= 10
+df.loc[df['매수스프레드'] >= 0.5, '거래품질점수'] -= 10
+
+df['거래품질점수'] = df['거래품질점수'].clip(0, 100)
+```
+
+**해석**:
+- 0-30점: 낮은 품질 (피해야 할 거래)
+- 30-50점: 보통 품질
+- 50-70점: 좋은 품질
+- 70-100점: 우수한 품질
+
+#### 리스크 조정 수익률 (NEW)
+
+```python
+# 수익률을 위험 요소로 나누어 조정
+risk_factor = (df['매수등락율'].abs() / 10 + df['보유시간'] / 300 + 1)
+df['리스크조정수익률'] = round(df['수익률'] / risk_factor, 4)
+```
+
+**해석**:
+- 같은 수익률이라도 위험이 낮을수록 높은 값
+- Sharpe Ratio와 유사한 개념
+
+#### 시간대 타이밍 점수 (NEW)
+
+```python
+# 시간대별 평균 수익률 기반 타이밍 점수
+hour_profit = df.groupby('매수시')['수익률'].mean()
+df['시간대평균수익률'] = df['매수시'].map(hour_profit)
+df['타이밍점수'] = (df['시간대평균수익률'] - mean) / std * 10
+```
+
+**해석**:
+- 양수: 유리한 시간대에 매수
+- 음수: 불리한 시간대에 매수
+
+### 2.3 전체 파생 지표 목록
+
+| 번호 | 지표명 | 유형 | 설명 |
+|------|--------|------|------|
+| 1 | 등락율변화 | 변화량 | 매도등락율 - 매수등락율 |
+| 2 | 체결강도변화 | 변화량 | 매도체결강도 - 매수체결강도 |
+| 3 | 전일비변화 | 변화량 | 매도전일비 - 매수전일비 |
+| 4 | 회전율변화 | 변화량 | 매도회전율 - 매수회전율 |
+| 5 | 호가잔량비변화 | 변화량 | 매도호가잔량비 - 매수호가잔량비 |
+| 6 | 거래대금변화율 | 변화율 | 매도거래대금 / 매수거래대금 |
+| 7 | 체결강도변화율 | 변화율 | 매도체결강도 / 매수체결강도 |
+| 8 | 등락추세 | 범주형 | 상승/하락/유지 |
+| 9 | 체결강도추세 | 범주형 | 강화/약화/유지 |
+| 10 | 거래량추세 | 범주형 | 증가/감소/유지 |
+| 11 | 급락신호 | 불리언 | 등락율↓3% AND 체결강도↓20 |
+| 12 | 매도세증가 | 불리언 | 호가잔량비↓0.2 |
+| 13 | 거래량급감 | 불리언 | 거래대금변화율 < 0.5 |
+| 14 | 위험도점수 | 0-100점 | 종합 위험 점수 (강화됨) |
+| 15 | **모멘텀점수** | 연속값 | 등락율+체결강도 정규화 (NEW) |
+| 16 | **매수변동폭비율** | % | 고가-저가 비율 (NEW) |
+| 17 | **변동성변화** | % | 매도-매수 변동성 차이 (NEW) |
+| 18 | **타이밍점수** | 연속값 | 시간대별 수익률 기반 (NEW) |
+| 19 | **리스크조정수익률** | % | 위험조정 수익률 (NEW) |
+| 20 | **거래품질점수** | 0-100점 | 종합 품질 점수 (NEW) |
+
+---
+
+## 3. 통계적 유의성 검증 (CalculateStatisticalSignificance)
 
 ### 3.1 함수 개요
 
-파일: `backtester/back_static.py:1042-1270`
+파일: `backtester/back_analysis_enhanced.py`
 
 ```python
-def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
+def CalculateStatisticalSignificance(filtered_out, remaining):
     """
-    확장된 상세기록 데이터를 기반으로 분석 차트를 생성하고 텔레그램으로 전송
+    필터 효과의 통계적 유의성을 계산합니다.
 
-    Args:
-        df_tsg: 확장된 상세기록 DataFrame (34개 컬럼)
-        save_file_name: 저장 파일명
-        teleQ: 텔레그램 전송 큐
+    Returns:
+        dict: {
+            't_stat': t-통계량,
+            'p_value': p-값,
+            'effect_size': Cohen's d,
+            'confidence_interval': 95% 신뢰구간,
+            'significant': p < 0.05 여부
+        }
     """
 ```
 
-### 3.2 생성되는 8개 차트
+### 3.2 통계 검정 방법
 
-#### Chart 1: 시간대별 수익금 분포 (gs[0, 0])
-
-```python
-# 목적: 어느 시간대에 매수한 거래가 수익성이 좋은지 분석
-df_hour = df_tsg.groupby('매수시').agg({'수익금': 'sum', '수익률': 'mean'})
-colors = [color_profit if x >= 0 else color_loss for x in df_hour['수익금']]
-ax1.bar(df_hour['매수시'], df_hour['수익금'], color=colors)
-```
-
-**해석 방법**:
-- 녹색 막대: 해당 시간대 총 수익이 양수
-- 빨간색 막대: 해당 시간대 총 수익이 음수
-- 막대 위 숫자: 총 수익금 (만원 단위)
-
-#### Chart 2: 등락율별 수익금 분포 (gs[0, 1])
+#### Welch's t-test
 
 ```python
-# 목적: 매수 시점 등락율과 수익률의 관계 분석
-bins = [0, 5, 10, 15, 20, 30, 100]
-labels = ['0-5%', '5-10%', '10-15%', '15-20%', '20-30%', '30%+']
-df_tsg['등락율구간'] = pd.cut(df_tsg['매수등락율'], bins=bins, labels=labels)
-df_rate = df_tsg.groupby('등락율구간').agg({'수익금': 'sum', '종목명': 'count'})
+# 두 그룹 (제외 거래 vs 남은 거래)의 수익금 차이 검정
+t_stat, p_value = stats.ttest_ind(group1, group2, equal_var=False)
 ```
 
-**해석 방법**:
-- 주황색 라인: 거래 횟수
-- 막대: 해당 등락율 구간의 총 수익금
-- 예: 20-30% 구간이 빨간색이면 고등락 종목 매수 시 손실 가능성 높음
+**해석**:
+- p < 0.05: 통계적으로 유의한 차이 존재
+- p < 0.01: 매우 유의한 차이
+- p >= 0.05: 우연에 의한 차이일 가능성
 
-#### Chart 3: 체결강도별 수익금 분포 (gs[1, 0])
+#### Cohen's d 효과 크기
 
 ```python
-# 목적: 체결강도(매수세/매도세 비율)와 수익률의 관계 분석
-bins_ch = [0, 80, 100, 120, 150, 200, 500]
-labels_ch = ['~80', '80-100', '100-120', '120-150', '150-200', '200+']
-df_tsg['체결강도구간'] = pd.cut(df_tsg['매수체결강도'], bins=bins_ch, labels=labels_ch)
-
-# 승률 계산
-win_rates = []
-for grp in df_ch['체결강도구간']:
-    grp_data = df_tsg[df_tsg['체결강도구간'] == grp]
-    wr = (grp_data['수익금'] > 0).sum() / len(grp_data) * 100
-    win_rates.append(wr)
+pooled_std = np.sqrt((np.var(group1) + np.var(group2)) / 2)
+effect_size = (np.mean(group1) - np.mean(group2)) / pooled_std
 ```
 
-**해석 방법**:
-- 체결강도 100 미만: 매도세 우위
-- 체결강도 100 초과: 매수세 우위
-- 보라색 라인: 해당 구간의 승률(%)
+**해석 기준**:
 
-#### Chart 4: 거래대금별 수익금 분포 (gs[1, 1])
+| 효과 크기 | Cohen's d | 의미 |
+|-----------|-----------|------|
+| 무시 | < 0.2 | 실질적 차이 없음 |
+| 작음 | 0.2 - 0.5 | 작은 효과 |
+| 중간 | 0.5 - 0.8 | 중간 효과 |
+| 큼 | 0.8 - 1.2 | 큰 효과 |
+| 매우 큼 | > 1.2 | 매우 큰 효과 |
+
+#### 95% 신뢰구간
 
 ```python
-# 목적: 당일 거래대금 수준에 따른 수익성 분석
-df_tsg['거래대금구간'] = pd.cut(df_tsg['매수당일거래대금'],
-    bins=[0, 100, 500, 1000, 5000, 10000, float('inf')],
-    labels=['~100억', '100-500억', '500-1000억', '1000-5000억', '5000억-1조', '1조+'])
+mean_diff = np.mean(group1) - np.mean(group2)
+se = np.sqrt(np.var(group1)/len(group1) + np.var(group2)/len(group2))
+ci_low = mean_diff - 1.96 * se
+ci_high = mean_diff + 1.96 * se
 ```
 
-**해석 방법**:
-- 거래대금이 높을수록 유동성이 좋음
-- 너무 낮은 거래대금: 슬리피지 위험
+**해석**:
+- 신뢰구간이 0을 포함하지 않으면 유의한 차이
+- 구간이 좁을수록 추정 정확도 높음
 
-#### Chart 5: 시가총액별 수익금 분포 (gs[2, 0])
+### 3.3 권장 등급 개선
 
 ```python
-# 목적: 종목 규모별 수익성 분석
-df_tsg['시총구간'] = pd.cut(df_tsg['시가총액'],
-    bins=[0, 1000, 3000, 10000, 50000, float('inf')],
-    labels=['~1000억', '1000-3000억', '3000억-1조', '1-5조', '5조+'])
-```
-
-**해석 방법**:
-- 소형주 vs 대형주 전략 적합성 확인
-- 손실이 큰 구간은 필터링 고려
-
-#### Chart 6: 보유시간별 수익금 분포 (gs[2, 1])
-
-```python
-# 목적: 보유 기간과 수익률의 관계 분석
-df_tsg['보유시간구간'] = pd.cut(df_tsg['보유시간'],
-    bins=[0, 60, 180, 300, 600, 1800, float('inf')],
-    labels=['~1분', '1-3분', '3-5분', '5-10분', '10-30분', '30분+'])
-```
-
-**해석 방법**:
-- 단타 전략: 1분 미만 구간 중요
-- 스윙 전략: 10분 이상 구간 중요
-
-#### Chart 7: 상관관계 히트맵 (gs[3, 0])
-
-```python
-# 목적: 변수 간 상관관계 파악
-corr_columns = ['수익률', '매수등락율', '매수체결강도', '매수회전율', '매수전일비', '보유시간']
-df_corr = df_tsg[corr_columns].corr()
-im = ax7.imshow(df_corr.values, cmap='RdYlGn', aspect='auto', vmin=-1, vmax=1)
-```
-
-**해석 방법**:
-- 녹색: 양의 상관관계 (함께 증가)
-- 빨간색: 음의 상관관계 (반대로 움직임)
-- 수치: 상관계수 (-1 ~ 1)
-
-#### Chart 8: 등락율 vs 수익률 산점도 (gs[3, 1])
-
-```python
-# 목적: 매수 등락율과 수익률의 직접적 관계 시각화
-ax8.scatter(df_tsg['매수등락율'], df_tsg['수익률'], c=colors, alpha=0.5)
-
-# 추세선 추가
-z = np.polyfit(df_tsg['매수등락율'], df_tsg['수익률'], 1)
-p = np.poly1d(z)
-ax8.plot(x_line, p(x_line), 'b--', linewidth=1, label='추세선')
-```
-
-**해석 방법**:
-- 녹색 점: 이익 거래
-- 빨간색 점: 손실 거래
-- 파란 점선: 추세선 (기울기가 음수면 고등락 종목 불리)
-
-### 3.3 출력 예시
-
-```
-파일: backtester/graph/{전략명}_analysis.png
-크기: 16x20 인치 (1920x2400 픽셀)
+# v2.0 개선된 권장 등급 로직
+if improvement > total_profit * 0.15 and significant:
+    rating = '★★★'  # 강력 추천 (유의하고 개선율 15% 이상)
+elif improvement > total_profit * 0.05 and p_value < 0.1:
+    rating = '★★'   # 추천 (약간 유의하고 개선율 5% 이상)
+elif improvement > 0:
+    rating = '★'    # 고려 (개선 있음)
+else:
+    rating = ''     # 비추천
 ```
 
 ---
 
-## 4. 파생 지표 계산 (CalculateDerivedMetrics)
+## 4. 동적 최적 임계값 탐색 (FindOptimalThresholds)
 
 ### 4.1 함수 개요
 
-파일: `backtester/back_static.py:1275-1328`
-
 ```python
-def CalculateDerivedMetrics(df_tsg):
+def FindOptimalThresholds(df_tsg, column, direction='less', n_splits=20):
     """
-    매수/매도 시점 간 파생 지표를 계산합니다.
+    특정 컬럼에 대해 최적의 필터 임계값을 탐색합니다.
+
+    Args:
+        column: 분석할 컬럼 (예: '매수등락율')
+        direction: 'less' (미만 제외) 또는 'greater' (이상 제외)
+        n_splits: 분할 수 (기본 20개 분위수)
 
     Returns:
-        DataFrame with added derived metrics
+        최적 임계값 및 효과 정보
     """
 ```
 
-### 4.2 생성되는 파생 지표
-
-#### 변화량 지표 (매도 - 매수)
+### 4.2 알고리즘
 
 ```python
-df['등락율변화'] = df['매도등락율'] - df['매수등락율']
-df['체결강도변화'] = df['매도체결강도'] - df['매수체결강도']
-df['전일비변화'] = df['매도전일비'] - df['매수전일비']
-df['회전율변화'] = df['매도회전율'] - df['매수회전율']
-df['호가잔량비변화'] = df['매도호가잔량비'] - df['매수호가잔량비']
+# 1. 분위수 기반 임계값 생성 (5% ~ 95%)
+percentiles = np.linspace(5, 95, n_splits)
+thresholds = np.percentile(values, percentiles)
+
+# 2. 각 임계값에 대해 수익 개선 효과 계산
+for threshold in thresholds:
+    if direction == 'less':
+        condition = df_tsg[column] < threshold
+    else:
+        condition = df_tsg[column] >= threshold
+
+    improvement = -filtered_out['수익금'].sum()
+    efficiency = improvement / len(filtered_out)  # 거래당 효율
+
+# 3. 최적 임계값 선택 (제외비율 50% 이하에서 효율 최대)
+best = df_valid[df_valid['efficiency'] == df_valid['efficiency'].max()]
 ```
 
-**해석**:
-- 양수: 보유 기간 동안 해당 지표가 증가
-- 음수: 보유 기간 동안 해당 지표가 감소
-
-#### 변화율 지표 (매도 / 매수)
+### 4.3 분석 대상 컬럼
 
 ```python
-df['거래대금변화율'] = df['매도당일거래대금'] / df['매수당일거래대금']
-df['체결강도변화율'] = df['매도체결강도'] / df['매수체결강도']
+columns_config = [
+    ('매수등락율', 'greater', '등락율 {:.0f}% 이상 제외'),
+    ('매수등락율', 'less', '등락율 {:.0f}% 미만 제외'),
+    ('매수체결강도', 'less', '체결강도 {:.0f} 미만 제외'),
+    ('매수체결강도', 'greater', '체결강도 {:.0f} 이상 제외'),
+    ('매수당일거래대금', 'less', '거래대금 {:.0f}억 미만 제외'),
+    ('시가총액', 'less', '시가총액 {:.0f}억 미만 제외'),
+    ('시가총액', 'greater', '시가총액 {:.0f}억 이상 제외'),
+    ('보유시간', 'less', '보유시간 {:.0f}초 미만 제외'),
+    ('보유시간', 'greater', '보유시간 {:.0f}초 이상 제외'),
+    ('매수호가잔량비', 'less', '호가잔량비 {:.0f}% 미만 제외'),
+    ('매수스프레드', 'greater', '스프레드 {:.2f}% 이상 제외'),
+    ('위험도점수', 'greater', '위험도 {:.0f}점 이상 제외'),
+    ('거래품질점수', 'less', '거래품질 {:.0f}점 미만 제외'),
+]
 ```
 
-**해석**:
-- 1.0: 변화 없음
-- 1.2: 20% 증가
-- 0.5: 50% 감소
+### 4.4 출력 예시
 
-#### 추세 판단 지표
-
-```python
-df['등락추세'] = df['등락율변화'].apply(
-    lambda x: '상승' if x > 0 else ('하락' if x < 0 else '유지'))
-
-df['체결강도추세'] = df['체결강도변화'].apply(
-    lambda x: '강화' if x > 10 else ('약화' if x < -10 else '유지'))
-
-df['거래량추세'] = df['거래대금변화율'].apply(
-    lambda x: '증가' if x > 1.2 else ('감소' if x < 0.8 else '유지'))
+```csv
+column,direction,optimal_threshold,improvement,excluded_ratio,efficiency
+매수등락율,greater,22.5,1250000,8.5,147059
+매수체결강도,less,85,890000,6.2,143548
+시가총액,less,850,720000,5.8,124138
 ```
-
-#### 위험 신호 지표
-
-```python
-# 급락 신호: 등락율 3% 이상 하락 AND 체결강도 20 이상 하락
-df['급락신호'] = (df['등락율변화'] < -3) & (df['체결강도변화'] < -20)
-
-# 매도세 증가: 호가잔량비 0.2 이상 감소
-df['매도세증가'] = df['호가잔량비변화'] < -0.2
-
-# 거래량 급감: 거래대금 50% 이하로 감소
-df['거래량급감'] = df['거래대금변화율'] < 0.5
-```
-
-#### 위험도 점수 (0-100점)
-
-```python
-df['위험도점수'] = 0
-df.loc[df['등락율변화'] < -2, '위험도점수'] += 20        # 등락율 2% 이상 하락
-df.loc[df['체결강도변화'] < -15, '위험도점수'] += 20     # 체결강도 15 이상 하락
-df.loc[df['호가잔량비변화'] < -0.3, '위험도점수'] += 20  # 호가잔량비 0.3 이상 감소
-df.loc[df['거래대금변화율'] < 0.6, '위험도점수'] += 20   # 거래대금 40% 이상 감소
-df.loc[df['매수등락율'] > 20, '위험도점수'] += 20        # 매수 시 등락율 20% 초과
-```
-
-**위험도 해석**:
-- 0-20점: 낮은 위험
-- 40-60점: 중간 위험
-- 80-100점: 높은 위험 (손실 가능성 높음)
 
 ---
 
-## 5. 필터 효과 분석 (AnalyzeFilterEffects)
+## 5. 필터 조합 분석 (AnalyzeFilterCombinations)
 
 ### 5.1 함수 개요
 
-파일: `backtester/back_static.py:1447-1560`
-
 ```python
-def AnalyzeFilterEffects(df_tsg):
+def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
     """
-    조건별 필터 적용 시 예상 효과를 분석합니다.
+    필터 조합의 시너지 효과를 분석합니다.
 
-    Args:
-        df_tsg: 파생 지표가 포함된 DataFrame
-
-    Returns:
-        list: 필터 효과 분석 결과
+    시너지 = 조합 개선 - 개별 개선 합
+    - 양수 시너지: 조합이 개별보다 효과적
+    - 음수 시너지: 중복 효과로 비효율
     """
 ```
 
-### 5.2 분석되는 필터 조건
-
-#### 시간대 필터
+### 5.2 시너지 효과 계산
 
 ```python
-for hour in df_tsg['매수시'].unique():
-    filter_conditions.append({
-        '필터명': f'시간대 {hour}시 제외',
-        '조건': df_tsg['매수시'] == hour,
-        '분류': '시간대'
-    })
+# OR 조건으로 조합 (둘 중 하나라도 해당되면 제외)
+combined_condition = cond1 | cond2
+
+filtered_out = df_tsg[combined_condition]
+improvement = -filtered_out['수익금'].sum()
+
+# 시너지 = 조합 효과 - 개별 효과 합
+individual_sum = filter1['improvement'] + filter2['improvement']
+synergy = improvement - individual_sum
+synergy_ratio = synergy / individual_sum * 100
 ```
 
-#### 등락율 필터
+### 5.3 해석
 
-```python
-filter_conditions.extend([
-    {'필터명': '등락율 25% 이상 제외', '조건': df_tsg['매수등락율'] >= 25},
-    {'필터명': '등락율 20% 이상 제외', '조건': df_tsg['매수등락율'] >= 20},
-    {'필터명': '등락율 5% 미만 제외', '조건': df_tsg['매수등락율'] < 5},
-])
-```
+| 시너지 비율 | 의미 | 권장 |
+|-------------|------|------|
+| > 20% | 강한 시너지 (상호 보완) | ★★★ |
+| 0 ~ 20% | 약한 시너지 | ★★ |
+| < 0% | 중복 효과 (비효율) | 비추천 |
 
-#### 체결강도 필터
-
-```python
-filter_conditions.extend([
-    {'필터명': '체결강도 80 미만 제외', '조건': df_tsg['매수체결강도'] < 80},
-    {'필터명': '체결강도 200 이상 제외', '조건': df_tsg['매수체결강도'] >= 200},
-])
-```
-
-#### 추세 변화 필터 (매도 데이터 있는 경우)
-
-```python
-filter_conditions.extend([
-    {'필터명': '등락율하락 3% 이상 제외', '조건': df_tsg['등락율변화'] <= -3},
-    {'필터명': '체결강도하락 20 이상 제외', '조건': df_tsg['체결강도변화'] <= -20},
-    {'필터명': '거래대금 50% 이상 감소 제외', '조건': df_tsg['거래대금변화율'] < 0.5},
-])
-```
-
-#### 위험 신호 필터
-
-```python
-filter_conditions.extend([
-    {'필터명': '급락신호 발생 제외', '조건': df_tsg['급락신호'] == True},
-    {'필터명': '위험도 60점 이상 제외', '조건': df_tsg['위험도점수'] >= 60},
-    {'필터명': '위험도 40점 이상 제외', '조건': df_tsg['위험도점수'] >= 40},
-])
-```
-
-#### 보유시간 필터
-
-```python
-filter_conditions.extend([
-    {'필터명': '보유시간 30초 미만 제외', '조건': df_tsg['보유시간'] < 30},
-    {'필터명': '보유시간 60초 미만 제외', '조건': df_tsg['보유시간'] < 60},
-    {'필터명': '보유시간 30분 이상 제외', '조건': df_tsg['보유시간'] >= 1800},
-])
-```
-
-#### 시가총액 필터
-
-```python
-filter_conditions.extend([
-    {'필터명': '시가총액 1000억 미만 제외', '조건': df_tsg['시가총액'] < 1000},
-    {'필터명': '시가총액 3000억 미만 제외', '조건': df_tsg['시가총액'] < 3000},
-    {'필터명': '시가총액 1조 이상 제외', '조건': df_tsg['시가총액'] >= 10000},
-])
-```
-
-### 5.3 필터 효과 계산 로직
-
-```python
-for fc in filter_conditions:
-    # 필터 대상 거래 분리
-    filtered_out = df_tsg[fc['조건']]      # 제외될 거래
-    remaining = df_tsg[~fc['조건']]         # 남을 거래
-
-    filtered_profit = filtered_out['수익금'].sum()   # 제외 거래 수익금
-    remaining_profit = remaining['수익금'].sum()      # 잔여 거래 수익금
-
-    # 수익 개선 효과 = 제외된 거래의 손실 (부호 반전)
-    # 손실 거래가 제외되면 양수, 이익 거래가 제외되면 음수
-    improvement = -filtered_profit
-
-    filter_results.append({
-        '분류': fc['분류'],
-        '필터명': fc['필터명'],
-        '제외거래수': len(filtered_out),
-        '제외비율': len(filtered_out) / total_trades * 100,
-        '제외거래수익금': filtered_profit,
-        '잔여거래수': len(remaining),
-        '잔여거래수익금': remaining_profit,
-        '수익개선금액': improvement,
-        '제외거래승률': (filtered_out['수익금'] > 0).mean() * 100,
-        '잔여거래승률': (remaining['수익금'] > 0).mean() * 100,
-        '적용권장': '★★★' if improvement > total_profit * 0.1 else
-                   ('★★' if improvement > 0 else ''),
-    })
-```
-
-### 5.4 적용 권장 기준
-
-| 등급 | 조건 | 의미 |
-|------|------|------|
-| ★★★ | 수익개선금액 > 총수익금 × 10% | 강력 추천 |
-| ★★ | 수익개선금액 > 0 | 권장 |
-| (없음) | 수익개선금액 ≤ 0 | 비추천 (이익 거래도 제외됨) |
-
-### 5.5 출력 예시 (CSV)
+### 5.4 출력 예시
 
 ```csv
-분류,필터명,제외거래수,제외비율,제외거래수익금,잔여거래수익금,수익개선금액,적용권장
-시간대,시간대 14시 제외,45,8.2,-1250000,5250000,1250000,★★★
-등락율,등락율 25% 이상 제외,23,4.2,-850000,4850000,850000,★★
-체결강도,체결강도 80 미만 제외,12,2.2,-320000,4320000,320000,★★
+조합유형,필터1,필터2,개별개선합,조합개선,시너지효과,시너지비율,권장
+2개 조합,등락율 25% 이상 제외,체결강도 80 미만 제외,1250000,1580000,330000,26.4%,★★★
+2개 조합,시간대 14시 제외,보유시간 30초 미만 제외,890000,920000,30000,3.4%,★★
 ```
 
 ---
 
-## 6. 매수/매도 비교 차트 (PltBuySellComparison)
+## 6. ML 특성 중요도 (AnalyzeFeatureImportance)
 
 ### 6.1 함수 개요
 
-파일: `backtester/back_static.py:1563-1811`
-
 ```python
-def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
+def AnalyzeFeatureImportance(df_tsg):
     """
-    매수/매도 시점 비교 분석 차트를 생성합니다.
+    Decision Tree를 사용하여 특성 중요도를 분석합니다.
 
-    Args:
-        df_tsg: 백테스팅 결과 DataFrame (파생 지표 포함)
-        save_file_name: 저장 파일명
-        teleQ: 텔레그램 전송 큐
+    Returns:
+        feature_importance: Gini 중요도 순위
+        decision_rules: 주요 분기 규칙
+        model_accuracy: 모델 정확도
     """
 ```
 
-### 6.2 생성되는 11개 차트
-
-#### Chart 1: 등락율 변화 vs 수익률 (gs[0, 0])
+### 6.2 알고리즘
 
 ```python
-# 목적: 보유 중 등락율 변화가 수익률에 미치는 영향
-ax1.scatter(df_tsg['등락율변화'], df_tsg['수익률'], c=colors)
-ax1.axhline(y=0, color='gray', linestyle='--')  # 손익 기준선
-ax1.axvline(x=0, color='gray', linestyle='--')  # 등락율 변화 기준선
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import StandardScaler
+
+# 특성 선택
+feature_columns = [
+    '매수등락율', '매수체결강도', '매수당일거래대금', '매수전일비',
+    '매수회전율', '시가총액', '보유시간', '매수호가잔량비'
+]
+
+# 타겟: 이익 여부 (이진 분류)
+y = (df_tsg['수익금'] > 0).astype(int)
+
+# Decision Tree 학습
+clf = DecisionTreeClassifier(max_depth=4, min_samples_leaf=10)
+clf.fit(X_scaled, y)
+
+# Gini 중요도 추출
+importance = dict(zip(feature_columns, clf.feature_importances_))
 ```
 
-**사분면 해석**:
-- 우상단: 주가 상승 + 이익 실현 ✓
-- 좌상단: 주가 하락 + 이익 실현 (타이밍 좋음)
-- 우하단: 주가 상승 + 손실 (너무 일찍 매도)
-- 좌하단: 주가 하락 + 손실 (추세 반전 실패) ✗
-
-#### Chart 2: 체결강도 변화 vs 수익률 (gs[0, 1])
+### 6.3 분기 규칙 추출
 
 ```python
-# 목적: 매수세 변화가 수익에 미치는 영향
-ax2.scatter(df_tsg['체결강도변화'], df_tsg['수익률'], c=colors)
+# 상위 2레벨의 분기 규칙 추출
+rules = [{
+    'feature': '매수등락율',
+    'threshold': 18.5,
+    'left_win_rate': 62.3,   # 18.5% 미만
+    'right_win_rate': 41.2,  # 18.5% 이상
+    'rule': '매수등락율 < 18.5: 승률 62.3%'
+}]
 ```
 
-**해석**:
-- 체결강도 증가(+) + 이익: 매수세 증가로 수익
-- 체결강도 감소(-) + 손실: 매수세 약화로 손실
-
-#### Chart 3: 매수 vs 매도 등락율 (gs[0, 2])
-
-```python
-# 목적: 매수 시점과 매도 시점의 등락율 관계
-ax3.scatter(df_tsg['매수등락율'], df_tsg['매도등락율'], c=colors)
-ax3.plot([min_val, max_val], [min_val, max_val], 'k--', label='변화없음')  # 대각선
-```
-
-**해석**:
-- 대각선 위: 보유 중 등락율 상승
-- 대각선 아래: 보유 중 등락율 하락
-- 대각선 근처: 변화 없음
-
-#### Chart 4: 위험도 점수별 수익금 분포 (gs[1, 0])
-
-```python
-risk_bins = [0, 20, 40, 60, 80, 100]
-risk_labels = ['0-20', '20-40', '40-60', '60-80', '80-100']
-df_tsg['위험도구간'] = pd.cut(df_tsg['위험도점수'], bins=risk_bins, labels=risk_labels)
-risk_profit = df_tsg.groupby('위험도구간')['수익금'].sum()
-```
-
-**활용법**:
-- 위험도 높은 구간(60-100)이 손실이면 해당 조건 필터링 고려
-
-#### Chart 5: 등락추세별 수익금 (gs[1, 1])
-
-```python
-# 추세: 상승, 하락, 유지
-trend_profit = df_tsg.groupby('등락추세')['수익금'].sum()
-```
-
-#### Chart 6: 체결강도추세별 수익금 (gs[1, 2])
-
-```python
-# 추세: 강화, 약화, 유지
-ch_trend_profit = df_tsg.groupby('체결강도추세')['수익금'].sum()
-```
-
-#### Chart 7: 필터 효과 파레토 차트 (gs[2, :2])
-
-```python
-# 수익 개선 효과가 있는 필터 Top 15
-filter_results = AnalyzeFilterEffects(df_tsg)
-df_filter = pd.DataFrame(filter_results)
-df_filter = df_filter[df_filter['수익개선금액'] > 0].nlargest(15, '수익개선금액')
-
-# 파레토 차트: 막대 + 누적 비율 라인
-ax7.bar(x_pos, df_filter['수익개선금액'], color=color_profit)
-ax7_twin.plot(x_pos, cumsum_pct, 'ro-', markersize=4)  # 누적 비율
-```
-
-**파레토 원칙 적용**:
-- 상위 20% 필터가 80%의 수익 개선 효과
-- 빨간 라인이 80%에 도달하는 지점까지의 필터 적용 권장
-
-#### Chart 8: 손실/이익 거래 특성 비교 (gs[2, 2])
-
-```python
-loss_trades = df_tsg[df_tsg['수익금'] < 0]
-profit_trades = df_tsg[df_tsg['수익금'] >= 0]
-
-compare_cols = ['매수등락율', '매수체결강도', '보유시간']
-loss_means = [loss_trades[c].mean() for c in compare_cols]
-profit_means = [profit_trades[c].mean() for c in compare_cols]
-
-ax8.bar(x - width/2, loss_means, width, label='손실거래', color=color_loss)
-ax8.bar(x + width/2, profit_means, width, label='이익거래', color=color_profit)
-```
-
-**활용법**:
-- 손실 거래 평균 등락율이 높으면 → 고등락 제한 필터 추가
-- 손실 거래 평균 체결강도가 낮으면 → 체결강도 하한 필터 추가
-
-#### Chart 9: 추세 조합별 수익금 히트맵 (gs[3, 0])
-
-```python
-# 등락추세 × 체결강도추세 조합
-pivot = df_tsg.pivot_table(values='수익금', index='등락추세',
-                           columns='체결강도추세', aggfunc='sum', fill_value=0)
-im = ax9.imshow(pivot.values, cmap='RdYlGn')
-```
-
-**해석**:
-- 녹색: 수익 조합
-- 빨간색: 손실 조합
-- 최적 조합 식별 가능 (예: 상승+강화)
-
-#### Chart 10: 시간대별 추세 변화 (gs[3, 1])
-
-```python
-hourly_change = df_tsg.groupby('매수시').agg({
-    '등락율변화': 'mean',
-    '체결강도변화': 'mean',
-    '수익금': 'sum'
-})
-```
-
-#### Chart 11: 거래대금 변화율별 수익금 (gs[3, 2])
-
-```python
-bins_vol = [0, 0.5, 0.8, 1.0, 1.2, 1.5, 100]
-labels_vol = ['~50%', '50-80%', '80-100%', '100-120%', '120-150%', '150%+']
-df_tsg['거래대금변화구간'] = pd.cut(df_tsg['거래대금변화율'], bins=bins_vol, labels=labels_vol)
-```
-
-### 6.3 출력 예시
+### 6.4 출력 예시
 
 ```
-파일: backtester/graph/{전략명}_comparison.png
-크기: 20x16 인치 (2400x1920 픽셀)
+=== ML 특성 중요도 (정확도: 65.2%) ===
+
+1. 매수등락율     : 0.285 ████████████████████
+2. 매수체결강도   : 0.198 ██████████████
+3. 보유시간       : 0.156 ███████████
+4. 시가총액       : 0.142 ██████████
+5. 매수당일거래대금: 0.089 ██████
 ```
 
 ---
 
-## 7. 전체 분석 실행 (RunFullAnalysis)
+## 7. 필터 안정성 검증 (AnalyzeFilterStability)
 
 ### 7.1 함수 개요
 
-파일: `backtester/back_static.py:1814-1861`
-
 ```python
-def RunFullAnalysis(df_tsg, save_file_name, teleQ=None):
+def AnalyzeFilterStability(df_tsg, n_periods=5):
     """
-    전체 분석을 실행합니다 (CSV 출력 + 시각화).
+    필터 효과의 시간적 안정성을 검증합니다.
+
+    Args:
+        n_periods: 분할 기간 수 (기본 5개)
 
     Returns:
-        dict: 분석 결과 요약
-            - csv_files: (detail_path, summary_path, filter_path)
-            - charts: [comparison_chart_path]
-            - recommendations: [필터 추천 메시지 리스트]
+        일관성 점수 및 안정성 등급
     """
 ```
 
-### 7.2 실행 흐름
+### 7.2 안정성 점수 계산
 
 ```python
-def RunFullAnalysis(df_tsg, save_file_name, teleQ=None):
-    result = {
-        'csv_files': None,
-        'charts': [],
-        'recommendations': []
-    }
+# 5개 기간으로 분할하여 각 기간별 필터 효과 계산
+for period_df in periods:
+    improvement = -filtered_out['수익금'].sum()
+    period_improvements.append(improvement)
 
-    try:
-        # 1. 파생 지표 계산
-        df_analysis = CalculateDerivedMetrics(df_tsg)
+# 일관성 점수 계산
+positive_periods = sum(1 for x in improvements if x > 0)
+consistency_score = (positive_periods / n_periods) * 50
 
-        # 2. CSV 파일 출력 (3개 파일)
-        csv_paths = ExportBacktestCSV(df_analysis, save_file_name, teleQ)
-        result['csv_files'] = csv_paths
-
-        # 3. 매수/매도 비교 차트 생성
-        PltBuySellComparison(df_analysis, save_file_name, teleQ)
-        result['charts'].append(f"{GRAPH_PATH}/{save_file_name}_comparison.png")
-
-        # 4. 필터 추천 생성 (★★ 이상만)
-        filter_results = AnalyzeFilterEffects(df_analysis)
-        top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
-
-        for f in top_filters[:5]:
-            result['recommendations'].append(
-                f"[{f['분류']}] {f['필터명']}: 수익개선 {f['수익개선금액']:,}원 예상"
-            )
-
-        # 5. 텔레그램 요약 전송
-        if teleQ is not None and result['recommendations']:
-            msg = "📊 필터 추천:\n" + "\n".join(result['recommendations'])
-            teleQ.put(msg)
-
-    except Exception as e:
-        print_exc()
-
-    return result
+# 변동계수 반영
+if mean_improvement > 0:
+    cv = std_improvement / mean_improvement
+    consistency_score += max(0, 50 - cv * 50)
 ```
 
-### 7.3 출력 파일 목록
+### 7.3 안정성 등급
 
-| 파일명 | 내용 |
-|--------|------|
-| `{전략명}_detail.csv` | 전체 거래 상세 기록 (50개 컬럼) |
-| `{전략명}_summary.csv` | 조건별 요약 통계 |
-| `{전략명}_filter.csv` | 필터 효과 분석 결과 |
-| `{전략명}_analysis.png` | 데이터 분석 차트 (8개) |
-| `{전략명}_comparison.png` | 매수/매도 비교 차트 (11개) |
+| 일관성 점수 | 등급 | 의미 |
+|-------------|------|------|
+| >= 70 | 안정 | 모든 기간에서 일관된 효과 |
+| 40-70 | 보통 | 대부분 기간에서 효과 있음 |
+| < 40 | 불안정 | 기간별 변동 큼 (신뢰도 낮음) |
 
----
+### 7.4 출력 예시
 
-## 8. 호출 흐름 다이어그램
-
-```
-백테스팅 완료
-     │
-     ▼
-PltShow() [back_static.py:615]
-     │
-     ├──→ 기존 차트 생성 (수익곡선, 부가정보)
-     │    • {전략명}.png
-     │    • {전략명}_.png
-     │
-     ├──→ teleQ.put() → 텔레그램 전송 (완료 메시지 + 기존 차트)
-     │
-     ├──→ PltAnalysisCharts() [1042]
-     │    │
-     │    ├── 데이터 그룹화 (시간대별, 등락율별, 체결강도별...)
-     │    ├── 8개 서브차트 생성
-     │    ├── 저장: {전략명}_analysis.png
-     │    └── teleQ.put() → 텔레그램 전송
-     │
-     └──→ RunFullAnalysis() [1814]
-          │
-          ├── CalculateDerivedMetrics() [1275]
-          │    └── 파생 지표 계산 (변화량, 변화율, 추세, 위험도)
-          │
-          ├── ExportBacktestCSV() [1331]
-          │    ├── 상세 기록 CSV 저장
-          │    ├── 요약 통계 CSV 저장
-          │    └── 필터 분석 CSV 저장
-          │
-          ├── PltBuySellComparison() [1563]
-          │    ├── 11개 서브차트 생성
-          │    ├── 저장: {전략명}_comparison.png
-          │    └── teleQ.put() → 텔레그램 전송
-          │
-          ├── AnalyzeFilterEffects() [1447]
-          │    └── 필터별 수익 개선 효과 계산
-          │
-          └── 필터 추천 메시지 생성
-               └── teleQ.put() → 텔레그램 전송
+```csv
+분류,필터명,평균개선,표준편차,양수기간수,일관성점수,안정성등급
+등락율,매수등락율 >= 20,285000,42000,5,82.5,안정
+체결강도,매수체결강도 < 80,180000,95000,4,58.3,보통
+보유시간,보유시간 < 60,120000,180000,3,35.2,불안정
 ```
 
 ---
 
-## 9. 텔레그램 전송 내용 요약
+## 8. 조건식 코드 자동 생성 (GenerateFilterCode)
 
-### 9.1 전송 순서
+### 8.1 함수 개요
+
+```python
+def GenerateFilterCode(filter_results, top_n=5):
+    """
+    필터 분석 결과를 실제 적용 가능한 조건식 코드로 변환합니다.
+
+    Returns:
+        code_text: 주석 포함 코드 텍스트
+        buy_conditions: 매수 조건 리스트
+        individual_conditions: 개별 조건 상세
+    """
+```
+
+### 8.2 생성 코드 예시
+
+```python
+# ===== 자동 생성된 필터 조건 (백테스팅 분석 기반) =====
+
+# [등락율] 필터
+# - 등락율 22% 이상 제외: 수익개선 1,250,000원, 제외율 8.5%
+
+# [체결강도] 필터
+# - 체결강도 85 미만 제외: 수익개선 890,000원, 제외율 6.2%
+
+# [시가총액] 필터
+# - 시가총액 850억 미만 제외: 수익개선 720,000원, 제외율 5.8%
+
+# ===== 적용 예시 =====
+# 기존 매수 조건에 다음 필터를 AND 조건으로 추가:
+#
+# if 기존매수조건
+#     and 등락율 < 22
+#     and 체결강도 >= 85
+#     and 시가총액 >= 850
+#     매수 = True
+```
+
+---
+
+## 9. 강화된 시각화 차트 (PltEnhancedAnalysisCharts)
+
+### 9.1 생성되는 14개 차트
+
+| 위치 | 차트명 | 설명 |
+|------|--------|------|
+| gs[0,0:2] | 필터 효과 순위 | Top 10 필터 수평 막대 그래프 |
+| gs[0,2] | 통계적 유의성 분포 | 유의/비유의 파이 차트 |
+| gs[1,0] | ML 특성 중요도 | Gini 중요도 막대 그래프 |
+| gs[1,1] | 효과 크기 분포 | Cohen's d 히스토그램 |
+| gs[1,2] | 제외비율 vs 수익개선 | 트레이드오프 산점도 |
+| gs[2,0] | 시간대별 수익금 | 시간대별 막대 그래프 |
+| gs[2,1] | 등락율별 수익금 | 등락율 구간별 막대 그래프 |
+| gs[2,2] | 체결강도별 수익금 | 체결강도 구간별 막대 그래프 |
+| gs[3,0] | **거래품질 점수별** | 품질 점수 구간별 (NEW) |
+| gs[3,1] | **위험도 점수별** | 위험도 구간별 (ENHANCED) |
+| gs[3,2] | **리스크조정수익률 분포** | 분포 히스토그램 (NEW) |
+| gs[4,0] | 상관관계 히트맵 | 변수간 상관계수 |
+| gs[4,1] | 손실/이익 특성 비교 | 그룹별 평균 비교 |
+| gs[4,2] | 분석 요약 | 텍스트 요약 정보 |
+
+### 9.2 출력 파일
+
+```
+파일: backtester/graph/{전략명}_enhanced.png
+크기: 20x24 인치 (2400x2880 픽셀)
+해상도: 120 DPI
+```
+
+---
+
+## 10. CSV 출력 파일
+
+### 10.1 생성되는 5개 CSV 파일
+
+| 파일명 | 내용 | 행 수 |
+|--------|------|-------|
+| `{전략명}_enhanced_detail.csv` | 전체 거래 상세 + 20개 파생지표 | 거래 수 |
+| `{전략명}_filter_analysis.csv` | 강화된 필터 분석 (통계 포함) | 필터 수 |
+| `{전략명}_optimal_thresholds.csv` | 최적 임계값 탐색 결과 | 컬럼 수 × 2 |
+| `{전략명}_filter_combinations.csv` | 필터 조합 시너지 분석 | 조합 수 |
+| `{전략명}_filter_stability.csv` | 기간별 필터 안정성 | 주요 필터 수 |
+
+### 10.2 filter_analysis.csv 컬럼
+
+```csv
+분류,필터명,조건식,적용코드,제외거래수,제외비율,제외거래수익금,
+제외평균수익률,잔여거래수,잔여거래수익금,잔여평균수익률,수익개선금액,
+제외거래승률,잔여거래승률,t통계량,p값,효과크기,효과해석,
+신뢰구간,유의함,적용권장
+```
+
+---
+
+## 11. 텔레그램 전송 내용
+
+### 11.1 전송 순서 (v2.0)
 
 1. **텍스트**: `"{전략명} {날짜} 완료."`
 2. **이미지**: `{전략명}_.png` (부가정보 차트)
 3. **이미지**: `{전략명}.png` (수익곡선 차트)
-4. **이미지**: `{전략명}_analysis.png` (데이터 분석 차트)
-5. **이미지**: `{전략명}_comparison.png` (매수/매도 비교 차트)
-6. **텍스트**: 필터 추천 메시지
+4. **이미지**: `{전략명}_enhanced.png` (강화된 분석 차트 - 14개) **NEW**
+5. **텍스트**: 통계적 유의 필터 추천 **NEW**
+6. **텍스트**: 조합 필터 추천 **NEW**
+7. **텍스트**: 자동 생성 조건식 요약 **NEW**
 
-### 9.2 필터 추천 메시지 예시
+### 11.2 메시지 예시 (v2.0)
 
 ```
-📊 필터 추천:
-[시간대] 시간대 14시 제외: 수익개선 1,250,000원 예상
-[등락율] 등락율 25% 이상 제외: 수익개선 850,000원 예상
-[체결강도] 체결강도 80 미만 제외: 수익개선 320,000원 예상
-[위험신호] 위험도 60점 이상 제외: 수익개선 280,000원 예상
-[보유시간] 보유시간 30초 미만 제외: 수익개선 150,000원 예상
+📊 강화된 필터 분석 결과:
+
+[통계적 유의] 등락율 22% 이상 제외: +1,250,000원 (p=0.008)
+[통계적 유의] 체결강도 85 미만 제외: +890,000원 (p=0.023)
+[조합추천] 등락율 22% 이상 + 체결강도 85 미만: 시너지 +330,000원
+[안정성] 등락율 >= 20: 일관성 82.5점
+
+💡 자동 생성 필터 코드:
+총 3개 필터
+예상 총 개선: 2,860,000원
 ```
 
 ---
 
-## 10. 활용 가이드
+## 12. 전략 개선 프로세스 (v2.0)
 
-### 10.1 분석 결과 해석 순서
-
-1. **데이터 분석 차트** (`_analysis.png`) 확인
-   - 손실이 큰 구간 식별 (시간대, 등락율, 체결강도 등)
-   - 상관관계 확인 (어떤 변수가 수익률에 영향?)
-
-2. **매수/매도 비교 차트** (`_comparison.png`) 확인
-   - 등락율 변화 vs 수익률 산점도로 패턴 파악
-   - 필터 효과 파레토 차트로 우선순위 결정
-
-3. **필터 추천 메시지** 검토
-   - ★★★ 등급 필터 우선 적용 검토
-   - CSV 파일로 상세 분석
-
-### 10.2 전략 개선 프로세스
+### 12.1 분석 기반 의사결정 흐름
 
 ```
 1. 백테스팅 실행
      │
      ▼
-2. 텔레그램 차트 분석
+2. 강화된 분석 결과 확인
      │
-     ├── 손실 패턴 식별
-     │    • 특정 시간대 손실?
-     │    • 고등락 종목 손실?
-     │    • 체결강도 낮을 때 손실?
+     ├── 📊 통계적 유의성 확인
+     │    • p < 0.05 필터만 신뢰
+     │    • 효과 크기 '중간' 이상 권장
      │
-     ▼
-3. 필터 추천 확인
+     ├── 🔗 필터 조합 시너지 확인
+     │    • 시너지 비율 > 20% 조합 우선
+     │    • 중복 효과 조합 피하기
      │
-     ├── ★★★ 필터 적용 검토
-     │    • 제외 비율 확인 (너무 많으면 거래 기회 감소)
-     │    • 수익 개선 금액 확인
+     ├── 📈 ML 특성 중요도 확인
+     │    • 중요도 높은 변수 필터 우선
+     │    • 분기 규칙 참고
      │
-     ▼
-4. 조건식 수정
-     │
-     ├── 매수 조건에 필터 추가
-     │    예: 매수등락율 < 25 and 매수체결강도 >= 80
+     ├── ⏱️ 필터 안정성 확인
+     │    • '안정' 등급 필터만 적용
+     │    • '불안정' 필터는 추가 검증
      │
      ▼
-5. 재백테스팅
+3. 자동 생성 코드 활용
+     │
+     ├── 조건식 복사/붙여넣기
      │
      ▼
-6. 개선 효과 확인
+4. 재백테스팅
+     │
+     ▼
+5. 개선 효과 검증
 ```
 
-### 10.3 조건식 적용 예시
+### 12.2 신뢰도 높은 필터 선택 기준
 
-필터 추천에서 "등락율 25% 이상 제외"가 ★★★ 등급이면:
+**적용 추천 조건 (모두 충족 시)**:
+- ✅ 통계적으로 유의함 (p < 0.05)
+- ✅ 효과 크기 '중간' 이상 (Cohen's d > 0.5)
+- ✅ 안정성 등급 '안정' (일관성 > 70)
+- ✅ 제외 비율 30% 이하 (거래 기회 유지)
+- ✅ 수익 개선 > 총수익 × 5%
+
+---
+
+## 13. 관련 파일 요약 (v2.0)
+
+| 파일 | 함수/클래스 | 역할 |
+|------|------------|------|
+| `back_static.py` | `PltShow()` | 메인 차트 생성 + 강화 분석 호출 |
+| `back_analysis_enhanced.py` | `CalculateEnhancedDerivedMetrics()` | 20개 파생 지표 계산 |
+| `back_analysis_enhanced.py` | `CalculateStatisticalSignificance()` | t-test, Cohen's d |
+| `back_analysis_enhanced.py` | `AnalyzeFilterEffectsEnhanced()` | 통계 포함 필터 분석 |
+| `back_analysis_enhanced.py` | `FindOptimalThresholds()` | 최적 임계값 탐색 |
+| `back_analysis_enhanced.py` | `FindAllOptimalThresholds()` | 모든 컬럼 임계값 탐색 |
+| `back_analysis_enhanced.py` | `AnalyzeFilterCombinations()` | 필터 조합 시너지 |
+| `back_analysis_enhanced.py` | `AnalyzeFeatureImportance()` | ML 특성 중요도 |
+| `back_analysis_enhanced.py` | `AnalyzeFilterStability()` | 기간별 안정성 |
+| `back_analysis_enhanced.py` | `GenerateFilterCode()` | 조건식 코드 생성 |
+| `back_analysis_enhanced.py` | `PltEnhancedAnalysisCharts()` | 14개 강화 차트 |
+| `back_analysis_enhanced.py` | `RunEnhancedAnalysis()` | 전체 강화 분석 실행 |
+
+---
+
+## 부록 A: 의존성 요구사항
 
 ```python
-# 기존 매수 조건
-if 매수조건1 and 매수조건2:
-    매수 = True
+# 기본 (기존)
+numpy
+pandas
+matplotlib
 
-# 개선된 매수 조건
-if 매수조건1 and 매수조건2 and 등락율 < 25:
-    매수 = True
+# 통계 (NEW)
+scipy  # t-test, 정규분포
+
+# 머신러닝 (NEW - 선택적)
+scikit-learn  # DecisionTreeClassifier, StandardScaler
 ```
 
 ---
 
-## 11. 관련 파일 요약
+## 부록 B: 성능 고려사항
 
-| 파일 | 함수 | 역할 |
-|------|------|------|
-| `backengine_kiwoom_tick.py` | `CalculationEyun()` | 매수/매도 시장 데이터 수집 |
-| `back_static.py` | `PltShow()` | 메인 차트 생성 및 분석 호출 |
-| `back_static.py` | `PltAnalysisCharts()` | 데이터 분석 차트 (8개) |
-| `back_static.py` | `CalculateDerivedMetrics()` | 파생 지표 계산 |
-| `back_static.py` | `AnalyzeFilterEffects()` | 필터 효과 분석 |
-| `back_static.py` | `PltBuySellComparison()` | 매수/매도 비교 차트 (11개) |
-| `back_static.py` | `RunFullAnalysis()` | 전체 분석 실행 |
-| `back_static.py` | `ExportBacktestCSV()` | CSV 파일 출력 |
-| `utility/telegram_msg.py` | - | 텔레그램 이미지/텍스트 전송 |
+| 분석 단계 | 시간 복잡도 | 예상 시간 (1000거래) |
+|-----------|-------------|---------------------|
+| 파생 지표 계산 | O(n) | < 1초 |
+| 단일 필터 분석 | O(n × m) | 2-3초 |
+| 최적 임계값 탐색 | O(n × m × 20) | 5-10초 |
+| 필터 조합 분석 | O(n × C(m,2)) | 10-20초 |
+| ML 특성 중요도 | O(n × log n) | 2-3초 |
+| 안정성 분석 | O(n × m × 5) | 5-10초 |
+| 차트 생성 | O(n) | 3-5초 |
+| **총 시간** | - | **약 30-50초** |
 
 ---
 
-## 부록 A: 데이터 컬럼 인덱스 참조표
+## 부록 C: 버전 히스토리
 
-`arry_data` 배열의 컬럼 인덱스:
-
-| 인덱스 | 컬럼명 | 설명 |
-|--------|--------|------|
-| 0 | index | 타임스탬프 (YYYYMMDDHHMMSS) |
-| 1 | 현재가 | 현재 체결가 |
-| 2 | 시가 | 당일 시가 |
-| 3 | 고가 | 당일 고가 |
-| 4 | 저가 | 당일 저가 |
-| 5 | 등락율 | 전일 대비 등락률 (%) |
-| 6 | 당일거래대금 | 당일 누적 거래대금 |
-| 7 | 체결강도 | 매수/매도 체결 비율 |
-| 9 | 전일비 | 전일 거래량 대비 비율 |
-| 10 | 회전율 | 상장주식 대비 거래량 비율 |
-| 11 | 전일동시간비 | 전일 동시간 대비 거래량 |
-| 12 | 시가총액 | 종목 시가총액 (억원) |
-| 17 | 고저평균대비등락율 | 고저평균가 대비 등락률 |
-| 18 | 매도총잔량 | 매도호가 1~5 잔량합 |
-| 19 | 매수총잔량 | 매수호가 1~5 잔량합 |
-| 24 | 매도호가1 | 최우선 매도호가 |
-| 25 | 매수호가1 | 최우선 매수호가 |
+| 버전 | 날짜 | 변경 사항 |
+|------|------|----------|
+| v1.0 | 2025-12-09 | 초기 문서 (기본 분석) |
+| v2.0 | 2025-12-10 | 강화된 분석 기능 추가 |
 
 ---
 
