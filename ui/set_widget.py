@@ -451,20 +451,62 @@ class WidgetCreater:
             tableWidget.setColumnWidth(4, 62)
             tableWidget.setColumnWidth(5, 62)
         elif columns == columns_bt:
-            tableWidget.setColumnWidth(0, 87)
-            tableWidget.setColumnWidth(1, 60)
-            tableWidget.setColumnWidth(2, 130)
-            tableWidget.setColumnWidth(3, 130)
-            tableWidget.setColumnWidth(4, 60)
-            tableWidget.setColumnWidth(5, 60)
-            tableWidget.setColumnWidth(6, 60)
-            tableWidget.setColumnWidth(7, 80)
-            tableWidget.setColumnWidth(8, 80)
-            tableWidget.setColumnWidth(9, 60)
-            tableWidget.setColumnWidth(10, 90)
-            tableWidget.setColumnWidth(11, 90)
-            tableWidget.setColumnWidth(12, 600)
-            tableWidget.setColumnWidth(13, 750)
+            # [2025-12-08] 백테스팅 상세기록 테이블 확장 - 매수/매도 시점 컬럼 너비 설정
+            tableWidget.setColumnWidth(0, 87)    # 종목명
+            tableWidget.setColumnWidth(1, 60)    # 시가총액/포지션
+            tableWidget.setColumnWidth(2, 130)   # 매수시간
+            tableWidget.setColumnWidth(3, 130)   # 매도시간
+            tableWidget.setColumnWidth(4, 60)    # 보유시간
+            tableWidget.setColumnWidth(5, 60)    # 매수가
+            tableWidget.setColumnWidth(6, 60)    # 매도가
+            tableWidget.setColumnWidth(7, 80)    # 매수금액
+            tableWidget.setColumnWidth(8, 80)    # 매도금액
+            tableWidget.setColumnWidth(9, 60)    # 수익률
+            tableWidget.setColumnWidth(10, 90)   # 수익금
+            tableWidget.setColumnWidth(11, 90)   # 수익금합계
+            tableWidget.setColumnWidth(12, 200)  # 매도조건
+            tableWidget.setColumnWidth(13, 100)  # 추가매수시간
+            # Phase 1: 매수 시간 분해 컬럼
+            tableWidget.setColumnWidth(14, 70)   # 매수일자
+            tableWidget.setColumnWidth(15, 40)   # 매수시
+            tableWidget.setColumnWidth(16, 40)   # 매수분
+            tableWidget.setColumnWidth(17, 40)   # 매수초
+            # Phase 2: 매수 시점 시장 데이터 컬럼
+            tableWidget.setColumnWidth(18, 65)   # 매수등락율
+            tableWidget.setColumnWidth(19, 75)   # 매수시가등락율
+            tableWidget.setColumnWidth(20, 90)   # 매수당일거래대금
+            tableWidget.setColumnWidth(21, 70)   # 매수체결강도
+            tableWidget.setColumnWidth(22, 60)   # 매수전일비
+            tableWidget.setColumnWidth(23, 60)   # 매수회전율
+            tableWidget.setColumnWidth(24, 80)   # 매수전일동시간비
+            tableWidget.setColumnWidth(25, 60)   # 매수고가
+            tableWidget.setColumnWidth(26, 60)   # 매수저가
+            tableWidget.setColumnWidth(27, 100)  # 매수고저평균대비등락율
+            # Phase 3: 매수 시점 호가 데이터 컬럼
+            tableWidget.setColumnWidth(28, 80)   # 매수매도총잔량
+            tableWidget.setColumnWidth(29, 80)   # 매수매수총잔량
+            tableWidget.setColumnWidth(30, 70)   # 매수호가잔량비
+            tableWidget.setColumnWidth(31, 75)   # 매수매도호가1
+            tableWidget.setColumnWidth(32, 75)   # 매수매수호가1
+            tableWidget.setColumnWidth(33, 70)   # 매수스프레드
+            # Phase 4: 매도 시점 시장 데이터 컬럼
+            tableWidget.setColumnWidth(34, 65)   # 매도등락율
+            tableWidget.setColumnWidth(35, 75)   # 매도시가등락율
+            tableWidget.setColumnWidth(36, 90)   # 매도당일거래대금
+            tableWidget.setColumnWidth(37, 70)   # 매도체결강도
+            tableWidget.setColumnWidth(38, 60)   # 매도전일비
+            tableWidget.setColumnWidth(39, 60)   # 매도회전율
+            tableWidget.setColumnWidth(40, 80)   # 매도전일동시간비
+            tableWidget.setColumnWidth(41, 60)   # 매도고가
+            tableWidget.setColumnWidth(42, 60)   # 매도저가
+            tableWidget.setColumnWidth(43, 100)  # 매도고저평균대비등락율
+            # Phase 5: 매도 시점 호가 데이터 컬럼
+            tableWidget.setColumnWidth(44, 80)   # 매도매도총잔량
+            tableWidget.setColumnWidth(45, 80)   # 매도매수총잔량
+            tableWidget.setColumnWidth(46, 70)   # 매도호가잔량비
+            tableWidget.setColumnWidth(47, 75)   # 매도매도호가1
+            tableWidget.setColumnWidth(48, 75)   # 매도매수호가1
+            tableWidget.setColumnWidth(49, 70)   # 매도스프레드
         elif columns in (columns_stg1, columns_stg2):
             tableWidget.setColumnWidth(0, 125)
             tableWidget.setColumnWidth(1, 125)

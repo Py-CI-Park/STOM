@@ -14,6 +14,23 @@ from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time, thread_decorator
 from utility.setting import ui_num, GRAPH_PATH, DB_SETTING, DB_OPTUNA
 
+# [2025-12-10] 강화된 분석 모듈 임포트
+try:
+    from backtester.back_analysis_enhanced import (
+        CalculateEnhancedDerivedMetrics,
+        AnalyzeFilterEffectsEnhanced,
+        FindAllOptimalThresholds,
+        AnalyzeFilterCombinations,
+        AnalyzeFeatureImportance,
+        AnalyzeFilterStability,
+        GenerateFilterCode,
+        PltEnhancedAnalysisCharts,
+        RunEnhancedAnalysis
+    )
+    ENHANCED_ANALYSIS_AVAILABLE = True
+except ImportError:
+    ENHANCED_ANALYSIS_AVAILABLE = False
+
 
 @thread_decorator
 def RunOptunaServer():
@@ -826,6 +843,22 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     teleQ.put(f'{backname} {save_file_name.split("_")[1]} 완료.')
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}_.png")
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}.png")
+
+    # [2025-12-08] 분석 차트 생성 및 텔레그램 전송
+    PltAnalysisCharts(df_tsg, save_file_name, teleQ)
+
+    # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
+    RunFullAnalysis(df_tsg, save_file_name, teleQ)
+
+    # [2025-12-10] 강화된 분석 실행
+    if ENHANCED_ANALYSIS_AVAILABLE:
+        try:
+            analysis_result = RunEnhancedAnalysis(df_tsg, save_file_name, teleQ)
+            if analysis_result and analysis_result.get('recommendations'):
+                for rec in analysis_result['recommendations'][:5]:
+                    teleQ.put(rec)
+        except Exception as e:
+            print_exc()
 
     if not schedul and not plotgraph:
         plt.show()
