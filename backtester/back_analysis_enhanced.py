@@ -14,6 +14,7 @@ Author: Claude
 Date: 2025-12-10
 """
 
+import warnings
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -22,6 +23,9 @@ from traceback import print_exc
 from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
 from utility.setting import GRAPH_PATH
+
+# [2025-12-10] matplotlib 한글 폰트 경고 억제
+warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
 
 
 # ============================================================================
@@ -1068,14 +1072,19 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         return
 
     try:
-        # 한글 폰트 설정
+        # [2025-12-10] 한글 폰트 설정 (back_static.py와 동일한 방식)
         font_path = 'C:/Windows/Fonts/malgun.ttf'
         try:
-            font_manager.fontManager.addfont(font_path)
-            plt.rcParams['font.family'] = 'Malgun Gothic'
+            font_family = font_manager.FontProperties(fname=font_path).get_name()
+            plt.rcParams['font.family'] = font_family
+            plt.rcParams['font.sans-serif'] = [font_family]
         except:
-            pass
+            # Fallback: 기본 설정
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+            plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
+
         plt.rcParams['axes.unicode_minus'] = False
+        plt.rcParams['axes.grid'] = True
 
         fig = plt.figure(figsize=(20, 24))
         fig.suptitle(f'강화된 백테스팅 분석 - {save_file_name}', fontsize=16, fontweight='bold')
@@ -1344,13 +1353,18 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
                 """
 
         ax14.text(0.1, 0.9, summary_text, transform=ax14.transAxes, fontsize=10,
-                 verticalalignment='top', fontfamily='monospace',
+                 verticalalignment='top',
                  bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
         # 저장 및 전송
-        plt.tight_layout(rect=[0, 0.02, 1, 0.97])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            plt.tight_layout(rect=[0, 0.02, 1, 0.97])
+
         analysis_path = f"{GRAPH_PATH}/{save_file_name}_enhanced.png"
-        plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
         if teleQ is not None:

@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from optuna_dashboard import run_server
 from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time, thread_decorator
-from utility.setting import ui_num, GRAPH_PATH, DB_SETTING, DB_OPTUNA
+from utility.setting import ui_num, GRAPH_PATH, DB_SETTING, DB_OPTUNA, columns_bt, columns_btf
 
 # [2025-12-10] 강화된 분석 모듈 임포트
 try:
@@ -844,13 +844,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}_.png")
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}.png")
 
-    # [2025-12-08] 분석 차트 생성 및 텔레그램 전송
-    PltAnalysisCharts(df_tsg, save_file_name, teleQ)
-
-    # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
-    RunFullAnalysis(df_tsg, save_file_name, teleQ)
-
     # [2025-12-10] 강화된 분석 실행
+    # NOTE: PltAnalysisCharts와 RunFullAnalysis는 commit에서 호출만 추가되고 정의는 누락됨
+    # 강화된 분석 모듈(back_analysis_enhanced.py)이 동일한 기능을 제공하므로 해당 모듈 사용
     if ENHANCED_ANALYSIS_AVAILABLE:
         try:
             analysis_result = RunEnhancedAnalysis(df_tsg, save_file_name, teleQ)
@@ -865,14 +861,19 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
 
 
 def GetResultDataframe(ui_gubun, list_tsg, arry_bct):
-    columns1 = [
-        'index', '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간',
-        '보유시간', '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '매도조건', '추가매수시간'
-    ]
-    columns2 = [
-        '종목명', '시가총액' if ui_gubun != 'CF' else '포지션', '매수시간', '매도시간', '보유시간', '매수가', '매도가',
-        '매수금액', '매도금액', '수익률', '수익금', '수익금합계', '매도조건', '추가매수시간'
-    ]
+    # [2025-12-10] 확장된 50개 컬럼 사용 (매수/매도 시점 시장 데이터 포함)
+    # list_tsg에는 'index'가 포함되지만 '수익금합계'는 없음 (나중에 cumsum으로 계산)
+    if ui_gubun in ['CT', 'CF']:
+        # 코인: 포지션 컬럼 사용
+        columns_without_sum = [col for col in columns_btf if col != '수익금합계']
+        columns1 = ['index'] + columns_without_sum
+        columns2 = columns_btf
+    else:
+        # 주식: 시가총액 컬럼 사용
+        columns_without_sum = [col for col in columns_bt if col != '수익금합계']
+        columns1 = ['index'] + columns_without_sum
+        columns2 = columns_bt
+
     df_tsg = pd.DataFrame(list_tsg, columns=columns1)
     df_tsg.set_index('index', inplace=True)
     df_tsg.sort_index(inplace=True)
