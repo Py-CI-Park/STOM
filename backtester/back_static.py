@@ -844,6 +844,12 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}_.png")
     teleQ.put(f"{GRAPH_PATH}/{save_file_name}.png")
 
+    # [2025-12-08] 분석 차트 생성 및 텔레그램 전송
+    PltAnalysisCharts(df_tsg, save_file_name, teleQ)
+
+    # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
+    RunFullAnalysis(df_tsg, save_file_name, teleQ)
+
     # [2025-12-10] 강화된 분석 실행
     if ENHANCED_ANALYSIS_AVAILABLE:
         try:
