@@ -1058,6 +1058,84 @@ def GenerateFilterCode(filter_results, top_n=5):
 # 9. 강화된 시각화 차트
 # ============================================================================
 
+def _plot_profit_by_category(ax, df, column, title, xlabel, color_profit, color_loss):
+    """단일 범주 컬럼에 대한 수익금/승률 분포를 그립니다."""
+    if column not in df.columns:
+        return
+
+    grouped = df.groupby(column).agg(
+        수익금=('수익금', 'sum'),
+        거래수=('수익금', 'count'),
+        승률=('수익금', lambda s: (s > 0).mean() * 100)
+    ).reset_index()
+
+    if grouped.empty:
+        return
+
+    grouped.sort_values(column, inplace=True)
+
+    x = range(len(grouped))
+    colors = [color_profit if v >= 0 else color_loss for v in grouped['수익금']]
+
+    bars = ax.bar(x, grouped['수익금'], color=colors, edgecolor='black', linewidth=0.5)
+    ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(grouped[column], rotation=45)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('총 수익금')
+    ax.set_title(title)
+
+    for bar, cnt in zip(bars, grouped['거래수']):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'n={cnt}',
+                ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=8)
+
+    # 승률 라인 추가 (중복된 차트 대신 인사이트 보강)
+    ax_win = ax.twinx()
+    ax_win.plot(x, grouped['승률'], color='#34495E', marker='o', linewidth=1.5, label='승률')
+    ax_win.set_ylabel('승률 (%)')
+    ax_win.set_ylim(0, 100)
+    ax_win.legend(loc='upper right', fontsize=8)
+
+
+def _plot_profit_by_bins(ax, df, column, bins, labels, title, xlabel, color_profit, color_loss):
+    """연속형 컬럼을 구간화하여 수익금/승률 분포를 그립니다."""
+    if column not in df.columns:
+        return
+
+    df_temp = df.copy()
+    df_temp['구간'] = pd.cut(df_temp[column], bins=bins, labels=labels, right=False)
+
+    grouped = df_temp.groupby('구간', observed=True).agg(
+        수익금=('수익금', 'sum'),
+        거래수=('수익금', 'count'),
+        승률=('수익금', lambda s: (s > 0).mean() * 100)
+    ).reset_index()
+
+    if grouped.empty:
+        return
+
+    x = range(len(grouped))
+    colors = [color_profit if v >= 0 else color_loss for v in grouped['수익금']]
+
+    bars = ax.bar(x, grouped['수익금'], color=colors, edgecolor='black', linewidth=0.5)
+    ax.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(grouped['구간'], rotation=45)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('총 수익금')
+    ax.set_title(title)
+
+    for bar, cnt in zip(bars, grouped['거래수']):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(), f'n={cnt}',
+                ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=8)
+
+    ax_win = ax.twinx()
+    ax_win.plot(x, grouped['승률'], color='#34495E', marker='o', linewidth=1.5, label='승률')
+    ax_win.set_ylabel('승률 (%)')
+    ax_win.set_ylim(0, 100)
+    ax_win.legend(loc='upper right', fontsize=8)
+
+
 def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None, feature_importance=None):
     """
     강화된 분석 차트를 생성합니다.
@@ -1087,7 +1165,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         plt.rcParams['axes.grid'] = True
 
         fig = plt.figure(figsize=(20, 24))
-        fig.suptitle(f'강화된 백테스팅 분석 - {save_file_name}', fontsize=16, fontweight='bold')
+        fig.suptitle(f'강화된 통합 백테스팅 분석 - {save_file_name}', fontsize=16, fontweight='bold')
 
         gs = gridspec.GridSpec(5, 3, figure=fig, hspace=0.4, wspace=0.3)
 
@@ -1172,88 +1250,55 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
             ax5.set_ylabel('수익 개선 금액')
             ax5.set_title('제외비율 vs 수익개선 트레이드오프')
 
-        # ============ Chart 6-8: 기존 분석 차트 (시간대, 등락율, 체결강도) ============
-        # 시간대별
+        # ============ Chart 6-10: 통합 분포 차트 (기본/강화 중복 제거) ============
         ax6 = fig.add_subplot(gs[2, 0])
-        if '매수시' in df_tsg.columns:
-            df_hour = df_tsg.groupby('매수시').agg({'수익금': 'sum', '수익률': 'mean'}).reset_index()
-            colors = [color_profit if x >= 0 else color_loss for x in df_hour['수익금']]
-            ax6.bar(df_hour['매수시'], df_hour['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax6.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax6.set_xlabel('매수 시간대')
-            ax6.set_ylabel('총 수익금')
-            ax6.set_title('시간대별 수익금')
+        _plot_profit_by_category(
+            ax6, df_tsg, '매수시', '시간대별 수익금 및 승률', '매수 시간대', color_profit, color_loss
+        )
 
-        # 등락율별
         ax7 = fig.add_subplot(gs[2, 1])
-        if '매수등락율' in df_tsg.columns:
-            bins = [0, 5, 10, 15, 20, 25, 30, 100]
-            labels = ['0-5', '5-10', '10-15', '15-20', '20-25', '25-30', '30+']
-            df_tsg['등락율구간'] = pd.cut(df_tsg['매수등락율'], bins=bins, labels=labels, right=False)
-            df_rate = df_tsg.groupby('등락율구간', observed=True).agg({'수익금': 'sum'}).reset_index()
-            colors = [color_profit if x >= 0 else color_loss for x in df_rate['수익금']]
-            ax7.bar(range(len(df_rate)), df_rate['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax7.set_xticks(range(len(df_rate)))
-            ax7.set_xticklabels(df_rate['등락율구간'], rotation=45)
-            ax7.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax7.set_xlabel('등락율 구간 (%)')
-            ax7.set_ylabel('총 수익금')
-            ax7.set_title('등락율별 수익금')
+        _plot_profit_by_bins(
+            ax7, df_tsg, '매수등락율',
+            bins=[0, 5, 10, 15, 20, 25, 30, 100],
+            labels=['0-5', '5-10', '10-15', '15-20', '20-25', '25-30', '30+'],
+            title='등락율 구간별 수익금·승률',
+            xlabel='등락율 구간 (%)',
+            color_profit=color_profit,
+            color_loss=color_loss
+        )
 
-        # 체결강도별
         ax8 = fig.add_subplot(gs[2, 2])
-        if '매수체결강도' in df_tsg.columns:
-            bins = [0, 80, 100, 120, 150, 200, 500]
-            labels = ['~80', '80-100', '100-120', '120-150', '150-200', '200+']
-            df_tsg['체결강도구간'] = pd.cut(df_tsg['매수체결강도'], bins=bins, labels=labels, right=False)
-            df_ch = df_tsg.groupby('체결강도구간', observed=True).agg({'수익금': 'sum'}).reset_index()
-            colors = [color_profit if x >= 0 else color_loss for x in df_ch['수익금']]
-            ax8.bar(range(len(df_ch)), df_ch['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax8.set_xticks(range(len(df_ch)))
-            ax8.set_xticklabels(df_ch['체결강도구간'], rotation=45)
-            ax8.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax8.set_xlabel('체결강도 구간')
-            ax8.set_ylabel('총 수익금')
-            ax8.set_title('체결강도별 수익금')
+        _plot_profit_by_bins(
+            ax8, df_tsg, '매수체결강도',
+            bins=[0, 80, 100, 120, 150, 200, 500],
+            labels=['~80', '80-100', '100-120', '120-150', '150-200', '200+'],
+            title='체결강도 구간별 수익금·승률',
+            xlabel='체결강도 구간',
+            color_profit=color_profit,
+            color_loss=color_loss
+        )
 
-        # ============ Chart 9: 거래품질점수별 수익금 ============
         ax9 = fig.add_subplot(gs[3, 0])
-        if '거래품질점수' in df_tsg.columns:
-            bins = [0, 30, 40, 50, 60, 70, 100]
-            labels = ['~30', '30-40', '40-50', '50-60', '60-70', '70+']
-            df_tsg['품질구간'] = pd.cut(df_tsg['거래품질점수'], bins=bins, labels=labels, right=False)
-            df_qual = df_tsg.groupby('품질구간', observed=True).agg({'수익금': 'sum', '종목명': 'count'}).reset_index()
-            df_qual.columns = ['품질구간', '수익금', '거래수']
-            colors = [color_profit if x >= 0 else color_loss for x in df_qual['수익금']]
-            bars = ax9.bar(range(len(df_qual)), df_qual['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax9.set_xticks(range(len(df_qual)))
-            ax9.set_xticklabels(df_qual['품질구간'], rotation=45)
-            ax9.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax9.set_xlabel('거래품질 점수')
-            ax9.set_ylabel('총 수익금')
-            ax9.set_title('거래품질 점수별 수익금 (NEW)')
+        _plot_profit_by_bins(
+            ax9, df_tsg, '거래품질점수',
+            bins=[0, 30, 40, 50, 60, 70, 100],
+            labels=['~30', '30-40', '40-50', '50-60', '60-70', '70+'],
+            title='거래품질 점수별 성과(통합)',
+            xlabel='거래품질 점수',
+            color_profit=color_profit,
+            color_loss=color_loss
+        )
 
-            # 거래수 표시
-            for i, (bar, cnt) in enumerate(zip(bars, df_qual['거래수'])):
-                ax9.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
-                        f'n={cnt}', ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=8)
-
-        # ============ Chart 10: 위험도점수별 수익금 ============
         ax10 = fig.add_subplot(gs[3, 1])
-        if '위험도점수' in df_tsg.columns:
-            bins = [0, 20, 40, 60, 80, 100]
-            labels = ['0-20', '20-40', '40-60', '60-80', '80-100']
-            df_tsg['위험도구간'] = pd.cut(df_tsg['위험도점수'], bins=bins, labels=labels, right=False)
-            df_risk = df_tsg.groupby('위험도구간', observed=True).agg({'수익금': 'sum', '종목명': 'count'}).reset_index()
-            df_risk.columns = ['위험도구간', '수익금', '거래수']
-            colors = [color_profit if x >= 0 else color_loss for x in df_risk['수익금']]
-            bars = ax10.bar(range(len(df_risk)), df_risk['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax10.set_xticks(range(len(df_risk)))
-            ax10.set_xticklabels(df_risk['위험도구간'], rotation=45)
-            ax10.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax10.set_xlabel('위험도 점수')
-            ax10.set_ylabel('총 수익금')
-            ax10.set_title('위험도 점수별 수익금 (ENHANCED)')
+        _plot_profit_by_bins(
+            ax10, df_tsg, '위험도점수',
+            bins=[0, 20, 40, 60, 80, 100],
+            labels=['0-20', '20-40', '40-60', '60-80', '80-100'],
+            title='위험도 점수별 성과(통합)',
+            xlabel='위험도 점수',
+            color_profit=color_profit,
+            color_loss=color_loss
+        )
 
         # ============ Chart 11: 리스크조정수익률 분포 ============
         ax11 = fig.add_subplot(gs[3, 2])
@@ -1508,7 +1553,11 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
 
             # 조건식 코드
             if generated_code and generated_code.get('summary'):
-                code_msg = f"💡 자동 생성 필터 코드:\n총 {generated_code['summary']['total_filters']}개 필터\n예상 총 개선: {generated_code['summary']['total_improvement']:,}원"
+                code_msg = (
+                    "💡 자동 생성 필터 코드:\n"
+                    f"총 {generated_code['summary']['total_filters']}개 필터\n"
+                    f"예상 총 개선: {generated_code['summary']['total_improvement']:,}원"
+                )
                 teleQ.put(code_msg)
 
     except Exception as e:
