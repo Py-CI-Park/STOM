@@ -26,17 +26,57 @@
     - [매수·매도 통합 최적화 범위 - C\_T\_900\_920\_U2\_OR](#매수매도-통합-최적화-범위---c_t_900_920_u2_or)
     - [예상 시간 계산](#예상-시간-계산)
     - [GA 최적화 범위 - C\_T\_900\_920\_U2\_GAR](#ga-최적화-범위---c_t_900_920_u2_gar)
+  - [최적화 조건식](#최적화-조건식-1)
+  - [BO (Buy Optimization)](#bo-buy-optimization)
+  - [BOR (Buy Optimization Range)](#bor-buy-optimization-range)
+  - [SO (Sell Optimization)](#so-sell-optimization)
+  - [SOR (Sell Optimization Range)](#sor-sell-optimization-range)
+  - [OR (Optimum Range)](#or-optimum-range)
+  - [GAR (Genetic Algorithm Range)](#gar-genetic-algorithm-range)
   - [조건식 개선 방향 연구](#조건식-개선-방향-연구)
     - [1. 추가 지표 활용 연구](#1-추가-지표-활용-연구)
+      - [1.1 누적거래대금비율](#11-누적거래대금비율)
+      - [1.2 초당순매수비율](#12-초당순매수비율)
+      - [1.3 거래대금가속도](#13-거래대금가속도)
+      - [1.4 체결강도가속도](#14-체결강도가속도)
     - [2. TA-Lib 보조지표 활용 연구](#2-ta-lib-보조지표-활용-연구)
+      - [2.1 볼린저 밴드 (BBU, BBM, BBL)](#21-볼린저-밴드-bbu-bbm-bbl)
+      - [2.2 MACD 지표](#22-macd-지표)
+      - [2.3 RSI 지표](#23-rsi-지표)
+      - [2.4 이동평균선 (MA)](#24-이동평균선-ma)
     - [3. 구간 연산 변수 활용 연구](#3-구간-연산-변수-활용-연구)
+      - [3.1 등락율각도 세분화](#31-등락율각도-세분화)
+      - [3.2 체결강도평균 활용](#32-체결강도평균-활용)
+      - [3.3 최고/최저 변수 활용](#33-최고최저-변수-활용)
     - [4. 매도 조건 고도화 연구](#4-매도-조건-고도화-연구)
+      - [4.1 시가총액별 손절 기준 차등화](#41-시가총액별-손절-기준-차등화)
+      - [4.2 보유시간별 익절 기준 차등화](#42-보유시간별-익절-기준-차등화)
+      - [4.3 동적 Trailing Stop](#43-동적-trailing-stop)
     - [5. 복합 지표 조합 연구](#5-복합-지표-조합-연구)
+      - [5.1 매수세 강도 지수 (Buy Pressure Index)](#51-매수세-강도-지수-buy-pressure-index)
+      - [5.2 거래 신뢰도 지수 (Trade Reliability Index)](#52-거래-신뢰도-지수-trade-reliability-index)
+      - [5.3 모멘텀 지속성 지수 (Momentum Persistence Index)](#53-모멘텀-지속성-지수-momentum-persistence-index)
     - [6. 시간대별 전략 세분화 연구](#6-시간대별-전략-세분화-연구)
+      - [6.1 09:00~09:05 구간 3분할](#61-09000905-구간-3분할)
+      - [6.2 시간 경과 가중치 시스템](#62-시간-경과-가중치-시스템)
     - [7. 최적화 전략 개선 연구](#7-최적화-전략-개선-연구)
+      - [7.1 계층적 최적화 (Hierarchical Optimization)](#71-계층적-최적화-hierarchical-optimization)
+      - [7.2 앙상블 최적화](#72-앙상블-최적화)
+      - [7.3 강건성 테스트 (Robustness Test)](#73-강건성-테스트-robustness-test)
     - [8. 리스크 관리 강화 연구](#8-리스크-관리-강화-연구)
+      - [8.1 포지션 사이징 (Position Sizing)](#81-포지션-사이징-position-sizing)
+      - [8.2 동시 보유 종목 수 제한](#82-동시-보유-종목-수-제한)
+      - [8.3 연속 손실 제한](#83-연속-손실-제한)
+      - [8.4 일일 손실 한도 (Daily Loss Limit)](#84-일일-손실-한도-daily-loss-limit)
     - [9. 백테스팅 개선 방향](#9-백테스팅-개선-방향)
+      - [9.1 슬리피지 (Slippage) 반영](#91-슬리피지-slippage-반영)
+      - [9.2 시장 충격 (Market Impact)](#92-시장-충격-market-impact)
+      - [9.3 체결 지연 (Execution Delay)](#93-체결-지연-execution-delay)
     - [10. 구현 우선순위](#10-구현-우선순위)
+      - [10.1 즉시 적용 가능 (High Priority)](#101-즉시-적용-가능-high-priority)
+      - [10.2 단기 적용 (Medium Priority, 1~2주)](#102-단기-적용-medium-priority-12주)
+      - [10.3 중장기 연구 (Low Priority, 1~2개월)](#103-중장기-연구-low-priority-12개월)
+      - [10.4 최적화 실행 계획 (2~3주)](#104-최적화-실행-계획-23주)
   - [태그](#태그)
 
 ## 개요
@@ -178,22 +218,19 @@
 # ================================
 매수 = True
 
-
 # 1. 공통 필터
 if not (관심종목 == 1):                         # 관심종목 필터
     매수 = False
 elif not (1000 <= 현재가 <= 50000):              # 가격대 필터 (1,000원 ~ 50,000원)
     매수 = False
-elif not (당일거래대금 >= 5_000_000_000):        # 최소 당일거래대금 50억 이상
+elif not (당일거래대금 >= 3 * 100):        # 최소 당일거래대금 3억(300백만) 이상
     매수 = False
 
-
 # 2. 기본 추세/모멘텀 필터
-elif not (등락율 >= 1.0):                       # 최소 등락율 1% 이상
+elif not (등락율 >= 0.5):                       # 최소 등락율 0.5% 이상
     매수 = False
 elif not (고저평균대비등락율 > 0):               # 고가·저가 평균 대비 현재가 위치
     매수 = False
-
 
 # 3. 리스크 관리 필터
 elif not (현재가 < VI아래5호가):                # VI 발동 리스크 회피
@@ -201,6 +238,35 @@ elif not (현재가 < VI아래5호가):                # VI 발동 리스크 회
 elif 라운드피겨위5호가이내:                     # 라운드 피겨 저항 회피
     매수 = False
 
+
+
+# Temp. Test
+
+elif not (전일비 > 1 and 전일동시간비 > 0):
+    매수 = False
+elif not (회전율 > 5.0):
+    매수 = False
+
+elif not (초당거래대금 > 30 and 초당거래대금N(1) > 30 ):
+    매수 = False
+ 
+# elif not (초당거래대금평균(30) > 초당거래대금평균(30, 1)):
+#     매수 = False
+
+elif not (초당매수수량 > 매도총잔량 * 0.10):
+    매수 = False
+elif not (매도총잔량 * 1.0 > 매수총잔량 * 1.0):
+    매수 = False
+# elif not (매도총잔량 * 0.08 < 매수총잔량 * 1.0):
+#     매수 = False
+elif not (매도총잔량 > 매수총잔량 * 0.10 and 매도총잔량 < 매수총잔량 * 2.0):
+    매수 = False
+# elif not (누적초당매수수량(30) * 0.4 < 누적초당매도수량(30) * 1.0):
+#     매수 = False
+elif not (누적초당매도수량(30) * 1.5 < 누적초당매수수량(30) * 1.0):
+    매수 = False
+elif not (체결강도 >= 90 and 체결강도 <= 280):
+    매수 = False
 
 # ================================
 #  시간대별 전략 분기
@@ -211,11 +277,11 @@ if 매수 and 시분초 < 90500:
 
     # 시가총액별 차등 조건
     if 시가총액 < 3000:                         # 소형주 (< 3,000억)
-        if not (2.0 <= 시가등락율 < 5.0):
+        if not (1.5 <= 시가등락율 < 5.0):
             매수 = False
         elif not (0.5 <= 시가대비등락율 < 8.0):
             매수 = False
-        elif not (1 < 초당순매수금액 < 1000):
+        elif not (1 < 초당순매수금액 < 10 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.20)):
             # 고가 근처 20% 이내에서 거래 중
@@ -224,47 +290,47 @@ if 매수 and 시분초 < 90500:
             매수 = False
         elif not (회전율 > 2.0):
             매수 = False
-        elif not (당일거래대금각도(30) > 5 and 당일거래대금각도(30) < 30):
+        # elif not (당일거래대금각도(30) > 5 and 당일거래대금각도(30) < 30):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > 2.0):
             매수 = False
-        elif not (초당거래대금 / 초당거래대금평균(30) > 3.0):
-            매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.20):
-            매수 = False
-        elif not (매도총잔량 > 매수총잔량 * 0.10 and 매도총잔량 < 매수총잔량 * 2.0):
-            매수 = False
-        elif not (체결강도 >= 100 and 체결강도 <= 300):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.20):
+        #     매수 = False
+        # elif not (매도총잔량 > 매수총잔량 * 0.10 and 매도총잔량 < 매수총잔량 * 2.0):
+        #     매수 = False
+        # elif not (체결강도 >= 100 and 체결강도 <= 300):
+        #     매수 = False
 
     elif 시가총액 < 10000:                      # 중형주 (3,000억 ~ 10,000억)
-        if not (1.5 <= 시가등락율 < 4.0):
+        if not (2.0 <= 시가등락율 < 4.0):
             매수 = False
-        elif not (0.3 <= 시가대비등락율 < 6.0):
+        elif not (0.5 <= 시가대비등락율 < 6.0):
             매수 = False
-        elif not (0.5 < 초당순매수금액 < 800):
+        elif not (0.5 < 초당순매수금액 < 8 * 100):
             매수 = False
-        elif not (현재가 > (고가 - (고가 - 저가) * 0.25)):
+        elif not (현재가 > (고가 - (고가 - 저가) * 0.20)):
             매수 = False
         elif not (전일비 > 0 and 전일동시간비 > 0):
             매수 = False
-        elif not (회전율 > 1.5):
+        elif not (회전율 > 2.0):
             매수 = False
-        elif not (당일거래대금각도(30) > 3 and 당일거래대금각도(30) < 25):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 3 and 당일거래대금각도(30) < 25):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 2.5):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.15):
-            매수 = False
-        elif not (매도총잔량 > 매수총잔량 * 0.08 and 매도총잔량 < 매수총잔량 * 2.5):
-            매수 = False
-        elif not (체결강도 >= 80 and 체결강도 <= 280):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.15):
+        #     매수 = False
+        # elif not (매도총잔량 > 매수총잔량 * 0.08 and 매도총잔량 < 매수총잔량 * 2.5):
+        #     매수 = False
+        # elif not (체결강도 >= 80 and 체결강도 <= 280):
+        #     매수 = False
 
     else:                                       # 대형주 (> 10,000억)
         if not (1.0 <= 시가등락율 < 3.0):
             매수 = False
         elif not (0.2 <= 시가대비등락율 < 5.0):
             매수 = False
-        elif not (0.3 < 초당순매수금액 < 600):
+        elif not (0.3 < 초당순매수금액 < 6 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.30)):
             매수 = False
@@ -272,16 +338,16 @@ if 매수 and 시분초 < 90500:
             매수 = False
         elif not (회전율 > 1.0):
             매수 = False
-        elif not (당일거래대금각도(30) > 2 and 당일거래대금각도(30) < 20):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 2 and 당일거래대금각도(30) < 20):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 2.0):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.12):
-            매수 = False
-        elif not (매도총잔량 > 매수총잔량 * 0.05 and 매도총잔량 < 매수총잔량 * 3.0):
-            매수 = False
-        elif not (체결강도 >= 70 and 체결강도 <= 250):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.12):
+        #     매수 = False
+        # elif not (매도총잔량 > 매수총잔량 * 0.05 and 매도총잔량 < 매수총잔량 * 3.0):
+        #     매수 = False
+        # elif not (체결강도 >= 70 and 체결강도 <= 250):
+        #     매수 = False
 
 
 # ---------- 09:05:00 ~ 09:10:00 (추세 지속 단계) ----------
@@ -292,37 +358,37 @@ elif 매수 and 90500 <= 시분초 < 91000:
             매수 = False
         elif not (3.0 <= 시가대비등락율 < 12.0):
             매수 = False
-        elif not (1 < 초당순매수금액 < 1000):
+        elif not (1 < 초당순매수금액 < 10 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.20)):
             매수 = False
-        elif not (전일비 > 5 and 전일동시간비 > 0):
+        elif not (전일비 > 4 and 전일동시간비 > 0):
             매수 = False
         elif not (회전율 > 1.5):
             매수 = False
-        elif not (당일거래대금 > 50 * 100):
+        elif not (당일거래대금 > 10 * 100):
             매수 = False
-        elif not (당일거래대금각도(30) > 3 and 당일거래대금각도(30) < 30):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 3 and 당일거래대금각도(30) < 30):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 2.0):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.25):
-            매수 = False
-        elif not (매도총잔량 * 0.10 < 매수총잔량 * 1.0):
-            매수 = False
-        elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30) * 1.0):
-            매수 = False
-        elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
-            매수 = False
-        elif not (체결강도 >= 70 and 체결강도 <= 300):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.25):
+        #     매수 = False
+        # elif not (매도총잔량 * 0.10 < 매수총잔량 * 1.0):
+        #     매수 = False
+        # elif not (누적초당매수수량(30) * 0.5 < 누적초당매도수량(30) * 1.0):
+        #     매수 = False
+        # elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+        #     매수 = False
+        # elif not (체결강도 >= 70 and 체결강도 <= 300):
+        #     매수 = False
 
     elif 시가총액 < 10000:                      # 중형주
         if not (0.0 <= 시가등락율 < 8.0):
             매수 = False
         elif not (2.5 <= 시가대비등락율 < 10.0):
             매수 = False
-        elif not (0.8 < 초당순매수금액 < 800):
+        elif not (0.8 < 초당순매수금액 < 8 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.25)):
             매수 = False
@@ -330,29 +396,29 @@ elif 매수 and 90500 <= 시분초 < 91000:
             매수 = False
         elif not (회전율 > 1.2):
             매수 = False
-        elif not (당일거래대금 > 40 * 100):
+        elif not (당일거래대금 > 15 * 100):
             매수 = False
-        elif not (당일거래대금각도(30) > 2 and 당일거래대금각도(30) < 25):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 2 and 당일거래대금각도(30) < 25):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.8):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.20):
-            매수 = False
-        elif not (매도총잔량 * 0.08 < 매수총잔량 * 1.0):
-            매수 = False
-        elif not (누적초당매수수량(30) * 0.4 < 누적초당매도수량(30) * 1.0):
-            매수 = False
-        elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
-            매수 = False
-        elif not (체결강도 >= 60 and 체결강도 <= 280):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.20):
+        #     매수 = False
+        # elif not (매도총잔량 * 0.08 < 매수총잔량 * 1.0):
+        #     매수 = False
+        # elif not (누적초당매수수량(30) * 0.4 < 누적초당매도수량(30) * 1.0):
+        #     매수 = False
+        # elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+        #     매수 = False
+        # elif not (체결강도 >= 60 and 체결강도 <= 280):
+        #     매수 = False
 
     else:                                       # 대형주
         if not (0.0 <= 시가등락율 < 6.0):
             매수 = False
         elif not (2.0 <= 시가대비등락율 < 8.0):
             매수 = False
-        elif not (0.5 < 초당순매수금액 < 600):
+        elif not (0.5 < 초당순매수금액 < 6 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.30)):
             매수 = False
@@ -360,22 +426,22 @@ elif 매수 and 90500 <= 시분초 < 91000:
             매수 = False
         elif not (회전율 > 1.0):
             매수 = False
-        elif not (당일거래대금 > 30 * 100):
+        elif not (당일거래대금 > 20 * 100):
             매수 = False
-        elif not (당일거래대금각도(30) > 1.5 and 당일거래대금각도(30) < 20):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 1.5 and 당일거래대금각도(30) < 20):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.5):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.15):
-            매수 = False
-        elif not (매도총잔량 * 0.05 < 매수총잔량 * 1.0):
-            매수 = False
-        elif not (누적초당매수수량(30) * 0.3 < 누적초당매도수량(30) * 1.0):
-            매수 = False
-        elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
-            매수 = False
-        elif not (체결강도 >= 50 and 체결강도 <= 250):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.15):
+        #     매수 = False
+        # elif not (매도총잔량 * 0.05 < 매수총잔량 * 1.0):
+        #     매수 = False
+        # elif not (누적초당매수수량(30) * 0.3 < 누적초당매도수량(30) * 1.0):
+        #     매수 = False
+        # elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+        #     매수 = False
+        # elif not (체결강도 >= 50 and 체결강도 <= 250):
+        #     매수 = False
 
 
 # ---------- 09:10:00 ~ 09:15:00 (고점 돌파 단계) ----------
@@ -390,7 +456,7 @@ elif 매수 and 91000 <= 시분초 < 91500:
             매수 = False
         elif not (2.5 <= 시가대비등락율 < 15.0):
             매수 = False
-        elif not (0.8 < 초당순매수금액 < 1000):
+        elif not (0.8 < 초당순매수금액 < 10 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.15)):
             매수 = False
@@ -398,14 +464,14 @@ elif 매수 and 91000 <= 시분초 < 91500:
             매수 = False
         elif not (회전율 > 1.2):
             매수 = False
-        elif not (등락각도(30) > 2 and 등락각도(30) < 25):
-            매수 = False
-        elif not (당일거래대금각도(30) > 2 and 당일거래대금각도(30) < 28):
-            매수 = False
+        # elif not (등락각도(30) > 2 and 등락각도(30) < 25):
+        #     매수 = False
+        # elif not (당일거래대금각도(30) > 2 and 당일거래대금각도(30) < 28):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.8):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.20):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.20):
+        #     매수 = False
         elif not (체결강도 >= 60 and 체결강도 <= 300):
             매수 = False
 
@@ -414,7 +480,7 @@ elif 매수 and 91000 <= 시분초 < 91500:
             매수 = False
         elif not (2.0 <= 시가대비등락율 < 12.0):
             매수 = False
-        elif not (0.6 < 초당순매수금액 < 800):
+        elif not (0.6 < 초당순매수금액 < 8 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.20)):
             매수 = False
@@ -422,10 +488,10 @@ elif 매수 and 91000 <= 시분초 < 91500:
             매수 = False
         elif not (회전율 > 1.0):
             매수 = False
-        elif not (등락각도(30) > 1.5 and 등락각도(30) < 20):
-            매수 = False
-        elif not (당일거래대금각도(30) > 1.5 and 당일거래대금각도(30) < 23):
-            매수 = False
+        # elif not (등락각도(30) > 1.5 and 등락각도(30) < 20):
+        #     매수 = False
+        # elif not (당일거래대금각도(30) > 1.5 and 당일거래대금각도(30) < 23):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.5):
             매수 = False
         elif not (초당매수수량 > 매도총잔량 * 0.15):
@@ -438,7 +504,7 @@ elif 매수 and 91000 <= 시분초 < 91500:
             매수 = False
         elif not (1.5 <= 시가대비등락율 < 10.0):
             매수 = False
-        elif not (0.4 < 초당순매수금액 < 600):
+        elif not (0.4 < 초당순매수금액 < 6 * 100):
             매수 = False
         elif not (현재가 > (고가 - (고가 - 저가) * 0.25)):
             매수 = False
@@ -446,10 +512,10 @@ elif 매수 and 91000 <= 시분초 < 91500:
             매수 = False
         elif not (회전율 > 0.8):
             매수 = False
-        elif not (등락각도(30) > 1.0 and 등락각도(30) < 18):
-            매수 = False
-        elif not (당일거래대금각도(30) > 1.0 and 당일거래대금각도(30) < 20):
-            매수 = False
+        # elif not (등락각도(30) > 1.0 and 등락각도(30) < 18):
+        #     매수 = False
+        # elif not (당일거래대금각도(30) > 1.0 and 당일거래대금각도(30) < 20):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.3):
             매수 = False
         elif not (초당매수수량 > 매도총잔량 * 0.12):
@@ -470,18 +536,18 @@ elif 매수 and 91500 <= 시분초 < 92000:
             매수 = False
         elif not (2.0 <= 시가대비등락율 < 12.0):
             매수 = False
-        elif not (0.5 < 초당순매수금액 < 1000):
+        elif not (0.5 < 초당순매수금액 < 10 * 100):
             매수 = False
         elif not (전일비 > 2 and 전일동시간비 > 0):
             매수 = False
         elif not (회전율 > 1.0):
             매수 = False
-        elif not (당일거래대금각도(30) > 1.5 and 당일거래대금각도(30) < 25):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 1.5 and 당일거래대금각도(30) < 25):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.5):
             매수 = False
-        elif not (초당매수수량 > 매도총잔량 * 0.15):
-            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * 0.15):
+        #     매수 = False
         elif not (체결강도 >= 50 and 체결강도 <= 300):
             매수 = False
 
@@ -490,14 +556,14 @@ elif 매수 and 91500 <= 시분초 < 92000:
             매수 = False
         elif not (1.5 <= 시가대비등락율 < 10.0):
             매수 = False
-        elif not (0.4 < 초당순매수금액 < 800):
+        elif not (0.4 < 초당순매수금액 < 8 * 100):
             매수 = False
         elif not (전일비 > 1.5 and 전일동시간비 > 0):
             매수 = False
         elif not (회전율 > 0.8):
             매수 = False
-        elif not (당일거래대금각도(30) > 1.0 and 당일거래대금각도(30) < 20):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 1.0 and 당일거래대금각도(30) < 20):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.3):
             매수 = False
         elif not (초당매수수량 > 매도총잔량 * 0.12):
@@ -516,8 +582,8 @@ elif 매수 and 91500 <= 시분초 < 92000:
             매수 = False
         elif not (회전율 > 0.6):
             매수 = False
-        elif not (당일거래대금각도(30) > 0.5 and 당일거래대금각도(30) < 18):
-            매수 = False
+        # elif not (당일거래대금각도(30) > 0.5 and 당일거래대금각도(30) < 18):
+        #     매수 = False
         elif not (초당거래대금 / 초당거래대금평균(30) > 1.2):
             매수 = False
         elif not (초당매수수량 > 매도총잔량 * 0.10):
@@ -568,20 +634,20 @@ if 등락율 > 29.0:
 
 
 # 2. 기본 손절 (가격 기준)
-elif 시가대비등락율 < 0 and 수익률 <= -2.5 and 현재가 < 최저현재가(int(60), int(보유시간)):
+elif 시가대비등락율 < 0 and 수익률 <= -3.5 and 현재가 < 최저현재가(int(60), int(보유시간)):
     매도 = True
 
 
 # 3. 보유시간 기반 손절
-elif 보유시간 > 60 and 현재가 < 최저현재가(int(60), int(보유시간)):
-    매도 = True
+# elif 보유시간 > 60 and 현재가 < 최저현재가(int(60), int(보유시간)):
+#     매도 = True
 
 
 # 4. 시간대별 익절/손절 기준
 elif 시분초 < 93000:                            # 09:30 이전
 
     # 기본 익절/손절
-    if 수익률 >= 6.0 or 수익률 <= -5.0:
+    if 수익률 >= 5.0 or 수익률 <= -4.0:
         매도 = True
 
     # Trailing Stop (최고수익률 대비)
@@ -601,7 +667,7 @@ elif 시분초 < 93000:                            # 09:30 이전
 
 
 # 5. 체결강도 급락 + 거래대금 감소
-elif 체결강도 <= 35 and 초당거래대금 < 초당거래대금N(1):
+elif 체결강도 <= 50 and 초당거래대금 < 초당거래대금N(1):
     매도 = True
 
 
@@ -630,6 +696,8 @@ if 매도:
 
 매수 조건식의 임계값들을 `self.vars[i]`로 치환하여 백테스트/GA에서 자동 최적화한다.
 
+**참고**: 기본 매수 조건식에서 주석 처리된 조건들은 최적화 대상에서도 제외되었습니다.
+
 ```python
 # ================================
 #  공통 계산 지표
@@ -657,12 +725,345 @@ elif not (현재가 < VI아래5호가):
 elif 라운드피겨위5호가이내:
     매수 = False
 
-# 시간대별 분기 및 최적화 변수 적용
-# (각 시간대별로 self.vars[5] ~ self.vars[N] 사용)
-# 구조는 기본 조건식과 동일하되, 모든 임계값을 self.vars로 치환
+# ================================
+#  시간대별 전략 분기
+# ================================
+
+# ---------- 09:00:00 ~ 09:05:00 (초기 5분: 급등주 포착) ----------
+if 매수 and 시분초 < 90500:
+
+    # 시가총액별 차등 조건
+    if 시가총액 < 3000:                         # 소형주
+        if not (self.vars[5] <= 시가등락율 < self.vars[6]):
+            매수 = False
+        elif not (self.vars[7] <= 시가대비등락율 < self.vars[8]):
+            매수 = False
+        elif not (1 < 초당순매수금액 < self.vars[9]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[10])):
+            매수 = False
+        elif not (전일비 > 0 and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[11]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[12] and 당일거래대금각도(30) < self.vars[13]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[14]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[15]):
+        #     매수 = False
+        # elif not (매도총잔량 > 매수총잔량 * self.vars[16] and 매도총잔량 < 매수총잔량 * self.vars[17]):
+        #     매수 = False
+        # elif not (체결강도 >= self.vars[18] and 체결강도 <= self.vars[19]):
+        #     매수 = False
+
+    elif 시가총액 < 10000:                      # 중형주
+        if not (self.vars[20] <= 시가등락율 < self.vars[21]):
+            매수 = False
+        elif not (self.vars[22] <= 시가대비등락율 < self.vars[23]):
+            매수 = False
+        elif not (0.5 < 초당순매수금액 < self.vars[24]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[25])):
+            매수 = False
+        elif not (전일비 > 0 and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[26]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[27] and 당일거래대금각도(30) < self.vars[28]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[29]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[30]):
+        #     매수 = False
+        # elif not (매도총잔량 > 매수총잔량 * self.vars[31] and 매도총잔량 < 매수총잔량 * self.vars[32]):
+        #     매수 = False
+        # elif not (체결강도 >= self.vars[33] and 체결강도 <= self.vars[34]):
+        #     매수 = False
+
+    else:                                       # 대형주
+        if not (self.vars[35] <= 시가등락율 < self.vars[36]):
+            매수 = False
+        elif not (self.vars[37] <= 시가대비등락율 < self.vars[38]):
+            매수 = False
+        elif not (0.3 < 초당순매수금액 < self.vars[39]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[40])):
+            매수 = False
+        elif not (전일비 > 0 and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[41]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[42] and 당일거래대금각도(30) < self.vars[43]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[44]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[45]):
+        #     매수 = False
+        # elif not (매도총잔량 > 매수총잔량 * self.vars[46] and 매도총잔량 < 매수총잔량 * self.vars[47]):
+        #     매수 = False
+        # elif not (체결강도 >= self.vars[48] and 체결강도 <= self.vars[49]):
+        #     매수 = False
+
+
+# ---------- 09:05:00 ~ 09:10:00 (추세 지속 단계) ----------
+elif 매수 and 90500 <= 시분초 < 91000:
+
+    if 시가총액 < 3000:                         # 소형주
+        if not (self.vars[50] <= 시가등락율 < self.vars[51]):
+            매수 = False
+        elif not (self.vars[52] <= 시가대비등락율 < self.vars[53]):
+            매수 = False
+        elif not (1 < 초당순매수금액 < self.vars[54]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[55])):
+            매수 = False
+        elif not (전일비 > self.vars[56] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[57]):
+            매수 = False
+        elif not (당일거래대금 > self.vars[58]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[59] and 당일거래대금각도(30) < self.vars[60]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[61]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[62]):
+        #     매수 = False
+        # elif not (매도총잔량 * self.vars[63] < 매수총잔량 * 1.0):
+        #     매수 = False
+        # elif not (누적초당매수수량(30) * self.vars[64] < 누적초당매도수량(30) * 1.0):
+        #     매수 = False
+        # elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+        #     매수 = False
+        # elif not (체결강도 >= self.vars[65] and 체결강도 <= self.vars[66]):
+        #     매수 = False
+
+    elif 시가총액 < 10000:                      # 중형주
+        if not (self.vars[67] <= 시가등락율 < self.vars[68]):
+            매수 = False
+        elif not (self.vars[69] <= 시가대비등락율 < self.vars[70]):
+            매수 = False
+        elif not (0.8 < 초당순매수금액 < self.vars[71]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[72])):
+            매수 = False
+        elif not (전일비 > self.vars[73] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[74]):
+            매수 = False
+        elif not (당일거래대금 > self.vars[75]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[76] and 당일거래대금각도(30) < self.vars[77]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[78]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[79]):
+        #     매수 = False
+        # elif not (매도총잔량 * self.vars[80] < 매수총잔량 * 1.0):
+        #     매수 = False
+        # elif not (누적초당매수수량(30) * self.vars[81] < 누적초당매도수량(30) * 1.0):
+        #     매수 = False
+        # elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+        #     매수 = False
+        # elif not (체결강도 >= self.vars[82] and 체결강도 <= self.vars[83]):
+        #     매수 = False
+
+    else:                                       # 대형주
+        if not (self.vars[84] <= 시가등락율 < self.vars[85]):
+            매수 = False
+        elif not (self.vars[86] <= 시가대비등락율 < self.vars[87]):
+            매수 = False
+        elif not (0.5 < 초당순매수금액 < self.vars[88]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[89])):
+            매수 = False
+        elif not (전일비 > self.vars[90] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[91]):
+            매수 = False
+        elif not (당일거래대금 > self.vars[92]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[93] and 당일거래대금각도(30) < self.vars[94]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[95]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[96]):
+        #     매수 = False
+        # elif not (매도총잔량 * self.vars[97] < 매수총잔량 * 1.0):
+        #     매수 = False
+        # elif not (누적초당매수수량(30) * self.vars[98] < 누적초당매도수량(30) * 1.0):
+        #     매수 = False
+        # elif not (누적초당매도수량(30) * 1.0 < 누적초당매수수량(30) * 1.0):
+        #     매수 = False
+        # elif not (체결강도 >= self.vars[99] and 체결강도 <= self.vars[100]):
+        #     매수 = False
+
+
+# ---------- 09:10:00 ~ 09:15:00 (고점 돌파 단계) ----------
+elif 매수 and 91000 <= 시분초 < 91500:
+
+    # 직전 고가 돌파 확인 (공통)
+    if not (현재가 >= 고가N(1)):
+        매수 = False
+
+    elif 시가총액 < 3000:                       # 소형주
+        if not (self.vars[101] <= 시가등락율 < self.vars[102]):
+            매수 = False
+        elif not (self.vars[103] <= 시가대비등락율 < self.vars[104]):
+            매수 = False
+        elif not (0.8 < 초당순매수금액 < self.vars[105]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[106])):
+            매수 = False
+        elif not (전일비 > self.vars[107] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[108]):
+            매수 = False
+        # elif not (등락각도(30) > self.vars[109] and 등락각도(30) < self.vars[110]):
+        #     매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[111] and 당일거래대금각도(30) < self.vars[112]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[113]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[114]):
+        #     매수 = False
+        elif not (체결강도 >= self.vars[115] and 체결강도 <= self.vars[116]):
+            매수 = False
+
+    elif 시가총액 < 10000:                      # 중형주
+        if not (self.vars[117] <= 시가등락율 < self.vars[118]):
+            매수 = False
+        elif not (self.vars[119] <= 시가대비등락율 < self.vars[120]):
+            매수 = False
+        elif not (0.6 < 초당순매수금액 < self.vars[121]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[122])):
+            매수 = False
+        elif not (전일비 > self.vars[123] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[124]):
+            매수 = False
+        # elif not (등락각도(30) > self.vars[125] and 등락각도(30) < self.vars[126]):
+        #     매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[127] and 당일거래대금각도(30) < self.vars[128]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[129]):
+            매수 = False
+        elif not (초당매수수량 > 매도총잔량 * self.vars[130]):
+            매수 = False
+        elif not (체결강도 >= self.vars[131] and 체결강도 <= self.vars[132]):
+            매수 = False
+
+    else:                                       # 대형주
+        if not (self.vars[133] <= 시가등락율 < self.vars[134]):
+            매수 = False
+        elif not (self.vars[135] <= 시가대비등락율 < self.vars[136]):
+            매수 = False
+        elif not (0.4 < 초당순매수금액 < self.vars[137]):
+            매수 = False
+        elif not (현재가 > (고가 - (고가 - 저가) * self.vars[138])):
+            매수 = False
+        elif not (전일비 > self.vars[139] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[140]):
+            매수 = False
+        # elif not (등락각도(30) > self.vars[141] and 등락각도(30) < self.vars[142]):
+        #     매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[143] and 당일거래대금각도(30) < self.vars[144]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[145]):
+            매수 = False
+        elif not (초당매수수량 > 매도총잔량 * self.vars[146]):
+            매수 = False
+        elif not (체결강도 >= self.vars[147] and 체결강도 <= self.vars[148]):
+            매수 = False
+
+
+# ---------- 09:15:00 ~ 09:20:00 (후반부 보수적 진입) ----------
+elif 매수 and 91500 <= 시분초 < 92000:
+
+    # 시가 대비 상승률 확인 (공통)
+    if not (현재가 >= 시가 * 1.01):
+        매수 = False
+
+    elif 시가총액 < 3000:                       # 소형주
+        if not (self.vars[149] <= 시가등락율 < self.vars[150]):
+            매수 = False
+        elif not (self.vars[151] <= 시가대비등락율 < self.vars[152]):
+            매수 = False
+        elif not (0.5 < 초당순매수금액 < self.vars[153]):
+            매수 = False
+        elif not (전일비 > self.vars[154] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[155]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[156] and 당일거래대금각도(30) < self.vars[157]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[158]):
+            매수 = False
+        # elif not (초당매수수량 > 매도총잔량 * self.vars[159]):
+        #     매수 = False
+        elif not (체결강도 >= self.vars[160] and 체결강도 <= self.vars[161]):
+            매수 = False
+
+    elif 시가총액 < 10000:                      # 중형주
+        if not (self.vars[162] <= 시가등락율 < self.vars[163]):
+            매수 = False
+        elif not (self.vars[164] <= 시가대비등락율 < self.vars[165]):
+            매수 = False
+        elif not (0.4 < 초당순매수금액 < self.vars[166]):
+            매수 = False
+        elif not (전일비 > self.vars[167] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[168]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[169] and 당일거래대금각도(30) < self.vars[170]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[171]):
+            매수 = False
+        elif not (초당매수수량 > 매도총잔량 * self.vars[172]):
+            매수 = False
+        elif not (체결강도 >= self.vars[173] and 체결강도 <= self.vars[174]):
+            매수 = False
+
+    else:                                       # 대형주
+        if not (self.vars[175] <= 시가등락율 < self.vars[176]):
+            매수 = False
+        elif not (self.vars[177] <= 시가대비등락율 < self.vars[178]):
+            매수 = False
+        elif not (0.3 < 초당순매수금액 < self.vars[179]):
+            매수 = False
+        elif not (전일비 > self.vars[180] and 전일동시간비 > 0):
+            매수 = False
+        elif not (회전율 > self.vars[181]):
+            매수 = False
+        # elif not (당일거래대금각도(30) > self.vars[182] and 당일거래대금각도(30) < self.vars[183]):
+        #     매수 = False
+        elif not (초당거래대금 / 초당거래대금평균(30) > self.vars[184]):
+            매수 = False
+        elif not (초당매수수량 > 매도총잔량 * self.vars[185]):
+            매수 = False
+        elif not (체결강도 >= self.vars[186] and 체결강도 <= self.vars[187]):
+            매수 = False
+
+
+# ---------- 09:20:00 이후 ----------
+else:
+    매수 = False
+
+
+# ================================
+#  매수 호출
+# ================================
+if 매수:
+    self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이)
 ```
 
-**매수 최적화 대상 변수 목록** (총 70개):
+**매수 최적화 대상 변수 목록**:
+
+**참고**: 기본 매수 조건식에서 주석 처리된 조건들은 최적화 대상에서도 제외되었습니다.
+따라서 실제 활성 변수 개수가 크게 줄어들었으며, 변수 번호는 활성 조건만 순차적으로 할당됩니다.
 
 **공통 필터 변수 (1~4)**:
 - `self.vars[1]`: 최소 현재가
@@ -670,7 +1071,7 @@ elif 라운드피겨위5호가이내:
 - `self.vars[3]`: 최소 당일거래대금
 - `self.vars[4]`: 최소 등락율
 
-**09:00~09:05 소형주 변수 (5~18)**:
+**09:00~09:05 소형주 변수 (5~14)**:
 - `self.vars[5]`: 시가등락율 하한
 - `self.vars[6]`: 시가등락율 상한
 - `self.vars[7]`: 시가대비등락율 하한
@@ -678,21 +1079,215 @@ elif 라운드피겨위5호가이내:
 - `self.vars[9]`: 초당순매수금액 상한
 - `self.vars[10]`: 고가 대비 비율
 - `self.vars[11]`: 회전율 하한
-- `self.vars[12]`: 당일거래대금각도 하한
-- `self.vars[13]`: 당일거래대금각도 상한
+- ~~`self.vars[12]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[13]`: 당일거래대금각도 상한~~ (비활성)
 - `self.vars[14]`: 초당거래대금 배율
-- `self.vars[15]`: 초당매수수량 대비 매도총잔량 비율
-- `self.vars[16]`: 매도총잔량 하한 배율
-- `self.vars[17]`: 매도총잔량 상한 배율
-- `self.vars[18]`: 체결강도 하한
+- ~~`self.vars[15]`: 초당매수수량 대비 매도총잔량 비율~~ (비활성)
+- ~~`self.vars[16]`: 매도총잔량 하한 배율~~ (비활성)
+- ~~`self.vars[17]`: 매도총잔량 상한 배율~~ (비활성)
+- ~~`self.vars[18]`: 체결강도 하한~~ (비활성)
+- ~~`self.vars[19]`: 체결강도 상한~~ (비활성)
 
-**(이하 중형주/대형주, 다른 시간대 변수 계속...)**
+**09:00~09:05 중형주 변수 (20~29)**:
+- `self.vars[20]`: 시가등락율 하한
+- `self.vars[21]`: 시가등락율 상한
+- `self.vars[22]`: 시가대비등락율 하한
+- `self.vars[23]`: 시가대비등락율 상한
+- `self.vars[24]`: 초당순매수금액 상한
+- `self.vars[25]`: 고가 대비 비율
+- `self.vars[26]`: 회전율 하한
+- ~~`self.vars[27]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[28]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[29]`: 초당거래대금 배율
+- ~~`self.vars[30]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- ~~`self.vars[31]`: 매도총잔량 하한 배율~~ (비활성)
+- ~~`self.vars[32]`: 매도총잔량 상한 배율~~ (비활성)
+- ~~`self.vars[33]`: 체결강도 하한~~ (비활성)
+- ~~`self.vars[34]`: 체결강도 상한~~ (비활성)
+
+**09:00~09:05 대형주 변수 (35~44)**:
+- `self.vars[35]`: 시가등락율 하한
+- `self.vars[36]`: 시가등락율 상한
+- `self.vars[37]`: 시가대비등락율 하한
+- `self.vars[38]`: 시가대비등락율 상한
+- `self.vars[39]`: 초당순매수금액 상한
+- `self.vars[40]`: 고가 대비 비율
+- `self.vars[41]`: 회전율 하한
+- ~~`self.vars[42]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[43]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[44]`: 초당거래대금 배율
+- ~~`self.vars[45]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- ~~`self.vars[46]`: 매도총잔량 하한 배율~~ (비활성)
+- ~~`self.vars[47]`: 매도총잔량 상한 배율~~ (비활성)
+- ~~`self.vars[48]`: 체결강도 하한~~ (비활성)
+- ~~`self.vars[49]`: 체결강도 상한~~ (비활성)
+
+**09:05~09:10 소형주 변수 (50~61)**:
+- `self.vars[50]`: 시가등락율 하한
+- `self.vars[51]`: 시가등락율 상한
+- `self.vars[52]`: 시가대비등락율 하한
+- `self.vars[53]`: 시가대비등락율 상한
+- `self.vars[54]`: 초당순매수금액 상한
+- `self.vars[55]`: 고가 대비 비율
+- `self.vars[56]`: 전일비 하한
+- `self.vars[57]`: 회전율 하한
+- `self.vars[58]`: 당일거래대금 하한
+- ~~`self.vars[59]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[60]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[61]`: 초당거래대금 배율
+- ~~`self.vars[62]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- ~~`self.vars[63]`: 매도총잔량 하한 배율~~ (비활성)
+- ~~`self.vars[64]`: 누적초당매수수량 비율~~ (비활성)
+- ~~`self.vars[65]`: 체결강도 하한~~ (비활성)
+- ~~`self.vars[66]`: 체결강도 상한~~ (비활성)
+
+**09:05~09:10 중형주 변수 (67~78)**:
+- `self.vars[67]`: 시가등락율 하한
+- `self.vars[68]`: 시가등락율 상한
+- `self.vars[69]`: 시가대비등락율 하한
+- `self.vars[70]`: 시가대비등락율 상한
+- `self.vars[71]`: 초당순매수금액 상한
+- `self.vars[72]`: 고가 대비 비율
+- `self.vars[73]`: 전일비 하한
+- `self.vars[74]`: 회전율 하한
+- `self.vars[75]`: 당일거래대금 하한
+- ~~`self.vars[76]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[77]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[78]`: 초당거래대금 배율
+- ~~`self.vars[79]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- ~~`self.vars[80]`: 매도총잔량 하한 배율~~ (비활성)
+- ~~`self.vars[81]`: 누적초당매수수량 비율~~ (비활성)
+- ~~`self.vars[82]`: 체결강도 하한~~ (비활성)
+- ~~`self.vars[83]`: 체결강도 상한~~ (비활성)
+
+**09:05~09:10 대형주 변수 (84~95)**:
+- `self.vars[84]`: 시가등락율 하한
+- `self.vars[85]`: 시가등락율 상한
+- `self.vars[86]`: 시가대비등락율 하한
+- `self.vars[87]`: 시가대비등락율 상한
+- `self.vars[88]`: 초당순매수금액 상한
+- `self.vars[89]`: 고가 대비 비율
+- `self.vars[90]`: 전일비 하한
+- `self.vars[91]`: 회전율 하한
+- `self.vars[92]`: 당일거래대금 하한
+- ~~`self.vars[93]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[94]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[95]`: 초당거래대금 배율
+- ~~`self.vars[96]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- ~~`self.vars[97]`: 매도총잔량 하한 배율~~ (비활성)
+- ~~`self.vars[98]`: 누적초당매수수량 비율~~ (비활성)
+- ~~`self.vars[99]`: 체결강도 하한~~ (비활성)
+- ~~`self.vars[100]`: 체결강도 상한~~ (비활성)
+
+**09:10~09:15 소형주 변수 (101~116)**:
+- `self.vars[101]`: 시가등락율 하한
+- `self.vars[102]`: 시가등락율 상한
+- `self.vars[103]`: 시가대비등락율 하한
+- `self.vars[104]`: 시가대비등락율 상한
+- `self.vars[105]`: 초당순매수금액 상한
+- `self.vars[106]`: 고가 대비 비율
+- `self.vars[107]`: 전일비 하한
+- `self.vars[108]`: 회전율 하한
+- ~~`self.vars[109]`: 등락각도 하한~~ (비활성)
+- ~~`self.vars[110]`: 등락각도 상한~~ (비활성)
+- ~~`self.vars[111]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[112]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[113]`: 초당거래대금 배율
+- ~~`self.vars[114]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- `self.vars[115]`: 체결강도 하한
+- `self.vars[116]`: 체결강도 상한
+
+**09:10~09:15 중형주 변수 (117~132)**:
+- `self.vars[117]`: 시가등락율 하한
+- `self.vars[118]`: 시가등락율 상한
+- `self.vars[119]`: 시가대비등락율 하한
+- `self.vars[120]`: 시가대비등락율 상한
+- `self.vars[121]`: 초당순매수금액 상한
+- `self.vars[122]`: 고가 대비 비율
+- `self.vars[123]`: 전일비 하한
+- `self.vars[124]`: 회전율 하한
+- ~~`self.vars[125]`: 등락각도 하한~~ (비활성)
+- ~~`self.vars[126]`: 등락각도 상한~~ (비활성)
+- ~~`self.vars[127]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[128]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[129]`: 초당거래대금 배율
+- `self.vars[130]`: 초당매수수량 대비 매도총잔량
+- `self.vars[131]`: 체결강도 하한
+- `self.vars[132]`: 체결강도 상한
+
+**09:10~09:15 대형주 변수 (133~148)**:
+- `self.vars[133]`: 시가등락율 하한
+- `self.vars[134]`: 시가등락율 상한
+- `self.vars[135]`: 시가대비등락율 하한
+- `self.vars[136]`: 시가대비등락율 상한
+- `self.vars[137]`: 초당순매수금액 상한
+- `self.vars[138]`: 고가 대비 비율
+- `self.vars[139]`: 전일비 하한
+- `self.vars[140]`: 회전율 하한
+- ~~`self.vars[141]`: 등락각도 하한~~ (비활성)
+- ~~`self.vars[142]`: 등락각도 상한~~ (비활성)
+- ~~`self.vars[143]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[144]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[145]`: 초당거래대금 배율
+- `self.vars[146]`: 초당매수수량 대비 매도총잔량
+- `self.vars[147]`: 체결강도 하한
+- `self.vars[148]`: 체결강도 상한
+
+**09:15~09:20 소형주 변수 (149~161)**:
+- `self.vars[149]`: 시가등락율 하한
+- `self.vars[150]`: 시가등락율 상한
+- `self.vars[151]`: 시가대비등락율 하한
+- `self.vars[152]`: 시가대비등락율 상한
+- `self.vars[153]`: 초당순매수금액 상한
+- `self.vars[154]`: 전일비 하한
+- `self.vars[155]`: 회전율 하한
+- ~~`self.vars[156]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[157]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[158]`: 초당거래대금 배율
+- ~~`self.vars[159]`: 초당매수수량 대비 매도총잔량~~ (비활성)
+- `self.vars[160]`: 체결강도 하한
+- `self.vars[161]`: 체결강도 상한
+
+**09:15~09:20 중형주 변수 (162~174)**:
+- `self.vars[162]`: 시가등락율 하한
+- `self.vars[163]`: 시가등락율 상한
+- `self.vars[164]`: 시가대비등락율 하한
+- `self.vars[165]`: 시가대비등락율 상한
+- `self.vars[166]`: 초당순매수금액 상한
+- `self.vars[167]`: 전일비 하한
+- `self.vars[168]`: 회전율 하한
+- ~~`self.vars[169]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[170]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[171]`: 초당거래대금 배율
+- `self.vars[172]`: 초당매수수량 대비 매도총잔량
+- `self.vars[173]`: 체결강도 하한
+- `self.vars[174]`: 체결강도 상한
+
+**09:15~09:20 대형주 변수 (175~187)**:
+- `self.vars[175]`: 시가등락율 하한
+- `self.vars[176]`: 시가등락율 상한
+- `self.vars[177]`: 시가대비등락율 하한
+- `self.vars[178]`: 시가대비등락율 상한
+- `self.vars[179]`: 초당순매수금액 상한
+- `self.vars[180]`: 전일비 하한
+- `self.vars[181]`: 회전율 하한
+- ~~`self.vars[182]`: 당일거래대금각도 하한~~ (비활성)
+- ~~`self.vars[183]`: 당일거래대금각도 상한~~ (비활성)
+- `self.vars[184]`: 초당거래대금 배율
+- `self.vars[185]`: 초당매수수량 대비 매도총잔량
+- `self.vars[186]`: 체결강도 하한
+- `self.vars[187]`: 체결강도 상한
 
 ---
 
 ### 매수 최적화 범위 - C_T_900_920_U2_BOR
 
 넓은 범위를 탐색하여 다양한 장세에서 최적값을 찾을 수 있도록 설정한다.
+
+**참고**:
+1. 기본 매수 조건식에서 주석 처리된 조건들에 해당하는 변수들도 주석 처리되었습니다.
+2. 비활성 변수들은 주석으로 표시되어 있으며, 실제 최적화 시 해당 변수는 사용되지 않습니다.
+3. 변수 번호와 BO 조건식의 변수 번호가 일치해야 합니다.
 
 ```python
 # ================================
@@ -715,55 +1310,54 @@ self.vars[8]  = [[5.0, 15.0, 1.0], 8.0]                                # 시가�
 self.vars[9]  = [[500, 2000, 100], 1000]                               # 초당순매수금액 상한, 범위 개수: 16
 self.vars[10] = [[0.10, 0.30, 0.05], 0.20]                             # 고가 대비 비율, 범위 개수: 5
 self.vars[11] = [[1.0, 5.0, 0.5], 2.0]                                 # 회전율 하한, 범위 개수: 9
-self.vars[12] = [[2, 10, 1], 5]                                        # 당일거래대금각도 하한, 범위 개수: 9
-self.vars[13] = [[20, 40, 2], 30]                                      # 당일거래대금각도 상한, 범위 개수: 11
+# self.vars[12] = [[2, 10, 1], 5]                                      # 당일거래대금각도 하한 (비활성)
+# self.vars[13] = [[20, 40, 2], 30]                                    # 당일거래대금각도 상한 (비활성)
 self.vars[14] = [[1.5, 5.0, 0.5], 3.0]                                 # 초당거래대금 배율, 범위 개수: 8
-self.vars[15] = [[0.10, 0.40, 0.05], 0.20]                             # 초당매수수량 대비 매도총잔량, 범위 개수: 7
-self.vars[16] = [[0.05, 0.20, 0.05], 0.10]                             # 매도총잔량 하한 배율, 범위 개수: 4
-self.vars[17] = [[1.5, 3.0, 0.5], 2.0]                                 # 매도총잔량 상한 배율, 범위 개수: 4
-self.vars[18] = [[60, 150, 10], 100]                                   # 체결강도 하한, 범위 개수: 10
-
-# 매수 총 경우의 수 (09:00~09:05 소형주만):
-# 20 × 17 × 10 × 20 × 10 × 8 × 7 × 11 × 16 × 5 × 9 × 9 × 11 × 8 × 7 × 4 × 4 × 10
-# = 매우 큰 수 (단계별 최적화 필요)
+# self.vars[15] = [[0.10, 0.40, 0.05], 0.20]                           # 초당매수수량 대비 매도총잔량 (비활성)
+# self.vars[16] = [[0.05, 0.20, 0.05], 0.10]                           # 매도총잔량 하한 배율 (비활성)
+# self.vars[17] = [[1.5, 3.0, 0.5], 2.0]                               # 매도총잔량 상한 배율 (비활성)
+# self.vars[18] = [[60, 150, 10], 100]                                 # 체결강도 하한 (비활성)
+# self.vars[19] = [[200, 400, 20], 300]                                # 체결강도 상한 (비활성)
 
 
 # ================================
 #  09:00~09:05 중형주 변수
 # ================================
-self.vars[19] = [[0.5, 4.0, 0.5], 1.5]                                 # 시가등락율 하한, 범위 개수: 8
-self.vars[20] = [[2.5, 8.0, 0.5], 4.0]                                 # 시가등락율 상한, 범위 개수: 12
-self.vars[21] = [[0.0, 1.8, 0.3], 0.3]                                 # 시가대비등락율 하한, 범위 개수: 7
-self.vars[22] = [[4.0, 12.0, 1.0], 6.0]                                # 시가대비등락율 상한, 범위 개수: 9
-self.vars[23] = [[400, 1500, 100], 800]                                # 초당순매수금액 상한, 범위 개수: 12
-self.vars[24] = [[0.15, 0.35, 0.05], 0.25]                             # 고가 대비 비율, 범위 개수: 5
-self.vars[25] = [[0.8, 2.9, 0.3], 1.5]                                 # 회전율 하한, 범위 개수: 8
-self.vars[26] = [[1, 8, 1], 3]                                         # 당일거래대금각도 하한, 범위 개수: 8
-self.vars[27] = [[18, 34, 2], 25]                                      # 당일거래대금각도 상한, 범위 개수: 9
-self.vars[28] = [[1.5, 4.0, 0.5], 2.5]                                 # 초당거래대금 배율, 범위 개수: 6
-self.vars[29] = [[0.10, 0.30, 0.05], 0.15]                             # 초당매수수량 대비 매도총잔량, 범위 개수: 5
-self.vars[30] = [[0.05, 0.15, 0.02], 0.08]                             # 매도총잔량 하한 배율, 범위 개수: 6
-self.vars[31] = [[1.5, 3.5, 0.5], 2.5]                                 # 매도총잔량 상한 배율, 범위 개수: 5
-self.vars[32] = [[50, 140, 10], 80]                                    # 체결강도 하한, 범위 개수: 10
+self.vars[20] = [[0.5, 4.0, 0.5], 1.5]                                 # 시가등락율 하한, 범위 개수: 8
+self.vars[21] = [[2.5, 8.0, 0.5], 4.0]                                 # 시가등락율 상한, 범위 개수: 12
+self.vars[22] = [[0.0, 1.8, 0.3], 0.3]                                 # 시가대비등락율 하한, 범위 개수: 7
+self.vars[23] = [[4.0, 12.0, 1.0], 6.0]                                # 시가대비등락율 상한, 범위 개수: 9
+self.vars[24] = [[400, 1500, 100], 800]                                # 초당순매수금액 상한, 범위 개수: 12
+self.vars[25] = [[0.15, 0.35, 0.05], 0.25]                             # 고가 대비 비율, 범위 개수: 5
+self.vars[26] = [[0.8, 2.9, 0.3], 1.5]                                 # 회전율 하한, 범위 개수: 8
+# self.vars[27] = [[1, 8, 1], 3]                                       # 당일거래대금각도 하한 (비활성)
+# self.vars[28] = [[18, 34, 2], 25]                                    # 당일거래대금각도 상한 (비활성)
+self.vars[29] = [[1.5, 4.0, 0.5], 2.5]                                 # 초당거래대금 배율, 범위 개수: 6
+# self.vars[30] = [[0.10, 0.30, 0.05], 0.15]                           # 초당매수수량 대비 매도총잔량 (비활성)
+# self.vars[31] = [[0.05, 0.15, 0.02], 0.08]                           # 매도총잔량 하한 배율 (비활성)
+# self.vars[32] = [[1.5, 3.5, 0.5], 2.5]                               # 매도총잔량 상한 배율 (비활성)
+# self.vars[33] = [[50, 140, 10], 80]                                  # 체결강도 하한 (비활성)
+# self.vars[34] = [[200, 400, 20], 280]                                # 체결강도 상한 (비활성)
 
 
 # ================================
 #  09:00~09:05 대형주 변수
 # ================================
-self.vars[33] = [[0.5, 3.0, 0.5], 1.0]                                 # 시가등락율 하한, 범위 개수: 6
-self.vars[34] = [[2.0, 6.0, 0.5], 3.0]                                 # 시가등락율 상한, 범위 개수: 9
-self.vars[35] = [[0.0, 1.4, 0.2], 0.2]                                 # 시가대비등락율 하한, 범위 개수: 8
-self.vars[36] = [[3.0, 10.0, 1.0], 5.0]                                # 시가대비등락율 상한, 범위 개수: 8
-self.vars[37] = [[300, 1000, 100], 600]                                # 초당순매수금액 상한, 범위 개수: 8
-self.vars[38] = [[0.20, 0.40, 0.05], 0.30]                             # 고가 대비 비율, 범위 개수: 5
-self.vars[39] = [[0.5, 2.3, 0.3], 1.0]                                 # 회전율 하한, 범위 개수: 7
-self.vars[40] = [[1, 6, 1], 2]                                         # 당일거래대금각도 하한, 범위 개수: 6
-self.vars[41] = [[15, 29, 2], 20]                                      # 당일거래대금각도 상한, 범위 개수: 8
-self.vars[42] = [[1.2, 3.3, 0.3], 2.0]                                 # 초당거래대금 배율, 범위 개수: 8
-self.vars[43] = [[0.08, 0.23, 0.03], 0.12]                             # 초당매수수량 대비 매도총잔량, 범위 개수: 6
-self.vars[44] = [[0.03, 0.09, 0.02], 0.05]                             # 매도총잔량 하한 배율, 범위 개수: 4
-self.vars[45] = [[2.0, 4.0, 0.5], 3.0]                                 # 매도총잔량 상한 배율, 범위 개수: 5
-self.vars[46] = [[40, 130, 10], 70]                                    # 체결강도 하한, 범위 개수: 10
+self.vars[35] = [[0.5, 3.0, 0.5], 1.0]                                 # 시가등락율 하한, 범위 개수: 6
+self.vars[36] = [[2.0, 6.0, 0.5], 3.0]                                 # 시가등락율 상한, 범위 개수: 9
+self.vars[37] = [[0.0, 1.4, 0.2], 0.2]                                 # 시가대비등락율 하한, 범위 개수: 8
+self.vars[38] = [[3.0, 10.0, 1.0], 5.0]                                # 시가대비등락율 상한, 범위 개수: 8
+self.vars[39] = [[300, 1000, 100], 600]                                # 초당순매수금액 상한, 범위 개수: 8
+self.vars[40] = [[0.20, 0.40, 0.05], 0.30]                             # 고가 대비 비율, 범위 개수: 5
+self.vars[41] = [[0.5, 2.3, 0.3], 1.0]                                 # 회전율 하한, 범위 개수: 7
+# self.vars[42] = [[1, 6, 1], 2]                                       # 당일거래대금각도 하한 (비활성)
+# self.vars[43] = [[15, 29, 2], 20]                                    # 당일거래대금각도 상한 (비활성)
+self.vars[44] = [[1.2, 3.3, 0.3], 2.0]                                 # 초당거래대금 배율, 범위 개수: 8
+# self.vars[45] = [[0.08, 0.23, 0.03], 0.12]                           # 초당매수수량 대비 매도총잔량 (비활성)
+# self.vars[46] = [[0.03, 0.09, 0.02], 0.05]                           # 매도총잔량 하한 배율 (비활성)
+# self.vars[47] = [[2.0, 4.0, 0.5], 3.0]                               # 매도총잔량 상한 배율 (비활성)
+# self.vars[48] = [[40, 130, 10], 70]                                  # 체결강도 하한 (비활성)
+# self.vars[49] = [[150, 350, 20], 250]                                # 체결강도 상한 (비활성)
 
 
 # ================================
@@ -795,6 +1389,8 @@ self.vars[61] = [[50, 140, 10], 70]                                    # 체결�
 
 매도 조건식의 임계값을 `self.vars`로 치환한다.
 
+**참고**: 기본 매도 조건식에서 주석 처리된 조건들은 최적화 대상에서도 제외되었습니다.
+
 ```python
 # ================================
 #  공통 계산 지표
@@ -811,9 +1407,9 @@ if 등락율 > self.vars[101]:
 elif 시가대비등락율 < 0 and 수익률 <= self.vars[102] and 현재가 < 최저현재가(int(60), int(보유시간)):
     매도 = True
 
-# 3. 보유시간 기반 손절
-elif 보유시간 > 60 and 현재가 < 최저현재가(int(60), int(보유시간)):
-    매도 = True
+# 3. 보유시간 기반 손절 (비활성)
+# elif 보유시간 > 60 and 현재가 < 최저현재가(int(60), int(보유시간)):
+#     매도 = True
 
 # 4. 익절/손절 기준
 elif 시분초 < 93000:
