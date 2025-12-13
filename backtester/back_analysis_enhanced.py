@@ -279,6 +279,15 @@ def PrepareThresholdCurveData(optimal_thresholds, top_n=5):
     return curve_data
 
 
+def _FindNearestIndex(values, target):
+    try:
+        arr = np.asarray(values, dtype=float)
+        tgt = float(target)
+        return int(np.nanargmin(np.abs(arr - tgt)))
+    except Exception:
+        return 0
+
+
 # ============================================================================
 # 2. 강화된 파생 지표 계산
 # ============================================================================
@@ -623,8 +632,10 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
 
         try:
             # 조합 조건 생성
-            cond1 = eval(filter1['조건식']) if '조건식' in filter1 else None
-            cond2 = eval(filter2['조건식']) if '조건식' in filter2 else None
+            safe_globals = {"__builtins__": {}}
+            safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+            cond1 = eval(filter1['조건식'], safe_globals, safe_locals) if '조건식' in filter1 else None
+            cond2 = eval(filter2['조건식'], safe_globals, safe_locals) if '조건식' in filter2 else None
 
             if cond1 is None or cond2 is None:
                 continue
@@ -670,9 +681,11 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
             filter3 = top_filters[f3]
 
             try:
-                cond1 = eval(filter1['조건식']) if '조건식' in filter1 else None
-                cond2 = eval(filter2['조건식']) if '조건식' in filter2 else None
-                cond3 = eval(filter3['조건식']) if '조건식' in filter3 else None
+                safe_globals = {"__builtins__": {}}
+                safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+                cond1 = eval(filter1['조건식'], safe_globals, safe_locals) if '조건식' in filter1 else None
+                cond2 = eval(filter2['조건식'], safe_globals, safe_locals) if '조건식' in filter2 else None
+                cond3 = eval(filter3['조건식'], safe_globals, safe_locals) if '조건식' in filter3 else None
 
                 if cond1 is None or cond2 is None or cond3 is None:
                     continue
@@ -1239,6 +1252,9 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         return
 
     try:
+        # 차트용 복사본 (원본 df_tsg에 구간 컬럼 등이 추가되는 부작용 방지)
+        df_tsg = df_tsg.copy()
+
         # 한글 폰트 설정
         font_path = 'C:/Windows/Fonts/malgun.ttf'
         try:
@@ -1543,13 +1559,17 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
             )
 
             if filter_names is not None and heatmap_matrix is not None:
-                im = ax14.imshow(heatmap_matrix, cmap='RdYlGn_r', aspect='auto',
-                                vmin=-100, vmax=0)
+                vmin = float(np.nanmin(heatmap_matrix)) if np.isfinite(heatmap_matrix).any() else -100.0
+                vmax = float(np.nanmax(heatmap_matrix)) if np.isfinite(heatmap_matrix).any() else 100.0
+                vmin = min(vmin, -100.0)
+                vmax = max(vmax, 100.0)
+                im = ax14.imshow(heatmap_matrix, cmap='RdYlGn', aspect='auto',
+                                vmin=vmin, vmax=vmax)
                 ax14.set_xticks(range(len(filter_names)))
                 ax14.set_yticks(range(len(filter_names)))
                 ax14.set_xticklabels(filter_names, rotation=45, ha='right', fontsize=7)
                 ax14.set_yticklabels(filter_names, fontsize=7)
-                ax14.set_title('필터 조합 시너지 히트맵 (NEW)\n(음수=시너지↓, 0에 가까울수록 좋음)',
+                ax14.set_title('필터 조합 시너지 히트맵 (NEW)\n(음수=시너지↓, 양수=시너지↑)',
                               fontsize=9)
 
                 # 값 표시
@@ -1585,10 +1605,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
                              marker='o', markersize=3, label=data['column'][:12],
                              color=color, linewidth=1.5)
                     # 최적점 표시
-                    try:
-                        opt_idx = data['thresholds'].index(data['optimal_threshold'])
-                    except ValueError:
-                        opt_idx = 0
+                    opt_idx = _FindNearestIndex(data.get('thresholds', []), data.get('optimal_threshold'))
                     ax15.scatter(data['excluded_ratios'][opt_idx],
                                 data['efficiencies'][opt_idx]/1000000,
                                 s=100, marker='*', color=color, edgecolors='black',
