@@ -1237,7 +1237,10 @@ def GenerateFilterCode(filter_results, top_n=5):
 # 9. 강화된 시각화 차트
 # ============================================================================
 
-def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None, feature_importance=None, optimal_thresholds=None, filter_combinations=None):
+def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
+                              filter_results=None, feature_importance=None,
+                              optimal_thresholds=None, filter_combinations=None,
+                              filter_stability=None, generated_code=None):
     """
     강화된 분석 차트를 생성합니다.
 
@@ -1259,20 +1262,27 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         # - 요약 텍스트 등에서 기본 monospace(DejaVu Sans Mono)로 fallback 되면 한글이 깨질 수 있어,
         #   family/monospace 모두에 한글 폰트를 우선 지정합니다.
         font_path = 'C:/Windows/Fonts/malgun.ttf'
-        preferred_korean_fonts = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'sans-serif']
-        plt.rcParams['font.family'] = preferred_korean_fonts
-        plt.rcParams['font.monospace'] = ['Malgun Gothic', 'Consolas', 'monospace']
         try:
-            font_manager.fontManager.addfont(font_path)
+            font_family = font_manager.FontProperties(fname=font_path).get_name()
+            plt.rcParams['font.family'] = font_family
+            plt.rcParams['font.sans-serif'] = [font_family]
+            plt.rcParams['font.monospace'] = [font_family, 'Consolas', 'monospace']
+            try:
+                font_manager.fontManager.addfont(font_path)
+            except:
+                pass
         except:
-            pass
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+            plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
+            plt.rcParams['font.monospace'] = ['Malgun Gothic', 'Consolas', 'monospace']
         plt.rcParams['axes.unicode_minus'] = False
 
         # 타임프레임 감지
         tf_info = DetectTimeframe(df_tsg, save_file_name)
 
         fig = plt.figure(figsize=(20, 30))
-        fig.suptitle(f'강화된 백테스팅 분석 - {save_file_name} ({tf_info["label"]})', fontsize=16, fontweight='bold')
+        fig.suptitle(f'백테스팅 필터 분석 차트 - {save_file_name} ({tf_info["label"]})',
+                     fontsize=16, fontweight='bold')
 
         gs = gridspec.GridSpec(6, 3, figure=fig, hspace=0.45, wspace=0.3)
 
@@ -1357,85 +1367,89 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
             ax5.set_ylabel('수익 개선 금액')
             ax5.set_title('제외비율 vs 수익개선 트레이드오프')
 
-        # ============ Chart 6-8: 기존 분석 차트 (시간대, 등락율, 체결강도) ============
-        # 시간대별
+        # ============ Chart 6-8: 필터 개선 핵심 보조 지표 ============
+        # Chart 6: 기간별 안정성(일관성) Top
         ax6 = fig.add_subplot(gs[2, 0])
-        if '매수시' in df_tsg.columns:
-            df_hour = df_tsg.groupby('매수시').agg({'수익금': 'sum', '수익률': 'mean'}).reset_index()
-            colors = [color_profit if x >= 0 else color_loss for x in df_hour['수익금']]
-            ax6.bar(df_hour['매수시'], df_hour['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax6.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax6.set_xlabel('매수 시간대')
-            ax6.set_ylabel('총 수익금')
-            ax6.set_title('시간대별 수익금')
+        if filter_stability and len(filter_stability) > 0:
+            top_stable = sorted(filter_stability, key=lambda x: x.get('일관성점수', 0), reverse=True)[:10]
+            names = [str(x.get('필터명', ''))[:18] for x in top_stable]
+            scores = [x.get('일관성점수', 0) for x in top_stable]
+            colors = []
+            for x in top_stable:
+                grade = x.get('안정성등급', '')
+                if grade == '안정':
+                    colors.append(color_profit)
+                elif grade == '보통':
+                    colors.append('#F1C40F')
+                else:
+                    colors.append(color_loss)
 
-        # 등락율별
+            y_pos = range(len(names))
+            ax6.barh(y_pos, scores, color=colors, edgecolor='black', linewidth=0.5)
+            ax6.set_yticks(y_pos)
+            ax6.set_yticklabels(names, fontsize=8)
+            ax6.set_xlabel('일관성점수(0-100)')
+            ax6.set_title('필터 안정성 Top 10')
+            ax6.invert_yaxis()
+            for i, item in enumerate(top_stable):
+                avg_imp = item.get('평균개선', 0)
+                ax6.text(scores[i] + 1, i, f"+{avg_imp/10000:.0f}만", va='center', fontsize=7)
+        else:
+            ax6.text(0.5, 0.5, '안정성 분석 데이터 없음', ha='center', va='center',
+                     fontsize=12, transform=ax6.transAxes)
+            ax6.axis('off')
+
+        # Chart 7: 최적 임계값 요약 (Top)
         ax7 = fig.add_subplot(gs[2, 1])
-        if '매수등락율' in df_tsg.columns:
-            # 동적 bins 생성: 데이터 분포에 기반
-            rate_min = max(0, df_tsg['매수등락율'].min())
-            rate_max = min(100, df_tsg['매수등락율'].max())
-            data_range = rate_max - rate_min
-            
-            if data_range > 25:
-                # 넓은 범위: 5% 단위
-                bins = [0, 5, 10, 15, 20, 25, 30, 100]
-            elif data_range > 15:
-                # 중간 범위: 3% 단위
-                bins = list(range(int(rate_min), int(rate_max) + 4, 3))
-                if bins[-1] < 100:
-                    bins.append(100)
-            else:
-                # 좁은 범위: 2% 단위
-                bins = list(range(int(rate_min), int(rate_max) + 3, 2))
-                if bins[-1] < 100:
-                    bins.append(100)
-            
-            labels = [f'{bins[i]}-{bins[i+1]}' for i in range(len(bins)-1)]
-            df_tsg['등락율구간'] = pd.cut(df_tsg['매수등락율'], bins=bins, labels=labels, right=False)
-            df_rate = df_tsg.groupby('등락율구간', observed=True).agg({'수익금': 'sum'}).reset_index()
-            colors = [color_profit if x >= 0 else color_loss for x in df_rate['수익금']]
-            ax7.bar(range(len(df_rate)), df_rate['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax7.set_xticks(range(len(df_rate)))
-            ax7.set_xticklabels(df_rate['등락율구간'], rotation=45, fontsize=8)
-            ax7.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax7.set_xlabel('등락율 구간 (%)')
-            ax7.set_ylabel('총 수익금')
-            ax7.set_title(f'등락율별 수익금 (범위: {rate_min:.1f}%-{rate_max:.1f}%)')
+        ax7.axis('off')
+        if optimal_thresholds and len(optimal_thresholds) > 0:
+            top_thr = optimal_thresholds[:8]
+            table_data = []
+            for t in top_thr:
+                name = t.get('필터명') or str(t.get('column', ''))[:22]
+                improvement = t.get('improvement', 0)
+                excluded_ratio = t.get('excluded_ratio', 0)
+                efficiency = t.get('efficiency', '')
+                table_data.append([str(name)[:22], f"{int(improvement):,}", f"{excluded_ratio}", f"{efficiency}"])
 
-        # 체결강도별
+            tbl = ax7.table(
+                cellText=table_data,
+                colLabels=['필터명', '개선(원)', '제외(%)', '효율'],
+                loc='center'
+            )
+            tbl.auto_set_font_size(False)
+            tbl.set_fontsize(7)
+            tbl.scale(1, 1.4)
+            ax7.set_title('최적 임계값 요약 (Top)', fontsize=10)
+        else:
+            ax7.text(0.5, 0.5, '임계값 분석 데이터 없음', ha='center', va='center',
+                     fontsize=12, transform=ax7.transAxes)
+
+        # Chart 8: 필터 조합 시너지 상위
         ax8 = fig.add_subplot(gs[2, 2])
-        if '매수체결강도' in df_tsg.columns:
-            # 동적 bins 생성: 데이터 분포에 기반
-            ch_min = max(0, df_tsg['매수체결강도'].min())
-            ch_max = min(500, df_tsg['매수체결강도'].max())
-            data_range = ch_max - ch_min
-            
-            if data_range > 150:
-                # 넓은 범위: 기존 방식
-                bins = [0, 80, 100, 120, 150, 200, 500]
-            elif data_range > 80:
-                # 중간 범위: 20 단위
-                bins = list(range(int(ch_min // 20 * 20), int(ch_max) + 25, 20))
-                if bins[-1] < 500:
-                    bins.append(500)
-            else:
-                # 좁은 범위: 10 단위
-                bins = list(range(int(ch_min // 10 * 10), int(ch_max) + 15, 10))
-                if bins[-1] < 500:
-                    bins.append(500)
-            
-            labels = [f'{bins[i]}-{bins[i+1]}' for i in range(len(bins)-1)]
-            df_tsg['체결강도구간'] = pd.cut(df_tsg['매수체결강도'], bins=bins, labels=labels, right=False)
-            df_ch = df_tsg.groupby('체결강도구간', observed=True).agg({'수익금': 'sum'}).reset_index()
-            colors = [color_profit if x >= 0 else color_loss for x in df_ch['수익금']]
-            ax8.bar(range(len(df_ch)), df_ch['수익금'], color=colors, edgecolor='black', linewidth=0.5)
-            ax8.set_xticks(range(len(df_ch)))
-            ax8.set_xticklabels(df_ch['체결강도구간'], rotation=45, fontsize=8)
-            ax8.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax8.set_xlabel('체결강도 구간')
-            ax8.set_ylabel('총 수익금')
-            ax8.set_title(f'체결강도별 수익금 (범위: {ch_min:.0f}-{ch_max:.0f})')
+        ax8.axis('off')
+        if filter_combinations and len(filter_combinations) > 0:
+            top_combo = sorted(filter_combinations, key=lambda x: x.get('시너지효과', 0), reverse=True)[:8]
+            lines = []
+            for c in top_combo:
+                combo_type = c.get('조합유형', '')
+                f1 = str(c.get('필터1', ''))[:14]
+                f2 = str(c.get('필터2', ''))[:14]
+                f3 = str(c.get('필터3', ''))[:14]
+                if combo_type == '3개 조합' and f3:
+                    name = f"{f1}+{f2}+{f3}"
+                else:
+                    name = f"{f1}+{f2}"
+                lines.append(
+                    f"- {name}: 시너지 {int(c.get('시너지효과', 0)):,}원 ({c.get('시너지비율', 0)}%)"
+                )
+            text = "\n".join(lines) if lines else '조합 분석 데이터 없음'
+            ax8.text(0.02, 0.98, text, transform=ax8.transAxes, va='top', fontsize=8,
+                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+            ax8.set_title('필터 조합 시너지 Top', fontsize=10)
+        else:
+            ax8.text(0.5, 0.5, '조합 분석 데이터 없음', ha='center', va='center',
+                     fontsize=12, transform=ax8.transAxes)
 
         # ============ Chart 9: 거래품질점수별 수익금 ============
         ax9 = fig.add_subplot(gs[3, 0])
@@ -1509,51 +1523,95 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
             ax11.set_title('리스크 조정 수익률 분포 (NEW)')
             ax11.legend(fontsize=9)
 
-        # ============ Chart 12: 상관관계 히트맵 ============
-        ax12 = fig.add_subplot(gs[4, 0])
-        corr_columns = ['수익률', '매수등락율', '매수체결강도', '매수회전율', '보유시간']
-        if '거래품질점수' in df_tsg.columns:
-            corr_columns.append('거래품질점수')
-        available_cols = [col for col in corr_columns if col in df_tsg.columns]
+        # ============ Chart 12: 필터 결과 요약 테이블 ============
+        ax12 = fig.add_subplot(gs[4, :2])
+        ax12.axis('off')
+        if filter_results and len(filter_results) > 0:
+            top_filters = [f for f in filter_results if f.get('수익개선금액', 0) > 0][:12]
+            if not top_filters:
+                top_filters = filter_results[:12]
 
-        if len(available_cols) >= 3:
-            df_corr = df_tsg[available_cols].corr()
-            im = ax12.imshow(df_corr.values, cmap='RdYlGn', aspect='auto', vmin=-1, vmax=1)
-            ax12.set_xticks(range(len(available_cols)))
-            ax12.set_yticks(range(len(available_cols)))
-            ax12.set_xticklabels(available_cols, rotation=45, ha='right', fontsize=8)
-            ax12.set_yticklabels(available_cols, fontsize=8)
-            ax12.set_title('변수 간 상관관계')
+            table_data = []
+            for f in top_filters:
+                name = str(f.get('필터명', ''))[:26]
+                improvement = int(f.get('수익개선금액', 0) or 0)
+                excluded = f.get('제외비율', '')
+                p_value = f.get('p값', '')
+                significant = f.get('유의함', '')
+                effect_size = f.get('효과크기', '')
+                recommend = str(f.get('적용권장', ''))
+                table_data.append([
+                    name,
+                    f"{improvement:,}",
+                    f"{excluded}",
+                    f"{p_value}",
+                    f"{significant}",
+                    f"{effect_size}",
+                    recommend
+                ])
 
-            for i in range(len(available_cols)):
-                for j in range(len(available_cols)):
-                    ax12.text(j, i, f'{df_corr.values[i, j]:.2f}', ha='center', va='center', fontsize=7)
+            tbl = ax12.table(
+                cellText=table_data,
+                colLabels=['필터명', '개선(원)', '제외(%)', 'p값', '유의', '효과(d)', '권장'],
+                loc='center'
+            )
+            tbl.auto_set_font_size(False)
+            tbl.set_fontsize(7)
+            tbl.scale(1, 1.55)
+            ax12.set_title('필터 결과 요약 (Top)', fontsize=11)
 
-            plt.colorbar(im, ax=ax12, shrink=0.8)
+            try:
+                for row_idx, f in enumerate(top_filters, start=1):
+                    stars = str(f.get('적용권장', ''))
+                    is_sig = str(f.get('유의함', '')) == '예'
+                    if stars.count('★') >= 3:
+                        row_color = '#E8F8F5'
+                    elif is_sig:
+                        row_color = '#FEF9E7'
+                    else:
+                        row_color = 'white'
+                    for col_idx in range(7):
+                        tbl[(row_idx, col_idx)].set_facecolor(row_color)
+            except:
+                pass
+        else:
+            ax12.text(0.5, 0.5, '필터 분석 결과 없음', ha='center', va='center',
+                      fontsize=12, transform=ax12.transAxes)
 
-        # ============ Chart 13: 손실/이익 거래 특성 비교 ============
-        ax13 = fig.add_subplot(gs[4, 1])
-        loss_trades = df_tsg[df_tsg['수익금'] < 0]
-        profit_trades = df_tsg[df_tsg['수익금'] >= 0]
+        # ============ Chart 13: 자동 생성 조건식 요약 ============
+        ax13 = fig.add_subplot(gs[4, 2])
+        ax13.axis('off')
+        if generated_code and generated_code.get('code_text'):
+            summary = generated_code.get('summary', {}) or {}
+            code_text = str(generated_code.get('code_text', '') or '')
+            code_lines = [ln.rstrip() for ln in code_text.splitlines() if ln is not None]
+            snippet = "\n".join(code_lines[:18])
+            if len(code_lines) > 18:
+                snippet += "\n..."
 
-        compare_cols = ['매수등락율', '매수체결강도', '보유시간']
-        if '거래품질점수' in df_tsg.columns:
-            compare_cols.append('거래품질점수')
-        available_cols = [c for c in compare_cols if c in df_tsg.columns]
+            header_lines = [
+                "=== 자동 생성 코드 요약 ===",
+                f"- 필터 수: {int(summary.get('total_filters', 0) or 0):,}",
+                f"- 예상 총 개선: {int(summary.get('total_improvement', 0) or 0):,}원",
+            ]
+            categories = summary.get('categories') or []
+            if categories:
+                shown = ", ".join([str(x) for x in categories[:6]])
+                header_lines.append(f"- 카테고리: {shown}" + (" ..." if len(categories) > 6 else ""))
 
-        if len(available_cols) > 0 and len(loss_trades) > 0 and len(profit_trades) > 0:
-            loss_means = [loss_trades[c].mean() for c in available_cols]
-            profit_means = [profit_trades[c].mean() for c in available_cols]
-
-            x = np.arange(len(available_cols))
-            width = 0.35
-            ax13.bar(x - width/2, loss_means, width, label='손실거래', color=color_loss, alpha=0.8)
-            ax13.bar(x + width/2, profit_means, width, label='이익거래', color=color_profit, alpha=0.8)
-            ax13.set_xticks(x)
-            ax13.set_xticklabels(available_cols, rotation=45, ha='right', fontsize=9)
-            ax13.set_ylabel('평균값')
-            ax13.set_title('손실/이익 거래 특성 비교')
-            ax13.legend(fontsize=9)
+            ax13.text(
+                0.02, 0.98,
+                "\n".join(header_lines) + "\n\n" + snippet,
+                transform=ax13.transAxes,
+                va='top',
+                fontsize=8,
+                family='monospace',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)
+            )
+            ax13.set_title('조건식 코드 생성', fontsize=10)
+        else:
+            ax13.text(0.5, 0.5, '코드 생성 결과 없음', ha='center', va='center',
+                      fontsize=12, transform=ax13.transAxes)
 
         # ============ Chart 14: 필터 조합 시너지 히트맵 (NEW) ============
         ax14 = fig.add_subplot(gs[5, 0])
@@ -1766,14 +1824,15 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         result['generated_code'] = generated_code
 
         # 8. CSV 파일 저장
-        # 상세 거래 기록
-        detail_path = f"{GRAPH_PATH}/{save_file_name}_enhanced_detail.csv"
+        # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
+        detail_path = f"{GRAPH_PATH}/{save_file_name}_detail.csv"
         df_enhanced.to_csv(detail_path, encoding='utf-8-sig', index=True)
         result['csv_files'].append(detail_path)
 
         # 필터 분석 결과
         if filter_results:
-            filter_path = f"{GRAPH_PATH}/{save_file_name}_filter_analysis.csv"
+            # 강화 분석 사용 시: filter.csv로 통합하여 중복 생성 방지
+            filter_path = f"{GRAPH_PATH}/{save_file_name}_filter.csv"
             pd.DataFrame(filter_results).to_csv(filter_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(filter_path)
 
@@ -1796,7 +1855,17 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
             result['csv_files'].append(stability_path)
 
         # 9. 강화된 차트 생성
-        chart_path = PltEnhancedAnalysisCharts(df_enhanced, save_file_name, teleQ, filter_results, feature_importance, optimal_thresholds, filter_combinations)
+        chart_path = PltEnhancedAnalysisCharts(
+            df_enhanced,
+            save_file_name,
+            teleQ,
+            filter_results=filter_results,
+            feature_importance=feature_importance,
+            optimal_thresholds=optimal_thresholds,
+            filter_combinations=filter_combinations,
+            filter_stability=filter_stability,
+            generated_code=generated_code
+        )
         if chart_path:
             result['charts'].append(chart_path)
 

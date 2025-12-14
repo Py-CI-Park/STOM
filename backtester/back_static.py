@@ -5,6 +5,8 @@ import sqlite3
 import operator
 import numpy as np
 import pandas as pd
+from datetime import datetime
+from pathlib import Path
 from numba import jit
 from talib import stream
 from traceback import print_exc
@@ -38,6 +40,163 @@ def RunOptunaServer():
         run_server(DB_OPTUNA)
     except:
         pass
+
+
+def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd=None,
+                           startday=None, endday=None, starttime=None, endtime=None,
+                           buy_vars=None, sell_vars=None, full_result=None,
+                           enhanced_result=None, enhanced_error=None):
+    """
+    backtester/graph 폴더에 이번 실행의 산출물 목록/요약을 txt로 저장합니다.
+
+    - 생성된 파일 목록(png/csv 등)
+    - 생성 시각(파일 수정 시각 기준)
+    - 조건식(매수/매도) 및 기본 성과 요약
+    """
+    try:
+        def _describe_output_file(filename: str) -> str:
+            if filename.endswith('_analysis.png'):
+                return '백테스팅 결과 분석 차트(분 단위 시간축/구간별 수익 분포)'
+            if filename.endswith('_comparison.png'):
+                return '매수/매도 시점 비교 분석 차트(변화량/추세/보유시간 등)'
+            if filename.endswith('_enhanced.png'):
+                return '필터 기능 분석 차트(통계/시너지/안정성/임계값/코드생성)'
+            if filename.endswith('_detail.csv'):
+                return '거래 상세 기록(강화 분석 사용 시 강화 파생지표 포함)'
+            if filename.endswith('_summary.csv'):
+                return '구간/조건별 요약 통계'
+            if filename.endswith('_filter.csv'):
+                return '필터 분석 결과(강화 분석 사용 시 t-test/효과크기 포함)'
+            if filename.endswith('_optimal_thresholds.csv'):
+                return '임계값(Threshold) 최적화 결과'
+            if filename.endswith('_filter_combinations.csv'):
+                return '필터 조합 시너지 분석 결과'
+            if filename.endswith('_filter_stability.csv'):
+                return '기간별 필터 안정성(일관성) 분석 결과'
+            if filename.endswith('_report.txt'):
+                return '이번 실행 산출물 리포트(파일/시간/조건/요약)'
+            if filename.endswith('_.png'):
+                return '부가정보 차트(지수비교/요일별/시간별 수익금)'
+            if filename.endswith('.png'):
+                return '수익곡선/누적 수익금 차트'
+            return ''
+
+        graph_dir = Path(GRAPH_PATH)
+        graph_dir.mkdir(parents=True, exist_ok=True)
+        report_path = graph_dir / f"{save_file_name}_report.txt"
+
+        now = datetime.now()
+        lines = []
+        lines.append("=== STOM Backtester Output Report ===")
+        lines.append(f"- 생성 시각: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"- 저장 키(save_file_name): {save_file_name}")
+        if backname is not None:
+            lines.append(f"- 백테스트 구분: {backname}")
+        if startday is not None and endday is not None:
+            lines.append(f"- 기간: {startday} ~ {endday}")
+        if starttime is not None and endtime is not None:
+            lines.append(f"- 시간: {starttime} ~ {endtime}")
+        if seed is not None:
+            lines.append(f"- Seed: {seed}")
+        if mdd is not None:
+            lines.append(f"- MDD(%): {mdd}")
+
+        if enhanced_result is not None and enhanced_error is None:
+            lines.append("- 강화 분석: 성공")
+        elif enhanced_error is not None:
+            lines.append("- 강화 분석: 실패(기본 CSV 대체)")
+        else:
+            lines.append("- 강화 분석: 미사용")
+
+        # 조건식 정보
+        if buy_vars:
+            lines.append("")
+            lines.append("=== 매수 조건식 ===")
+            lines.append(str(buy_vars))
+        if sell_vars:
+            lines.append("")
+            lines.append("=== 매도 조건식 ===")
+            lines.append(str(sell_vars))
+
+        # 기본 성과 요약
+        lines.append("")
+        lines.append("=== 성과 요약 ===")
+        total_trades = len(df_tsg) if df_tsg is not None else 0
+        lines.append(f"- 거래 수: {total_trades:,}")
+        if df_tsg is not None and '수익금' in df_tsg.columns:
+            total_profit = int(df_tsg['수익금'].sum())
+            win_rate = (df_tsg['수익금'] > 0).mean() * 100 if total_trades > 0 else 0
+            avg_return = float(df_tsg['수익률'].mean()) if '수익률' in df_tsg.columns and total_trades > 0 else 0
+            lines.append(f"- 총 수익금: {total_profit:,}원")
+            lines.append(f"- 승률: {win_rate:.2f}%")
+            lines.append(f"- 평균 수익률: {avg_return:.4f}%")
+
+        if df_tsg is not None and '매도조건' in df_tsg.columns:
+            try:
+                vc = df_tsg['매도조건'].astype(str).value_counts()
+                lines.append("")
+                lines.append("=== 매도조건 상위(빈도) ===")
+                for k, v in vc.head(10).items():
+                    lines.append(f"- {k[:60]}: {v}")
+            except:
+                pass
+
+        # 추천/요약
+        if full_result and full_result.get('recommendations'):
+            lines.append("")
+            lines.append("=== 기본 분석 추천(Top) ===")
+            for rec in full_result['recommendations'][:10]:
+                lines.append(f"- {rec}")
+
+        if enhanced_result and enhanced_result.get('recommendations'):
+            lines.append("")
+            lines.append("=== 강화 분석 추천(Top) ===")
+            for rec in enhanced_result['recommendations'][:10]:
+                lines.append(f"- {rec}")
+
+        if enhanced_error is not None:
+            lines.append("")
+            lines.append("=== 강화 분석 오류 ===")
+            lines.append(str(enhanced_error))
+
+        # 파일 목록
+        lines.append("")
+        lines.append("=== 생성 파일 목록 ===")
+        prefix = str(save_file_name)
+        matched = []
+        for p in graph_dir.iterdir():
+            if not p.is_file():
+                continue
+            name = p.name
+            if not name.startswith(prefix):
+                continue
+            rest = name[len(prefix):]
+            if rest == '' or rest.startswith('_') or rest.startswith('.'):
+                matched.append(p)
+        matched = sorted(matched, key=lambda x: x.name)
+        if not matched:
+            lines.append("(없음)")
+        else:
+            for p in matched:
+                desc = _describe_output_file(p.name)
+                try:
+                    st = p.stat()
+                    mtime = datetime.fromtimestamp(st.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                    if desc:
+                        lines.append(f"- {p.name} | {st.st_size:,} bytes | mtime {mtime} | {desc}")
+                    else:
+                        lines.append(f"- {p.name} | {st.st_size:,} bytes | mtime {mtime}")
+                except:
+                    if desc:
+                        lines.append(f"- {p.name} | {desc}")
+                    else:
+                        lines.append(f"- {p.name}")
+
+        report_path.write_text("\n".join(lines), encoding='utf-8-sig')
+        return str(report_path)
+    except:
+        print_exc()
+        return None
 
 
 def GetTradeInfo(gubun):
@@ -847,18 +1006,70 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     # [2025-12-08] 분석 차트 생성 및 텔레그램 전송 (8개 기본 분석 차트)
     PltAnalysisCharts(df_tsg, save_file_name, teleQ)
 
-    # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력 (11개 비교 차트 + CSV)
-    RunFullAnalysis(df_tsg, save_file_name, teleQ)
+    # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
+    # - 강화 분석을 사용할 경우: detail/filter CSV는 강화 분석 결과로 통합(중복 생성 방지)
+    full_result = RunFullAnalysis(
+        df_tsg,
+        save_file_name,
+        teleQ,
+        export_detail=not ENHANCED_ANALYSIS_AVAILABLE,
+        export_summary=True,
+        export_filter=not ENHANCED_ANALYSIS_AVAILABLE,
+        include_filter_recommendations=not ENHANCED_ANALYSIS_AVAILABLE
+    )
 
     # [2025-12-10] 강화된 분석 실행 (14개 ML/통계 분석 차트)
+    enhanced_result = None
+    enhanced_error = None
     if ENHANCED_ANALYSIS_AVAILABLE:
         try:
-            analysis_result = RunEnhancedAnalysis(df_tsg, save_file_name, teleQ)
-            if analysis_result and analysis_result.get('recommendations'):
-                for rec in analysis_result['recommendations'][:5]:
+            enhanced_result = RunEnhancedAnalysis(df_tsg, save_file_name, teleQ)
+            if teleQ is not None and enhanced_result and enhanced_result.get('recommendations'):
+                for rec in enhanced_result['recommendations'][:5]:
                     teleQ.put(rec)
         except Exception as e:
+            enhanced_error = e
             print_exc()
+            # 강화 분석 실패 시: 기본 detail/filter CSV를 생성해 결과 보존
+            try:
+                ExportBacktestCSV(
+                    df_tsg,
+                    save_file_name,
+                    teleQ,
+                    write_detail=True,
+                    write_summary=False,
+                    write_filter=True
+                )
+                if teleQ is not None:
+                    df_fallback = CalculateDerivedMetrics(df_tsg)
+                    filter_results = AnalyzeFilterEffects(df_fallback)
+                    top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
+                    recs = [
+                        f"[{f['분류']}] {f['필터명']}: 수익개선 {f['수익개선금액']:,}원 예상"
+                        for f in top_filters[:5]
+                    ]
+                    if recs:
+                        teleQ.put("📊 필터 추천:\n" + "\n".join(recs))
+            except:
+                print_exc()
+
+    # [2025-12-14] 산출물 메타 리포트(txt) 저장
+    WriteGraphOutputReport(
+        save_file_name=save_file_name,
+        df_tsg=df_tsg,
+        backname=backname,
+        seed=seed,
+        mdd=mdd,
+        startday=startday,
+        endday=endday,
+        starttime=starttime,
+        endtime=endtime,
+        buy_vars=buy_vars,
+        sell_vars=sell_vars,
+        full_result=full_result,
+        enhanced_result=enhanced_result,
+        enhanced_error=enhanced_error
+    )
 
     if not schedul and not plotgraph:
         plt.show()
@@ -1042,6 +1253,9 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         return  # 데이터가 부족하거나 확장 컬럼이 없으면 건너뜀
 
     try:
+        # 차트용 복사본 (원본 df_tsg에 임시 컬럼 추가되는 부작용 방지)
+        df_tsg = df_tsg.copy()
+
         # 한글 폰트 설정 (개선된 버전)
         font_path = 'C:/Windows/Fonts/malgun.ttf'
         try:
@@ -1063,20 +1277,58 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         color_loss = '#E74C3C'    # 빨간색 (손실)
         color_bar = '#3498DB'     # 파란색
 
-        # ============ Chart 1: 시간대별 수익 분포 ============
+        # ============ Chart 1: 매수 시각별(분 단위) 수익 분포 ============
         ax1 = fig.add_subplot(gs[0, 0])
-        df_hour = df_tsg.groupby('매수시').agg({'수익금': 'sum', '수익률': 'mean'}).reset_index()
-        colors = [color_profit if x >= 0 else color_loss for x in df_hour['수익금']]
-        bars = ax1.bar(df_hour['매수시'], df_hour['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-        ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-        ax1.set_xlabel('매수 시간대 (시)')
-        ax1.set_ylabel('총 수익금')
-        ax1.set_title('시간대별 수익금 분포')
-        ax1.set_xticks(range(9, 16))
-        for bar, val in zip(bars, df_hour['수익금']):
-            if abs(val) > 0:
-                ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
-                        f'{val/10000:.0f}만', ha='center', va='bottom' if val >= 0 else 'top', fontsize=8)
+        if '매수시' in df_tsg.columns and '매수분' in df_tsg.columns:
+            hour = df_tsg['매수시'].fillna(0).astype(int).astype(str).str.zfill(2)
+            minute = df_tsg['매수분'].fillna(0).astype(int).astype(str).str.zfill(2)
+            df_tsg['매수시각'] = hour + ':' + minute
+            df_time = df_tsg.groupby('매수시각', observed=True).agg({
+                '수익금': 'sum',
+                '수익률': 'mean',
+                '종목명': 'count'
+            }).reset_index()
+            df_time.columns = ['매수시각', '수익금', '평균수익률', '거래횟수']
+            df_time = df_time.sort_values('매수시각')
+
+            x_pos = range(len(df_time))
+            colors = [color_profit if x >= 0 else color_loss for x in df_time['수익금']]
+            bars = ax1.bar(x_pos, df_time['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+            ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+            ax1.set_xlabel('매수 시각 (HH:MM)')
+            ax1.set_ylabel('총 수익금')
+            ax1.set_title('매수 시각별 수익금 분포(분 단위) + 거래횟수')
+
+            ax1_twin = ax1.twinx()
+            ax1_twin.plot(x_pos, df_time['거래횟수'], 'o-', color='orange', linewidth=1.5, markersize=4)
+            ax1_twin.set_ylabel('거래횟수', color='orange')
+            ax1_twin.tick_params(axis='y', labelcolor='orange')
+
+            tick_step = max(1, int(len(df_time) / 12))
+            ax1.set_xticks(list(range(0, len(df_time), tick_step)))
+            ax1.set_xticklabels(df_time['매수시각'].iloc[::tick_step], rotation=45, ha='right', fontsize=8)
+
+            if len(df_time) <= 25:
+                for bar, val in zip(bars, df_time['수익금']):
+                    if abs(val) > 0:
+                        ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                                 f'{val/10000:.0f}만', ha='center',
+                                 va='bottom' if val >= 0 else 'top', fontsize=7)
+        else:
+            df_hour = df_tsg.groupby('매수시').agg({'수익금': 'sum', '수익률': 'mean'}).reset_index()
+            colors = [color_profit if x >= 0 else color_loss for x in df_hour['수익금']]
+            bars = ax1.bar(df_hour['매수시'], df_hour['수익금'], color=colors, alpha=0.8, edgecolor='black',
+                           linewidth=0.5)
+            ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+            ax1.set_xlabel('매수 시간대 (시)')
+            ax1.set_ylabel('총 수익금')
+            ax1.set_title('시간대별 수익금 분포')
+            ax1.set_xticks(range(9, 16))
+            for bar, val in zip(bars, df_hour['수익금']):
+                if abs(val) > 0:
+                    ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                             f'{val/10000:.0f}만', ha='center',
+                             va='bottom' if val >= 0 else 'top', fontsize=8)
 
         # ============ Chart 2: 등락율별 수익 분포 ============
         ax2 = fig.add_subplot(gs[0, 1])
@@ -1321,7 +1573,7 @@ def CalculateDerivedMetrics(df_tsg):
     return df
 
 
-def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
+def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, write_summary=True, write_filter=True):
     """
     백테스팅 결과를 CSV 파일로 내보냅니다.
 
@@ -1329,6 +1581,9 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
         df_tsg: 백테스팅 결과 DataFrame
         save_file_name: 저장 파일명
         teleQ: 텔레그램 전송 큐
+        write_detail: detail.csv 생성 여부
+        write_summary: summary.csv 생성 여부
+        write_filter: filter.csv 생성 여부
 
     Returns:
         tuple: (detail_path, summary_path, filter_path)
@@ -1337,15 +1592,18 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
         # 파생 지표 계산
         df_analysis = CalculateDerivedMetrics(df_tsg)
 
+        detail_path, summary_path, filter_path = None, None, None
+
         # === 1. 상세 거래 기록 CSV ===
-        detail_path = f"{GRAPH_PATH}/{save_file_name}_detail.csv"
-        df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True)
+        if write_detail:
+            detail_path = f"{GRAPH_PATH}/{save_file_name}_detail.csv"
+            df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True)
 
         # === 2. 조건별 요약 통계 CSV ===
         summary_data = []
 
         # 시간대별 요약
-        if '매수시' in df_analysis.columns:
+        if write_summary and '매수시' in df_analysis.columns:
             for hour in df_analysis['매수시'].unique():
                 hour_data = df_analysis[df_analysis['매수시'] == hour]
                 summary_data.append({
@@ -1360,7 +1618,7 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
                 })
 
         # 등락율 구간별 요약
-        if '매수등락율' in df_analysis.columns:
+        if write_summary and '매수등락율' in df_analysis.columns:
             bins = [0, 5, 10, 15, 20, 25, 30, 100]
             labels = ['0-5%', '5-10%', '10-15%', '15-20%', '20-25%', '25-30%', '30%+']
             df_analysis['등락율구간_'] = pd.cut(df_analysis['매수등락율'], bins=bins, labels=labels, right=False)
@@ -1379,7 +1637,7 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
                     })
 
         # 체결강도 구간별 요약
-        if '매수체결강도' in df_analysis.columns:
+        if write_summary and '매수체결강도' in df_analysis.columns:
             bins_ch = [0, 80, 100, 120, 150, 200, 500]
             labels_ch = ['~80', '80-100', '100-120', '120-150', '150-200', '200+']
             df_analysis['체결강도구간_'] = pd.cut(df_analysis['매수체결강도'], bins=bins_ch, labels=labels_ch, right=False)
@@ -1398,7 +1656,7 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
                     })
 
         # 매도조건별 요약
-        if '매도조건' in df_analysis.columns:
+        if write_summary and '매도조건' in df_analysis.columns:
             for cond in df_analysis['매도조건'].unique():
                 cond_data = df_analysis[df_analysis['매도조건'] == cond]
                 summary_data.append({
@@ -1412,22 +1670,24 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None):
                     '손실거래비중': round((cond_data['수익금'] < 0).mean() * 100, 2)
                 })
 
-        summary_path = f"{GRAPH_PATH}/{save_file_name}_summary.csv"
-        df_summary = pd.DataFrame(summary_data)
-        if len(df_summary) > 0:
-            df_summary = df_summary.sort_values(['분류', '총수익금'], ascending=[True, False])
-            df_summary.to_csv(summary_path, encoding='utf-8-sig', index=False)
+        if write_summary:
+            summary_path = f"{GRAPH_PATH}/{save_file_name}_summary.csv"
+            df_summary = pd.DataFrame(summary_data)
+            if len(df_summary) > 0:
+                df_summary = df_summary.sort_values(['분류', '총수익금'], ascending=[True, False])
+                df_summary.to_csv(summary_path, encoding='utf-8-sig', index=False)
 
         # === 3. 필터 효과 분석 CSV ===
-        filter_data = AnalyzeFilterEffects(df_analysis)
-        filter_path = f"{GRAPH_PATH}/{save_file_name}_filter.csv"
-        if len(filter_data) > 0:
-            df_filter = pd.DataFrame(filter_data)
-            df_filter = df_filter.sort_values('수익개선금액', ascending=False)
-            df_filter.to_csv(filter_path, encoding='utf-8-sig', index=False)
+        if write_filter:
+            filter_data = AnalyzeFilterEffects(df_analysis)
+            filter_path = f"{GRAPH_PATH}/{save_file_name}_filter.csv"
+            if len(filter_data) > 0:
+                df_filter = pd.DataFrame(filter_data)
+                df_filter = df_filter.sort_values('수익개선금액', ascending=False)
+                df_filter.to_csv(filter_path, encoding='utf-8-sig', index=False)
 
         # 텔레그램 알림
-        if teleQ is not None:
+        if teleQ is not None and (write_detail or write_summary or write_filter):
             teleQ.put(f"CSV 파일 생성 완료: {save_file_name}")
 
         return detail_path, summary_path, filter_path
@@ -1557,7 +1817,7 @@ def AnalyzeFilterEffects(df_tsg):
 # [2025-12-09] 매수/매도 시점 비교 분석 차트 (11개 차트)
 # ============================================================================
 
-def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
+def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None):
     """
     매수/매도 시점 비교 분석 차트를 생성합니다.
 
@@ -1828,7 +2088,231 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
             pass
 
 
-def RunFullAnalysis(df_tsg, save_file_name, teleQ=None):
+def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
+    """
+    매수/매도 시점 비교 분석 차트를 생성합니다.
+
+    목적:
+        - 매수/매도 시점 변화(매도-매수)와 수익률 관계를 파악
+        - 손실/이익 거래의 특징 차이를 비교해 매도/필터 개선 근거 제공
+
+    차트 구성 (중복 최소화):
+        1) 등락율 변화 vs 수익률
+        2) 체결강도 변화 vs 수익률
+        3) 매수 vs 매도 등락율
+        4) 등락추세별 수익금(거래수)
+        5) 체결강도추세별 수익금(거래수)
+        6) 등락추세×체결강도추세 조합별 수익금 히트맵
+        7) 손실/이익 거래 특성 비교(매수단/보유시간)
+        8) 손실/이익 거래 변화량 비교(매도-매수)
+        9) 보유시간 vs 수익률 산점도
+    """
+    import warnings
+    warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
+
+    # 매도 시점 데이터 확인
+    required_cols = ['매도등락율', '매도체결강도', '등락율변화', '체결강도변화']
+    if not all(col in df_tsg.columns for col in required_cols):
+        return
+
+    if len(df_tsg) < 5:
+        return
+
+    try:
+        df_tsg = df_tsg.copy()
+
+        # 한글 폰트 설정 (개선된 버전)
+        font_path = 'C:/Windows/Fonts/malgun.ttf'
+        try:
+            font_family = font_manager.FontProperties(fname=font_path).get_name()
+            plt.rcParams['font.family'] = font_family
+            plt.rcParams['font.sans-serif'] = [font_family]
+        except:
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+            plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
+        plt.rcParams['axes.unicode_minus'] = False
+
+        fig = plt.figure(figsize=(22, 18))
+        fig.suptitle(f'매수/매도 시점 비교 분석 - {save_file_name}', fontsize=14, fontweight='bold')
+        gs = gridspec.GridSpec(3, 3, figure=fig, hspace=0.4, wspace=0.3)
+
+        color_profit = '#2ECC71'
+        color_loss = '#E74C3C'
+        color_neutral = '#3498DB'
+
+        # === Chart 1: 등락율 변화 vs 수익률 ===
+        ax1 = fig.add_subplot(gs[0, 0])
+        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
+        ax1.scatter(df_tsg['등락율변화'], df_tsg['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+        ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax1.axvline(x=0, color='gray', linestyle='--', linewidth=0.8)
+        ax1.set_xlabel('등락율 변화 (매도-매수) %')
+        ax1.set_ylabel('수익률 (%)')
+        ax1.set_title('등락율 변화 vs 수익률')
+        ax1.grid(True, alpha=0.3)
+
+        # 사분면 라벨
+        ax1.text(0.95, 0.95, '상승+이익', transform=ax1.transAxes, ha='right', va='top', fontsize=8, color='green')
+        ax1.text(0.05, 0.95, '하락+이익', transform=ax1.transAxes, ha='left', va='top', fontsize=8, color='blue')
+        ax1.text(0.95, 0.05, '상승+손실', transform=ax1.transAxes, ha='right', va='bottom', fontsize=8, color='orange')
+        ax1.text(0.05, 0.05, '하락+손실', transform=ax1.transAxes, ha='left', va='bottom', fontsize=8, color='red')
+
+        # === Chart 2: 체결강도 변화 vs 수익률 ===
+        ax2 = fig.add_subplot(gs[0, 1])
+        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
+        ax2.scatter(df_tsg['체결강도변화'], df_tsg['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+        ax2.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+        ax2.axvline(x=0, color='gray', linestyle='--', linewidth=0.8)
+        ax2.set_xlabel('체결강도 변화 (매도-매수)')
+        ax2.set_ylabel('수익률 (%)')
+        ax2.set_title('체결강도 변화 vs 수익률')
+        ax2.grid(True, alpha=0.3)
+
+        # === Chart 3: 매수 vs 매도 등락율 비교 ===
+        ax3 = fig.add_subplot(gs[0, 2])
+        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
+        ax3.scatter(df_tsg['매수등락율'], df_tsg['매도등락율'], c=colors, alpha=0.5, s=25, edgecolors='none')
+        max_val = max(df_tsg['매수등락율'].max(), df_tsg['매도등락율'].max())
+        min_val = min(df_tsg['매수등락율'].min(), df_tsg['매도등락율'].min())
+        ax3.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1, alpha=0.5, label='변화없음')
+        ax3.set_xlabel('매수 등락율 (%)')
+        ax3.set_ylabel('매도 등락율 (%)')
+        ax3.set_title('매수 vs 매도 등락율')
+        ax3.legend(fontsize=8)
+        ax3.grid(True, alpha=0.3)
+
+        # === Chart 4: 등락추세별 수익금 ===
+        ax4 = fig.add_subplot(gs[1, 0])
+        if '등락추세' in df_tsg.columns:
+            trend_profit = df_tsg.groupby('등락추세')['수익금'].sum()
+            trend_count = df_tsg.groupby('등락추세').size()
+            colors = [color_profit if trend_profit.get(x, 0) >= 0 else color_loss for x in trend_profit.index]
+            bars = ax4.bar(trend_profit.index, trend_profit.values, color=colors, edgecolor='black', linewidth=0.5)
+            ax4.set_xlabel('등락 추세')
+            ax4.set_ylabel('총 수익금')
+            ax4.set_title('등락추세별 수익금')
+            ax4.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+
+            for bar, cnt in zip(bars, trend_count):
+                ax4.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                         f'n={cnt}', ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=9)
+
+        # === Chart 5: 체결강도추세별 수익금 ===
+        ax5 = fig.add_subplot(gs[1, 1])
+        if '체결강도추세' in df_tsg.columns:
+            ch_trend_profit = df_tsg.groupby('체결강도추세')['수익금'].sum()
+            ch_trend_count = df_tsg.groupby('체결강도추세').size()
+            colors = [color_profit if ch_trend_profit.get(x, 0) >= 0 else color_loss for x in ch_trend_profit.index]
+            bars = ax5.bar(ch_trend_profit.index, ch_trend_profit.values, color=colors, edgecolor='black', linewidth=0.5)
+            ax5.set_xlabel('체결강도 추세')
+            ax5.set_ylabel('총 수익금')
+            ax5.set_title('체결강도추세별 수익금')
+            ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+
+            for bar, cnt in zip(bars, ch_trend_count):
+                ax5.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
+                         f'n={cnt}', ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=9)
+
+        # === Chart 6: 추세 조합 히트맵 ===
+        ax6 = fig.add_subplot(gs[1, 2])
+        if '등락추세' in df_tsg.columns and '체결강도추세' in df_tsg.columns:
+            pivot = df_tsg.pivot_table(values='수익금', index='등락추세', columns='체결강도추세',
+                                       aggfunc='sum', fill_value=0)
+            im = ax6.imshow(pivot.values, cmap='RdYlGn', aspect='auto')
+            ax6.set_xticks(range(len(pivot.columns)))
+            ax6.set_yticks(range(len(pivot.index)))
+            ax6.set_xticklabels(pivot.columns, fontsize=9)
+            ax6.set_yticklabels(pivot.index, fontsize=9)
+            ax6.set_xlabel('체결강도 추세')
+            ax6.set_ylabel('등락 추세')
+            ax6.set_title('추세 조합별 수익금')
+
+            vmax = float(np.max(np.abs(pivot.values))) if pivot.size else 0
+            for i in range(len(pivot.index)):
+                for j in range(len(pivot.columns)):
+                    val = pivot.values[i, j]
+                    text_color = 'white' if vmax and abs(val) > vmax * 0.5 else 'black'
+                    ax6.text(j, i, f'{val/10000:.0f}만', ha='center', va='center', fontsize=8, color=text_color)
+
+            plt.colorbar(im, ax=ax6, shrink=0.8)
+
+        loss_trades = df_tsg[df_tsg['수익금'] < 0]
+        profit_trades = df_tsg[df_tsg['수익금'] >= 0]
+
+        # === Chart 7: 손실/이익 거래 특성 비교 (매수/보유) ===
+        ax7 = fig.add_subplot(gs[2, 0])
+        if len(loss_trades) > 0 and len(profit_trades) > 0:
+            compare_cols = ['매수등락율', '매수체결강도', '보유시간']
+            available_cols = [c for c in compare_cols if c in df_tsg.columns]
+            if available_cols:
+                loss_means = [loss_trades[c].mean() for c in available_cols]
+                profit_means = [profit_trades[c].mean() for c in available_cols]
+
+                x = np.arange(len(available_cols))
+                width = 0.35
+                ax7.bar(x - width/2, loss_means, width, label='손실거래', color=color_loss, alpha=0.8)
+                ax7.bar(x + width/2, profit_means, width, label='이익거래', color=color_profit, alpha=0.8)
+                ax7.set_xticks(x)
+                ax7.set_xticklabels(available_cols, rotation=45, ha='right', fontsize=9)
+                ax7.set_ylabel('평균값')
+                ax7.set_title('손실/이익 거래 특성 비교 (매수/보유)')
+                ax7.legend(fontsize=9)
+
+        # === Chart 8: 손실/이익 거래 변화량 비교 (매도-매수) ===
+        ax8 = fig.add_subplot(gs[2, 1])
+        if len(loss_trades) > 0 and len(profit_trades) > 0:
+            compare_cols = ['등락율변화', '체결강도변화', '거래대금변화율', '호가잔량비변화']
+            available_cols = [c for c in compare_cols if c in df_tsg.columns]
+            if available_cols:
+                loss_means = [loss_trades[c].mean() for c in available_cols]
+                profit_means = [profit_trades[c].mean() for c in available_cols]
+
+                x = np.arange(len(available_cols))
+                width = 0.35
+                ax8.bar(x - width/2, loss_means, width, label='손실거래', color=color_loss, alpha=0.8)
+                ax8.bar(x + width/2, profit_means, width, label='이익거래', color=color_profit, alpha=0.8)
+                ax8.set_xticks(x)
+                ax8.set_xticklabels(available_cols, rotation=45, ha='right', fontsize=9)
+                ax8.set_ylabel('평균값')
+                ax8.set_title('손실/이익 거래 변화량 비교 (매도-매수)')
+                ax8.legend(fontsize=9)
+
+        # === Chart 9: 보유시간 vs 수익률 ===
+        ax9 = fig.add_subplot(gs[2, 2])
+        if '보유시간' in df_tsg.columns:
+            colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
+            ax9.scatter(df_tsg['보유시간'], df_tsg['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+            ax9.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+            ax9.set_xlabel('보유시간(초)')
+            ax9.set_ylabel('수익률(%)')
+            ax9.set_title('보유시간 vs 수익률')
+            ax9.grid(True, alpha=0.3)
+
+        # 저장 및 전송
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            plt.tight_layout(rect=[0, 0.02, 1, 0.97])
+
+        comparison_path = f"{GRAPH_PATH}/{save_file_name}_comparison.png"
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            plt.savefig(comparison_path, dpi=120, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        if teleQ is not None:
+            teleQ.put(comparison_path)
+
+    except Exception as e:
+        print_exc()
+        try:
+            plt.close('all')
+        except:
+            pass
+
+
+def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
+                    export_detail=True, export_summary=True, export_filter=True,
+                    include_filter_recommendations=True):
     """
     전체 분석을 실행합니다 (CSV 출력 + 시각화).
 
@@ -1836,6 +2320,10 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None):
         df_tsg: 백테스팅 결과 DataFrame
         save_file_name: 저장 파일명
         teleQ: 텔레그램 전송 큐
+        export_detail: detail.csv 생성 여부
+        export_summary: summary.csv 생성 여부
+        export_filter: filter.csv 생성 여부
+        include_filter_recommendations: 기본 필터 추천 메시지 전송 여부
 
     Returns:
         dict: 분석 결과 요약
@@ -1851,26 +2339,33 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None):
         df_analysis = CalculateDerivedMetrics(df_tsg)
 
         # 2. CSV 파일 출력
-        csv_paths = ExportBacktestCSV(df_analysis, save_file_name, teleQ)
+        csv_paths = ExportBacktestCSV(
+            df_analysis,
+            save_file_name,
+            teleQ,
+            write_detail=export_detail,
+            write_summary=export_summary,
+            write_filter=export_filter
+        )
         result['csv_files'] = csv_paths
 
         # 3. 매수/매도 비교 차트 생성
         PltBuySellComparison(df_analysis, save_file_name, teleQ)
         result['charts'].append(f"{GRAPH_PATH}/{save_file_name}_comparison.png")
 
-        # 4. 필터 추천 생성
-        filter_results = AnalyzeFilterEffects(df_analysis)
-        top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
+        # 4. 필터 추천 생성/전송 (기본 분석)
+        if include_filter_recommendations:
+            filter_results = AnalyzeFilterEffects(df_analysis)
+            top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
 
-        for f in top_filters[:5]:
-            result['recommendations'].append(
-                f"[{f['분류']}] {f['필터명']}: 수익개선 {f['수익개선금액']:,}원 예상"
-            )
+            for f in top_filters[:5]:
+                result['recommendations'].append(
+                    f"[{f['분류']}] {f['필터명']}: 수익개선 {f['수익개선금액']:,}원 예상"
+                )
 
-        # 5. 텔레그램 요약 전송
-        if teleQ is not None and result['recommendations']:
-            msg = "📊 필터 추천:\n" + "\n".join(result['recommendations'])
-            teleQ.put(msg)
+            if teleQ is not None and result['recommendations']:
+                msg = "📊 필터 추천:\n" + "\n".join(result['recommendations'])
+                teleQ.put(msg)
 
     except Exception as e:
         print_exc()

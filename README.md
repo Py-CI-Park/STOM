@@ -867,12 +867,13 @@ backtester/
 
 | 파일명 패턴 | 내용 |
 |-------------|------|
-| `{전략명}_enhanced_detail.csv` | 강화된 파생 지표 포함 상세 거래 기록 |
-| `{전략명}_filter_analysis.csv` | 통계 검정 포함 필터 분석 결과 |
+| `{전략명}_detail.csv` | 거래 상세 기록 (강화 분석 사용 시 강화 파생지표 포함) |
+| `{전략명}_filter.csv` | 필터 분석 결과 (강화 분석 사용 시 통계 검정/효과크기 포함) |
 | `{전략명}_optimal_thresholds.csv` | 동적 최적 임계값 탐색 결과 |
 | `{전략명}_filter_combinations.csv` | 필터 조합 시너지 분석 |
 | `{전략명}_filter_stability.csv` | 기간별 필터 안정성 검증 |
-| `{전략명}_enhanced.png` | 강화된 시각화 차트 (14개) |
+| `{전략명}_enhanced.png` | 필터 기능 분석 차트 (16개) |
+| `{전략명}_report.txt` | 실행 산출물 리포트(파일/시간/조건/요약) |
 
 ### 새로운 파생 지표
 
