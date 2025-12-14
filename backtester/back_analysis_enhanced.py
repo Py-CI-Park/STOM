@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 [2025-12-10] 백테스팅 결과 분석 강화 모듈
+[2025-12-13] 추가 개선 적용
 
 기능:
 1. 통계적 유의성 검증 (t-test, 효과 크기)
@@ -9,9 +10,14 @@
 4. 동적 최적 임계값 탐색
 5. 조건식 코드 자동 생성
 6. 기간별 필터 안정성 검증
+7. Tick/Min 타임프레임 자동 감지 (NEW)
+8. 필터 조합 시너지 히트맵 시각화 (NEW)
+9. 최적 임계값 효율성 곡선 차트 (NEW)
+10. 동적 X축 세분화 (데이터 분포 기반) (NEW)
+11. 위험도 공식 차트 표시 (NEW)
 
 Author: Claude
-Date: 2025-12-10
+Date: 2025-12-10, Updated: 2025-12-13
 """
 
 import numpy as np
@@ -107,6 +113,179 @@ def CalculateEffectSizeInterpretation(effect_size):
         return '큼'
     else:
         return '매우큼'
+
+
+def DetectTimeframe(df_tsg, save_file_name=''):
+    """
+    백테스팅 데이터의 타임프레임(Tick/Min)을 자동 감지합니다.
+
+    Args:
+        df_tsg: 백테스팅 결과 DataFrame
+        save_file_name: 저장 파일명 (선택적)
+
+    Returns:
+        dict: 타임프레임 정보
+            - timeframe: 'tick' 또는 'min'
+            - scale_factor: 스케일 조정 계수
+            - time_unit: 시간 단위 ('초' 또는 '분')
+            - holding_bins: 보유시간 bins
+            - holding_labels: 보유시간 라벨
+            - label: 표시용 라벨
+    """
+    # 파일명에서 감지
+    name_lower = save_file_name.lower()
+    if 'tick' in name_lower or '_t_' in name_lower:
+        timeframe = 'tick'
+    elif 'min' in name_lower or '_m_' in name_lower:
+        timeframe = 'min'
+    else:
+        # 인덱스 형식에서 감지 (YYYYMMDDHHMMSS vs YYYYMMDDHHMM)
+        try:
+            first_idx = str(df_tsg.index[0])
+            if len(first_idx) >= 14:  # 초까지 있으면 Tick
+                timeframe = 'tick'
+            else:
+                timeframe = 'min'
+        except:
+            timeframe = 'tick'  # 기본값
+
+    # 스케일 조정
+    if timeframe == 'tick':
+        return {
+            'timeframe': 'tick',
+            'scale_factor': 1,
+            'time_unit': '초',
+            'holding_bins': [0, 30, 60, 120, 300, 600, 1200, 3600],
+            'holding_labels': ['~30초', '30-60초', '1-2분', '2-5분',
+                              '5-10분', '10-20분', '20분+'],
+            'label': 'Tick 데이터'
+        }
+    else:
+        return {
+            'timeframe': 'min',
+            'scale_factor': 60,
+            'time_unit': '분',
+            'holding_bins': [0, 1, 3, 5, 10, 30, 60, 1440],
+            'holding_labels': ['~1분', '1-3분', '3-5분', '5-10분',
+                              '10-30분', '30-60분', '1시간+'],
+            'label': 'Min 데이터'
+        }
+
+
+def CreateSynergyHeatmapData(filter_combinations, top_n=10):
+    """
+    필터 조합 분석 결과를 히트맵용 데이터로 변환합니다.
+
+    Args:
+        filter_combinations: 필터 조합 분석 결과 리스트
+        top_n: 표시할 필터 수
+
+    Returns:
+        tuple: (filter_names, heatmap_matrix, annotations)
+    """
+    if not filter_combinations or len(filter_combinations) == 0:
+        return None, None, None
+
+    # 2개 조합만 추출
+    two_combos = [c for c in filter_combinations if c['조합유형'] == '2개 조합']
+
+    if len(two_combos) == 0:
+        return None, None, None
+
+    # 사용된 필터 목록 추출
+    filter_set = set()
+    for combo in two_combos[:30]:
+        filter_set.add(combo['필터1'])
+        filter_set.add(combo['필터2'])
+
+    filter_names = sorted(list(filter_set))[:top_n]
+    n = len(filter_names)
+
+    if n < 2:
+        return None, None, None
+
+    # 히트맵 매트릭스 초기화
+    heatmap_matrix = np.zeros((n, n))
+    annotations = [['' for _ in range(n)] for _ in range(n)]
+
+    # 조합 정보 채우기
+    for combo in two_combos:
+        f1, f2 = combo['필터1'], combo['필터2']
+        if f1 in filter_names and f2 in filter_names:
+            i, j = filter_names.index(f1), filter_names.index(f2)
+            synergy = combo['시너지비율']
+            heatmap_matrix[i, j] = synergy
+            heatmap_matrix[j, i] = synergy  # 대칭
+
+            # 주석 (시너지 효과 금액)
+            synergy_effect = combo['시너지효과']
+            if synergy_effect >= 0:
+                annotations[i][j] = f'+{synergy_effect/1000000:.1f}M'
+            else:
+                annotations[i][j] = f'{synergy_effect/1000000:.1f}M'
+            annotations[j][i] = annotations[i][j]
+
+    # 필터명 축약
+    short_names = [name[:15] for name in filter_names]
+
+    return short_names, heatmap_matrix, annotations
+
+
+def PrepareThresholdCurveData(optimal_thresholds, top_n=5):
+    """
+    최적 임계값 탐색 결과에서 효율성 곡선용 데이터를 준비합니다.
+
+    Args:
+        optimal_thresholds: 최적 임계값 분석 결과 리스트
+        top_n: 표시할 컬럼 수
+
+    Returns:
+        list: 각 컬럼별 곡선 데이터 리스트
+    """
+    if not optimal_thresholds or len(optimal_thresholds) == 0:
+        return []
+
+    curve_data = []
+
+    for i, opt in enumerate(optimal_thresholds[:top_n]):
+        try:
+            column = opt['column']
+            direction = opt['direction']
+            all_thresholds = opt.get('all_thresholds', [])
+
+            if not all_thresholds or not isinstance(all_thresholds, list):
+                continue
+
+            # 데이터 추출
+            thresholds = [t['threshold'] for t in all_thresholds]
+            improvements = [t['improvement'] for t in all_thresholds]
+            efficiencies = [t['efficiency'] for t in all_thresholds]
+            excluded_ratios = [t['excluded_ratio'] for t in all_thresholds]
+
+            curve_data.append({
+                'column': column,
+                'direction': direction,
+                'thresholds': thresholds,
+                'improvements': improvements,
+                'efficiencies': efficiencies,
+                'excluded_ratios': excluded_ratios,
+                'optimal_threshold': opt['optimal_threshold'],
+                'optimal_improvement': opt['improvement'],
+                'filter_name': opt.get('필터명', f'{column} 필터')
+            })
+        except:
+            continue
+
+    return curve_data
+
+
+def _FindNearestIndex(values, target):
+    try:
+        arr = np.asarray(values, dtype=float)
+        tgt = float(target)
+        return int(np.nanargmin(np.abs(arr - tgt)))
+    except Exception:
+        return 0
 
 
 # ============================================================================
@@ -453,8 +632,10 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
 
         try:
             # 조합 조건 생성
-            cond1 = eval(filter1['조건식']) if '조건식' in filter1 else None
-            cond2 = eval(filter2['조건식']) if '조건식' in filter2 else None
+            safe_globals = {"__builtins__": {}}
+            safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+            cond1 = eval(filter1['조건식'], safe_globals, safe_locals) if '조건식' in filter1 else None
+            cond2 = eval(filter2['조건식'], safe_globals, safe_locals) if '조건식' in filter2 else None
 
             if cond1 is None or cond2 is None:
                 continue
@@ -500,9 +681,11 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
             filter3 = top_filters[f3]
 
             try:
-                cond1 = eval(filter1['조건식']) if '조건식' in filter1 else None
-                cond2 = eval(filter2['조건식']) if '조건식' in filter2 else None
-                cond3 = eval(filter3['조건식']) if '조건식' in filter3 else None
+                safe_globals = {"__builtins__": {}}
+                safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+                cond1 = eval(filter1['조건식'], safe_globals, safe_locals) if '조건식' in filter1 else None
+                cond2 = eval(filter2['조건식'], safe_globals, safe_locals) if '조건식' in filter2 else None
+                cond3 = eval(filter3['조건식'], safe_globals, safe_locals) if '조건식' in filter3 else None
 
                 if cond1 is None or cond2 is None or cond3 is None:
                     continue
@@ -1054,33 +1237,44 @@ def GenerateFilterCode(filter_results, top_n=5):
 # 9. 강화된 시각화 차트
 # ============================================================================
 
-def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None, feature_importance=None):
+def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None, feature_importance=None, optimal_thresholds=None, filter_combinations=None):
     """
     강화된 분석 차트를 생성합니다.
 
     신규 차트:
     - 필터 효과 통계 요약 테이블
     - 특성 중요도 막대 차트
-    - 최적 임계값 탐색 결과
-    - 필터 조합 시너지 히트맵
+    - 최적 임계값 탐색 결과 (NEW)
+    - 필터 조합 시너지 히트맵 (NEW)
+    - 최적 임계값 효율성 곡선 (NEW)
     """
     if len(df_tsg) < 5:
         return
 
     try:
+        # 차트용 복사본 (원본 df_tsg에 구간 컬럼 등이 추가되는 부작용 방지)
+        df_tsg = df_tsg.copy()
+
         # 한글 폰트 설정
+        # - 요약 텍스트 등에서 기본 monospace(DejaVu Sans Mono)로 fallback 되면 한글이 깨질 수 있어,
+        #   family/monospace 모두에 한글 폰트를 우선 지정합니다.
         font_path = 'C:/Windows/Fonts/malgun.ttf'
+        preferred_korean_fonts = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'sans-serif']
+        plt.rcParams['font.family'] = preferred_korean_fonts
+        plt.rcParams['font.monospace'] = ['Malgun Gothic', 'Consolas', 'monospace']
         try:
             font_manager.fontManager.addfont(font_path)
-            plt.rcParams['font.family'] = 'Malgun Gothic'
         except:
             pass
         plt.rcParams['axes.unicode_minus'] = False
 
-        fig = plt.figure(figsize=(20, 24))
-        fig.suptitle(f'강화된 백테스팅 분석 - {save_file_name}', fontsize=16, fontweight='bold')
+        # 타임프레임 감지
+        tf_info = DetectTimeframe(df_tsg, save_file_name)
 
-        gs = gridspec.GridSpec(5, 3, figure=fig, hspace=0.4, wspace=0.3)
+        fig = plt.figure(figsize=(20, 30))
+        fig.suptitle(f'강화된 백테스팅 분석 - {save_file_name} ({tf_info["label"]})', fontsize=16, fontweight='bold')
+
+        gs = gridspec.GridSpec(6, 3, figure=fig, hspace=0.45, wspace=0.3)
 
         color_profit = '#2ECC71'
         color_loss = '#E74C3C'
@@ -1178,34 +1372,70 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         # 등락율별
         ax7 = fig.add_subplot(gs[2, 1])
         if '매수등락율' in df_tsg.columns:
-            bins = [0, 5, 10, 15, 20, 25, 30, 100]
-            labels = ['0-5', '5-10', '10-15', '15-20', '20-25', '25-30', '30+']
+            # 동적 bins 생성: 데이터 분포에 기반
+            rate_min = max(0, df_tsg['매수등락율'].min())
+            rate_max = min(100, df_tsg['매수등락율'].max())
+            data_range = rate_max - rate_min
+            
+            if data_range > 25:
+                # 넓은 범위: 5% 단위
+                bins = [0, 5, 10, 15, 20, 25, 30, 100]
+            elif data_range > 15:
+                # 중간 범위: 3% 단위
+                bins = list(range(int(rate_min), int(rate_max) + 4, 3))
+                if bins[-1] < 100:
+                    bins.append(100)
+            else:
+                # 좁은 범위: 2% 단위
+                bins = list(range(int(rate_min), int(rate_max) + 3, 2))
+                if bins[-1] < 100:
+                    bins.append(100)
+            
+            labels = [f'{bins[i]}-{bins[i+1]}' for i in range(len(bins)-1)]
             df_tsg['등락율구간'] = pd.cut(df_tsg['매수등락율'], bins=bins, labels=labels, right=False)
             df_rate = df_tsg.groupby('등락율구간', observed=True).agg({'수익금': 'sum'}).reset_index()
             colors = [color_profit if x >= 0 else color_loss for x in df_rate['수익금']]
             ax7.bar(range(len(df_rate)), df_rate['수익금'], color=colors, edgecolor='black', linewidth=0.5)
             ax7.set_xticks(range(len(df_rate)))
-            ax7.set_xticklabels(df_rate['등락율구간'], rotation=45)
+            ax7.set_xticklabels(df_rate['등락율구간'], rotation=45, fontsize=8)
             ax7.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
             ax7.set_xlabel('등락율 구간 (%)')
             ax7.set_ylabel('총 수익금')
-            ax7.set_title('등락율별 수익금')
+            ax7.set_title(f'등락율별 수익금 (범위: {rate_min:.1f}%-{rate_max:.1f}%)')
 
         # 체결강도별
         ax8 = fig.add_subplot(gs[2, 2])
         if '매수체결강도' in df_tsg.columns:
-            bins = [0, 80, 100, 120, 150, 200, 500]
-            labels = ['~80', '80-100', '100-120', '120-150', '150-200', '200+']
+            # 동적 bins 생성: 데이터 분포에 기반
+            ch_min = max(0, df_tsg['매수체결강도'].min())
+            ch_max = min(500, df_tsg['매수체결강도'].max())
+            data_range = ch_max - ch_min
+            
+            if data_range > 150:
+                # 넓은 범위: 기존 방식
+                bins = [0, 80, 100, 120, 150, 200, 500]
+            elif data_range > 80:
+                # 중간 범위: 20 단위
+                bins = list(range(int(ch_min // 20 * 20), int(ch_max) + 25, 20))
+                if bins[-1] < 500:
+                    bins.append(500)
+            else:
+                # 좁은 범위: 10 단위
+                bins = list(range(int(ch_min // 10 * 10), int(ch_max) + 15, 10))
+                if bins[-1] < 500:
+                    bins.append(500)
+            
+            labels = [f'{bins[i]}-{bins[i+1]}' for i in range(len(bins)-1)]
             df_tsg['체결강도구간'] = pd.cut(df_tsg['매수체결강도'], bins=bins, labels=labels, right=False)
             df_ch = df_tsg.groupby('체결강도구간', observed=True).agg({'수익금': 'sum'}).reset_index()
             colors = [color_profit if x >= 0 else color_loss for x in df_ch['수익금']]
             ax8.bar(range(len(df_ch)), df_ch['수익금'], color=colors, edgecolor='black', linewidth=0.5)
             ax8.set_xticks(range(len(df_ch)))
-            ax8.set_xticklabels(df_ch['체결강도구간'], rotation=45)
+            ax8.set_xticklabels(df_ch['체결강도구간'], rotation=45, fontsize=8)
             ax8.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
             ax8.set_xlabel('체결강도 구간')
             ax8.set_ylabel('총 수익금')
-            ax8.set_title('체결강도별 수익금')
+            ax8.set_title(f'체결강도별 수익금 (범위: {ch_min:.0f}-{ch_max:.0f})')
 
         # ============ Chart 9: 거래품질점수별 수익금 ============
         ax9 = fig.add_subplot(gs[3, 0])
@@ -1232,8 +1462,17 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         # ============ Chart 10: 위험도점수별 수익금 ============
         ax10 = fig.add_subplot(gs[3, 1])
         if '위험도점수' in df_tsg.columns:
-            bins = [0, 20, 40, 60, 80, 100]
-            labels = ['0-20', '20-40', '40-60', '60-80', '80-100']
+            # 동적 bins 생성: 데이터 분포에 기반
+            risk_min = df_tsg['위험도점수'].min()
+            risk_max = df_tsg['위험도점수'].max()
+            if risk_max - risk_min > 50:
+                bins = [0, 20, 40, 60, 80, 100]
+            else:
+                # 데이터 범위가 좁으면 더 세분화
+                bins = list(range(int(risk_min), int(risk_max) + 20, 10))
+                if bins[-1] < 100:
+                    bins.append(100)
+            labels = [f'{bins[i]}-{bins[i+1]}' for i in range(len(bins)-1)]
             df_tsg['위험도구간'] = pd.cut(df_tsg['위험도점수'], bins=bins, labels=labels, right=False)
             df_risk = df_tsg.groupby('위험도구간', observed=True).agg({'수익금': 'sum', '종목명': 'count'}).reset_index()
             df_risk.columns = ['위험도구간', '수익금', '거래수']
@@ -1244,7 +1483,17 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
             ax10.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
             ax10.set_xlabel('위험도 점수')
             ax10.set_ylabel('총 수익금')
-            ax10.set_title('위험도 점수별 수익금 (ENHANCED)')
+            
+            # 위험도 공식 표시
+            risk_formula = (
+                "위험도 공식:\n"
+                "• 등락율변화<-2: +15, <-5: +10\n"
+                "• 체결강도변화<-15: +15, <-30: +10\n"
+                "• 호가잔량비변화<-0.3: +15\n"
+                "• 거래대금변화율<0.6: +15\n"
+                "• 매수등락율>20: +10, >25: +10"
+            )
+            ax10.set_title(f'위험도 점수별 수익금 (ENHANCED)\n{risk_formula}', fontsize=8, loc='left')
 
         # ============ Chart 11: 리스크조정수익률 분포 ============
         ax11 = fig.add_subplot(gs[3, 2])
@@ -1306,9 +1555,84 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
             ax13.set_title('손실/이익 거래 특성 비교')
             ax13.legend(fontsize=9)
 
-        # ============ Chart 14: 요약 통계 텍스트 ============
-        ax14 = fig.add_subplot(gs[4, 2])
-        ax14.axis('off')
+        # ============ Chart 14: 필터 조합 시너지 히트맵 (NEW) ============
+        ax14 = fig.add_subplot(gs[5, 0])
+        if filter_combinations and len(filter_combinations) > 0:
+            filter_names, heatmap_matrix, annotations = CreateSynergyHeatmapData(
+                filter_combinations, top_n=8
+            )
+
+            if filter_names is not None and heatmap_matrix is not None:
+                vmin = float(np.nanmin(heatmap_matrix)) if np.isfinite(heatmap_matrix).any() else -100.0
+                vmax = float(np.nanmax(heatmap_matrix)) if np.isfinite(heatmap_matrix).any() else 100.0
+                vmin = min(vmin, -100.0)
+                vmax = max(vmax, 100.0)
+                im = ax14.imshow(heatmap_matrix, cmap='RdYlGn', aspect='auto',
+                                vmin=vmin, vmax=vmax)
+                ax14.set_xticks(range(len(filter_names)))
+                ax14.set_yticks(range(len(filter_names)))
+                ax14.set_xticklabels(filter_names, rotation=45, ha='right', fontsize=7)
+                ax14.set_yticklabels(filter_names, fontsize=7)
+                ax14.set_title('필터 조합 시너지 히트맵 (NEW)\n(음수=시너지↓, 양수=시너지↑)',
+                              fontsize=9)
+
+                # 값 표시
+                for i in range(len(filter_names)):
+                    for j in range(len(filter_names)):
+                        if annotations[i][j]:
+                            ax14.text(j, i, annotations[i][j], ha='center', va='center',
+                                     fontsize=6,
+                                     color='white' if abs(heatmap_matrix[i, j]) > 50 else 'black')
+
+                plt.colorbar(im, ax=ax14, shrink=0.8, label='시너지비율(%)')
+            else:
+                ax14.text(0.5, 0.5, '조합 분석 데이터 없음', ha='center', va='center',
+                         fontsize=12, transform=ax14.transAxes)
+                ax14.axis('off')
+        else:
+            ax14.text(0.5, 0.5, '조합 분석 데이터 없음', ha='center', va='center',
+                     fontsize=12, transform=ax14.transAxes)
+            ax14.axis('off')
+
+        # ============ Chart 15: 최적 임계값 효율성 곡선 (NEW) ============
+        ax15 = fig.add_subplot(gs[5, 1])
+        if optimal_thresholds and len(optimal_thresholds) > 0:
+            curve_data = PrepareThresholdCurveData(optimal_thresholds, top_n=3)
+
+            if curve_data:
+                colors = ['#E74C3C', '#3498DB', '#2ECC71']
+                for i, data in enumerate(curve_data):
+                    color = colors[i % len(colors)]
+                    # 제외비율 대비 효율성 곡선
+                    ax15.plot(data['excluded_ratios'],
+                             [e/1000000 for e in data['efficiencies']],
+                             marker='o', markersize=3, label=data['column'][:12],
+                             color=color, linewidth=1.5)
+                    # 최적점 표시
+                    opt_idx = _FindNearestIndex(data.get('thresholds', []), data.get('optimal_threshold'))
+                    ax15.scatter(data['excluded_ratios'][opt_idx],
+                                data['efficiencies'][opt_idx]/1000000,
+                                s=100, marker='*', color=color, edgecolors='black',
+                                zorder=5)
+
+                ax15.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+                ax15.set_xlabel('제외 비율 (%)')
+                ax15.set_ylabel('효율성 (백만원)')
+                ax15.set_title('최적 임계값 효율성 곡선 (NEW)\n(★=최적점)', fontsize=9)
+                ax15.legend(fontsize=7, loc='best')
+                ax15.grid(True, alpha=0.3)
+            else:
+                ax15.text(0.5, 0.5, '임계값 분석 데이터 없음', ha='center', va='center',
+                         fontsize=12, transform=ax15.transAxes)
+                ax15.axis('off')
+        else:
+            ax15.text(0.5, 0.5, '임계값 분석 데이터 없음', ha='center', va='center',
+                     fontsize=12, transform=ax15.transAxes)
+            ax15.axis('off')
+
+        # ============ Chart 16: 요약 통계 텍스트 ============
+        ax16 = fig.add_subplot(gs[5, 2])
+        ax16.axis('off')
 
         total_trades = len(df_tsg)
         total_profit = df_tsg['수익금'].sum()
@@ -1316,7 +1640,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         avg_profit = df_tsg['수익률'].mean()
 
         summary_text = f"""
-        === 분석 요약 ===
+        === 분석 요약 ({tf_info['label']}) ===
 
         총 거래 수: {total_trades:,}
         총 수익금: {total_profit:,}원
@@ -1343,12 +1667,23 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         중요도: {top_feature[1]:.3f}
                 """
 
-        ax14.text(0.1, 0.9, summary_text, transform=ax14.transAxes, fontsize=10,
-                 verticalalignment='top', fontfamily='monospace',
+        # 최적 임계값 정보 추가
+        if optimal_thresholds and len(optimal_thresholds) > 0:
+            top_threshold = optimal_thresholds[0]
+            summary_text += f"""
+        === 최적 임계값 ===
+        {top_threshold.get('필터명', 'N/A')}
+        개선: {top_threshold.get('improvement', 0):,.0f}원
+                """
+
+        ax16.text(0.1, 0.9, summary_text, transform=ax16.transAxes, fontsize=10,
+                 verticalalignment='top',
                  bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
         # 저장 및 전송
-        plt.tight_layout(rect=[0, 0.02, 1, 0.97])
+        # tight_layout은 colorbar/그리드와 함께 경고가 자주 발생하여(subplot 배치가 깨질 수 있음),
+        # 고정 margins로 레이아웃을 안정화합니다.
+        fig.subplots_adjust(left=0.05, right=0.98, bottom=0.04, top=0.94, hspace=0.55, wspace=0.3)
         analysis_path = f"{GRAPH_PATH}/{save_file_name}_enhanced.png"
         plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
@@ -1461,7 +1796,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
             result['csv_files'].append(stability_path)
 
         # 9. 강화된 차트 생성
-        chart_path = PltEnhancedAnalysisCharts(df_enhanced, save_file_name, teleQ, filter_results, feature_importance)
+        chart_path = PltEnhancedAnalysisCharts(df_enhanced, save_file_name, teleQ, filter_results, feature_importance, optimal_thresholds, filter_combinations)
         if chart_path:
             result['charts'].append(chart_path)
 

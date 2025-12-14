@@ -78,6 +78,14 @@ docs/
 │   ├── 09_Manual/               # 사용자 매뉴얼
 │   └── 10_Conclusion/           # 부록 및 참고자료
 │
+├── study/                       # 📚 연구 및 분석 문서
+│   ├── README.md
+│   ├── DocumentationReviews/    # 문서 리뷰 (1개)
+│   ├── ResearchReports/         # 연구 보고서 (3개)
+│   ├── SystemAnalysis/          # 시스템 분석 (3개)
+│   ├── ConditionStudies/        # 조건 분석 (2개)
+│   └── Guides/                  # 가이드 (1개)
+│
 ├── CodeReview/                  # 🔍 코드 리뷰 문서
 │   └── Backtesting_Data_Loading_Multicore_Analysis.md
 │
@@ -221,6 +229,34 @@ docs/
 - 실시간 처리: WebSocket, ZeroMQ
 
 **자세히 보기**: [Manual/README.md](./Manual/README.md)
+
+---
+
+### 📚 [study](./study/) - 연구 및 분석 문서
+
+**목적**: STOM 프로젝트의 연구, 분석, 검증 문서 체계적 관리
+
+**주요 카테고리** (10개 문서):
+- **DocumentationReviews (1개)**: 문서 품질 검증 및 개선
+- **ResearchReports (3개)**: AI/ML 기반 트레이딩 전략 자동화 연구
+- **SystemAnalysis (3개)**: 시스템 최적화, Git 브랜치 구조 분석
+- **ConditionStudies (2개)**: 트레이딩 조건 심층 분석
+- **Guides (1개)**: 조건 최적화 및 분석 가이드
+
+**최신 문서**:
+- **[2025-12-13_Git_Branch_Structure_Analysis.md](./study/SystemAnalysis/2025-12-13_Git_Branch_Structure_Analysis.md)** (38KB)
+  - Git 브랜치 구조 분석 및 커밋 히스토리 정리
+  - 7→3 커밋 스쿼싱, 브랜치 6개 정리
+  - STOM_V1 브랜치 생성 및 히스토리 무결성 검증
+
+**특징**:
+- 총 문서 수: 10개 (약 350KB)
+- AI/ML 연구: XGBoost, SHAP, Genetic Programming, LLM 통합
+- 시스템 분석: 최적화 시스템, Git 워크플로우
+- 조건 분석: 장 시작 5분 전략 심층 분석
+- 문서 품질: 106개 문서 검증 (품질 4.5/5)
+
+**자세히 보기**: [study/README.md](./study/README.md)
 
 ---
 
@@ -404,9 +440,10 @@ graph LR
   - Idea: **26개** (Plan_from_GPT5 14개, Plan_from_claude_opus 12개)
   - Reference: 8개
 - **Manual**: 10개 섹션 (다수 하위 문서)
+- **study**: **10개** (문서리뷰 1, 연구 3, 시스템분석 3, 조건분석 2, 가이드 1)
 - **CodeReview**: 1개
 - **가상환경구축연구**: 1개
-- **총계**: **188+ 문서**
+- **총계**: **198+ 문서**
 
 ### 문서 품질 분포
 - ⭐⭐⭐⭐⭐ (골드 스탠다드): **4개**
@@ -499,5 +536,5 @@ graph LR
 
 *이 문서 저장소는 STOM 프로젝트의 지식을 체계적으로 관리하고 공유하기 위해 만들어졌습니다. 모든 문서는 실제 시스템 및 백테스팅 결과를 기반으로 작성되었습니다.*
 
-**📅 마지막 업데이트**: 2025-01-15
+**📅 마지막 업데이트**: 2025-12-13
 **📧 관리자**: STOM 프로젝트 팀
