@@ -893,6 +893,11 @@ class BackEngineKiwoomTick:
         buy_매수호가1 = int(self.arry_data[bi, 25])
         buy_스프레드 = round((buy_매도호가1 - buy_매수호가1) / buy_매수호가1 * 100, 4) if buy_매수호가1 > 0 else 0.0
 
+        # [2025-12-14] 매수 시점 초당 데이터 수집 (지표 조합 분석용)
+        buy_초당매수수량 = int(self.arry_data[bi, 14])
+        buy_초당매도수량 = int(self.arry_data[bi, 15])
+        buy_초당거래대금 = round(float(self.arry_data[bi, 16]), 2)
+
         # [2025-12-08] 매도 시점 시장 데이터 수집
         si = self.indexn  # 매도 시점 인덱스
         sell_등락율 = round(float(self.arry_data[si, 5]), 2)
@@ -913,6 +918,11 @@ class BackEngineKiwoomTick:
         sell_매수호가1 = int(self.arry_data[si, 25])
         sell_스프레드 = round((sell_매도호가1 - sell_매수호가1) / sell_매수호가1 * 100, 4) if sell_매수호가1 > 0 else 0.0
 
+        # [2025-12-14] 매도 시점 초당 데이터 수집 (지표 조합 분석용)
+        sell_초당매수수량 = int(self.arry_data[si, 14])
+        sell_초당매도수량 = int(self.arry_data[si, 15])
+        sell_초당거래대금 = round(float(self.arry_data[si, 16]), 2)
+
         data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey,
                 buy_date, buy_hour, buy_min, buy_sec,
                 buy_등락율, buy_시가등락율, buy_당일거래대금, buy_체결강도,
@@ -920,11 +930,13 @@ class BackEngineKiwoomTick:
                 buy_고가, buy_저가, buy_고저평균대비등락율,
                 buy_매도총잔량, buy_매수총잔량, buy_호가잔량비,
                 buy_매도호가1, buy_매수호가1, buy_스프레드,
+                buy_초당매수수량, buy_초당매도수량, buy_초당거래대금,
                 sell_등락율, sell_시가등락율, sell_당일거래대금, sell_체결강도,
                 sell_전일비, sell_회전율, sell_전일동시간비,
                 sell_고가, sell_저가, sell_고저평균대비등락율,
                 sell_매도총잔량, sell_매수총잔량, sell_호가잔량비,
-                sell_매도호가1, sell_매수호가1, sell_스프레드)
+                sell_매도호가1, sell_매수호가1, sell_스프레드,
+                sell_초당매수수량, sell_초당매도수량, sell_초당거래대금)
         self.bstq_list[vkey if self.opti_turn in (1, 3) else (self.sell_count % 5)].put(data)
         self.sell_count += 1
         self.trade_info[vturn][vkey] = GetTradeInfo(1)
