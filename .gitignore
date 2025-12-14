@@ -65,3 +65,11 @@ Deep_Data/
 
 
 
+
+# Backtester outputs
+/backtester/graph/*.csv
+/backtester/graph/*.png
+
+# Local shortcuts
+STOM V1 venv.lnk
+
