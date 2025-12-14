@@ -796,8 +796,17 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     df_tsg['수익금합계240'] = df_tsg['수익금합계'].rolling(window=240).mean().round(2)
     df_tsg['수익금합계480'] = df_tsg['수익금합계'].rolling(window=480).mean().round(2)
 
-    df_tsg['이익금액'] = df_tsg['수익금'].apply(lambda x: x if x >= 0 else 0)
-    df_tsg['손실금액'] = df_tsg['수익금'].apply(lambda x: x if x < 0 else 0)
+    profit_values = df_tsg['수익금'].to_numpy(dtype=np.float64)
+    df_tsg['이익금액'] = np.where(profit_values >= 0, profit_values, 0)
+    df_tsg['손실금액'] = np.where(profit_values < 0, profit_values, 0)
+
+    # 거래가 매우 많으면(예: 60,000건) 차트 렌더링/강화분석 시간이 길어 텔레그램 알림이 늦어질 수 있어,
+    # 우선 "진행 중" 메시지를 먼저 전송합니다.
+    if teleQ is not None:
+        try:
+            teleQ.put(f'{backname} {save_file_name.split("_")[1]} 분석/차트 생성 중... (거래 {len(df_tsg):,}회)')
+        except:
+            pass
     sig_list = df_tsg['수익금'].to_list()
     mdd_list = []
     for i in range(30):
@@ -980,20 +989,65 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.grid()
     # noinspection PyTypeChecker
     plt.subplot(gs[1])
-    plt.bar(df_tsg.index, df_tsg['이익금액'], label='이익금액', color='r')
-    plt.bar(df_tsg.index, df_tsg['손실금액'], label='손실금액', color='b')
-    plt.plot(df_tsg.index, df_tsg['수익금합계480'], linewidth=0.5, label='수익금합계480', color='k')
-    plt.plot(df_tsg.index, df_tsg['수익금합계240'], linewidth=0.5, label='수익금합계240', color='gray')
-    plt.plot(df_tsg.index, df_tsg['수익금합계120'], linewidth=0.5, label='수익금합계120', color='b')
-    plt.plot(df_tsg.index, df_tsg['수익금합계060'], linewidth=0.5, label='수익금합계60', color='g')
-    plt.plot(df_tsg.index, df_tsg['수익금합계020'], linewidth=0.5, label='수익금합계20', color='r')
-    plt.plot(df_tsg.index, df_tsg['수익금합계'], linewidth=2, label='수익금합계', color='orange')
-    if gubun == '최적화':
-        for i, endx in enumerate(endx_list):
-            plt.axvline(x=endx, color='red' if i == 0 else 'green', linestyle='--')
-        plt.axvspan(endx_list[0], df_tsg.index[-1], facecolor='gray', alpha=0.1)
-    count = int(len(df_tsg) / 20) if int(len(df_tsg) / 20) >= 1 else 1
-    plt.xticks(list(df_tsg.index[::count]), rotation=45)
+    n_trades = len(df_tsg)
+    max_plot_points = 5000
+    if n_trades > max_plot_points:
+        # 대용량 데이터에서는 bar/scatter 렌더링이 매우 느려지므로, 표시용으로만 구간 집계/샘플링합니다.
+        step = int(math.ceil(n_trades / max_plot_points))
+        start_idx = np.arange(0, n_trades, step, dtype=np.int64)
+        end_idx = np.minimum(start_idx + step - 1, n_trades - 1)
+        x = np.arange(len(end_idx))
+
+        profit_bar = np.add.reduceat(df_tsg['이익금액'].to_numpy(dtype=np.float64), start_idx)
+        loss_bar = np.add.reduceat(df_tsg['손실금액'].to_numpy(dtype=np.float64), start_idx)
+
+        plt.bar(x, profit_bar, label=f'이익금액(집계:{step}건)', color='r')
+        plt.bar(x, loss_bar, label=f'손실금액(집계:{step}건)', color='b')
+
+        def _sample(col: str):
+            return df_tsg[col].to_numpy(dtype=np.float64)[end_idx]
+
+        plt.plot(x, _sample('수익금합계480'), linewidth=0.5, label='수익금합계480', color='k')
+        plt.plot(x, _sample('수익금합계240'), linewidth=0.5, label='수익금합계240', color='gray')
+        plt.plot(x, _sample('수익금합계120'), linewidth=0.5, label='수익금합계120', color='b')
+        plt.plot(x, _sample('수익금합계060'), linewidth=0.5, label='수익금합계60', color='g')
+        plt.plot(x, _sample('수익금합계020'), linewidth=0.5, label='수익금합계20', color='r')
+        plt.plot(x, _sample('수익금합계'), linewidth=2, label='수익금합계', color='orange')
+
+        if gubun == '최적화':
+            for i, endx in enumerate(endx_list):
+                try:
+                    pos_full = df_tsg.index.get_loc(endx)
+                    pos = int(pos_full / step)
+                    plt.axvline(x=pos, color='red' if i == 0 else 'green', linestyle='--')
+                except:
+                    continue
+            try:
+                pos0_full = df_tsg.index.get_loc(endx_list[0])
+                pos0 = int(pos0_full / step)
+                plt.axvspan(pos0, x[-1], facecolor='gray', alpha=0.1)
+            except:
+                pass
+
+        tick_step = max(1, int(len(x) / 20))
+        tick_positions = list(x[::tick_step])
+        tick_labels = [str(v) for v in df_tsg.index[end_idx][::tick_step]]
+        plt.xticks(tick_positions, tick_labels, rotation=45)
+    else:
+        plt.bar(df_tsg.index, df_tsg['이익금액'], label='이익금액', color='r')
+        plt.bar(df_tsg.index, df_tsg['손실금액'], label='손실금액', color='b')
+        plt.plot(df_tsg.index, df_tsg['수익금합계480'], linewidth=0.5, label='수익금합계480', color='k')
+        plt.plot(df_tsg.index, df_tsg['수익금합계240'], linewidth=0.5, label='수익금합계240', color='gray')
+        plt.plot(df_tsg.index, df_tsg['수익금합계120'], linewidth=0.5, label='수익금합계120', color='b')
+        plt.plot(df_tsg.index, df_tsg['수익금합계060'], linewidth=0.5, label='수익금합계60', color='g')
+        plt.plot(df_tsg.index, df_tsg['수익금합계020'], linewidth=0.5, label='수익금합계20', color='r')
+        plt.plot(df_tsg.index, df_tsg['수익금합계'], linewidth=2, label='수익금합계', color='orange')
+        if gubun == '최적화':
+            for i, endx in enumerate(endx_list):
+                plt.axvline(x=endx, color='red' if i == 0 else 'green', linestyle='--')
+            plt.axvspan(endx_list[0], df_tsg.index[-1], facecolor='gray', alpha=0.1)
+        count = int(len(df_tsg) / 20) if int(len(df_tsg) / 20) >= 1 else 1
+        plt.xticks(list(df_tsg.index[::count]), rotation=45)
     plt.legend(loc='upper left')
     plt.grid()
     plt.tight_layout()
@@ -1579,8 +1633,12 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
 
         # ============ Chart 8: 산점도 (등락율 vs 수익률) ============
         ax8 = fig.add_subplot(gs[3, 1])
-        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
-        ax8.scatter(df_tsg['매수등락율'], df_tsg['수익률'], c=colors, alpha=0.5, s=20, edgecolors='none')
+        df_scatter = df_tsg
+        if len(df_tsg) > 20000:
+            # 산점도는 대용량에서 렌더링 시간이 급증하므로 샘플링(표시용) 처리
+            df_scatter = df_tsg.sample(n=20000, random_state=42)
+        colors = np.where(df_scatter['수익률'].to_numpy(dtype=np.float64) >= 0, color_profit, color_loss)
+        ax8.scatter(df_scatter['매수등락율'], df_scatter['수익률'], c=colors, alpha=0.5, s=20, edgecolors='none')
         ax8.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
         ax8.axvline(x=df_tsg['매수등락율'].mean(), color='blue', linestyle=':', linewidth=0.8, alpha=0.5)
         ax8.set_xlabel('매수 등락율 (%)')
@@ -1588,10 +1646,10 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         ax8.set_title('등락율 vs 수익률 산점도')
 
         # 추세선 추가
-        if len(df_tsg) > 10:
-            z = np.polyfit(df_tsg['매수등락율'], df_tsg['수익률'], 1)
+        if len(df_scatter) > 10:
+            z = np.polyfit(df_scatter['매수등락율'], df_scatter['수익률'], 1)
             p = np.poly1d(z)
-            x_line = np.linspace(df_tsg['매수등락율'].min(), df_tsg['매수등락율'].max(), 100)
+            x_line = np.linspace(df_scatter['매수등락율'].min(), df_scatter['매수등락율'].max(), 100)
             ax8.plot(x_line, p(x_line), 'b--', linewidth=1, alpha=0.7, label=f'추세선')
             ax8.legend(fontsize=8)
 
@@ -1868,11 +1926,8 @@ def AnalyzeFilterEffects(df_tsg):
         ])
 
     # 5. 보유시간 필터
-    filter_conditions.extend([
-        {'필터명': '보유시간 30초 미만 제외', '조건': df_tsg['보유시간'] < 30, '분류': '보유시간'},
-        {'필터명': '보유시간 60초 미만 제외', '조건': df_tsg['보유시간'] < 60, '분류': '보유시간'},
-        {'필터명': '보유시간 30분 이상 제외', '조건': df_tsg['보유시간'] >= 1800, '분류': '보유시간'},
-    ])
+    # - 보유시간은 매도 조건(SL/TP 등)의 결과로 결정되는 값이어서,
+    #   "매수 시점 필터"로 쓰기 어렵기 때문에 필터 분석에서는 제외합니다.
 
     # 6. 시가총액 필터
     if '시가총액' in df_tsg.columns:
@@ -2246,11 +2301,15 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         color_profit = '#2ECC71'
         color_loss = '#E74C3C'
         color_neutral = '#3498DB'
+        df_scatter = df_tsg
+        if len(df_tsg) > 20000:
+            # 산점도는 대용량에서 렌더링 시간이 급증하므로 샘플링(표시용) 처리
+            df_scatter = df_tsg.sample(n=20000, random_state=42)
 
         # === Chart 1: 등락율 변화 vs 수익률 ===
         ax1 = fig.add_subplot(gs[0, 0])
-        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
-        ax1.scatter(df_tsg['등락율변화'], df_tsg['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+        colors = np.where(df_scatter['수익률'].to_numpy(dtype=np.float64) >= 0, color_profit, color_loss)
+        ax1.scatter(df_scatter['등락율변화'], df_scatter['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
         ax1.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
         ax1.axvline(x=0, color='gray', linestyle='--', linewidth=0.8)
         ax1.set_xlabel('등락율 변화 (매도-매수) %')
@@ -2270,8 +2329,8 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
 
         # === Chart 2: 체결강도 변화 vs 수익률 ===
         ax2 = fig.add_subplot(gs[0, 1])
-        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
-        ax2.scatter(df_tsg['체결강도변화'], df_tsg['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+        colors = np.where(df_scatter['수익률'].to_numpy(dtype=np.float64) >= 0, color_profit, color_loss)
+        ax2.scatter(df_scatter['체결강도변화'], df_scatter['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
         ax2.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
         ax2.axvline(x=0, color='gray', linestyle='--', linewidth=0.8)
         ax2.set_xlabel('체결강도 변화 (매도-매수)')
@@ -2285,8 +2344,8 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
 
         # === Chart 3: 매수 vs 매도 등락율 비교 ===
         ax3 = fig.add_subplot(gs[0, 2])
-        colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
-        ax3.scatter(df_tsg['매수등락율'], df_tsg['매도등락율'], c=colors, alpha=0.5, s=25, edgecolors='none')
+        colors = np.where(df_scatter['수익률'].to_numpy(dtype=np.float64) >= 0, color_profit, color_loss)
+        ax3.scatter(df_scatter['매수등락율'], df_scatter['매도등락율'], c=colors, alpha=0.5, s=25, edgecolors='none')
         max_val = max(df_tsg['매수등락율'].max(), df_tsg['매도등락율'].max())
         min_val = min(df_tsg['매수등락율'].min(), df_tsg['매도등락율'].min())
         ax3.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1, alpha=0.5, label='변화없음')
@@ -2425,9 +2484,10 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         # === Chart 10: 보유시간 vs 수익률 (분 단위) ===
         ax10 = fig.add_subplot(gs[3, :])
         if '보유시간' in df_tsg.columns:
-            colors = [color_profit if x >= 0 else color_loss for x in df_tsg['수익률']]
-            hold_minutes = df_tsg['보유시간'] / 60.0
-            ax10.scatter(hold_minutes, df_tsg['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+            plot_df = df_scatter if '보유시간' in df_scatter.columns else df_tsg
+            colors = np.where(plot_df['수익률'].to_numpy(dtype=np.float64) >= 0, color_profit, color_loss)
+            hold_minutes = plot_df['보유시간'] / 60.0
+            ax10.scatter(hold_minutes, plot_df['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
             ax10.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
             ax10.set_xlabel('보유시간(분)')
             ax10.set_ylabel('수익률(%)')

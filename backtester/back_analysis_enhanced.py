@@ -39,8 +39,8 @@ def CalculateStatisticalSignificance(filtered_out, remaining):
     필터 효과의 통계적 유의성을 계산합니다.
 
     Args:
-        filtered_out: 제외되는 거래 DataFrame
-        remaining: 남는 거래 DataFrame
+        filtered_out: 제외되는 거래 DataFrame 또는 수익금 배열/시리즈
+        remaining: 남는 거래 DataFrame 또는 수익금 배열/시리즈
 
     Returns:
         dict: 통계 검정 결과
@@ -62,9 +62,21 @@ def CalculateStatisticalSignificance(filtered_out, remaining):
         return result
 
     try:
+        def _to_profit_array(obj):
+            if isinstance(obj, pd.DataFrame):
+                if '수익금' in obj.columns:
+                    return obj['수익금'].to_numpy(dtype=np.float64)
+                return obj.to_numpy(dtype=np.float64).reshape(-1)
+            if isinstance(obj, pd.Series):
+                return obj.to_numpy(dtype=np.float64)
+            return np.asarray(obj, dtype=np.float64)
+
         # 두 그룹의 수익금
-        group1 = filtered_out['수익금'].values
-        group2 = remaining['수익금'].values
+        group1 = _to_profit_array(filtered_out)
+        group2 = _to_profit_array(remaining)
+
+        if group1.size < 2 or group2.size < 2:
+            return result
 
         # Welch's t-test (등분산 가정하지 않음)
         t_stat, p_value = stats.ttest_ind(group1, group2, equal_var=False)
@@ -482,32 +494,34 @@ def FindOptimalThresholds(df_tsg, column, direction='less', n_splits=20):
     results = []
     total_profit = df_tsg['수익금'].sum()
     total_trades = len(df_tsg)
+    profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+    col_arr = df_tsg[column].to_numpy(dtype=np.float64)
 
     for threshold in thresholds:
         if direction == 'less':
-            condition = df_tsg[column] < threshold
+            condition = col_arr < threshold
         else:
-            condition = df_tsg[column] >= threshold
+            condition = col_arr >= threshold
 
-        filtered_out = df_tsg[condition]
-        remaining = df_tsg[~condition]
-
-        if len(filtered_out) == 0 or len(remaining) == 0:
+        excluded_count = int(np.sum(condition))
+        remaining_count = total_trades - excluded_count
+        if excluded_count == 0 or remaining_count == 0:
             continue
 
-        improvement = -filtered_out['수익금'].sum()
-        excluded_ratio = len(filtered_out) / total_trades * 100
-        remaining_winrate = (remaining['수익금'] > 0).mean() * 100
+        excluded_profit = float(np.sum(profit_arr[condition]))
+        improvement = -excluded_profit
+        excluded_ratio = excluded_count / total_trades * 100
+        remaining_winrate = (profit_arr[~condition] > 0).mean() * 100
 
         # 효율성 점수: 수익개선 / 제외거래수 (제외 거래당 개선 효과)
-        efficiency = improvement / len(filtered_out) if len(filtered_out) > 0 else 0
+        efficiency = improvement / excluded_count if excluded_count > 0 else 0
 
         results.append({
             'threshold': round(threshold, 2),
             'improvement': int(improvement),
             'excluded_ratio': round(excluded_ratio, 1),
-            'excluded_count': len(filtered_out),
-            'remaining_count': len(remaining),
+            'excluded_count': excluded_count,
+            'remaining_count': remaining_count,
             'remaining_winrate': round(remaining_winrate, 1),
             'efficiency': round(efficiency, 0)
         })
@@ -564,8 +578,6 @@ def FindAllOptimalThresholds(df_tsg):
         ('매수당일거래대금', 'less', '거래대금 {:.0f}억 미만 제외'),
         ('시가총액', 'less', '시가총액 {:.0f}억 미만 제외'),
         ('시가총액', 'greater', '시가총액 {:.0f}억 이상 제외'),
-        ('보유시간', 'less', '보유시간 {:.0f}초 미만 제외'),
-        ('보유시간', 'greater', '보유시간 {:.0f}초 이상 제외'),
         ('매수호가잔량비', 'less', '호가잔량비 {:.0f}% 미만 제외'),
         ('매수스프레드', 'greater', '스프레드 {:.2f}% 이상 제외'),
     ]
@@ -596,7 +608,7 @@ def FindAllOptimalThresholds(df_tsg):
 # 4. 필터 조합 분석
 # ============================================================================
 
-def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
+def AnalyzeFilterCombinations(df_tsg, single_filters=None, max_filters=3, top_n=10):
     """
     필터 조합의 시너지 효과를 분석합니다.
 
@@ -608,8 +620,9 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
     Returns:
         list: 필터 조합 분석 결과
     """
-    # 먼저 단일 필터 분석
-    single_filters = AnalyzeFilterEffectsEnhanced(df_tsg)
+    # 먼저 단일 필터 분석(이미 계산된 결과가 있으면 재사용)
+    if single_filters is None:
+        single_filters = AnalyzeFilterEffectsEnhanced(df_tsg)
 
     if not single_filters:
         return []
@@ -620,8 +633,24 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
     if len(top_filters) < 2:
         return []
 
-    total_profit = df_tsg['수익금'].sum()
     total_trades = len(df_tsg)
+    profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+
+    # 조건식은 조합 루프에서 반복 eval 되면 비용이 커서, 상위 필터에 대해서만 미리 평가해둡니다.
+    safe_globals = {"__builtins__": {}}
+    safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+    cond_arrays = []
+    for f in top_filters:
+        try:
+            cond_expr = f.get('조건식')
+            if not cond_expr:
+                cond_arrays.append(None)
+                continue
+            cond = eval(cond_expr, safe_globals, safe_locals)
+            cond_arr = cond.to_numpy(dtype=bool) if hasattr(cond, 'to_numpy') else np.asarray(cond, dtype=bool)
+            cond_arrays.append(cond_arr)
+        except:
+            cond_arrays.append(None)
 
     combination_results = []
 
@@ -631,25 +660,19 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
         filter2 = top_filters[f2]
 
         try:
-            # 조합 조건 생성
-            safe_globals = {"__builtins__": {}}
-            safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
-            cond1 = eval(filter1['조건식'], safe_globals, safe_locals) if '조건식' in filter1 else None
-            cond2 = eval(filter2['조건식'], safe_globals, safe_locals) if '조건식' in filter2 else None
-
+            cond1 = cond_arrays[f1]
+            cond2 = cond_arrays[f2]
             if cond1 is None or cond2 is None:
                 continue
 
             combined_condition = cond1 | cond2  # OR 조건 (둘 중 하나라도 해당되면 제외)
-
-            filtered_out = df_tsg[combined_condition]
-            remaining = df_tsg[~combined_condition]
-
-            if len(filtered_out) == 0 or len(remaining) == 0:
+            excluded_count = int(np.sum(combined_condition))
+            remaining_count = total_trades - excluded_count
+            if excluded_count == 0 or remaining_count == 0:
                 continue
 
-            improvement = -filtered_out['수익금'].sum()
-            excluded_ratio = len(filtered_out) / total_trades * 100
+            improvement = -float(np.sum(profit_arr[combined_condition]))
+            excluded_ratio = excluded_count / total_trades * 100
 
             # 시너지 효과 계산 (조합 개선 - 개별 개선 합)
             individual_sum = filter1['수익개선금액'] + filter2['수익개선금액']
@@ -666,8 +689,8 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
                 '시너지효과': int(synergy),
                 '시너지비율': round(synergy_ratio, 1),
                 '제외비율': round(excluded_ratio, 1),
-                '잔여승률': round((remaining['수익금'] > 0).mean() * 100, 1),
-                '잔여거래수': len(remaining),
+                '잔여승률': round((profit_arr[~combined_condition] > 0).mean() * 100, 1),
+                '잔여거래수': remaining_count,
                 '권장': '★★★' if synergy_ratio > 20 else ('★★' if synergy_ratio > 0 else ''),
             })
         except:
@@ -681,25 +704,21 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
             filter3 = top_filters[f3]
 
             try:
-                safe_globals = {"__builtins__": {}}
-                safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
-                cond1 = eval(filter1['조건식'], safe_globals, safe_locals) if '조건식' in filter1 else None
-                cond2 = eval(filter2['조건식'], safe_globals, safe_locals) if '조건식' in filter2 else None
-                cond3 = eval(filter3['조건식'], safe_globals, safe_locals) if '조건식' in filter3 else None
-
+                cond1 = cond_arrays[f1]
+                cond2 = cond_arrays[f2]
+                cond3 = cond_arrays[f3]
                 if cond1 is None or cond2 is None or cond3 is None:
                     continue
 
                 combined_condition = cond1 | cond2 | cond3
 
-                filtered_out = df_tsg[combined_condition]
-                remaining = df_tsg[~combined_condition]
-
-                if len(filtered_out) == 0 or len(remaining) == 0:
+                excluded_count = int(np.sum(combined_condition))
+                remaining_count = total_trades - excluded_count
+                if excluded_count == 0 or remaining_count == 0:
                     continue
 
-                improvement = -filtered_out['수익금'].sum()
-                excluded_ratio = len(filtered_out) / total_trades * 100
+                improvement = -float(np.sum(profit_arr[combined_condition]))
+                excluded_ratio = excluded_count / total_trades * 100
 
                 individual_sum = filter1['수익개선금액'] + filter2['수익개선금액'] + filter3['수익개선금액']
                 synergy = improvement - individual_sum
@@ -715,8 +734,8 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
                     '시너지효과': int(synergy),
                     '시너지비율': round(synergy_ratio, 1),
                     '제외비율': round(excluded_ratio, 1),
-                    '잔여승률': round((remaining['수익금'] > 0).mean() * 100, 1),
-                    '잔여거래수': len(remaining),
+                    '잔여승률': round((profit_arr[~combined_condition] > 0).mean() * 100, 1),
+                    '잔여거래수': remaining_count,
                     '권장': '★★★' if synergy_ratio > 20 else ('★★' if synergy_ratio > 0 else ''),
                 })
             except:
@@ -749,6 +768,9 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
 
     if total_trades == 0:
         return filter_results
+
+    profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+    return_arr = df_tsg['수익률'].to_numpy(dtype=np.float64) if '수익률' in df_tsg.columns else None
 
     # === 필터 조건 정의 (조건식 포함) ===
     filter_conditions = []
@@ -866,25 +888,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
                 '코드': f'시가총액 < {threshold}'
             })
 
-    # 6. 보유시간 필터
-    for threshold in [10, 30, 60, 120, 300]:
-        filter_conditions.append({
-            '필터명': f'보유시간 {threshold}초 미만 제외',
-            '조건': df_tsg['보유시간'] < threshold,
-            '조건식': f"df_tsg['보유시간'] < {threshold}",
-            '분류': '보유시간',
-            '코드': f'# 보유시간 {threshold}초 이상 유지'
-        })
-    for threshold in [600, 1200, 1800, 3600]:
-        filter_conditions.append({
-            '필터명': f'보유시간 {threshold}초 이상 제외',
-            '조건': df_tsg['보유시간'] >= threshold,
-            '조건식': f"df_tsg['보유시간'] >= {threshold}",
-            '분류': '보유시간',
-            '코드': f'# 보유시간 {threshold}초 전에 청산'
-        })
-
-    # 7. 호가 관련 필터
+    # 6. 호가 관련 필터
     if '매수호가잔량비' in df_tsg.columns:
         for threshold in [50, 70, 90, 100]:
             filter_conditions.append({
@@ -938,26 +942,30 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     # === 각 필터 효과 계산 (통계 검정 포함) ===
     for fc in filter_conditions:
         try:
-            filtered_out = df_tsg[fc['조건']]
-            remaining = df_tsg[~fc['조건']]
+            cond = fc['조건']
+            cond_arr = cond.to_numpy(dtype=bool) if hasattr(cond, 'to_numpy') else np.asarray(cond, dtype=bool)
+            filtered_count = int(np.sum(cond_arr))
+            remaining_count = total_trades - filtered_count
 
-            if len(filtered_out) == 0:
+            if filtered_count == 0 or remaining_count == 0:
                 continue
 
-            filtered_profit = filtered_out['수익금'].sum()
-            remaining_profit = remaining['수익금'].sum()
-            filtered_count = len(filtered_out)
-            remaining_count = len(remaining)
+            filtered_profit = float(np.sum(profit_arr[cond_arr]))
+            remaining_profit = float(total_profit - filtered_profit)
 
             improvement = -filtered_profit
 
             # 통계적 유의성 검증
-            stat_result = CalculateStatisticalSignificance(filtered_out, remaining)
+            stat_result = CalculateStatisticalSignificance(profit_arr[cond_arr], profit_arr[~cond_arr])
             effect_interpretation = CalculateEffectSizeInterpretation(stat_result['effect_size'])
 
             # 제외 거래의 특성 분석
-            filtered_avg_profit = filtered_out['수익률'].mean() if len(filtered_out) > 0 else 0
-            remaining_avg_profit = remaining['수익률'].mean() if len(remaining) > 0 else 0
+            if return_arr is not None:
+                filtered_avg_profit = float(np.nanmean(return_arr[cond_arr])) if filtered_count > 0 else 0.0
+                remaining_avg_profit = float(np.nanmean(return_arr[~cond_arr])) if remaining_count > 0 else 0.0
+            else:
+                filtered_avg_profit = 0.0
+                remaining_avg_profit = 0.0
 
             # 권장 등급 (개선된 로직)
             if improvement > total_profit * 0.15 and stat_result['significant']:
@@ -982,8 +990,8 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
                 '잔여거래수익금': int(remaining_profit),
                 '잔여평균수익률': round(remaining_avg_profit, 2),
                 '수익개선금액': int(improvement),
-                '제외거래승률': round((filtered_out['수익금'] > 0).mean() * 100, 1),
-                '잔여거래승률': round((remaining['수익금'] > 0).mean() * 100, 1),
+                '제외거래승률': round((profit_arr[cond_arr] > 0).mean() * 100, 1) if filtered_count > 0 else 0.0,
+                '잔여거래승률': round((profit_arr[~cond_arr] > 0).mean() * 100, 1) if remaining_count > 0 else 0.0,
                 't통계량': stat_result['t_stat'],
                 'p값': stat_result['p_value'],
                 '효과크기': stat_result['effect_size'],
@@ -1130,7 +1138,6 @@ def AnalyzeFilterStability(df_tsg, n_periods=5):
     key_filters = [
         ('매수등락율 >= 20', lambda df: df['매수등락율'] >= 20, '등락율'),
         ('매수체결강도 < 80', lambda df: df['매수체결강도'] < 80, '체결강도'),
-        ('보유시간 < 60', lambda df: df['보유시간'] < 60, '보유시간'),
     ]
 
     if '시가총액' in df_tsg.columns:
@@ -1873,8 +1880,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         optimal_thresholds = FindAllOptimalThresholds(df_enhanced)
         result['optimal_thresholds'] = optimal_thresholds
 
-        # 4. 필터 조합 분석
-        filter_combinations = AnalyzeFilterCombinations(df_enhanced)
+        # 4. 필터 조합 분석 (단일 필터 결과 재사용으로 중복 계산 제거)
+        filter_combinations = AnalyzeFilterCombinations(df_enhanced, single_filters=filter_results)
         result['filter_combinations'] = filter_combinations
 
         # 5. ML 특성 중요도
