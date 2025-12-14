@@ -1256,10 +1256,14 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
         df_tsg = df_tsg.copy()
 
         # 한글 폰트 설정
+        # - 요약 텍스트 등에서 기본 monospace(DejaVu Sans Mono)로 fallback 되면 한글이 깨질 수 있어,
+        #   family/monospace 모두에 한글 폰트를 우선 지정합니다.
         font_path = 'C:/Windows/Fonts/malgun.ttf'
+        preferred_korean_fonts = ['Malgun Gothic', 'AppleGothic', 'NanumGothic', 'sans-serif']
+        plt.rcParams['font.family'] = preferred_korean_fonts
+        plt.rcParams['font.monospace'] = ['Malgun Gothic', 'Consolas', 'monospace']
         try:
             font_manager.fontManager.addfont(font_path)
-            plt.rcParams['font.family'] = 'Malgun Gothic'
         except:
             pass
         plt.rcParams['axes.unicode_minus'] = False
@@ -1673,11 +1677,13 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ, filter_results=None
                 """
 
         ax16.text(0.1, 0.9, summary_text, transform=ax16.transAxes, fontsize=10,
-                 verticalalignment='top', fontfamily='monospace',
+                 verticalalignment='top',
                  bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
         # 저장 및 전송
-        plt.tight_layout(rect=[0, 0.02, 1, 0.97])
+        # tight_layout은 colorbar/그리드와 함께 경고가 자주 발생하여(subplot 배치가 깨질 수 있음),
+        # 고정 margins로 레이아웃을 안정화합니다.
+        fig.subplots_adjust(left=0.05, right=0.98, bottom=0.04, top=0.94, hspace=0.55, wspace=0.3)
         analysis_path = f"{GRAPH_PATH}/{save_file_name}_enhanced.png"
         plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
