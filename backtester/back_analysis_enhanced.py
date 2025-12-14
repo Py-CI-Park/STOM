@@ -722,8 +722,12 @@ def AnalyzeFilterCombinations(df_tsg, max_filters=3, top_n=10):
             except:
                 continue
 
-    # 시너지 효과 기준 정렬
-    combination_results.sort(key=lambda x: x['시너지효과'], reverse=True)
+    # 조합 적용 시 개선금액 기준 정렬(내림차순)
+    # - "현재 조건식에 불필요한 조건"을 찾기 위해, 최종 개선 효과가 큰 조합을 상단에 배치
+    combination_results.sort(
+        key=lambda x: (x.get('조합개선', 0), x.get('시너지효과', 0), x.get('시너지비율', 0)),
+        reverse=True
+    )
 
     return combination_results
 
@@ -749,6 +753,34 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     # === 필터 조건 정의 (조건식 포함) ===
     filter_conditions = []
 
+    def _fmt_eok_to_korean(value_eok):
+        """
+        억 단위 숫자를 사람이 읽기 쉬운 라벨로 변환합니다.
+        - 1조(=10,000억) 미만: 억 단위
+        - 1조 이상: 조 단위(정수)
+        """
+        try:
+            v = float(value_eok)
+        except:
+            return str(value_eok)
+        if v >= 10000:
+            return f"{int(round(v / 10000))}조"
+        return f"{int(round(v))}억"
+
+    def _detect_trade_money_unit(series):
+        """
+        매수당일거래대금 단위를 추정합니다.
+        - 백만 단위: 값이 일반적으로 수천~수십만 수준(예: 10,000 = 100억)
+        - 억 단위(레거시): 값이 수십~수천 수준
+        """
+        try:
+            s = series.dropna()
+            if len(s) == 0:
+                return '백만'
+            return '백만' if float(s.median()) > 5000 else '억'
+        except:
+            return '백만'
+
     # 1. 시간대 필터
     if '매수시' in df_tsg.columns:
         for hour in sorted(df_tsg['매수시'].unique()):
@@ -764,56 +796,62 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     if '매수등락율' in df_tsg.columns:
         for threshold in [5, 10, 15, 20, 25, 30]:
             filter_conditions.append({
-                '필터명': f'등락율 {threshold}% 이상 제외',
+                '필터명': f'매수등락율 {threshold}% 이상 제외',
                 '조건': df_tsg['매수등락율'] >= threshold,
                 '조건식': f"df_tsg['매수등락율'] >= {threshold}",
                 '분류': '등락율',
-                '코드': f'등락율 < {threshold}'
+                '코드': f'매수등락율 < {threshold}'
             })
         for threshold in [3, 5, 7, 10]:
             filter_conditions.append({
-                '필터명': f'등락율 {threshold}% 미만 제외',
+                '필터명': f'매수등락율 {threshold}% 미만 제외',
                 '조건': df_tsg['매수등락율'] < threshold,
                 '조건식': f"df_tsg['매수등락율'] < {threshold}",
                 '분류': '등락율',
-                '코드': f'등락율 >= {threshold}'
+                '코드': f'매수등락율 >= {threshold}'
             })
 
     # 3. 체결강도 필터
     if '매수체결강도' in df_tsg.columns:
         for threshold in [70, 80, 90, 100]:
             filter_conditions.append({
-                '필터명': f'체결강도 {threshold} 미만 제외',
+                '필터명': f'매수체결강도 {threshold} 미만 제외',
                 '조건': df_tsg['매수체결강도'] < threshold,
                 '조건식': f"df_tsg['매수체결강도'] < {threshold}",
                 '분류': '체결강도',
-                '코드': f'체결강도 >= {threshold}'
+                '코드': f'매수체결강도 >= {threshold}'
             })
         for threshold in [150, 200, 250]:
             filter_conditions.append({
-                '필터명': f'체결강도 {threshold} 이상 제외',
+                '필터명': f'매수체결강도 {threshold} 이상 제외',
                 '조건': df_tsg['매수체결강도'] >= threshold,
                 '조건식': f"df_tsg['매수체결강도'] >= {threshold}",
                 '분류': '체결강도',
-                '코드': f'체결강도 < {threshold}'
+                '코드': f'매수체결강도 < {threshold}'
             })
 
     # 4. 거래대금 필터
     if '매수당일거래대금' in df_tsg.columns:
-        for threshold in [50, 100, 200, 500]:
+        money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금'])
+        thresholds_eok = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+        for threshold_eok in thresholds_eok:
+            if money_unit == '백만':
+                threshold_value = int(threshold_eok * 100)  # 1억 = 100백만
+            else:
+                threshold_value = int(threshold_eok)
             filter_conditions.append({
-                '필터명': f'거래대금 {threshold}억 미만 제외',
-                '조건': df_tsg['매수당일거래대금'] < threshold,
-                '조건식': f"df_tsg['매수당일거래대금'] < {threshold}",
+                '필터명': f"매수당일거래대금 {_fmt_eok_to_korean(threshold_eok)} 미만 제외",
+                '조건': df_tsg['매수당일거래대금'] < threshold_value,
+                '조건식': f"df_tsg['매수당일거래대금'] < {threshold_value}",
                 '분류': '거래대금',
-                '코드': f'당일거래대금 >= {threshold}'
+                '코드': f"매수당일거래대금 >= {threshold_value}  # 단위:{money_unit}(={_fmt_eok_to_korean(threshold_eok)})"
             })
 
     # 5. 시가총액 필터
     if '시가총액' in df_tsg.columns:
         for threshold in [500, 1000, 2000, 3000, 5000]:
             filter_conditions.append({
-                '필터명': f'시가총액 {threshold}억 미만 제외',
+                '필터명': f'시가총액 {_fmt_eok_to_korean(threshold)} 미만 제외',
                 '조건': df_tsg['시가총액'] < threshold,
                 '조건식': f"df_tsg['시가총액'] < {threshold}",
                 '분류': '시가총액',
@@ -821,7 +859,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
             })
         for threshold in [10000, 20000, 50000]:
             filter_conditions.append({
-                '필터명': f'시가총액 {threshold}억 이상 제외',
+                '필터명': f'시가총액 {_fmt_eok_to_korean(threshold)} 이상 제외',
                 '조건': df_tsg['시가총액'] >= threshold,
                 '조건식': f"df_tsg['시가총액'] >= {threshold}",
                 '분류': '시가총액',
@@ -871,7 +909,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     if '위험도점수' in df_tsg.columns:
         for threshold in [30, 40, 50, 60, 70]:
             filter_conditions.append({
-                '필터명': f'위험도 {threshold}점 이상 제외',
+                '필터명': f'매수 위험도점수 {threshold}점 이상 제외',
                 '조건': df_tsg['위험도점수'] >= threshold,
                 '조건식': f"df_tsg['위험도점수'] >= {threshold}",
                 '분류': '위험신호',
@@ -1354,18 +1392,46 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                 ax4.set_title('필터 효과 크기 분포')
                 ax4.legend(fontsize=8)
 
-        # ============ Chart 5: 제외비율 vs 수익개선 ============
+        # ============ Chart 5: 필터 적용 시 예상 수익 개선 효과 (Top 15) ============
         ax5 = fig.add_subplot(gs[1, 2])
         if filter_results and len(filter_results) > 0:
-            excluded_ratios = [f['제외비율'] for f in filter_results]
-            improvements = [f['수익개선금액'] for f in filter_results]
-            colors = [color_profit if imp > 0 else color_loss for imp in improvements]
+            df_filter = pd.DataFrame(filter_results)
+            if '수익개선금액' in df_filter.columns and '필터명' in df_filter.columns:
+                df_filter = df_filter[df_filter['수익개선금액'] > 0].sort_values('수익개선금액', ascending=False).head(15)
 
-            ax5.scatter(excluded_ratios, improvements, c=colors, alpha=0.6, s=50)
-            ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax5.set_xlabel('제외 비율 (%)')
-            ax5.set_ylabel('수익 개선 금액')
-            ax5.set_title('제외비율 vs 수익개선 트레이드오프')
+                if len(df_filter) > 0:
+                    x_pos = range(len(df_filter))
+                    ax5.bar(x_pos, df_filter['수익개선금액'], color=color_profit, edgecolor='black', linewidth=0.5)
+                    ax5.set_xticks(list(x_pos))
+                    ax5.set_xticklabels([str(x)[:18] for x in df_filter['필터명']],
+                                        rotation=45, ha='right', fontsize=7)
+                    ax5.set_ylabel('수익 개선 금액')
+                    ax5.set_title('필터 적용 시 예상 수익 개선 효과 (Top 15)\n(막대=개선금액, 빨간선=누적 비율)')
+                    ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+
+                    try:
+                        cumsum = df_filter['수익개선금액'].cumsum()
+                        denom = float(cumsum.iloc[-1]) if len(cumsum) > 0 else 0.0
+                        cumsum_pct = (cumsum / denom * 100) if denom else [0 for _ in cumsum]
+                        ax5_twin = ax5.twinx()
+                        ax5_twin.plot(list(x_pos), cumsum_pct, 'ro-', markersize=3, linewidth=1.2)
+                        ax5_twin.set_ylabel('누적 비율 (%)', color='red')
+                        ax5_twin.tick_params(axis='y', labelcolor='red')
+                        ax5_twin.set_ylim(0, 110)
+                    except:
+                        pass
+                else:
+                    ax5.text(0.5, 0.5, '개선 효과(+) 필터 없음', ha='center', va='center',
+                             fontsize=12, transform=ax5.transAxes)
+                    ax5.axis('off')
+            else:
+                ax5.text(0.5, 0.5, '필터 결과 컬럼 누락', ha='center', va='center',
+                         fontsize=12, transform=ax5.transAxes)
+                ax5.axis('off')
+        else:
+            ax5.text(0.5, 0.5, '필터 분석 데이터 없음', ha='center', va='center',
+                     fontsize=12, transform=ax5.transAxes)
+            ax5.axis('off')
 
         # ============ Chart 6-8: 필터 개선 핵심 보조 지표 ============
         # Chart 6: 기간별 안정성(일관성) Top
@@ -1845,7 +1911,28 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         # 필터 조합
         if filter_combinations:
             combo_path = f"{GRAPH_PATH}/{save_file_name}_filter_combinations.csv"
-            pd.DataFrame(filter_combinations).to_csv(combo_path, encoding='utf-8-sig', index=False)
+            df_combo = pd.DataFrame(filter_combinations)
+            if '조합개선' in df_combo.columns:
+                sort_cols = ['조합개선']
+                sort_asc = [False]
+                if '시너지효과' in df_combo.columns:
+                    sort_cols.append('시너지효과')
+                    sort_asc.append(False)
+                df_combo = df_combo.sort_values(sort_cols, ascending=sort_asc)
+
+            df_combo = df_combo.rename(columns={
+                '조합유형': '조합유형(필터개수)',
+                '개별개선합': '개별개선합(원=각필터단독개선합)',
+                '조합개선': '조합개선(원=조합적용개선금액)',
+                '시너지효과': '시너지효과(원=조합개선-개별개선합)',
+                '시너지비율': '시너지비율(%=시너지효과/개별개선합)',
+                '제외비율': '제외비율(%=조합적용시제외)',
+                '잔여승률': '잔여승률(%=조합적용후)',
+                '잔여거래수': '잔여거래수(건)',
+                '권장': '권장(시너지기준)'
+            })
+
+            df_combo.to_csv(combo_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(combo_path)
 
         # 필터 안정성
