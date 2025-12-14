@@ -1689,49 +1689,89 @@ def CalculateDerivedMetrics(df_tsg):
     """
     df = df_tsg.copy()
 
-    # 매도 시점 컬럼 존재 여부 확인
+    # === 1) 매수 시점 위험도 점수 (0-100, LOOKAHEAD-FREE) ===
+    # - 필터 분석은 "매수를 안 하는 조건(진입 회피)"을 찾는 것이므로,
+    #   매도 시점 정보(매도등락율/변화량/보유시간 등)를 사용하면 룩어헤드가 됩니다.
+    # - 위험도점수는 매수 시점에서 알 수 있는 정보만으로 계산합니다.
+    df['위험도점수'] = 0
+
+    if '매수등락율' in df.columns:
+        buy_ret = pd.to_numeric(df['매수등락율'], errors='coerce')
+        df.loc[buy_ret >= 20, '위험도점수'] += 20
+        df.loc[buy_ret >= 25, '위험도점수'] += 10
+        df.loc[buy_ret >= 30, '위험도점수'] += 10
+
+    if '매수체결강도' in df.columns:
+        buy_power = pd.to_numeric(df['매수체결강도'], errors='coerce')
+        df.loc[buy_power < 80, '위험도점수'] += 15
+        df.loc[buy_power < 60, '위험도점수'] += 10
+
+    if '매수당일거래대금' in df.columns:
+        trade_money_raw = pd.to_numeric(df['매수당일거래대금'], errors='coerce')
+        try:
+            median = float(trade_money_raw.dropna().median())
+        except Exception:
+            median = 0.0
+        trade_money_eok = trade_money_raw / 100.0 if median > 5000 else trade_money_raw
+        df.loc[trade_money_eok < 50, '위험도점수'] += 15
+        df.loc[trade_money_eok < 100, '위험도점수'] += 10
+
+    if '시가총액' in df.columns:
+        mcap = pd.to_numeric(df['시가총액'], errors='coerce')
+        df.loc[mcap < 1000, '위험도점수'] += 15
+        df.loc[mcap < 5000, '위험도점수'] += 10
+
+    if '매수호가잔량비' in df.columns:
+        hoga = pd.to_numeric(df['매수호가잔량비'], errors='coerce')
+        df.loc[hoga < 90, '위험도점수'] += 10
+        df.loc[hoga < 70, '위험도점수'] += 15
+
+    if '매수스프레드' in df.columns:
+        spread = pd.to_numeric(df['매수스프레드'], errors='coerce')
+        df.loc[spread >= 0.5, '위험도점수'] += 10
+        df.loc[spread >= 1.0, '위험도점수'] += 10
+
+    # 매수 변동폭(고가-저가) 기반 변동성(%)이 있으면 반영
+    if '매수변동폭비율' in df.columns:
+        vol_pct = pd.to_numeric(df['매수변동폭비율'], errors='coerce')
+        df.loc[vol_pct >= 5, '위험도점수'] += 10
+        df.loc[vol_pct >= 10, '위험도점수'] += 10
+
+    df['위험도점수'] = df['위험도점수'].clip(0, 100)
+
+    # === 2) 매도 시점 데이터 기반 파생지표(진단용) ===
     sell_columns = ['매도등락율', '매도체결강도', '매도당일거래대금', '매도전일비', '매도회전율', '매도호가잔량비']
     has_sell_data = all(col in df.columns for col in sell_columns)
 
-    if not has_sell_data:
-        return df
+    if has_sell_data:
+        # === 변화량 지표 (매도 - 매수) ===
+        df['등락율변화'] = df['매도등락율'] - df['매수등락율']
+        df['체결강도변화'] = df['매도체결강도'] - df['매수체결강도']
+        df['전일비변화'] = df['매도전일비'] - df['매수전일비']
+        df['회전율변화'] = df['매도회전율'] - df['매수회전율']
+        df['호가잔량비변화'] = df['매도호가잔량비'] - df['매수호가잔량비']
 
-    # === 변화량 지표 (매도 - 매수) ===
-    df['등락율변화'] = df['매도등락율'] - df['매수등락율']
-    df['체결강도변화'] = df['매도체결강도'] - df['매수체결강도']
-    df['전일비변화'] = df['매도전일비'] - df['매수전일비']
-    df['회전율변화'] = df['매도회전율'] - df['매수회전율']
-    df['호가잔량비변화'] = df['매도호가잔량비'] - df['매수호가잔량비']
+        # === 변화율 지표 (매도 / 매수) ===
+        df['거래대금변화율'] = np.where(
+            df['매수당일거래대금'] > 0,
+            df['매도당일거래대금'] / df['매수당일거래대금'],
+            1.0
+        )
+        df['체결강도변화율'] = np.where(
+            df['매수체결강도'] > 0,
+            df['매도체결강도'] / df['매수체결강도'],
+            1.0
+        )
 
-    # === 변화율 지표 (매도 / 매수) ===
-    df['거래대금변화율'] = np.where(
-        df['매수당일거래대금'] > 0,
-        df['매도당일거래대금'] / df['매수당일거래대금'],
-        1.0
-    )
-    df['체결강도변화율'] = np.where(
-        df['매수체결강도'] > 0,
-        df['매도체결강도'] / df['매수체결강도'],
-        1.0
-    )
+        # === 추세 판단 지표 ===
+        df['등락추세'] = df['등락율변화'].apply(lambda x: '상승' if x > 0 else ('하락' if x < 0 else '유지'))
+        df['체결강도추세'] = df['체결강도변화'].apply(lambda x: '강화' if x > 10 else ('약화' if x < -10 else '유지'))
+        df['거래량추세'] = df['거래대금변화율'].apply(lambda x: '증가' if x > 1.2 else ('감소' if x < 0.8 else '유지'))
 
-    # === 추세 판단 지표 ===
-    df['등락추세'] = df['등락율변화'].apply(lambda x: '상승' if x > 0 else ('하락' if x < 0 else '유지'))
-    df['체결강도추세'] = df['체결강도변화'].apply(lambda x: '강화' if x > 10 else ('약화' if x < -10 else '유지'))
-    df['거래량추세'] = df['거래대금변화율'].apply(lambda x: '증가' if x > 1.2 else ('감소' if x < 0.8 else '유지'))
-
-    # === 위험 신호 지표 ===
-    df['급락신호'] = (df['등락율변화'] < -3) & (df['체결강도변화'] < -20)
-    df['매도세증가'] = df['호가잔량비변화'] < -0.2
-    df['거래량급감'] = df['거래대금변화율'] < 0.5
-
-    # === 손실 위험도 점수 (0-100) ===
-    df['위험도점수'] = 0
-    df.loc[df['등락율변화'] < -2, '위험도점수'] += 20
-    df.loc[df['체결강도변화'] < -15, '위험도점수'] += 20
-    df.loc[df['호가잔량비변화'] < -0.3, '위험도점수'] += 20
-    df.loc[df['거래대금변화율'] < 0.6, '위험도점수'] += 20
-    df.loc[df['매수등락율'] > 20, '위험도점수'] += 20
+        # === 위험 신호 지표 (매도-매수 기반, 진단용) ===
+        df['급락신호'] = (df['등락율변화'] < -3) & (df['체결강도변화'] < -20)
+        df['매도세증가'] = df['호가잔량비변화'] < -0.2
+        df['거래량급감'] = df['거래대금변화율'] < 0.5
 
     return df
 
@@ -1904,20 +1944,9 @@ def AnalyzeFilterEffects(df_tsg):
             {'필터명': '매수체결강도 200 이상 제외', '조건': df_tsg['매수체결강도'] >= 200, '분류': '체결강도'},
         ])
 
-    # 4. 변화량 기반 필터 (매도 시점 데이터 있는 경우)
-    if '등락율변화' in df_tsg.columns:
-        filter_conditions.extend([
-            {'필터명': '등락율변화 -3% 이하 제외(매도-매수)', '조건': df_tsg['등락율변화'] <= -3, '분류': '추세변화'},
-            {'필터명': '체결강도변화 -20 이하 제외(매도-매수)', '조건': df_tsg['체결강도변화'] <= -20, '분류': '추세변화'},
-            {'필터명': '거래대금변화율 50% 미만 제외(매도/매수)', '조건': df_tsg['거래대금변화율'] < 0.5, '분류': '추세변화'},
-        ])
-
-    if '급락신호' in df_tsg.columns:
-        filter_conditions.append({
-            '필터명': '급락신호 발생 제외',
-            '조건': df_tsg['급락신호'] == True,
-            '분류': '위험신호'
-        })
+    # 4. (룩어헤드 제거) 매도-매수 변화량/급락신호 기반 필터는 제외
+    # - 등락율변화/체결강도변화/거래대금변화율/급락신호 등은 매도 시점 정보가 포함된
+    #   "사후 확정 지표"이므로, 매수 진입 필터 추천에는 사용하지 않습니다.
 
     if '위험도점수' in df_tsg.columns:
         filter_conditions.extend([
@@ -1932,9 +1961,9 @@ def AnalyzeFilterEffects(df_tsg):
     # 6. 시가총액 필터
     if '시가총액' in df_tsg.columns:
         filter_conditions.extend([
-            {'필터명': '시가총액 1000억 미만 제외', '조건': df_tsg['시가총액'] < 1000, '분류': '시가총액'},
-            {'필터명': '시가총액 3000억 미만 제외', '조건': df_tsg['시가총액'] < 3000, '분류': '시가총액'},
-            {'필터명': '시가총액 1조 이상 제외', '조건': df_tsg['시가총액'] >= 10000, '분류': '시가총액'},
+            {'필터명': '매수시가총액 1000억 미만 제외', '조건': df_tsg['시가총액'] < 1000, '분류': '시가총액'},
+            {'필터명': '매수시가총액 3000억 미만 제외', '조건': df_tsg['시가총액'] < 3000, '분류': '시가총액'},
+            {'필터명': '매수시가총액 1조 이상 제외', '조건': df_tsg['시가총액'] >= 10000, '분류': '시가총액'},
         ])
 
     # === 각 필터 효과 계산 ===

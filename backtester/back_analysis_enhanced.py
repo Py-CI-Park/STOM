@@ -357,17 +357,6 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
         df['매도세증가'] = df['호가잔량비변화'] < -0.2
         df['거래량급감'] = df['거래대금변화율'] < 0.5
 
-        # === 5. 강화된 위험도 점수 (0-100) ===
-        df['위험도점수'] = 0
-        df.loc[df['등락율변화'] < -2, '위험도점수'] += 15
-        df.loc[df['등락율변화'] < -5, '위험도점수'] += 10  # 추가 가중치
-        df.loc[df['체결강도변화'] < -15, '위험도점수'] += 15
-        df.loc[df['체결강도변화'] < -30, '위험도점수'] += 10  # 추가 가중치
-        df.loc[df['호가잔량비변화'] < -0.3, '위험도점수'] += 15
-        df.loc[df['거래대금변화율'] < 0.6, '위험도점수'] += 15
-        df.loc[df['매수등락율'] > 20, '위험도점수'] += 10
-        df.loc[df['매수등락율'] > 25, '위험도점수'] += 10  # 추가 가중치
-
     # === 6. 모멘텀 점수 (NEW) ===
     if '매수등락율' in df.columns and '매수체결강도' in df.columns:
         # 등락율과 체결강도를 정규화하여 모멘텀 점수 계산
@@ -391,6 +380,63 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
             0
         )
         df['변동성변화'] = df['매도변동폭비율'] - df['매수변동폭비율']
+
+    # === 7.5. 매수 시점 위험도 점수 (0-100, LOOKAHEAD-FREE) ===
+    # - 필터 분석은 "매수를 안 하는 조건(진입 회피)"을 찾는 것이므로,
+    #   매도 시점 정보(매도등락율/변화량/보유시간 등)를 사용하면 룩어헤드가 됩니다.
+    # - 위험도점수는 매수 시점에서 알 수 있는 정보만으로 계산합니다.
+    df['위험도점수'] = 0
+
+    # 1) 과열(추격 매수) 위험: 매수등락율
+    if '매수등락율' in df.columns:
+        buy_ret = pd.to_numeric(df['매수등락율'], errors='coerce')
+        df.loc[buy_ret >= 20, '위험도점수'] += 20
+        df.loc[buy_ret >= 25, '위험도점수'] += 10
+        df.loc[buy_ret >= 30, '위험도점수'] += 10
+
+    # 2) 매수체결강도 약세 위험
+    if '매수체결강도' in df.columns:
+        buy_power = pd.to_numeric(df['매수체결강도'], errors='coerce')
+        df.loc[buy_power < 80, '위험도점수'] += 15
+        df.loc[buy_power < 60, '위험도점수'] += 10
+
+    # 3) 유동성 위험: 매수당일거래대금 (원본 단위가 '백만' 또는 '억' 혼재 가능)
+    if '매수당일거래대금' in df.columns:
+        trade_money_raw = pd.to_numeric(df['매수당일거래대금'], errors='coerce')
+        try:
+            median = float(trade_money_raw.dropna().median())
+        except Exception:
+            median = 0.0
+        # median이 충분히 크면(대략 50억=5,000백만) '백만' 단위로 간주하여 억 단위로 환산
+        trade_money_eok = trade_money_raw / 100.0 if median > 5000 else trade_money_raw
+        df.loc[trade_money_eok < 50, '위험도점수'] += 15
+        df.loc[trade_money_eok < 100, '위험도점수'] += 10
+
+    # 4) 소형주 위험: 시가총액(억)
+    if '시가총액' in df.columns:
+        mcap = pd.to_numeric(df['시가총액'], errors='coerce')
+        df.loc[mcap < 1000, '위험도점수'] += 15
+        df.loc[mcap < 5000, '위험도점수'] += 10
+
+    # 5) 매도우위(호가) 위험: 매수호가잔량비
+    if '매수호가잔량비' in df.columns:
+        hoga = pd.to_numeric(df['매수호가잔량비'], errors='coerce')
+        df.loc[hoga < 90, '위험도점수'] += 10
+        df.loc[hoga < 70, '위험도점수'] += 15
+
+    # 6) 슬리피지/비유동 위험: 매수스프레드(%)
+    if '매수스프레드' in df.columns:
+        spread = pd.to_numeric(df['매수스프레드'], errors='coerce')
+        df.loc[spread >= 0.5, '위험도점수'] += 10
+        df.loc[spread >= 1.0, '위험도점수'] += 10
+
+    # 7) 변동성 위험: 매수변동폭비율(%)
+    if '매수변동폭비율' in df.columns:
+        vol_pct = pd.to_numeric(df['매수변동폭비율'], errors='coerce')
+        df.loc[vol_pct >= 5, '위험도점수'] += 10
+        df.loc[vol_pct >= 10, '위험도점수'] += 10
+
+    df['위험도점수'] = df['위험도점수'].clip(0, 100)
 
     # === 8. 시장 타이밍 점수 (NEW) ===
     if '매수시' in df.columns:
@@ -569,33 +615,87 @@ def FindAllOptimalThresholds(df_tsg):
     """
     results = []
 
+    def _fmt_eok_to_korean(value_eok):
+        """
+        억 단위 숫자를 사람이 읽기 쉬운 라벨로 변환합니다.
+        - 1조(=10,000억) 미만: 억 단위
+        - 1조 이상: 조 단위(정수)
+        """
+        try:
+            v = float(value_eok)
+        except Exception:
+            return str(value_eok)
+        if v >= 10000:
+            return f"{int(round(v / 10000))}조"
+        return f"{int(round(v))}억"
+
+    def _detect_trade_money_unit(series):
+        """
+        매수당일거래대금 단위를 추정합니다.
+        - 백만 단위: 값이 일반적으로 수천~수십만 수준(예: 10,000 = 100억)
+        - 억 단위(레거시): 값이 수십~수천 수준
+        """
+        try:
+            s = series.dropna()
+            if len(s) == 0:
+                return '백만'
+            return '백만' if float(s.median()) > 5000 else '억'
+        except Exception:
+            return '백만'
+
+    trade_money_unit = None
+    if '매수당일거래대금' in df_tsg.columns:
+        trade_money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금'])
+
     # 분석할 컬럼과 방향 정의
     columns_config = [
-        ('매수등락율', 'greater', '등락율 {:.0f}% 이상 제외'),
-        ('매수등락율', 'less', '등락율 {:.0f}% 미만 제외'),
-        ('매수체결강도', 'less', '체결강도 {:.0f} 미만 제외'),
-        ('매수체결강도', 'greater', '체결강도 {:.0f} 이상 제외'),
-        ('매수당일거래대금', 'less', '거래대금 {:.0f}억 미만 제외'),
-        ('시가총액', 'less', '시가총액 {:.0f}억 미만 제외'),
-        ('시가총액', 'greater', '시가총액 {:.0f}억 이상 제외'),
-        ('매수호가잔량비', 'less', '호가잔량비 {:.0f}% 미만 제외'),
-        ('매수스프레드', 'greater', '스프레드 {:.2f}% 이상 제외'),
+        ('매수등락율', 'greater', '매수등락율 {:.0f}% 이상 제외'),
+        ('매수등락율', 'less', '매수등락율 {:.0f}% 미만 제외'),
+        ('매수체결강도', 'less', '매수체결강도 {:.0f} 미만 제외'),
+        ('매수체결강도', 'greater', '매수체결강도 {:.0f} 이상 제외'),
+        ('매수당일거래대금', 'less', '매수당일거래대금 {:.0f}억 미만 제외'),
+        ('시가총액', 'less', '매수시가총액 {:.0f}억 미만 제외'),
+        ('시가총액', 'greater', '매수시가총액 {:.0f}억 이상 제외'),
+        ('매수호가잔량비', 'less', '매수호가잔량비 {:.0f}% 미만 제외'),
+        ('매수스프레드', 'greater', '매수스프레드 {:.2f}% 이상 제외'),
     ]
 
     # 파생 지표도 분석
     if '위험도점수' in df_tsg.columns:
-        columns_config.append(('위험도점수', 'greater', '위험도 {:.0f}점 이상 제외'))
+        columns_config.append(('위험도점수', 'greater', '매수위험도 {:.0f}점 이상 제외'))
 
     if '거래품질점수' in df_tsg.columns:
-        columns_config.append(('거래품질점수', 'less', '거래품질 {:.0f}점 미만 제외'))
+        columns_config.append(('거래품질점수', 'less', '거래품질(매수) {:.0f}점 미만 제외'))
 
     if '모멘텀점수' in df_tsg.columns:
-        columns_config.append(('모멘텀점수', 'less', '모멘텀 {:.1f} 미만 제외'))
+        columns_config.append(('모멘텀점수', 'less', '모멘텀(매수) {:.1f} 미만 제외'))
 
     for column, direction, name_template in columns_config:
         result = FindOptimalThresholds(df_tsg, column, direction)
         if result and result['improvement'] > 0:
-            result['필터명'] = name_template.format(result['optimal_threshold'])
+            raw_thr = result.get('optimal_threshold')
+            result['임계값(원본)'] = raw_thr
+
+            # 표시용 라벨 정리(단위/스케일 혼동 방지)
+            if column == '매수당일거래대금':
+                unit = trade_money_unit or '백만'
+                try:
+                    thr_eok = float(raw_thr) / 100.0 if unit == '백만' else float(raw_thr)
+                except Exception:
+                    thr_eok = raw_thr
+                result['임계값(표시)'] = _fmt_eok_to_korean(thr_eok)
+                result['원본단위'] = unit
+                result['필터명'] = f"매수당일거래대금 {result['임계값(표시)']} 미만 제외"
+            elif column == '시가총액':
+                try:
+                    thr_eok = float(raw_thr)
+                except Exception:
+                    thr_eok = raw_thr
+                result['임계값(표시)'] = _fmt_eok_to_korean(thr_eok)
+                suffix = '미만 제외' if direction == 'less' else '이상 제외'
+                result['필터명'] = f"매수시가총액 {result['임계값(표시)']} {suffix}"
+            else:
+                result['필터명'] = name_template.format(raw_thr)
             results.append(result)
 
     # 수익 개선금액 기준 정렬
@@ -873,7 +973,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     if '시가총액' in df_tsg.columns:
         for threshold in [500, 1000, 2000, 3000, 5000]:
             filter_conditions.append({
-                '필터명': f'시가총액 {_fmt_eok_to_korean(threshold)} 미만 제외',
+                '필터명': f'매수시가총액 {_fmt_eok_to_korean(threshold)} 미만 제외',
                 '조건': df_tsg['시가총액'] < threshold,
                 '조건식': f"df_tsg['시가총액'] < {threshold}",
                 '분류': '시가총액',
@@ -881,7 +981,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
             })
         for threshold in [10000, 20000, 50000]:
             filter_conditions.append({
-                '필터명': f'시가총액 {_fmt_eok_to_korean(threshold)} 이상 제외',
+                '필터명': f'매수시가총액 {_fmt_eok_to_korean(threshold)} 이상 제외',
                 '조건': df_tsg['시가총액'] >= threshold,
                 '조건식': f"df_tsg['시가총액'] >= {threshold}",
                 '분류': '시가총액',
@@ -892,7 +992,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     if '매수호가잔량비' in df_tsg.columns:
         for threshold in [50, 70, 90, 100]:
             filter_conditions.append({
-                '필터명': f'호가잔량비 {threshold}% 미만 제외',
+                '필터명': f'매수호가잔량비 {threshold}% 미만 제외',
                 '조건': df_tsg['매수호가잔량비'] < threshold,
                 '조건식': f"df_tsg['매수호가잔량비'] < {threshold}",
                 '분류': '호가',
@@ -902,7 +1002,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     if '매수스프레드' in df_tsg.columns:
         for threshold in [0.2, 0.3, 0.5, 1.0]:
             filter_conditions.append({
-                '필터명': f'스프레드 {threshold}% 이상 제외',
+                '필터명': f'매수스프레드 {threshold}% 이상 제외',
                 '조건': df_tsg['매수스프레드'] >= threshold,
                 '조건식': f"df_tsg['매수스프레드'] >= {threshold}",
                 '분류': '호가',
@@ -929,15 +1029,8 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
                 '분류': '품질',
                 '코드': f'# 거래품질 {threshold}점 이상만 매수'
             })
-
-    if '급락신호' in df_tsg.columns:
-        filter_conditions.append({
-            '필터명': '급락신호 발생 제외',
-            '조건': df_tsg['급락신호'] == True,
-            '조건식': "df_tsg['급락신호'] == True",
-            '분류': '위험신호',
-            '코드': '# 급락신호 종목 제외'
-        })
+    # (룩어헤드 제거) 급락신호/매도-매수 변화량 기반 지표는 매도 시점 확정 정보이므로
+    # "매수 진입 필터" 추천 대상에서 제외합니다.
 
     # === 각 필터 효과 계산 (통계 검정 포함) ===
     for fc in filter_conditions:
@@ -1031,8 +1124,8 @@ def AnalyzeFeatureImportance(df_tsg):
 
     # 분석에 사용할 특성 선택
     feature_columns = [
-        '매수등락율', '매수체결강도', '매수당일거래대금', '매수전일비',
-        '매수회전율', '시가총액', '보유시간', '매수호가잔량비'
+         '매수등락율', '매수체결강도', '매수당일거래대금', '매수전일비',
+        '매수회전율', '시가총액', '매수호가잔량비'
     ]
 
     available_features = [col for col in feature_columns if col in df_tsg.columns]
@@ -1141,7 +1234,7 @@ def AnalyzeFilterStability(df_tsg, n_periods=5):
     ]
 
     if '시가총액' in df_tsg.columns:
-        key_filters.append(('시가총액 < 1000', lambda df: df['시가총액'] < 1000, '시가총액'))
+        key_filters.append(('매수시가총액 < 1000', lambda df: df['시가총액'] < 1000, '시가총액'))
 
     if '위험도점수' in df_tsg.columns:
         key_filters.append(('위험도점수 >= 50', lambda df: df['위험도점수'] >= 50, '위험도'))
@@ -1571,16 +1664,15 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             ax10.set_xlabel('위험도 점수')
             ax10.set_ylabel('총 수익금')
             
-            # 위험도 공식 표시
+            # 위험도 공식 표시 (매수 시점 기반 / 룩어헤드 제거)
             risk_formula = (
-                "위험도 공식:\n"
-                "• 등락율변화<-2: +15, <-5: +10\n"
-                "• 체결강도변화<-15: +15, <-30: +10\n"
-                "• 호가잔량비변화<-0.3: +15\n"
-                "• 거래대금변화율<0.6: +15\n"
-                "• 매수등락율>20: +10, >25: +10"
+                "위험도(매수 시점) 공식:\n"
+                "• 매수등락율>=20:+20, >=25:+10, >=30:+10\n"
+                "• 매수체결강도<80:+15, <60:+10 | 거래대금(억환산)<50:+15, <100:+10\n"
+                "• 매수시가총액(억)<1000:+15, <5000:+10 | 매수호가잔량비<90:+10, <70:+15\n"
+                "• 매수스프레드>=0.5:+10, >=1.0:+10 | 매수변동폭비율>=5:+10, >=10:+10"
             )
-            ax10.set_title(f'위험도 점수별 수익금 (ENHANCED)\n{risk_formula}', fontsize=8, loc='left')
+            ax10.set_title(f'위험도 점수별 수익금 (매수 진입 위험도)\n{risk_formula}', fontsize=8, loc='left')
 
         # ============ Chart 11: 리스크조정수익률 분포 ============
         ax11 = fig.add_subplot(gs[3, 2])
