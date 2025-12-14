@@ -984,7 +984,7 @@ p-value 해석:
 ### 참고 문서
 
 상세한 기술 문서는 다음을 참조하세요:
-- [텔레그램 차트 분석 상세 문서](./docs/Study/Telegram_Charts_Analysis.md)
+- [텔레그램 차트 분석 상세 문서](./docs/Study/SystemAnalysis/Telegram/Telegram_Charts_Analysis.md)
 - [백테스팅 가이드라인](./docs/Guideline/Back_Testing_Guideline_Tick.md)
 
 ---
@@ -1039,7 +1039,7 @@ p-value 해석:
   - ML 기반 특성 중요도 분석 (Decision Tree)
   - 기간별 필터 안정성 검증 (5기간 분할)
   - 조건식 코드 자동 생성
-- 텔레그램 차트 분석 상세 문서 작성 (`docs/Study/Telegram_Charts_Analysis.md`)
+- 텔레그램 차트 분석 상세 문서 작성 (`docs/Study/SystemAnalysis/Telegram/Telegram_Charts_Analysis.md`)
 - README.md 강화된 분석 시스템 가이드 추가
 
 **이전 완료 사항**:

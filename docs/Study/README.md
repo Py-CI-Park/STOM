@@ -13,10 +13,12 @@ Study/
 │   ├── AI_ML_Trading_Strategy_Automation_Research.md
 │   ├── Research_Report_Automated_Condition_Finding.md
 │   └── AI_Driven_Condition_Automation_Circular_Research_System.md
-├── SystemAnalysis/           # 시스템 분석 및 개선사항 (3개)
+├── SystemAnalysis/           # 시스템 분석 및 개선사항 (4개)
 │   ├── Optistd_System_Analysis.md
 │   ├── STOM_Optimization_System_Improvements.md
-│   └── 2025-12-13_Git_Branch_Structure_Analysis.md
+│   ├── 2025-12-13_Git_Branch_Structure_Analysis.md
+│   └── Telegram/
+│       └── Telegram_Charts_Analysis.md
 ├── ConditionStudies/         # 트레이딩 조건 심층 분석 (2개)
 │   ├── Condition_902_905_Update_2_Deep_Analysis.md
 │   └── Condition_Tick_902_905_update_2_Study.md
@@ -24,7 +26,7 @@ Study/
     └── Condition_Optimization_and_Analysis_Guide.md
 ```
 
-**총 문서 수**: 10개 | **총 용량**: ~350KB
+**총 문서 수**: 11개 | **총 용량**: ~390KB
 
 ---
 
@@ -44,6 +46,7 @@ Study/
 | 8 | **Condition 902/905 Study** | 조건 분석 | 2025-11-29 | 10KB | 틱 조건 스터디 노트 | • 2단계 최적화 (Coarse→Fine)<br>• 조건 무력화 방법<br>• 조건 조합 아이디어 | Backtesting | ✅ |
 | 9 | **Optimization & Analysis Guide** | 가이드 | 2025-11-29 | 13KB | 전체 변수 사전 및 가이드 | • 826개 틱 변수 정리<br>• 7가지 카테고리 분류<br>• 무력화 설정값 제공 | Documentation | ✅ |
 | 10 | **AI Condition Automation Circular System** | 연구 보고서 | 2025-12-01 | 80KB | AI 기반 조건식 자동화 순환 연구 | • 133개 조건 분석 (826/752 변수)<br>• 4단계 순환 프로세스 설계<br>• LLM/GP/Feature Importance 통합 | LLM, DEAP, XGBoost, SHAP, SQLite | ✅ |
+| 11 | **Telegram Charts Analysis** | 시스템 분석 | 2025-12-14 | 40KB | 텔레그램 차트/CSV 기반 백테스팅 강화 분석 | • 기본/강화 CSV 산출물(최대 8종) 정의<br>• 필터 효과(통계)·시너지·안정성·임계값 분석 정리<br>• 텔레그램 전송 플로우 문서화 | pandas, SciPy, scikit-learn, Telegram | ✅ |
 
 ### 📊 스터디 주제별 분류
 
@@ -52,8 +55,8 @@ Study/
 - **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning, DEAP
 - **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간), 완전 자동화된 순환 개선 프로세스
 
-#### ⚙️ 시스템 최적화 및 관리 (3개)
-- **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조
+#### ⚙️ 시스템 최적화 및 관리 (4개)
+- **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조, 텔레그램 차트/CSV 기반 분석 시스템
 - **문제 식별**: 극단값 증폭, TRAIN×VALID 곱셈 문제, Git 히스토리 정리 필요
 - **개선안**: 조화평균 사용, 15가지 구체적 개선 방안, 커밋 스쿼싱 및 브랜치 정리
 
@@ -115,6 +118,7 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | [Optistd_System_Analysis.md](./SystemAnalysis/Optistd_System_Analysis.md) | 2025-11-29 | ✅ 완료 | Optistd 최적화 시스템 분석 |
 | [STOM_Optimization_System_Improvements.md](./SystemAnalysis/STOM_Optimization_System_Improvements.md) | 2025-11-29 | ✅ 완료 | STOM 최적화 시스템 개선방안 |
 | [2025-12-13_Git_Branch_Structure_Analysis.md](./SystemAnalysis/2025-12-13_Git_Branch_Structure_Analysis.md) | 2025-12-13 | ✅ 완료 | Git 브랜치 구조 분석 및 정리 보고서 (38KB) |
+| [Telegram_Charts_Analysis.md](./SystemAnalysis/Telegram/Telegram_Charts_Analysis.md) | 2025-12-14 | ✅ 완료 | 텔레그램 추가 차트/CSV 기반 강화 분석 시스템 문서 (v2.0) |
 
 **주요 내용:**
 - 최적화 시스템 아키텍처 분석
@@ -164,10 +168,10 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 |----------|---------|------|---------|------|
 | Documentation Reviews | 1 | 1 | 0 | 0 |
 | Research Reports | 3 | 3 | 0 | 0 |
-| System Analysis | 3 | 3 | 0 | 0 |
+| System Analysis | 4 | 4 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
 | Guides | 1 | 1 | 0 | 0 |
-| **전체** | **10** | **10** | **0** | **0** |
+| **전체** | **11** | **11** | **0** | **0** |
 
 ## 🎯 문서 상태 범례
 
