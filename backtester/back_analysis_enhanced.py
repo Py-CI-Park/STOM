@@ -357,6 +357,21 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
         df['매도세증가'] = df['호가잔량비변화'] < -0.2
         df['거래량급감'] = df['거래대금변화율'] < 0.5
 
+        # === 5. 매수/매도 위험도 점수 (0-100, 사후 진단용) ===
+        # - 매도 시점 확정 정보(매도-매수 변화량 등)를 포함하는 위험도 점수입니다.
+        # - "매수 진입 필터"로 쓰면 룩어헤드가 되므로, 비교/진단 차트용으로만 사용합니다.
+        df['매수매도위험도점수'] = 0
+        df.loc[df['등락율변화'] < -2, '매수매도위험도점수'] += 15
+        df.loc[df['등락율변화'] < -5, '매수매도위험도점수'] += 10  # 추가 가중치
+        df.loc[df['체결강도변화'] < -15, '매수매도위험도점수'] += 15
+        df.loc[df['체결강도변화'] < -30, '매수매도위험도점수'] += 10  # 추가 가중치
+        df.loc[df['호가잔량비변화'] < -0.3, '매수매도위험도점수'] += 15
+        df.loc[df['거래대금변화율'] < 0.6, '매수매도위험도점수'] += 15
+        if '매수등락율' in df.columns:
+            df.loc[df['매수등락율'] > 20, '매수매도위험도점수'] += 10
+            df.loc[df['매수등락율'] > 25, '매수매도위험도점수'] += 10  # 추가 가중치
+        df['매수매도위험도점수'] = df['매수매도위험도점수'].clip(0, 100)
+
     # === 6. 모멘텀 점수 (NEW) ===
     if '매수등락율' in df.columns and '매수체결강도' in df.columns:
         # 등락율과 체결강도를 정규화하여 모멘텀 점수 계산
@@ -1741,7 +1756,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                 ax9.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
                         f'n={cnt}', ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=8)
 
-        # ============ Chart 10: 위험도점수별 수익금 ============
+        # ============ Chart 10: 매수 위험도점수별 수익금 ============
         ax10 = fig.add_subplot(gs[3, 1])
         if '위험도점수' in df_tsg.columns:
             # 동적 bins 생성: 데이터 분포에 기반
@@ -1763,7 +1778,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             ax10.set_xticks(range(len(df_risk)))
             ax10.set_xticklabels(df_risk['위험도구간'], rotation=45)
             ax10.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax10.set_xlabel('위험도 점수')
+            ax10.set_xlabel('매수 위험도 점수')
             ax10.set_ylabel('총 수익금')
             
             # 위험도 공식 표시 (매수 시점 기반 / 룩어헤드 제거)
@@ -1774,7 +1789,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                 "• 매수시가총액(억)<1000:+15, <5000:+10 | 매수호가잔량비<90:+10, <70:+15\n"
                 "• 매수스프레드>=0.5:+10, >=1.0:+10 | 매수변동폭비율>=5:+10, >=10:+10"
             )
-            ax10.set_title(f'위험도 점수별 수익금 (매수 진입 위험도)\n{risk_formula}', fontsize=8, loc='left')
+            ax10.set_title(f'매수 위험도 점수별 수익금 (룩어헤드 없음)\n{risk_formula}', fontsize=8, loc='left')
 
         # ============ Chart 11: 리스크조정수익률 분포 ============
         ax11 = fig.add_subplot(gs[3, 2])

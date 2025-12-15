@@ -52,13 +52,14 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
     - 생성된 파일 목록(png/csv 등)
     - 생성 시각(파일 수정 시각 기준)
     - 조건식(매수/매도) 및 기본 성과 요약
+    - detail.csv 컬럼 설명/공식(이번 실행 기준)
     """
     try:
         def _describe_output_file(filename: str) -> str:
             if filename.endswith('_analysis.png'):
                 return '백테스팅 결과 분석 차트(분 단위 시간축/구간별 수익 분포)'
             if filename.endswith('_comparison.png'):
-                return '매수/매도 시점 비교 분석 차트(변화량/추세/보유시간 등)'
+                return '매수/매도 시점 비교 분석 차트(변화량/추세/위험도/3D 히트맵 등)'
             if filename.endswith('_enhanced.png'):
                 return '필터 기능 분석 차트(통계/시너지/안정성/임계값/코드생성)'
             if filename.endswith('_detail.csv'):
@@ -80,6 +81,416 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             if filename.endswith('.png'):
                 return '수익곡선/누적 수익금 차트'
             return ''
+
+        def _fmt_eok_to_korean(value_eok):
+            """
+            억 단위 숫자를 사람이 읽기 쉬운 라벨로 변환합니다.
+            - 1조(=10,000억) 미만: 억 단위
+            - 1조 이상: 조 단위(정수)
+            """
+            try:
+                v = float(value_eok)
+            except Exception:
+                return str(value_eok)
+            if v >= 10000:
+                return f"{int(round(v / 10000))}조"
+            return f"{int(round(v))}억"
+
+        def _build_detail_csv_docs(df_report: pd.DataFrame) -> list[str]:
+            """
+            detail.csv(= df_report.to_csv(index=True))에 포함되는 컬럼 설명/공식을 생성합니다.
+            - 이번 실행에서 실제 존재하는 컬럼(df_report.columns)만 출력합니다.
+            """
+            lines_local: list[str] = []
+            if df_report is None:
+                return lines_local
+
+            # 파생 지표(분석 모듈 계산) 중심으로 공식 정의.
+            # 그 외 컬럼은 "엔진 수집값"으로 표시하되, 가능한 경우 기본 정의를 제공합니다.
+            derived_docs = {
+                # 기본 손익/누적
+                '수익금합계': {
+                    'desc': '수익금 누적합',
+                    'unit': '원',
+                    'formula': ["수익금합계 = cumsum(수익금)"],
+                    'note': 'GetResultDataframe()에서 계산'
+                },
+                # 매도-매수 변화량
+                '등락율변화': {
+                    'desc': '등락율 변화(매도-매수)',
+                    'unit': '%p',
+                    'formula': ["등락율변화 = 매도등락율 - 매수등락율"],
+                    'note': '매도 시점 데이터 존재 시 계산'
+                },
+                '체결강도변화': {
+                    'desc': '체결강도 변화(매도-매수)',
+                    'unit': '지수',
+                    'formula': ["체결강도변화 = 매도체결강도 - 매수체결강도"],
+                    'note': '매도 시점 데이터 존재 시 계산'
+                },
+                '전일비변화': {
+                    'desc': '전일비 변화(매도-매수)',
+                    'unit': '원/지수',
+                    'formula': ["전일비변화 = 매도전일비 - 매수전일비"],
+                },
+                '회전율변화': {
+                    'desc': '회전율 변화(매도-매수)',
+                    'unit': '%',
+                    'formula': ["회전율변화 = 매도회전율 - 매수회전율"],
+                },
+                '호가잔량비변화': {
+                    'desc': '호가잔량비 변화(매도-매수)',
+                    'unit': '%p',
+                    'formula': ["호가잔량비변화 = 매도호가잔량비 - 매수호가잔량비"],
+                },
+                '거래대금변화율': {
+                    'desc': '거래대금 변화율(매도/매수)',
+                    'unit': '배율',
+                    'formula': [
+                        "거래대금변화율 = (매도당일거래대금 / 매수당일거래대금) if 매수당일거래대금>0 else 1.0"
+                    ],
+                },
+                '체결강도변화율': {
+                    'desc': '체결강도 변화율(매도/매수)',
+                    'unit': '배율',
+                    'formula': ["체결강도변화율 = (매도체결강도 / 매수체결강도) if 매수체결강도>0 else 1.0"],
+                },
+                '등락추세': {
+                    'desc': '등락율변화의 방향(상승/하락/유지)',
+                    'unit': '범주',
+                    'formula': ["등락추세 = '상승' if 등락율변화>0 else '하락' if 등락율변화<0 else '유지'"],
+                },
+                '체결강도추세': {
+                    'desc': '체결강도변화의 방향(강화/약화/유지)',
+                    'unit': '범주',
+                    'formula': ["체결강도추세 = '강화' if 체결강도변화>10 else '약화' if 체결강도변화<-10 else '유지'"],
+                },
+                '거래량추세': {
+                    'desc': '거래대금변화율 기반 거래량 추세(증가/감소/유지)',
+                    'unit': '범주',
+                    'formula': ["거래량추세 = '증가' if 거래대금변화율>1.2 else '감소' if 거래대금변화율<0.8 else '유지'"],
+                },
+                '급락신호': {
+                    'desc': '급락 신호(매도-매수 변화량 기반)',
+                    'unit': 'bool',
+                    'formula': ["급락신호 = (등락율변화 < -3) and (체결강도변화 < -20)"],
+                    'note': '사후(매도 시점 확정) 지표'
+                },
+                '매도세증가': {
+                    'desc': '매도세 증가(호가잔량비변화 기반)',
+                    'unit': 'bool',
+                    'formula': ["매도세증가 = (호가잔량비변화 < -0.2)"],
+                },
+                '거래량급감': {
+                    'desc': '거래량 급감(거래대금변화율 기반)',
+                    'unit': 'bool',
+                    'formula': ["거래량급감 = (거래대금변화율 < 0.5)"],
+                },
+                # 위험도
+                '위험도점수': {
+                    'desc': '매수 시점 기반 위험도 점수(룩어헤드 제거)',
+                    'unit': '점(0~100)',
+                    'formula': [
+                        "점수 = 0",
+                        "+20 if 매수등락율>=20, +10 if >=25, +10 if >=30",
+                        "+15 if 매수체결강도<80, +10 if <60",
+                        "+15 if 매수당일거래대금(억환산)<50, +10 if <100",
+                        "+15 if 시가총액<1000억, +10 if <5000억",
+                        "+10 if 매수호가잔량비<90, +15 if <70",
+                        "+10 if 매수스프레드>=0.5, +10 if >=1.0",
+                        "+10 if 매수변동폭비율>=5, +10 if >=10",
+                        "점수 = clip(점수, 0, 100)"
+                    ],
+                    'note': '매수 진입 필터/추천에 사용 가능(매수 시점 정보만 사용)'
+                },
+                '매수매도위험도점수': {
+                    'desc': '매수/매도 변화(사후 확정) 기반 위험도 점수',
+                    'unit': '점(0~100)',
+                    'formula': [
+                        "점수 = 0",
+                        "+20 if 등락율변화<-2",
+                        "+20 if 체결강도변화<-15",
+                        "+20 if 호가잔량비변화<-0.3",
+                        "+20 if 거래대금변화율<0.6",
+                        "+20 if 매수등락율>20",
+                        "점수 = clip(점수, 0, 100)"
+                    ],
+                    'note': '룩어헤드가 포함되므로 필터 추천에는 사용하지 않고, 비교/진단 용도로만 활용'
+                },
+                # 강화 분석 주요 지표
+                '모멘텀점수': {
+                    'desc': '매수등락율/매수체결강도 정규화 기반 모멘텀 점수',
+                    'unit': '점수',
+                    'formula': [
+                        "등락율_norm = (매수등락율-mean)/ (std+0.001)",
+                        "체결강도_norm = (매수체결강도-100)/50",
+                        "모멘텀점수 = (등락율_norm*0.4 + 체결강도_norm*0.6) * 10"
+                    ],
+                },
+                '매수변동폭': {
+                    'desc': '매수 시점 고가-저가',
+                    'unit': '원',
+                    'formula': ["매수변동폭 = 매수고가 - 매수저가"],
+                },
+                '매수변동폭비율': {
+                    'desc': '매수변동폭을 저가 대비 %로 환산',
+                    'unit': '%',
+                    'formula': ["매수변동폭비율 = ((매수고가-매수저가)/매수저가)*100 if 매수저가>0 else 0"],
+                },
+                '변동성변화': {
+                    'desc': '변동성 변화(매도변동폭비율-매수변동폭비율)',
+                    'unit': '%p',
+                    'formula': ["변동성변화 = 매도변동폭비율 - 매수변동폭비율"],
+                },
+                '타이밍점수': {
+                    'desc': '시간대별 평균 수익률의 Z-score(사후 결과 기반)',
+                    'unit': '점수',
+                    'formula': [
+                        "시간대평균수익률 = groupby(매수시).mean(수익률)",
+                        "타이밍점수 = zscore(시간대평균수익률) * 10"
+                    ],
+                    'note': '사후(수익률) 기반이므로 필터 추천용으로 직접 사용하면 데이터 누수가 될 수 있음'
+                },
+                '연속이익': {
+                    'desc': '직전 거래까지 연속 이익 횟수',
+                    'unit': '회',
+                    'formula': ["연속이익 = (이익여부==1) 연속 카운트"],
+                },
+                '연속손실': {
+                    'desc': '직전 거래까지 연속 손실 횟수',
+                    'unit': '회',
+                    'formula': ["연속손실 = (이익여부==0) 연속 카운트"],
+                },
+                '리스크조정수익률': {
+                    'desc': '수익률을 위험 요인으로 나눈 조정값',
+                    'unit': '지표',
+                    'formula': ["리스크조정수익률 = 수익률 / (abs(매수등락율)/10 + 보유시간/300 + 1)"],
+                    'note': '보유시간 포함(사후 결과) → 진입 필터로 직접 사용 금지'
+                },
+                '스프레드영향': {
+                    'desc': '매수스프레드 수준(낮음/중간/높음)',
+                    'unit': '범주',
+                    'formula': ["스프레드영향 = '높음'(>0.5) / '중간'(>0.2) / '낮음'"],
+                },
+                '거래품질점수': {
+                    'desc': '매수 시점 거래 품질 종합 점수(0~100)',
+                    'unit': '점',
+                    'formula': [
+                        "기본 50점",
+                        "+10 if 매수체결강도>=120, +10 if >=150",
+                        "+10 if 매수호가잔량비>=100",
+                        "+10 if 1000억<=시가총액<=10000억",
+                        "-15 if 매수등락율>=25, -10 if >=30",
+                        "-10 if 매수스프레드>=0.5",
+                        "clip(0,100)"
+                    ],
+                },
+                # 초당(틱) 지표 조합
+                '초당매수수량_매도총잔량_비율': {
+                    'desc': '초당매수수량 대비 매도총잔량 비율(매수세 강도)',
+                    'unit': '%',
+                    'formula': ["(매수초당매수수량 / 매수매도총잔량) * 100 if 매수매도총잔량>0 else 0"],
+                },
+                '매도잔량_매수잔량_비율': {
+                    'desc': '매도총잔량/매수총잔량 비율(호가 불균형 - 매도 우위)',
+                    'unit': '배율',
+                    'formula': ["매수매도총잔량 / 매수매수총잔량 if 매수매수총잔량>0 else 0"],
+                },
+                '매수잔량_매도잔량_비율': {
+                    'desc': '매수총잔량/매도총잔량 비율(호가 불균형 - 매수 우위)',
+                    'unit': '배율',
+                    'formula': ["매수매수총잔량 / 매수매도총잔량 if 매수매도총잔량>0 else 0"],
+                },
+                '초당매도_매수_비율': {
+                    'desc': '초당매도수량/초당매수수량 비율(매도 압력)',
+                    'unit': '배율',
+                    'formula': ["매수초당매도수량 / 매수초당매수수량 if 매수초당매수수량>0 else 0"],
+                },
+                '초당매수_매도_비율': {
+                    'desc': '초당매수수량/초당매도수량 비율(매수 압력)',
+                    'unit': '배율',
+                    'formula': ["매수초당매수수량 / 매수초당매도수량 if 매수초당매도수량>0 else 0"],
+                },
+                '현재가_고저범위_위치': {
+                    'desc': '매수시점 현재가(매수가)가 고저 범위 내에서 위치하는 비율',
+                    'unit': '%',
+                    'formula': ["((매수가-매수저가)/(매수고가-매수저가))*100 if (매수고가-매수저가)>0 else 50"],
+                },
+                '초당거래대금_당일비중': {
+                    'desc': '초당거래대금이 당일거래대금에서 차지하는 비중(만분율)',
+                    'unit': '만분율',
+                    'formula': ["(매수초당거래대금/매수당일거래대금)*10000 if 매수당일거래대금>0 else 0"],
+                },
+                '초당순매수수량': {
+                    'desc': '초당 순매수수량(매수-매도)',
+                    'unit': '수량',
+                    'formula': ["매수초당매수수량 - 매수초당매도수량"],
+                },
+                '초당순매수금액': {
+                    'desc': '초당 순매수금액(백만원 단위)',
+                    'unit': '백만원',
+                    'formula': ["(초당순매수수량 * 매수가) / 1_000_000"],
+                },
+                '초당순매수비율': {
+                    'desc': '초당 매수 비중(0~100)',
+                    'unit': '%',
+                    'formula': ["매수초당매수수량/(매수초당매수수량+매수초당매도수량)*100 if 합>0 else 50"],
+                },
+                '매도시_초당매수_매도_비율': {
+                    'desc': '매도 시점 초당매수/초당매도 비율',
+                    'unit': '배율',
+                    'formula': ["매도초당매수수량/매도초당매도수량 if 매도초당매도수량>0 else 0"],
+                },
+                '초당매수수량변화': {
+                    'desc': '초당매수수량 변화(매도-매수)',
+                    'unit': '수량',
+                    'formula': ["매도초당매수수량 - 매수초당매수수량"],
+                },
+                '초당매도수량변화': {
+                    'desc': '초당매도수량 변화(매도-매수)',
+                    'unit': '수량',
+                    'formula': ["매도초당매도수량 - 매수초당매도수량"],
+                },
+                '초당거래대금변화': {
+                    'desc': '초당거래대금 변화(매도-매수)',
+                    'unit': '원/단위',
+                    'formula': ["매도초당거래대금 - 매수초당거래대금"],
+                },
+                '초당거래대금변화율': {
+                    'desc': '초당거래대금 변화율(매도/매수)',
+                    'unit': '배율',
+                    'formula': ["매도초당거래대금/매수초당거래대금 if 매수초당거래대금>0 else 1.0"],
+                },
+            }
+
+            def _default_doc(col: str):
+                return {
+                    'desc': '엔진 수집값(원본) 또는 미정의 컬럼',
+                    'unit': '',
+                    'formula': ['원본 데이터(백테 엔진 수집/계산)'],
+                    'note': ''
+                }
+
+            def _pattern_doc(col: str):
+                # 호가잔량비/스프레드처럼 기본 공식이 명확한 컬럼은 패턴으로 보강
+                if col == '보유시간':
+                    return {
+                        'desc': '보유 시간(매수~매도)',
+                        'unit': '초',
+                        'formula': ['보유시간 = 매도시간 - 매수시간 (엔진 계산)'],
+                        'note': '시간 단위는 엔진 구현에 따름'
+                    }
+                if col == '수익금':
+                    return {
+                        'desc': '거래별 손익 금액',
+                        'unit': '원',
+                        'formula': ['수익금 = 매도금액 - 매수금액 (수수료/슬리피지 반영 여부는 전략/엔진 설정에 따름)'],
+                        'note': ''
+                    }
+                if col == '수익률':
+                    return {
+                        'desc': '거래별 손익률',
+                        'unit': '%',
+                        'formula': ['수익률(%) = (수익금 / 매수금액) * 100'],
+                        'note': '엔진 계산값과 동일 스케일로 표기'
+                    }
+                if col.endswith('호가잔량비'):
+                    if col.startswith('매수') and '매수매도총잔량' in df_report.columns and '매수매수총잔량' in df_report.columns:
+                        return {
+                            'desc': '매수 시점 매수총잔량/매도총잔량 비율',
+                            'unit': '%',
+                            'formula': ['(매수매수총잔량 / 매수매도총잔량) * 100 if 매수매도총잔량>0 else 0'],
+                            'note': ''
+                        }
+                    if col.startswith('매도') and '매도매도총잔량' in df_report.columns and '매도매수총잔량' in df_report.columns:
+                        return {
+                            'desc': '매도 시점 매수총잔량/매도총잔량 비율',
+                            'unit': '%',
+                            'formula': ['(매도매수총잔량 / 매도매도총잔량) * 100 if 매도매도총잔량>0 else 0'],
+                            'note': ''
+                        }
+                if col.endswith('스프레드'):
+                    if col.startswith('매수'):
+                        return {
+                            'desc': '매수 시점 1호가 스프레드(매도1-매수1)',
+                            'unit': '%',
+                            'formula': ['((매수매도호가1-매수매수호가1)/매수매수호가1)*100 if 매수매수호가1>0 else 0'],
+                            'note': ''
+                        }
+                    if col.startswith('매도'):
+                        return {
+                            'desc': '매도 시점 1호가 스프레드(매도1-매수1)',
+                            'unit': '%',
+                            'formula': ['((매도매도호가1-매도매수호가1)/매도매수호가1)*100 if 매도매수호가1>0 else 0'],
+                            'note': ''
+                        }
+                if col == '시가총액':
+                    return {
+                        'desc': '시가총액(매수 시점 스냅샷)',
+                        'unit': '억',
+                        'formula': ['원본 데이터(엔진 수집): 단위 억'],
+                        'note': f"예: 10,000억 = {_fmt_eok_to_korean(10000)}"
+                    }
+                if col == '매수당일거래대금':
+                    return {
+                        'desc': '매수 시점 당일거래대금(원본 단위는 전략/데이터에 따라 상이)',
+                        'unit': '백만(주로) 또는 억(레거시)',
+                        'formula': ['원본 데이터(엔진 수집)'],
+                        'note': '강화 필터/차트에서는 값 분포를 보고 단위를 추정하여 억 단위로 라벨링'
+                    }
+                if col in ('매수초당매수수량', '매수초당매도수량', '매도초당매수수량', '매도초당매도수량'):
+                    return {
+                        'desc': '초당 체결 수량(초 단위 누적/순간값은 엔진 정의에 따름)',
+                        'unit': '수량',
+                        'formula': ['원본 데이터(엔진 수집): arry_data[14]/[15]'],
+                        'note': 'tick 데이터에서만 의미가 큼'
+                    }
+                if col in ('매수초당거래대금', '매도초당거래대금'):
+                    return {
+                        'desc': '초당 거래대금(원본 단위는 엔진/데이터 정의에 따름)',
+                        'unit': '원/단위',
+                        'formula': ['원본 데이터(엔진 수집): arry_data[16]'],
+                        'note': '파생지표에서 당일거래대금 대비 만분율로도 사용'
+                    }
+                return None
+
+            # 출력(이번 실행 컬럼 순서 기준)
+            columns_in_order = ['index'] + list(df_report.columns)
+            lines_local.append(f"- 컬럼 수(index 제외): {len(df_report.columns)}")
+            lines_local.append("- 아래는 이번 실행 detail.csv(=detail DataFrame) 기준으로, 존재하는 컬럼만 출력합니다.")
+            lines_local.append("- 공식은 코드 기준 정의이며, 결측/0분모는 0 또는 기본값으로 처리될 수 있습니다.")
+            lines_local.append("")
+
+            for col in columns_in_order:
+                if col == 'index':
+                    info = {
+                        'desc': '거래 인덱스(문자열). 기본은 매수시간/매도시간 중 하나를 문자열로 사용',
+                        'unit': 'string',
+                        'formula': ['index = str(매수시간) if buystd else str(매도시간)'],
+                        'note': 'GetResultDataframe()에서 index로 설정 후 CSV 첫 컬럼으로 저장'
+                    }
+                else:
+                    info = derived_docs.get(col)
+                    if info is None:
+                        info = _pattern_doc(col) or _default_doc(col)
+
+                lines_local.append(f"[{col}]")
+                lines_local.append(f"- 설명: {info.get('desc', '')}")
+                if info.get('unit') is not None:
+                    lines_local.append(f"- 단위: {info.get('unit', '')}")
+                formula = info.get('formula') or []
+                if isinstance(formula, str):
+                    formula = [formula]
+                if formula:
+                    lines_local.append("- 공식:")
+                    for fline in formula:
+                        lines_local.append(f"  - {fline}")
+                note = info.get('note')
+                if note:
+                    lines_local.append(f"- 비고: {note}")
+                lines_local.append("")
+
+            return lines_local
 
         graph_dir = Path(GRAPH_PATH)
         graph_dir.mkdir(parents=True, exist_ok=True)
@@ -191,6 +602,17 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                         lines.append(f"- {p.name} | {desc}")
                     else:
                         lines.append(f"- {p.name}")
+
+        # detail.csv 컬럼 설명/공식
+        if df_tsg is not None:
+            try:
+                lines.append("")
+                lines.append("=== detail.csv 컬럼 설명/공식(이번 실행 기준) ===")
+                lines.extend(_build_detail_csv_docs(df_tsg))
+            except:
+                lines.append("")
+                lines.append("=== detail.csv 컬럼 설명/공식 ===")
+                lines.append("(컬럼 설명 생성 중 오류가 발생했습니다. 실행은 계속됩니다.)")
 
         report_path.write_text("\n".join(lines), encoding='utf-8-sig')
         return str(report_path)
@@ -1773,6 +2195,19 @@ def CalculateDerivedMetrics(df_tsg):
         df['매도세증가'] = df['호가잔량비변화'] < -0.2
         df['거래량급감'] = df['거래대금변화율'] < 0.5
 
+        # === 매수/매도 위험도 점수 (0-100, 사후 진단용) ===
+        # - 매도 시점 정보(매도-매수 변화량 등)를 포함하는 위험도 점수입니다.
+        # - "매수 진입 필터"로 쓰면 룩어헤드가 되므로, 비교/진단 차트용으로만 사용합니다.
+        df['매수매도위험도점수'] = 0
+        df.loc[df['등락율변화'] < -2, '매수매도위험도점수'] += 20
+        df.loc[df['체결강도변화'] < -15, '매수매도위험도점수'] += 20
+        df.loc[df['호가잔량비변화'] < -0.3, '매수매도위험도점수'] += 20
+        df.loc[df['거래대금변화율'] < 0.6, '매수매도위험도점수'] += 20
+        if '매수등락율' in df.columns:
+            buy_ret = pd.to_numeric(df['매수등락율'], errors='coerce')
+            df.loc[buy_ret > 20, '매수매도위험도점수'] += 20
+        df['매수매도위험도점수'] = df['매수매도위험도점수'].clip(0, 100)
+
     return df
 
 
@@ -2295,7 +2730,8 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         7) 등락추세×체결강도추세 조합별 수익금 히트맵
         8) 손실/이익 거래 특성 비교(매수단/보유시간)
         9) 손실/이익 거래 변화량 비교(매도-매수)
-        10) 보유시간 vs 수익률 산점도(분 단위)
+        10) 3D 히트맵: 매수시간×시가총액 → 평균 수익률
+        11) 보유시간 vs 수익률 산점도(분 단위)
     """
     import warnings
     warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
@@ -2323,9 +2759,9 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
 
-        fig = plt.figure(figsize=(22, 22))
+        fig = plt.figure(figsize=(22, 26))
         fig.suptitle(f'매수/매도 시점 비교 분석 - {save_file_name}', fontsize=14, fontweight='bold')
-        gs = gridspec.GridSpec(4, 3, figure=fig, hspace=0.45, wspace=0.32)
+        gs = gridspec.GridSpec(5, 3, figure=fig, hspace=0.55, wspace=0.32)
 
         color_profit = '#2ECC71'
         color_loss = '#E74C3C'
@@ -2403,9 +2839,9 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
             ax4.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
             ax4.set_xticks(x_pos)
             ax4.set_xticklabels(df_risk['위험도구간'], rotation=45, ha='right', fontsize=9)
-            ax4.set_xlabel('위험도 점수 구간')
+            ax4.set_xlabel('매수 위험도 점수 구간')
             ax4.set_ylabel('총 수익금')
-            ax4.set_title('위험도 점수별 수익금 분포')
+            ax4.set_title('매수 위험도 점수별 수익금 분포')
             for bar, cnt in zip(bars, df_risk['거래횟수']):
                 ax4.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
                          f'n={int(cnt)}', ha='center',
@@ -2475,18 +2911,26 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         # === Chart 8: 손실/이익 거래 특성 비교 (매수/보유) ===
         ax8 = fig.add_subplot(gs[2, 1])
         if len(loss_trades) > 0 and len(profit_trades) > 0:
-            compare_cols = ['매수등락율', '매수체결강도', '보유시간']
-            available_cols = [c for c in compare_cols if c in df_tsg.columns]
-            if available_cols:
-                loss_means = [loss_trades[c].mean() for c in available_cols]
-                profit_means = [profit_trades[c].mean() for c in available_cols]
+            compare_specs = []
+            if '매수등락율' in df_tsg.columns:
+                compare_specs.append(('매수등락율', '매수등락율(%)', 1.0))
+            if '매수체결강도' in df_tsg.columns:
+                compare_specs.append(('매수체결강도', '매수체결강도', 1.0))
+            if '위험도점수' in df_tsg.columns:
+                compare_specs.append(('위험도점수', '매수 위험도점수', 1.0))
+            if '보유시간' in df_tsg.columns:
+                compare_specs.append(('보유시간', '보유시간(분)', 1.0 / 60.0))
 
-                x = np.arange(len(available_cols))
+            if compare_specs:
+                loss_means = [loss_trades[c].mean() * scale for c, _, scale in compare_specs]
+                profit_means = [profit_trades[c].mean() * scale for c, _, scale in compare_specs]
+
+                x = np.arange(len(compare_specs))
                 width = 0.35
                 ax8.bar(x - width/2, loss_means, width, label='손실거래', color=color_loss, alpha=0.8)
                 ax8.bar(x + width/2, profit_means, width, label='이익거래', color=color_profit, alpha=0.8)
                 ax8.set_xticks(x)
-                ax8.set_xticklabels(available_cols, rotation=45, ha='right', fontsize=9)
+                ax8.set_xticklabels([label for _, label, _ in compare_specs], rotation=45, ha='right', fontsize=9)
                 ax8.set_ylabel('평균값')
                 ax8.set_title('손실/이익 거래 특성 비교 (매수/보유)')
                 ax8.legend(fontsize=9)
@@ -2494,7 +2938,7 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         # === Chart 9: 손실/이익 거래 변화량 비교 (매도-매수) ===
         ax9 = fig.add_subplot(gs[2, 2])
         if len(loss_trades) > 0 and len(profit_trades) > 0:
-            compare_cols = ['등락율변화', '체결강도변화', '거래대금변화율', '호가잔량비변화']
+            compare_cols = ['등락율변화', '체결강도변화', '거래대금변화율', '호가잔량비변화', '매수매도위험도점수']
             available_cols = [c for c in compare_cols if c in df_tsg.columns]
             if available_cols:
                 loss_means = [loss_trades[c].mean() for c in available_cols]
@@ -2510,22 +2954,131 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
                 ax9.set_title('손실/이익 거래 변화량 비교 (매도-매수)')
                 ax9.legend(fontsize=9)
 
-        # === Chart 10: 보유시간 vs 수익률 (분 단위) ===
+        # === Chart 10: 3D 히트맵(매수시간×시가총액 → 평균 수익률) ===
         ax10 = fig.add_subplot(gs[3, :])
+        try:
+            required_heat_cols = {'시가총액', '수익률'}
+            has_time_cols = {'매수시', '매수분'}.issubset(df_tsg.columns)
+            if required_heat_cols.issubset(df_tsg.columns) and has_time_cols:
+                from matplotlib.colors import TwoSlopeNorm
+
+                df_heat = df_tsg[['매수시', '매수분', '시가총액', '수익률']].copy()
+                if '매수초' in df_tsg.columns:
+                    df_heat['매수초'] = df_tsg['매수초']
+                else:
+                    df_heat['매수초'] = 0
+
+                hour = pd.to_numeric(df_heat['매수시'], errors='coerce').fillna(0).astype(int)
+                minute = pd.to_numeric(df_heat['매수분'], errors='coerce').fillna(0).astype(int)
+                second = pd.to_numeric(df_heat['매수초'], errors='coerce').fillna(0).astype(int)
+                minute_of_day = (hour * 60 + minute + (second / 60.0)).astype(float)
+
+                min_val = float(np.nanmin(minute_of_day.to_numpy(dtype=np.float64)))
+                max_val = float(np.nanmax(minute_of_day.to_numpy(dtype=np.float64)))
+                span = max_val - min_val
+
+                desired_bins = 18
+                raw_step = max(1, int(np.ceil(span / max(desired_bins, 1)))) if span > 0 else 5
+                step_candidates = [1, 2, 5, 10, 15, 30, 60]
+                step = next((c for c in step_candidates if c >= raw_step), step_candidates[-1])
+                start = float(np.floor(min_val / step) * step)
+                end = float(np.ceil(max_val / step) * step)
+                if end <= start:
+                    end = start + step
+                bins = np.arange(start, end + step, step, dtype=float)
+                if len(bins) < 3:
+                    bins = np.array([start, start + step, start + 2 * step], dtype=float)
+
+                time_labels = [f"{int(t // 60):02d}:{int(t % 60):02d}" for t in bins[:-1]]
+                df_heat['매수시간구간'] = pd.cut(minute_of_day, bins=bins, labels=time_labels, right=False, include_lowest=True)
+
+                mcap = pd.to_numeric(df_heat['시가총액'], errors='coerce')
+                mcap_bins = [0, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, np.inf]
+                mcap_labels = ['~500억', '500-1000억', '1000-2000억', '2000-3000억', '3000-5000억',
+                               '0.5-1조', '1-2조', '2-5조', '5조+']
+                df_heat['시총구간_3D'] = pd.cut(mcap, bins=mcap_bins, labels=mcap_labels, right=False, include_lowest=True)
+
+                df_heat = df_heat.dropna(subset=['매수시간구간', '시총구간_3D'])
+                if len(df_heat) >= 10:
+                    pivot = df_heat.pivot_table(values='수익률', index='시총구간_3D', columns='매수시간구간',
+                                                aggfunc='mean', observed=True)
+                    pivot_count = df_heat.pivot_table(values='수익률', index='시총구간_3D', columns='매수시간구간',
+                                                      aggfunc='size', fill_value=0, observed=True)
+
+                    pivot = pivot.reindex(index=mcap_labels, columns=time_labels).dropna(axis=0, how='all').dropna(axis=1, how='all')
+                    pivot_count = pivot_count.reindex(index=pivot.index, columns=pivot.columns)
+
+                    if pivot.size > 0:
+                        data = pivot.to_numpy(dtype=np.float64)
+                        data_masked = np.ma.masked_invalid(data)
+
+                        abs_max = float(np.nanpercentile(np.abs(data), 95)) if np.isfinite(data).any() else 1.0
+                        abs_max = max(abs_max, 0.5)
+                        norm = TwoSlopeNorm(vcenter=0.0, vmin=-abs_max, vmax=abs_max)
+
+                        cmap = plt.get_cmap('RdYlGn').copy()
+                        cmap.set_bad(color='#F2F2F2')
+
+                        im = ax10.imshow(data_masked, cmap=cmap, norm=norm, aspect='auto', interpolation='nearest')
+                        ax10.set_title('3D 히트맵: 매수시간×시가총액 → 평균 수익률(%)')
+                        ax10.set_xlabel('매수시간(시:분, 구간)')
+                        ax10.set_ylabel('시가총액 구간')
+
+                        xcnt = len(pivot.columns)
+                        ycnt = len(pivot.index)
+                        x_step = max(1, int(np.ceil(xcnt / 20)))
+                        ax10.set_xticks(np.arange(0, xcnt, x_step))
+                        ax10.set_xticklabels([pivot.columns[i] for i in range(0, xcnt, x_step)],
+                                             rotation=45, ha='right', fontsize=8)
+                        ax10.set_yticks(np.arange(ycnt))
+                        ax10.set_yticklabels(pivot.index, fontsize=9)
+                        ax10.grid(False)
+
+                        cbar = plt.colorbar(im, ax=ax10, shrink=0.9, pad=0.02)
+                        cbar.set_label('평균 수익률(%)', fontsize=9)
+
+                        if ycnt <= 9 and xcnt <= 18:
+                            for yi in range(ycnt):
+                                for xi in range(xcnt):
+                                    v = data[yi, xi]
+                                    n_raw = pivot_count.iat[yi, xi] if pivot_count is not None else 0
+                                    try:
+                                        n = int(n_raw) if np.isfinite(n_raw) else 0
+                                    except Exception:
+                                        n = 0
+                                    if not np.isfinite(v) or n <= 0:
+                                        continue
+                                    txt_color = 'white' if abs(v) > abs_max * 0.5 else 'black'
+                                    ax10.text(xi, yi, f"{v:.1f}\n(n={n})", ha='center', va='center', fontsize=7, color=txt_color)
+                    else:
+                        ax10.text(0.5, 0.5, '3D 히트맵 데이터 부족', ha='center', va='center', fontsize=12, transform=ax10.transAxes)
+                        ax10.axis('off')
+                else:
+                    ax10.text(0.5, 0.5, '3D 히트맵 데이터 부족', ha='center', va='center', fontsize=12, transform=ax10.transAxes)
+                    ax10.axis('off')
+            else:
+                ax10.text(0.5, 0.5, '3D 히트맵 생성 불가(시가총액/매수시간 컬럼 부족)', ha='center', va='center', fontsize=11, transform=ax10.transAxes)
+                ax10.axis('off')
+        except Exception:
+            ax10.text(0.5, 0.5, '3D 히트맵 생성 중 오류', ha='center', va='center', fontsize=11, transform=ax10.transAxes)
+            ax10.axis('off')
+
+        # === Chart 11: 보유시간 vs 수익률 (분 단위) ===
+        ax11 = fig.add_subplot(gs[4, :])
         if '보유시간' in df_tsg.columns:
             plot_df = df_scatter if '보유시간' in df_scatter.columns else df_tsg
             colors = np.where(plot_df['수익률'].to_numpy(dtype=np.float64) >= 0, color_profit, color_loss)
             hold_minutes = plot_df['보유시간'] / 60.0
-            ax10.scatter(hold_minutes, plot_df['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
-            ax10.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-            ax10.set_xlabel('보유시간(분)')
-            ax10.set_ylabel('수익률(%)')
-            ax10.set_title('보유시간 vs 수익률')
-            ax10.xaxis.set_major_locator(MaxNLocator(nbins=12))
-            ax10.xaxis.set_minor_locator(AutoMinorLocator(2))
-            ax10.yaxis.set_major_locator(MaxNLocator(nbins=10))
-            ax10.yaxis.set_minor_locator(AutoMinorLocator(2))
-            ax10.grid(True, which='both', alpha=0.25)
+            ax11.scatter(hold_minutes, plot_df['수익률'], c=colors, alpha=0.5, s=25, edgecolors='none')
+            ax11.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
+            ax11.set_xlabel('보유시간(분)')
+            ax11.set_ylabel('수익률(%)')
+            ax11.set_title('보유시간 vs 수익률')
+            ax11.xaxis.set_major_locator(MaxNLocator(nbins=12))
+            ax11.xaxis.set_minor_locator(AutoMinorLocator(2))
+            ax11.yaxis.set_major_locator(MaxNLocator(nbins=10))
+            ax11.yaxis.set_minor_locator(AutoMinorLocator(2))
+            ax11.grid(True, which='both', alpha=0.25)
 
         # 저장 및 전송
         with warnings.catch_warnings():

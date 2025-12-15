@@ -69,7 +69,8 @@ Deep_Data/
 # Backtester outputs
 /backtester/graph/*.csv
 /backtester/graph/*.png
+/backtester/graph/*_report.txt
+/backtester/graph/Temp_Check_*/
 
 # Local shortcuts
 STOM V1 venv.lnk
-
