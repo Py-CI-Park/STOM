@@ -1744,10 +1744,11 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
             plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
 
-        fig = plt.figure(figsize=(16, 20))
+        # x축 라벨/히트맵 글자 겹침 방지를 위해 세로 여백을 늘립니다.
+        fig = plt.figure(figsize=(16, 22))
         fig.suptitle(f'백테스팅 분석 차트 - {save_file_name}', fontsize=14, fontweight='bold')
 
-        gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.35, wspace=0.25)
+        gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.45, wspace=0.25)
 
         # 색상 정의
         color_profit = '#2ECC71'  # 녹색 (이익)
@@ -1871,15 +1872,15 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         # ============ Chart 4: 거래대금별 수익 분포 ============
         ax4 = fig.add_subplot(gs[1, 1])
         money_series = df_tsg['매수당일거래대금'].dropna()
-        # 단위 자동 판별:
-        # - 백만 단위(권장): 중간값이 큰 편(> 5,000)인 경우
-        # - 억 단위(레거시): 중간값이 작은 편인 경우
-        money_unit = '백만' if (len(money_series) > 0 and float(money_series.median()) > 5000) else '억'
+        # STOM 백테스팅 상세 테이블의 당일거래대금 단위는 "백만"입니다.
+        # (예: 10,000 = 100억, 1,000,000 = 1조)
+        money_unit = '백만'
 
         if money_unit == '백만':
             # 기본 분할(억/조 단위로 읽기 쉽게 라벨링, 실제 데이터 단위는 백만)
             max_val = float(money_series.max()) if len(money_series) > 0 else 0.0
-            base_edges = [0, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]  # (백만) = 50억~1조
+            # (백만) 단위: 500=5억, 5,000=50억, 1,000,000=1조
+            base_edges = [0, 500, 1000, 2000, 3000, 5000, 7000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000]
 
             edges = [e for e in base_edges if e < max_val]
             # 상단 구간 보정(최대값을 포함하도록 마지막 경계 추가)
@@ -1916,14 +1917,6 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
                     labels.append(f"{_fmt_money_million(lo)}-{_fmt_money_million(hi)}")
 
             df_tsg['거래대금구간'] = pd.cut(df_tsg['매수당일거래대금'], bins=edges, labels=labels, right=False)
-        else:
-            # 레거시(억 단위) 가정
-            df_tsg['거래대금구간'] = pd.cut(
-                df_tsg['매수당일거래대금'],
-                bins=[0, 50, 100, 200, 500, 1000, 2000, 5000, 10000, float('inf')],
-                labels=['~50억', '50-100억', '100-200억', '200-500억', '500-1000억', '1000-2000억', '2000-5000억', '5000억-1조', '1조+'],
-                right=False
-            )
         df_money = df_tsg.groupby('거래대금구간', observed=True).agg({
             '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
         }).reset_index()
@@ -1933,9 +1926,12 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         colors = [color_profit if x >= 0 else color_loss for x in df_money['수익금']]
         ax4.bar(x, df_money['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
         ax4.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-        ax4.set_xlabel('매수 당일거래대금 구간')
+        ax4.set_xlabel('매수 당일거래대금 구간(라벨: 억/조)')
         ax4.set_ylabel('총 수익금')
-        ax4.set_title(f'거래대금 구간별 수익금 분포 (단위: {money_unit})')
+        if money_unit == '백만':
+            ax4.set_title('거래대금 구간별 수익금 분포 (원본 단위: 백만, 라벨: 억/조)')
+        else:
+            ax4.set_title('거래대금 구간별 수익금 분포 (단위: 억/조)')
         tick_step = max(1, int(math.ceil(len(df_money) / 8)))
         ax4.set_xticks(list(range(0, len(df_money), tick_step)))
         ax4.set_xticklabels([str(v) for v in df_money['거래대금구간'].iloc[::tick_step]],
@@ -1946,32 +1942,32 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         cap_series = df_tsg['시가총액'].dropna()
         cap_max = float(cap_series.max()) if len(cap_series) > 0 else 0.0
 
-        base_cap_edges = [0, 500, 1000, 2000, 3000, 5000, 7000, 10000]  # 1조 미만은 억 단위(100억 단위로 읽기 쉬운 경계)
-        cap_edges = [e for e in base_cap_edges if e < cap_max]
-        next_cap_edge = next((e for e in base_cap_edges if e >= cap_max), None)
-        if next_cap_edge is not None:
-            cap_edges.append(next_cap_edge)
+        # 1조(=10,000억) 미만: 100억 단위로 구간 생성 (요구사항)
+        # 1조 이상: 1조 단위로 구간 확장 (요구사항)
+        cap_edges = []
+        if cap_max <= 0:
+            cap_edges = [0, float('inf')]
+        elif cap_max < 10000:
+            cap_max_rounded = int(math.ceil(cap_max / 100.0) * 100)
+            cap_edges = list(range(0, cap_max_rounded + 100, 100))
+            cap_edges.append(float('inf'))
         else:
-            # 1조 이상: 1조(=10,000억) 단위로 확장 (요구사항: 1조 단위 고정)
+            base_cap_edges = list(range(0, 10000 + 100, 100))  # 0~1조 미만 100억 단위
+            cap_edges = [e for e in base_cap_edges if e < 10000]
             max_jo = int(math.ceil(cap_max / 10000)) if cap_max > 0 else 1
-            step_jo = 1
-            step = step_jo * 10000
-            cap_edges = [e for e in cap_edges if e < 10000]
-            for e in range(10000, (max_jo + step_jo) * 10000, step):
+            for e in range(10000, (max_jo + 1) * 10000, 10000):
                 cap_edges.append(e)
+            cap_edges.append(float('inf'))
 
         cap_edges = sorted(set(cap_edges))
-        if not cap_edges or cap_edges[0] != 0:
-            cap_edges = [0] + cap_edges
-        cap_edges.append(float('inf'))
 
         def _fmt_cap_eok(x):
             # x: 억 단위
-            # - 1조 미만: 100억 단위로 표기(요구사항)
-            # - 1조 이상: 조 단위로 표기(요구사항)
+            # - 1조 미만: 억 단위로 명확히 표기(라벨 길이/가독성 고려)
+            # - 1조 이상: 조 단위로 표기
             if x >= 10000:
                 return f"{int(round(x / 10000))}조"
-            return f"{int(x / 100)}"
+            return f"{int(round(x))}억"
 
         cap_labels = []
         for i in range(len(cap_edges) - 1):
@@ -1993,7 +1989,7 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         colors = [color_profit if x >= 0 else color_loss for x in df_cap['수익금']]
         ax5.bar(x, df_cap['수익금'], color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
         ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
-        ax5.set_xlabel('시가총액 구간 (단위: 100억, 1조+는 조)')
+        ax5.set_xlabel('시가총액 구간 (단위: 억, 1조+는 조)')
         ax5.set_ylabel('총 수익금')
         ax5.set_title('시가총액 구간별 수익금 분포')
         tick_step = max(1, int(math.ceil(len(df_cap) / 8)))
@@ -2127,14 +2123,15 @@ def CalculateDerivedMetrics(df_tsg):
         buy_power = pd.to_numeric(df['매수체결강도'], errors='coerce')
         df.loc[buy_power < 80, '위험도점수'] += 15
         df.loc[buy_power < 60, '위험도점수'] += 10
+        # 과열(초고 체결강도)도 사후 분석에서 손실로 이어지는 경우가 있어 별도 가중(룩어헤드 없음)
+        df.loc[buy_power >= 150, '위험도점수'] += 10
+        df.loc[buy_power >= 200, '위험도점수'] += 10
+        df.loc[buy_power >= 250, '위험도점수'] += 10
 
     if '매수당일거래대금' in df.columns:
         trade_money_raw = pd.to_numeric(df['매수당일거래대금'], errors='coerce')
-        try:
-            median = float(trade_money_raw.dropna().median())
-        except Exception:
-            median = 0.0
-        trade_money_eok = trade_money_raw / 100.0 if median > 5000 else trade_money_raw
+        # STOM: 당일거래대금 단위 = 백만 → 억 환산(÷100)
+        trade_money_eok = trade_money_raw / 100.0
         df.loc[trade_money_eok < 50, '위험도점수'] += 15
         df.loc[trade_money_eok < 100, '위험도점수'] += 10
 
@@ -2153,11 +2150,19 @@ def CalculateDerivedMetrics(df_tsg):
         df.loc[spread >= 0.5, '위험도점수'] += 10
         df.loc[spread >= 1.0, '위험도점수'] += 10
 
+    # 유동성(회전율) 기반 위험도(룩어헤드 없음)
+    if '매수회전율' in df.columns:
+        turn = pd.to_numeric(df['매수회전율'], errors='coerce')
+        df.loc[turn < 10, '위험도점수'] += 5
+        df.loc[turn < 5, '위험도점수'] += 10
+
     # 매수 변동폭(고가-저가) 기반 변동성(%)이 있으면 반영
     if '매수변동폭비율' in df.columns:
         vol_pct = pd.to_numeric(df['매수변동폭비율'], errors='coerce')
-        df.loc[vol_pct >= 5, '위험도점수'] += 10
+        # 과도한 변동성은 손실 확률이 높아지는 경향이 있어 가중(룩어헤드 없음)
+        df.loc[vol_pct >= 7.5, '위험도점수'] += 10
         df.loc[vol_pct >= 10, '위험도점수'] += 10
+        df.loc[vol_pct >= 15, '위험도점수'] += 10
 
     df['위험도점수'] = df['위험도점수'].clip(0, 100)
 

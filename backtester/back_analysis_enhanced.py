@@ -414,16 +414,16 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
         buy_power = pd.to_numeric(df['매수체결강도'], errors='coerce')
         df.loc[buy_power < 80, '위험도점수'] += 15
         df.loc[buy_power < 60, '위험도점수'] += 10
+        # 과열(초고 체결강도)도 손실로 이어지는 경우가 있어 별도 가중(룩어헤드 없음)
+        df.loc[buy_power >= 150, '위험도점수'] += 10
+        df.loc[buy_power >= 200, '위험도점수'] += 10
+        df.loc[buy_power >= 250, '위험도점수'] += 10
 
     # 3) 유동성 위험: 매수당일거래대금 (원본 단위가 '백만' 또는 '억' 혼재 가능)
     if '매수당일거래대금' in df.columns:
         trade_money_raw = pd.to_numeric(df['매수당일거래대금'], errors='coerce')
-        try:
-            median = float(trade_money_raw.dropna().median())
-        except Exception:
-            median = 0.0
-        # median이 충분히 크면(대략 50억=5,000백만) '백만' 단위로 간주하여 억 단위로 환산
-        trade_money_eok = trade_money_raw / 100.0 if median > 5000 else trade_money_raw
+        # STOM: 당일거래대금 단위 = 백만 → 억 환산(÷100)
+        trade_money_eok = trade_money_raw / 100.0
         df.loc[trade_money_eok < 50, '위험도점수'] += 15
         df.loc[trade_money_eok < 100, '위험도점수'] += 10
 
@@ -445,11 +445,18 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
         df.loc[spread >= 0.5, '위험도점수'] += 10
         df.loc[spread >= 1.0, '위험도점수'] += 10
 
+    # 6.5) 유동성(회전율) 기반 위험도(룩어헤드 없음)
+    if '매수회전율' in df.columns:
+        turn = pd.to_numeric(df['매수회전율'], errors='coerce')
+        df.loc[turn < 10, '위험도점수'] += 5
+        df.loc[turn < 5, '위험도점수'] += 10
+
     # 7) 변동성 위험: 매수변동폭비율(%)
     if '매수변동폭비율' in df.columns:
         vol_pct = pd.to_numeric(df['매수변동폭비율'], errors='coerce')
-        df.loc[vol_pct >= 5, '위험도점수'] += 10
+        df.loc[vol_pct >= 7.5, '위험도점수'] += 10
         df.loc[vol_pct >= 10, '위험도점수'] += 10
+        df.loc[vol_pct >= 15, '위험도점수'] += 10
 
     df['위험도점수'] = df['위험도점수'].clip(0, 100)
 
@@ -695,8 +702,9 @@ def FindOptimalThresholds(df_tsg, column, direction='less', n_splits=20):
     # 최적 임계값 선택 (수익개선 × 효율성 가중)
     df_results = pd.DataFrame(results)
 
-    # 제외 비율이 50% 이하인 것만 고려
-    df_valid = df_results[df_results['excluded_ratio'] <= 50]
+    # 제외 비율이 너무 큰 경우(거의 거래를 안 하는 케이스)는 과적합/왜곡 위험이 커서 제한
+    # - 기존 50% 제한은 "좋은 구간만 남기는" 범위 필터를 놓치는 경우가 있어 80%로 완화
+    df_valid = df_results[df_results['excluded_ratio'] <= 80]
 
     if len(df_valid) == 0:
         return None
@@ -723,6 +731,133 @@ def FindOptimalThresholds(df_tsg, column, direction='less', n_splits=20):
     }
 
 
+def FindOptimalRangeThresholds(df_tsg, column, mode='outside', n_bins=10, max_excluded_ratio=80):
+    """
+    특정 컬럼에 대해 "범위(구간)" 기반 필터를 탐색합니다.
+
+    mode:
+        - 'outside': 범위 밖 제외(= 범위 안에서만 매수)  → excluded = (x < low) or (x >= high)
+        - 'inside' : 범위 안 제외(= 특정 구간만 회피)     → excluded = (low <= x < high)
+    """
+    if column not in df_tsg.columns:
+        return None
+
+    try:
+        s = df_tsg[column]
+        if not pd.api.types.is_numeric_dtype(s):
+            return None
+        values = s.dropna().to_numpy(dtype=np.float64)
+    except Exception:
+        return None
+
+    if len(values) < 50:
+        return None
+
+    # 분위수 기반 경계값 생성(중복 제거)
+    percentiles = np.linspace(0, 100, n_bins + 1)
+    try:
+        edges = np.nanpercentile(values, percentiles)
+        edges = np.unique(edges)
+    except Exception:
+        return None
+
+    if len(edges) < 4:
+        return None
+
+    # 전체 배열(NaN 포함)로 bin index 생성
+    col_arr = df_tsg[column].to_numpy(dtype=np.float64)
+    profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+    total_profit = float(np.nansum(profit_arr))
+    total_trades = int(len(col_arr))
+
+    # NaN은 bin=-1로 처리
+    valid_mask = np.isfinite(col_arr)
+    valid_vals = col_arr[valid_mask]
+    if len(valid_vals) == 0:
+        return None
+
+    # bin: 0..k-2 (edges 길이 k)
+    # bins: [edges[i], edges[i+1]) 형태로 맞추기 위해 side='right'를 사용(경계값은 상위 bin으로)
+    bin_idx = np.searchsorted(edges[1:-1], valid_vals, side='right')
+    bin_count = int(len(edges) - 1)
+    counts = np.bincount(bin_idx, minlength=bin_count).astype(np.int64)
+    profit_sums = np.bincount(bin_idx, weights=profit_arr[valid_mask], minlength=bin_count).astype(np.float64)
+    win_counts = np.bincount(bin_idx, weights=(profit_arr[valid_mask] > 0).astype(np.int64), minlength=bin_count).astype(np.int64)
+
+    # prefix sums for O(k^2) interval evaluation
+    pc = np.concatenate(([0], np.cumsum(counts)))
+    pp = np.concatenate(([0.0], np.cumsum(profit_sums)))
+    pw = np.concatenate(([0], np.cumsum(win_counts)))
+
+    best = None
+    k = bin_count
+
+    for i in range(k):
+        for j in range(i, k):
+            low = float(edges[i])
+            high = float(edges[j + 1]) if (j + 1) < len(edges) else float(edges[-1])
+            if not np.isfinite(low) or not np.isfinite(high) or high <= low:
+                continue
+
+            in_count = int(pc[j + 1] - pc[i])
+            if in_count <= 0:
+                continue
+
+            in_profit = float(pp[j + 1] - pp[i])
+            in_wins = int(pw[j + 1] - pw[i])
+
+            if mode == 'inside':
+                excluded_count = in_count
+                excluded_profit = in_profit
+                remaining_count = total_trades - excluded_count
+                remaining_wins = int(np.sum(profit_arr > 0)) - in_wins
+            else:
+                # outside
+                excluded_count = total_trades - in_count
+                excluded_profit = total_profit - in_profit
+                remaining_count = in_count
+                remaining_wins = in_wins
+
+            if excluded_count <= 0 or remaining_count <= 0:
+                continue
+
+            excluded_ratio = excluded_count / total_trades * 100
+            if excluded_ratio > max_excluded_ratio:
+                continue
+
+            improvement = -excluded_profit
+            if improvement <= 0:
+                continue
+
+            remaining_winrate = (remaining_wins / remaining_count * 100.0) if remaining_count > 0 else 0.0
+            efficiency = improvement / excluded_count if excluded_count > 0 else 0.0
+
+            candidate = {
+                'column': column,
+                'direction': 'range',
+                'mode': mode,
+                'low': round(low, 6),
+                'high': round(high, 6),
+                'improvement': int(improvement),
+                'excluded_ratio': round(excluded_ratio, 1),
+                'excluded_count': int(excluded_count),
+                'remaining_winrate': round(remaining_winrate, 1),
+                'efficiency': round(efficiency, 0),
+            }
+
+            if best is None:
+                best = candidate
+                continue
+
+            # 우선순위: 효율성 → 개선금액(동률 시)
+            if candidate['efficiency'] > best.get('efficiency', 0):
+                best = candidate
+            elif candidate['efficiency'] == best.get('efficiency', 0) and candidate['improvement'] > best.get('improvement', 0):
+                best = candidate
+
+    return best
+
+
 def FindAllOptimalThresholds(df_tsg):
     """
     모든 주요 컬럼에 대해 최적 임계값을 탐색합니다.
@@ -747,18 +882,8 @@ def FindAllOptimalThresholds(df_tsg):
         return f"{int(round(v))}억"
 
     def _detect_trade_money_unit(series):
-        """
-        매수당일거래대금 단위를 추정합니다.
-        - 백만 단위: 값이 일반적으로 수천~수십만 수준(예: 10,000 = 100억)
-        - 억 단위(레거시): 값이 수십~수천 수준
-        """
-        try:
-            s = series.dropna()
-            if len(s) == 0:
-                return '백만'
-            return '백만' if float(s.median()) > 5000 else '억'
-        except Exception:
-            return '백만'
+        # STOM: 당일거래대금 단위는 "백만"으로 고정(요구사항).
+        return '백만'
 
     trade_money_unit = None
     if '매수당일거래대금' in df_tsg.columns:
@@ -1007,18 +1132,8 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
         return f"{int(round(v))}억"
 
     def _detect_trade_money_unit(series):
-        """
-        매수당일거래대금 단위를 추정합니다.
-        - 백만 단위: 값이 일반적으로 수천~수십만 수준(예: 10,000 = 100억)
-        - 억 단위(레거시): 값이 수십~수천 수준
-        """
-        try:
-            s = series.dropna()
-            if len(s) == 0:
-                return '백만'
-            return '백만' if float(s.median()) > 5000 else '억'
-        except:
-            return '백만'
+        # STOM: 당일거래대금 단위는 "백만"으로 고정(요구사항).
+        return '백만'
 
     # 1. 시간대 필터
     if '매수시' in df_tsg.columns:
@@ -1031,121 +1146,199 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
                 '코드': f'매수시 != {hour}'
             })
 
-    # 2. 등락율 필터 (다양한 임계값)
-    if '매수등락율' in df_tsg.columns:
-        for threshold in [5, 10, 15, 20, 25, 30]:
-            filter_conditions.append({
-                '필터명': f'매수등락율 {threshold}% 이상 제외',
-                '조건': df_tsg['매수등락율'] >= threshold,
-                '조건식': f"df_tsg['매수등락율'] >= {threshold}",
-                '분류': '등락율',
-                '코드': f'매수등락율 < {threshold}'
-            })
-        for threshold in [3, 5, 7, 10]:
-            filter_conditions.append({
-                '필터명': f'매수등락율 {threshold}% 미만 제외',
-                '조건': df_tsg['매수등락율'] < threshold,
-                '조건식': f"df_tsg['매수등락율'] < {threshold}",
-                '분류': '등락율',
-                '코드': f'매수등락율 >= {threshold}'
-            })
+    # 2. 전 컬럼 스캔: "매수 시점에 알 수 있는 변수" 중심으로 동적 임계값/범위 필터 탐색
+    # - 목적: 매수시점 모든 변수(가능한 범위)를 검토하고, 개선 효과가 큰 필터를 추천
+    # - 원칙(룩어헤드 방지): 매도* / 변화량(*변화, *변화율) / 보유시간 / 수익결과 기반 컬럼은 제외
 
-    # 3. 체결강도 필터
-    if '매수체결강도' in df_tsg.columns:
-        for threshold in [70, 80, 90, 100]:
-            filter_conditions.append({
-                '필터명': f'매수체결강도 {threshold} 미만 제외',
-                '조건': df_tsg['매수체결강도'] < threshold,
-                '조건식': f"df_tsg['매수체결강도'] < {threshold}",
-                '분류': '체결강도',
-                '코드': f'매수체결강도 >= {threshold}'
-            })
-        for threshold in [150, 200, 250]:
-            filter_conditions.append({
-                '필터명': f'매수체결강도 {threshold} 이상 제외',
-                '조건': df_tsg['매수체결강도'] >= threshold,
-                '조건식': f"df_tsg['매수체결강도'] >= {threshold}",
-                '분류': '체결강도',
-                '코드': f'매수체결강도 < {threshold}'
-            })
+    trade_money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금']) if '매수당일거래대금' in df_tsg.columns else '백만'
 
-    # 4. 거래대금 필터
-    if '매수당일거래대금' in df_tsg.columns:
-        money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금'])
-        thresholds_eok = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-        for threshold_eok in thresholds_eok:
-            if money_unit == '백만':
-                threshold_value = int(threshold_eok * 100)  # 1억 = 100백만
-            else:
-                threshold_value = int(threshold_eok)
-            filter_conditions.append({
-                '필터명': f"매수당일거래대금 {_fmt_eok_to_korean(threshold_eok)} 미만 제외",
-                '조건': df_tsg['매수당일거래대금'] < threshold_value,
-                '조건식': f"df_tsg['매수당일거래대금'] < {threshold_value}",
-                '분류': '거래대금',
-                '코드': f"매수당일거래대금 >= {threshold_value}  # 단위:{money_unit}(={_fmt_eok_to_korean(threshold_eok)})"
-            })
+    def _fmt_number(v, decimals=2):
+        try:
+            x = float(v)
+        except Exception:
+            return str(v)
+        if abs(x - round(x)) < 1e-9:
+            return f"{int(round(x))}"
+        if abs(x) >= 1000:
+            return f"{x:,.0f}"
+        s = f"{x:.{decimals}f}"
+        return s.rstrip('0').rstrip('.')
 
-    # 5. 시가총액 필터
-    if '시가총액' in df_tsg.columns:
-        for threshold in [500, 1000, 2000, 3000, 5000]:
-            filter_conditions.append({
-                '필터명': f'매수시가총액 {_fmt_eok_to_korean(threshold)} 미만 제외',
-                '조건': df_tsg['시가총액'] < threshold,
-                '조건식': f"df_tsg['시가총액'] < {threshold}",
-                '분류': '시가총액',
-                '코드': f'시가총액 >= {threshold}'
-            })
-        for threshold in [10000, 20000, 50000]:
-            filter_conditions.append({
-                '필터명': f'매수시가총액 {_fmt_eok_to_korean(threshold)} 이상 제외',
-                '조건': df_tsg['시가총액'] >= threshold,
-                '조건식': f"df_tsg['시가총액'] >= {threshold}",
-                '분류': '시가총액',
-                '코드': f'시가총액 < {threshold}'
-            })
+    def _fmt_trade_money(raw_value):
+        # raw_value: df_tsg['매수당일거래대금'] 원본 단위(권장: 백만)
+        try:
+            rv = float(raw_value)
+        except Exception:
+            return str(raw_value)
+        eok = rv / 100.0 if trade_money_unit == '백만' else rv
+        return _fmt_eok_to_korean(eok)
 
-    # 6. 호가 관련 필터
-    if '매수호가잔량비' in df_tsg.columns:
-        for threshold in [50, 70, 90, 100]:
-            filter_conditions.append({
-                '필터명': f'매수호가잔량비 {threshold}% 미만 제외',
-                '조건': df_tsg['매수호가잔량비'] < threshold,
-                '조건식': f"df_tsg['매수호가잔량비'] < {threshold}",
-                '분류': '호가',
-                '코드': f'매수총잔량 / 매도총잔량 * 100 >= {threshold}'
-            })
+    def _categorize(col: str) -> str:
+        if col == '시가총액':
+            return '시가총액'
+        if '위험도' in col:
+            return '위험신호'
+        if '품질' in col:
+            return '품질'
+        if '모멘텀' in col:
+            return '모멘텀'
+        if '등락' in col:
+            return '등락율'
+        if '체결강도' in col:
+            return '체결강도'
+        if '거래대금' in col:
+            return '거래대금'
+        if '회전율' in col:
+            return '회전율'
+        if '전일' in col:
+            return '전일비'
+        if '스프레드' in col:
+            return '스프레드'
+        if '호가' in col or '잔량' in col:
+            return '호가'
+        if '초당' in col:
+            return '초당'
+        return '기타'
 
-    if '매수스프레드' in df_tsg.columns:
-        for threshold in [0.2, 0.3, 0.5, 1.0]:
-            filter_conditions.append({
-                '필터명': f'매수스프레드 {threshold}% 이상 제외',
-                '조건': df_tsg['매수스프레드'] >= threshold,
-                '조건식': f"df_tsg['매수스프레드'] >= {threshold}",
-                '분류': '호가',
-                '코드': f'스프레드 < {threshold}'
-            })
+    def _is_buytime_candidate(col: str) -> bool:
+        if col in ('수익금', '수익률', '보유시간', '매수시간', '매도시간', '매수일자', '추가매수시간', '매도조건'):
+            return False
+        if col.startswith('매도'):
+            return False
+        if col.startswith('수익금'):
+            return False
+        if col in ('이익금액', '손실금액', '이익여부', '시간대평균수익률', '타이밍점수', '리스크조정수익률',
+                   '연속이익', '연속손실', '매수매도위험도점수'):
+            return False
+        if '매도시' in col:
+            return False
+        if '변화' in col:
+            return False
+        # 시간 컬럼은 별도(시간대 필터)로 처리
+        if col in ('매수시', '매수분', '매수초'):
+            return False
+        return True
 
-    # 8. 파생 지표 필터
-    if '위험도점수' in df_tsg.columns:
-        for threshold in [30, 40, 50, 60, 70]:
-            filter_conditions.append({
-                '필터명': f'매수 위험도점수 {threshold}점 이상 제외',
-                '조건': df_tsg['위험도점수'] >= threshold,
-                '조건식': f"df_tsg['위험도점수'] >= {threshold}",
-                '분류': '위험신호',
-                '코드': f'# 위험도 {threshold}점 미만만 매수'
-            })
+    candidate_cols = []
+    for col in df_tsg.columns:
+        col = str(col)
+        if not _is_buytime_candidate(col):
+            continue
+        try:
+            if not pd.api.types.is_numeric_dtype(df_tsg[col]):
+                continue
+        except Exception:
+            continue
+        candidate_cols.append(col)
 
-    if '거래품질점수' in df_tsg.columns:
-        for threshold in [30, 40, 50]:
-            filter_conditions.append({
-                '필터명': f'거래품질 {threshold}점 미만 제외',
-                '조건': df_tsg['거래품질점수'] < threshold,
-                '조건식': f"df_tsg['거래품질점수'] < {threshold}",
-                '분류': '품질',
-                '코드': f'# 거래품질 {threshold}점 이상만 매수'
-            })
+    # 컬럼별로 최적 임계값(less/greater) + 범위 필터를 제한적으로 추가
+    for col in sorted(candidate_cols):
+        try:
+            col_series = df_tsg[col]
+            if col_series.notna().sum() < 50:
+                continue
+            if col_series.nunique(dropna=True) < 5:
+                continue
+
+            category = _categorize(col)
+
+            # 1) 단일 임계값(미만 제외 / 이상 제외)
+            for direction in ('less', 'greater'):
+                res = FindOptimalThresholds(df_tsg, col, direction=direction, n_splits=20)
+                if not res or res.get('improvement', 0) <= 0:
+                    continue
+
+                thr = float(res.get('optimal_threshold'))
+                col_arr = col_series.to_numpy(dtype=np.float64)
+
+                if direction == 'less':
+                    cond_arr = col_arr < thr
+                    cond_expr = f"df_tsg['{col}'] < {round(thr, 6)}"
+                    keep_code = f"({col} >= {round(thr, 6)})"
+                    suffix = '미만 제외'
+                else:
+                    cond_arr = col_arr >= thr
+                    cond_expr = f"df_tsg['{col}'] >= {round(thr, 6)}"
+                    keep_code = f"({col} < {round(thr, 6)})"
+                    suffix = '이상 제외'
+
+                if col == '매수당일거래대금':
+                    thr_label = _fmt_trade_money(thr)
+                    name = f"매수당일거래대금 {thr_label} {suffix}"
+                    keep_code = f"{keep_code}  # 단위:{trade_money_unit}(≈{thr_label})"
+                elif col == '시가총액':
+                    name = f"매수시가총액 {_fmt_eok_to_korean(thr)} {suffix}"
+                elif col == '위험도점수':
+                    name = f"매수 위험도점수 {thr:.0f}점 {suffix}"
+                elif col == '거래품질점수':
+                    name = f"거래품질점수 {thr:.0f}점 {suffix}"
+                else:
+                    name = f"{col} {_fmt_number(thr)} {suffix}"
+
+                filter_conditions.append({
+                    '필터명': name,
+                    '조건': cond_arr,
+                    '조건식': cond_expr,
+                    '분류': category,
+                    '코드': keep_code,
+                    '탐색기반': f"최적임계({direction})",
+                })
+
+            # 2) 범위 필터(하한/상한): outside(범위 밖 제외) / inside(구간 제외)
+            for mode in ('outside', 'inside'):
+                r = FindOptimalRangeThresholds(df_tsg, col, mode=mode, n_bins=10, max_excluded_ratio=80)
+                if not r or r.get('improvement', 0) <= 0:
+                    continue
+
+                low = float(r['low'])
+                high = float(r['high'])
+                col_arr = col_series.to_numpy(dtype=np.float64)
+                finite = col_arr[np.isfinite(col_arr)]
+                if len(finite) == 0:
+                    continue
+                col_min = float(np.min(finite))
+                col_max = float(np.max(finite))
+                # 양쪽 경계가 모두 "내부"에 있어야 진짜 범위 필터(= one-sided 중복 방지)
+                eps = 1e-12
+                if not (low > col_min + eps and high < col_max - eps):
+                    continue
+
+                if mode == 'outside':
+                    # 범위 밖 제외 → 범위 안에서만 매수
+                    cond_arr = (col_arr < low) | (col_arr >= high)
+                    cond_expr = f"(df_tsg['{col}'] < {round(low, 6)}) | (df_tsg['{col}'] >= {round(high, 6)})"
+                    keep_code = f"(({col} >= {round(low, 6)}) and ({col} < {round(high, 6)}))"
+                    suffix = '범위 밖 제외(범위만 매수)'
+                else:
+                    # 범위 안 제외 → 특정 구간 회피
+                    cond_arr = (col_arr >= low) & (col_arr < high)
+                    cond_expr = f"(df_tsg['{col}'] >= {round(low, 6)}) & (df_tsg['{col}'] < {round(high, 6)})"
+                    keep_code = f"(({col} < {round(low, 6)}) or ({col} >= {round(high, 6)}))"
+                    suffix = '구간 제외'
+
+                if col == '매수당일거래대금':
+                    lo_label = _fmt_trade_money(low)
+                    hi_label = _fmt_trade_money(high)
+                    name = f"매수당일거래대금 {lo_label}~{hi_label} {suffix}"
+                    keep_code = f"{keep_code}  # 단위:{trade_money_unit}(≈{lo_label}~{hi_label})"
+                elif col == '시가총액':
+                    name = f"매수시가총액 {_fmt_eok_to_korean(low)}~{_fmt_eok_to_korean(high)} {suffix}"
+                elif col == '위험도점수':
+                    name = f"매수 위험도점수 {low:.0f}~{high:.0f} {suffix}"
+                else:
+                    name = f"{col} {_fmt_number(low)}~{_fmt_number(high)} {suffix}"
+
+                filter_conditions.append({
+                    '필터명': name,
+                    '조건': cond_arr,
+                    '조건식': cond_expr,
+                    '분류': category,
+                    '코드': keep_code,
+                    '탐색기반': f"범위({mode})",
+                })
+        except Exception:
+            continue
+
     # (룩어헤드 제거) 급락신호/매도-매수 변화량 기반 지표는 매도 시점 확정 정보이므로
     # "매수 진입 필터" 추천 대상에서 제외합니다.
 
@@ -1219,6 +1412,180 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     return filter_results
 
 
+def AnalyzeFilterEffectsLookahead(df_tsg):
+    """
+    (진단용) 매도 시점 확정 정보까지 포함한 필터 효과 분석.
+
+    중요:
+    - 이 분석은 매도 시점 데이터/변화량/보유시간 등 룩어헤드가 포함될 수 있으므로,
+      실거래용 "매수 진입 필터 추천/자동 조건식 생성"에는 사용하지 않습니다.
+    - 목적은 '손실 거래에서 사후적으로 어떤 지표가 같이 나왔는지'를 빠르게 파악하기 위함입니다.
+    """
+    filter_results = []
+    if df_tsg is None or len(df_tsg) == 0:
+        return filter_results
+    if '수익금' not in df_tsg.columns:
+        return filter_results
+
+    total_trades = int(len(df_tsg))
+    total_profit = float(df_tsg['수익금'].sum())
+    profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+    return_arr = df_tsg['수익률'].to_numpy(dtype=np.float64) if '수익률' in df_tsg.columns else None
+
+    def _fmt_eok_to_korean(value_eok):
+        try:
+            v = float(value_eok)
+        except Exception:
+            return str(value_eok)
+        if v >= 10000:
+            return f"{int(round(v / 10000))}조"
+        return f"{int(round(v))}억"
+
+    def _detect_trade_money_unit(series):
+        # STOM: 당일거래대금 단위는 "백만"으로 고정(요구사항).
+        return '백만'
+
+    trade_money_unit = None
+    if '매도당일거래대금' in df_tsg.columns:
+        trade_money_unit = _detect_trade_money_unit(df_tsg['매도당일거래대금'])
+    elif '매수당일거래대금' in df_tsg.columns:
+        trade_money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금'])
+    else:
+        trade_money_unit = '백만'
+
+    def _fmt_trade_money(raw_value):
+        try:
+            rv = float(raw_value)
+        except Exception:
+            return str(raw_value)
+        eok = rv / 100.0 if trade_money_unit == '백만' else rv
+        return _fmt_eok_to_korean(eok)
+
+    # 사후 진단용으로 의미 있는 대표 컬럼만 선정(과도한 계산/과적합 방지)
+    candidate_cols = [
+        # 매도 확정 정보/변화량
+        '매수매도위험도점수', '보유시간',
+        '등락율변화', '체결강도변화', '거래대금변화율', '체결강도변화율', '호가잔량비변화',
+        '급락신호', '매도세증가', '거래량급감',
+        # 매도 시점 스냅샷
+        '매도등락율', '매도체결강도', '매도당일거래대금', '매도전일비', '매도회전율', '매도호가잔량비', '매도스프레드',
+    ]
+
+    filter_conditions = []
+    for col in candidate_cols:
+        if col not in df_tsg.columns:
+            continue
+        s = df_tsg[col]
+
+        # bool/flag 컬럼은 True 제외만 검사
+        if pd.api.types.is_bool_dtype(s) or str(s.dtype) == 'bool':
+            cond_arr = s.to_numpy(dtype=bool)
+            excluded_count = int(np.sum(cond_arr))
+            if excluded_count == 0 or excluded_count == total_trades:
+                continue
+            filter_conditions.append({
+                '필터명': f"{col} True 제외(사후진단)",
+                '조건': cond_arr,
+                '조건식': f"df_tsg['{col}'] == True",
+                '분류': '사후진단',
+                '코드': f"# (진단용) {col} == True 제외",
+            })
+            continue
+
+        if not pd.api.types.is_numeric_dtype(s):
+            continue
+
+        # one-sided 임계값(미만/이상)만(사후진단이므로 단순/빠르게)
+        for direction in ('less', 'greater'):
+            res = FindOptimalThresholds(df_tsg, col, direction=direction, n_splits=20)
+            if not res or res.get('improvement', 0) <= 0:
+                continue
+
+            thr = float(res.get('optimal_threshold'))
+            col_arr = s.to_numpy(dtype=np.float64)
+
+            if direction == 'less':
+                cond_arr = col_arr < thr
+                cond_expr = f"df_tsg['{col}'] < {round(thr, 6)}"
+                keep_code = f"({col} >= {round(thr, 6)})"
+                suffix = '미만 제외'
+            else:
+                cond_arr = col_arr >= thr
+                cond_expr = f"df_tsg['{col}'] >= {round(thr, 6)}"
+                keep_code = f"({col} < {round(thr, 6)})"
+                suffix = '이상 제외'
+
+            if col in ('매수당일거래대금', '매도당일거래대금'):
+                thr_label = _fmt_trade_money(thr)
+                name = f"{col} {thr_label} {suffix}(사후진단)"
+                keep_code = f"{keep_code}  # 단위:{trade_money_unit}(≈{thr_label})"
+            elif col == '시가총액':
+                name = f"{col} {_fmt_eok_to_korean(thr)} {suffix}(사후진단)"
+            else:
+                name = f"{col} {thr:.2f} {suffix}(사후진단)"
+
+            filter_conditions.append({
+                '필터명': name,
+                '조건': cond_arr,
+                '조건식': cond_expr,
+                '분류': '사후진단',
+                '코드': keep_code,
+            })
+
+    for fc in filter_conditions:
+        try:
+            cond_arr = fc['조건']
+            cond_arr = cond_arr.to_numpy(dtype=bool) if hasattr(cond_arr, 'to_numpy') else np.asarray(cond_arr, dtype=bool)
+            filtered_count = int(np.sum(cond_arr))
+            remaining_count = total_trades - filtered_count
+            if filtered_count == 0 or remaining_count == 0:
+                continue
+
+            filtered_profit = float(np.sum(profit_arr[cond_arr]))
+            remaining_profit = float(total_profit - filtered_profit)
+            improvement = -filtered_profit
+
+            # 통계 검정(가능하면 동일 포맷 유지)
+            stat_result = CalculateStatisticalSignificance(profit_arr[cond_arr], profit_arr[~cond_arr])
+            effect_interpretation = CalculateEffectSizeInterpretation(stat_result['effect_size'])
+
+            if return_arr is not None:
+                filtered_avg_profit = float(np.nanmean(return_arr[cond_arr])) if filtered_count > 0 else 0.0
+                remaining_avg_profit = float(np.nanmean(return_arr[~cond_arr])) if remaining_count > 0 else 0.0
+            else:
+                filtered_avg_profit = 0.0
+                remaining_avg_profit = 0.0
+
+            filter_results.append({
+                '분류': fc.get('분류', '사후진단'),
+                '필터명': fc.get('필터명', ''),
+                '조건식': fc.get('조건식', ''),
+                '적용코드': fc.get('코드', ''),
+                '제외거래수': filtered_count,
+                '제외비율': round(filtered_count / total_trades * 100, 1),
+                '제외거래수익금': int(filtered_profit),
+                '제외평균수익률': round(filtered_avg_profit, 2),
+                '잔여거래수': remaining_count,
+                '잔여거래수익금': int(remaining_profit),
+                '잔여평균수익률': round(remaining_avg_profit, 2),
+                '수익개선금액': int(improvement),
+                '제외거래승률': round((profit_arr[cond_arr] > 0).mean() * 100, 1) if filtered_count > 0 else 0.0,
+                '잔여거래승률': round((profit_arr[~cond_arr] > 0).mean() * 100, 1) if remaining_count > 0 else 0.0,
+                't통계량': stat_result['t_stat'],
+                'p값': stat_result['p_value'],
+                '효과크기': stat_result['effect_size'],
+                '효과해석': effect_interpretation,
+                '신뢰구간': stat_result['confidence_interval'],
+                '유의함': '예' if stat_result['significant'] else '아니오',
+                '적용권장': '※진단용(룩어헤드)',
+            })
+        except Exception:
+            continue
+
+    filter_results.sort(key=lambda x: x.get('수익개선금액', 0), reverse=True)
+    return filter_results
+
+
 # ============================================================================
 # 6. ML 기반 특성 중요도 분석
 # ============================================================================
@@ -1236,6 +1603,7 @@ def AnalyzeFeatureImportance(df_tsg):
     try:
         from sklearn.tree import DecisionTreeClassifier
         from sklearn.preprocessing import StandardScaler
+        from sklearn.model_selection import train_test_split
     except ImportError:
         return None
 
@@ -1259,13 +1627,30 @@ def AnalyzeFeatureImportance(df_tsg):
     X = df_analysis[available_features]
     y = (df_analysis['수익금'] > 0).astype(int)
 
-    # 표준화
+    # 기준선(다수 클래스) 정확도: 이 값보다 의미 있게 높지 않다면 과대해석 금지
+    try:
+        pos_ratio = float(y.mean())
+    except Exception:
+        pos_ratio = 0.0
+    baseline_accuracy = round(max(pos_ratio, 1 - pos_ratio) * 100, 1)
+
+    # Train/Test 분리(과대평가 방지)
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.25, random_state=42, stratify=y
+        )
+    except Exception:
+        # 샘플 수가 작거나 stratify 불가 등 예외 시 전체 학습으로 폴백
+        X_train, X_test, y_train, y_test = X, X, y, y
+
+    # 표준화(임계값을 원 스케일로 복원하기 위함; 트리 자체는 스케일에 민감하지 않음)
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test) if len(X_test) else X_train_scaled
 
     # Decision Tree 학습
     clf = DecisionTreeClassifier(max_depth=4, min_samples_leaf=10, random_state=42)
-    clf.fit(X_scaled, y)
+    clf.fit(X_train_scaled, y_train)
 
     # 특성 중요도
     importance = dict(zip(available_features, clf.feature_importances_))
@@ -1310,11 +1695,22 @@ def AnalyzeFeatureImportance(df_tsg):
 
     extract_rules(0, 0)
 
+    try:
+        train_acc = round(clf.score(X_train_scaled, y_train) * 100, 1)
+    except Exception:
+        train_acc = 0.0
+    try:
+        test_acc = round(clf.score(X_test_scaled, y_test) * 100, 1)
+    except Exception:
+        test_acc = train_acc
+
     return {
         'feature_importance': importance_sorted,
         'top_features': importance_sorted[:5],
         'decision_rules': rules[:10],
-        'model_accuracy': round(clf.score(X_scaled, y) * 100, 1)
+        'model_accuracy': test_acc,
+        'model_accuracy_train': train_acc,
+        'baseline_accuracy': baseline_accuracy,
     }
 
 
@@ -1406,13 +1802,15 @@ def AnalyzeFilterStability(df_tsg, n_periods=5):
 # 8. 조건식 코드 자동 생성
 # ============================================================================
 
-def GenerateFilterCode(filter_results, top_n=5):
+def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
     """
     필터 분석 결과를 바탕으로 실제 적용 가능한 조건식 코드를 생성합니다.
 
     Args:
         filter_results: 필터 분석 결과 리스트
-        top_n: 상위 N개 필터
+        df_tsg: (선택) 원본 DataFrame. 전달되면 "동시 적용(중복 반영)" 기준으로
+                예상 총 개선/누적 제외비율/추가 개선(증분)을 계산합니다.
+        top_n: 상위 N개 필터(최대)
 
     Returns:
         dict: 코드 생성 결과
@@ -1423,14 +1821,99 @@ def GenerateFilterCode(filter_results, top_n=5):
     if not filter_results:
         return None
 
-    top_filters = [f for f in filter_results if f['수익개선금액'] > 0][:top_n]
+    # 기본 후보: 개선(+) + 적용코드/조건식이 있는 항목
+    candidates = [
+        f for f in filter_results
+        if f.get('수익개선금액', 0) > 0 and f.get('적용코드') and f.get('조건식')
+    ]
 
-    if not top_filters:
+    if not candidates:
         return None
+
+    # df_tsg가 있으면 "동시 적용(OR 제외)" 기준으로 중복/상쇄를 반영한 그리디 조합을 만듭니다.
+    selected = []
+    combine_steps = []
+    combined_improvement = None
+    naive_sum = 0
+
+    if df_tsg is not None and '수익금' in df_tsg.columns and len(df_tsg) > 0:
+        try:
+            total_trades = int(len(df_tsg))
+            profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+
+            safe_globals = {"__builtins__": {}}
+            safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+
+            cand_masks = []
+            for f in candidates:
+                cond_expr = f.get('조건식', '')
+                cond = eval(cond_expr, safe_globals, safe_locals)
+                cond_arr = cond.to_numpy(dtype=bool) if hasattr(cond, 'to_numpy') else np.asarray(cond, dtype=bool)
+                if len(cond_arr) != total_trades:
+                    cand_masks.append(None)
+                else:
+                    cand_masks.append(cond_arr)
+
+            excluded_mask = np.zeros(total_trades, dtype=bool)
+            cum_impr = 0.0
+            chosen_idx = set()
+
+            max_steps = min(int(top_n), len(candidates))
+            for step in range(max_steps):
+                best_i = None
+                best_inc = 0.0
+
+                for i, (f, mask) in enumerate(zip(candidates, cand_masks)):
+                    if i in chosen_idx or mask is None:
+                        continue
+
+                    add_mask = mask & (~excluded_mask)
+                    inc = -float(np.sum(profit_arr[add_mask]))
+                    if inc > best_inc:
+                        best_inc = inc
+                        best_i = i
+
+                if best_i is None or best_inc <= 0:
+                    break
+
+                chosen_idx.add(best_i)
+                excluded_mask |= cand_masks[best_i]
+                cum_impr += best_inc
+
+                excluded_count = int(np.sum(excluded_mask))
+                remaining_count = total_trades - excluded_count
+                remaining_winrate = float((profit_arr[~excluded_mask] > 0).mean() * 100) if remaining_count > 0 else 0.0
+
+                selected.append(candidates[best_i])
+                combine_steps.append({
+                    '순서': step + 1,
+                    '필터명': candidates[best_i].get('필터명', ''),
+                    '조건코드': candidates[best_i].get('적용코드', ''),
+                    '개별개선': int(candidates[best_i].get('수익개선금액', 0)),
+                    '추가개선(중복반영)': int(best_inc),
+                    '누적개선(동시적용)': int(cum_impr),
+                    '누적제외비율': round(excluded_count / total_trades * 100, 1),
+                    '잔여거래수': int(remaining_count),
+                    '잔여승률': round(remaining_winrate, 1),
+                })
+
+            combined_improvement = int(cum_impr)
+            naive_sum = int(sum(f.get('수익개선금액', 0) for f in selected))
+        except Exception:
+            selected = []
+            combine_steps = []
+            combined_improvement = None
+            naive_sum = 0
+
+    # fallback: df_tsg가 없으면 단순히 상위 N개(개별개선 기준)를 사용
+    if not selected:
+        selected = candidates[:top_n]
+        naive_sum = int(sum(f.get('수익개선금액', 0) for f in selected))
+        combined_improvement = naive_sum
 
     # 카테고리별 조건 분류
     conditions_by_category = {}
-    for f in top_filters:
+    for f in selected:
         category = f['분류']
         if category not in conditions_by_category:
             conditions_by_category[category] = []
@@ -1464,10 +1947,21 @@ def GenerateFilterCode(filter_results, top_n=5):
     for line in buy_filter_lines:
         code_lines.append(f"#{line}")
     code_lines.append("#     매수 = True")
+    code_lines.append("#")
+    code_lines.append("# [조합 방식 설명]")
+    code_lines.append("# - 각 필터는 '해당 조건이면 매수하지 않음(제외)'을 의미합니다.")
+    code_lines.append("# - 여러 필터를 함께 쓴다는 것은: (필터1 통과) AND (필터2 통과) AND ... 로 해석됩니다.")
+    code_lines.append("#   즉, 제외 조건 기준으로 보면 (제외1) OR (제외2) OR ... 입니다.")
+    if combined_improvement is not None:
+        overlap_loss = int(naive_sum - combined_improvement)
+        code_lines.append("#")
+        code_lines.append(f"# 예상 총 개선(동시 적용/중복 반영): {combined_improvement:,}원")
+        code_lines.append(f"# 개별 개선 합(단순 합산): {naive_sum:,}원")
+        code_lines.append(f"# 중복/상쇄(합산-동시적용): {overlap_loss:,}원")
 
     # 개별 조건식
     individual_conditions = []
-    for f in top_filters:
+    for f in selected:
         if '적용코드' in f:
             individual_conditions.append({
                 '필터명': f['필터명'],
@@ -1480,9 +1974,12 @@ def GenerateFilterCode(filter_results, top_n=5):
         'code_text': '\n'.join(code_lines),
         'buy_conditions': buy_filter_lines,
         'individual_conditions': individual_conditions,
+        'combine_steps': combine_steps,
         'summary': {
-            'total_filters': len(top_filters),
-            'total_improvement': sum(f['수익개선금액'] for f in top_filters),
+            'total_filters': len(selected),
+            'total_improvement_combined': int(combined_improvement) if combined_improvement is not None else int(naive_sum),
+            'total_improvement_naive': int(naive_sum),
+            'overlap_loss': int(naive_sum - (combined_improvement if combined_improvement is not None else naive_sum)),
             'categories': list(conditions_by_category.keys())
         }
     }
@@ -1493,7 +1990,8 @@ def GenerateFilterCode(filter_results, top_n=5):
 # ============================================================================
 
 def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
-                              filter_results=None, feature_importance=None,
+                              filter_results=None, filter_results_lookahead=None,
+                              feature_importance=None,
                               optimal_thresholds=None, filter_combinations=None,
                               filter_stability=None, generated_code=None):
     """
@@ -1505,6 +2003,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
     - 최적 임계값 탐색 결과 (NEW)
     - 필터 조합 시너지 히트맵 (NEW)
     - 최적 임계값 효율성 곡선 (NEW)
+    - (진단용) 룩어헤드 포함 필터 효과 Top (NEW)
     """
     if len(df_tsg) < 5:
         return
@@ -1535,11 +2034,11 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         # 타임프레임 감지
         tf_info = DetectTimeframe(df_tsg, save_file_name)
 
-        fig = plt.figure(figsize=(20, 30))
+        fig = plt.figure(figsize=(20, 34))
         fig.suptitle(f'백테스팅 필터 분석 차트 - {save_file_name} ({tf_info["label"]})',
                      fontsize=16, fontweight='bold')
 
-        gs = gridspec.GridSpec(6, 3, figure=fig, hspace=0.45, wspace=0.3)
+        gs = gridspec.GridSpec(7, 3, figure=fig, hspace=0.45, wspace=0.3)
 
         color_profit = '#2ECC71'
         color_loss = '#E74C3C'
@@ -1592,7 +2091,9 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             ax3.set_yticks(y_pos)
             ax3.set_yticklabels(names, fontsize=9)
             ax3.set_xlabel('중요도')
-            ax3.set_title(f'ML 특성 중요도 (정확도: {feature_importance.get("model_accuracy", 0)}%)')
+            test_acc = feature_importance.get("model_accuracy", 0)
+            base_acc = feature_importance.get("baseline_accuracy", 0)
+            ax3.set_title(f"ML 특성 중요도 (정확도 test: {test_acc}%, 기준선: {base_acc}%)")
             ax3.invert_yaxis()
 
         # ============ Chart 4: 효과 크기 분포 ============
@@ -1623,13 +2124,39 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                     ax5.set_xticklabels([str(x)[:18] for x in df_filter['필터명']],
                                         rotation=45, ha='right', fontsize=7)
                     ax5.set_ylabel('수익 개선 금액')
-                    ax5.set_title('필터 적용 시 예상 수익 개선 효과 (Top 15)\n(막대=개선금액, 빨간선=누적 비율)')
+                    ax5.set_title('필터 적용 시 예상 수익 개선 효과 (Top 15)\n(막대=개별개선, 빨간선=누적(동시적용/중복반영))')
                     ax5.axhline(y=0, color='gray', linestyle='--', linewidth=0.8)
 
                     try:
-                        cumsum = df_filter['수익개선금액'].cumsum()
-                        denom = float(cumsum.iloc[-1]) if len(cumsum) > 0 else 0.0
-                        cumsum_pct = (cumsum / denom * 100) if denom else [0 for _ in cumsum]
+                        if '조건식' in df_filter.columns and '수익금' in df_tsg.columns:
+                            safe_globals = {"__builtins__": {}}
+                            safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
+                            profit_arr_local = df_tsg['수익금'].to_numpy(dtype=np.float64)
+                            excluded_mask = np.zeros(len(df_tsg), dtype=bool)
+                            cum_values = []
+                            cum = 0.0
+                            for expr in df_filter['조건식'].tolist():
+                                cond = eval(expr, safe_globals, safe_locals)
+                                cond_arr = cond.to_numpy(dtype=bool) if hasattr(cond, 'to_numpy') else np.asarray(cond, dtype=bool)
+                                add_mask = cond_arr & (~excluded_mask)
+                                cum += -float(np.sum(profit_arr_local[add_mask]))
+                                excluded_mask |= cond_arr
+                                cum_values.append(cum)
+
+                            denom = float(cum_values[-1]) if cum_values else 0.0
+                            if denom <= 0:
+                                # 누적 개선이 0 이하로 끝나는 케이스는 비율 표시가 왜곡될 수 있어
+                                # 기존(단순 합산) 누적비율로 폴백합니다.
+                                cumsum = df_filter['수익개선금액'].cumsum()
+                                denom = float(cumsum.iloc[-1]) if len(cumsum) > 0 else 0.0
+                                cumsum_pct = (cumsum / denom * 100) if denom else [0 for _ in cumsum]
+                            else:
+                                cumsum_pct = [(v / denom * 100) for v in cum_values]
+                        else:
+                            cumsum = df_filter['수익개선금액'].cumsum()
+                            denom = float(cumsum.iloc[-1]) if len(cumsum) > 0 else 0.0
+                            cumsum_pct = (cumsum / denom * 100) if denom else [0 for _ in cumsum]
+
                         ax5_twin = ax5.twinx()
                         ax5_twin.plot(list(x_pos), cumsum_pct, 'ro-', markersize=3, linewidth=1.2)
                         ax5_twin.set_ylabel('누적 비율 (%)', color='red')
@@ -1785,9 +2312,11 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             risk_formula = (
                 "위험도(매수 시점) 공식:\n"
                 "• 매수등락율>=20:+20, >=25:+10, >=30:+10\n"
-                "• 매수체결강도<80:+15, <60:+10 | 거래대금(억환산)<50:+15, <100:+10\n"
-                "• 매수시가총액(억)<1000:+15, <5000:+10 | 매수호가잔량비<90:+10, <70:+15\n"
-                "• 매수스프레드>=0.5:+10, >=1.0:+10 | 매수변동폭비율>=5:+10, >=10:+10"
+                "• 매수체결강도<80:+15, <60:+10 | 과열>=150:+10, >=200:+10, >=250:+10\n"
+                "• 거래대금(억=매수당일거래대금/100)<50:+15, <100:+10\n"
+                "• 시총(억)<1000:+15, <5000:+10 | 호가잔량비<90:+10, <70:+15\n"
+                "• 스프레드>=0.5:+10, >=1.0:+10 | 회전율<10:+5, <5:+10\n"
+                "• 변동폭비율>=7.5:+10, >=10:+10, >=15:+10"
             )
             ax10.set_title(f'매수 위험도 점수별 수익금 (룩어헤드 없음)\n{risk_formula}', fontsize=8, loc='left')
 
@@ -1874,7 +2403,8 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             header_lines = [
                 "=== 자동 생성 코드 요약 ===",
                 f"- 필터 수: {int(summary.get('total_filters', 0) or 0):,}",
-                f"- 예상 총 개선: {int(summary.get('total_improvement', 0) or 0):,}원",
+                f"- 예상 총 개선(동시적용): {int(summary.get('total_improvement_combined', summary.get('total_improvement_naive', 0)) or 0):,}원",
+                f"- 개별개선합/중복: {int(summary.get('total_improvement_naive', 0) or 0):,}원 / {int(summary.get('overlap_loss', 0) or 0):+,}원",
             ]
             categories = summary.get('categories') or []
             if categories:
@@ -2020,6 +2550,37 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                  verticalalignment='top',
                  bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
+        # ============ Chart 17: (진단용) 룩어헤드 포함 필터 효과 Top ============
+        ax17 = fig.add_subplot(gs[6, :])
+        if filter_results_lookahead and len(filter_results_lookahead) > 0:
+            top_15 = [f for f in filter_results_lookahead if f.get('수익개선금액', 0) > 0][:15]
+            if top_15:
+                names = [str(f.get('필터명', ''))[:26] for f in top_15]
+                improvements = [int(f.get('수익개선금액', 0)) for f in top_15]
+
+                y_pos = range(len(names))
+                ax17.barh(y_pos, improvements, color='#F39C12', alpha=0.85, edgecolor='black', linewidth=0.5)
+                ax17.set_yticks(y_pos)
+                ax17.set_yticklabels(names, fontsize=9)
+                ax17.set_xlabel('수익 개선 금액(원)')
+                ax17.set_title('사후진단(룩어헤드) Top 15 필터 효과\n※ 매도 확정 정보 포함 → 실거래/자동 조건식에는 사용 금지', fontsize=11)
+                ax17.invert_yaxis()
+
+                # 값/제외비율 표시
+                max_val = max(improvements) if improvements else 0
+                for i, f in enumerate(top_15):
+                    v = int(f.get('수익개선금액', 0))
+                    ex = f.get('제외비율', 0)
+                    ax17.text(v + max_val * 0.01, i, f"{v:,}원 (제외 {ex}%)", va='center', fontsize=8)
+            else:
+                ax17.text(0.5, 0.5, '사후진단 결과(양수 개선) 없음', ha='center', va='center',
+                          fontsize=12, transform=ax17.transAxes)
+                ax17.axis('off')
+        else:
+            ax17.text(0.5, 0.5, '사후진단(룩어헤드) 분석 데이터 없음', ha='center', va='center',
+                      fontsize=12, transform=ax17.transAxes)
+            ax17.axis('off')
+
         # 저장 및 전송
         # tight_layout은 colorbar/그리드와 함께 경고가 자주 발생하여(subplot 배치가 깨질 수 있음),
         # 고정 margins로 레이아웃을 안정화합니다.
@@ -2066,6 +2627,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
     result = {
         'enhanced_df': None,
         'filter_results': [],
+        'filter_results_lookahead': [],
         'optimal_thresholds': [],
         'filter_combinations': [],
         'feature_importance': None,
@@ -2085,6 +2647,10 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         filter_results = AnalyzeFilterEffectsEnhanced(df_enhanced)
         result['filter_results'] = filter_results
 
+        # 2-1. (진단용) 룩어헤드 포함 필터 효과 분석
+        filter_results_lookahead = AnalyzeFilterEffectsLookahead(df_enhanced)
+        result['filter_results_lookahead'] = filter_results_lookahead
+
         # 3. 최적 임계값 탐색
         optimal_thresholds = FindAllOptimalThresholds(df_enhanced)
         result['optimal_thresholds'] = optimal_thresholds
@@ -2102,7 +2668,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         result['filter_stability'] = filter_stability
 
         # 7. 조건식 코드 생성
-        generated_code = GenerateFilterCode(filter_results)
+        generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced)
         result['generated_code'] = generated_code
 
         # 8. CSV 파일 저장
@@ -2117,6 +2683,12 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
             filter_path = f"{GRAPH_PATH}/{save_file_name}_filter.csv"
             pd.DataFrame(filter_results).to_csv(filter_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(filter_path)
+
+        # (진단용) 룩어헤드 포함 필터 분석 결과
+        if filter_results_lookahead:
+            lookahead_path = f"{GRAPH_PATH}/{save_file_name}_filter_lookahead.csv"
+            pd.DataFrame(filter_results_lookahead).to_csv(lookahead_path, encoding='utf-8-sig', index=False)
+            result['csv_files'].append(lookahead_path)
 
         # 최적 임계값
         if optimal_thresholds:
@@ -2163,6 +2735,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
             save_file_name,
             teleQ,
             filter_results=filter_results,
+            filter_results_lookahead=filter_results_lookahead,
             feature_importance=feature_importance,
             optimal_thresholds=optimal_thresholds,
             filter_combinations=filter_combinations,
@@ -2196,13 +2769,42 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         if teleQ is not None:
             # 요약 메시지
             if recommendations:
-                msg = "📊 강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
+                msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
                 teleQ.put(msg)
 
             # 조건식 코드
             if generated_code and generated_code.get('summary'):
-                code_msg = f"💡 자동 생성 필터 코드:\n총 {generated_code['summary']['total_filters']}개 필터\n예상 총 개선: {generated_code['summary']['total_improvement']:,}원"
-                teleQ.put(code_msg)
+                summary = generated_code.get('summary', {})
+                total_filters = int(summary.get('total_filters', 0))
+                total_impr = int(summary.get('total_improvement_combined', summary.get('total_improvement_naive', 0)))
+                naive_impr = int(summary.get('total_improvement_naive', total_impr))
+                overlap_loss = int(summary.get('overlap_loss', naive_impr - total_impr))
+
+                lines = []
+                lines.append("자동 생성 필터 코드(요약):")
+                lines.append(f"- 총 {total_filters}개 필터 (조합: AND, 즉 '모든 조건을 만족해야 매수')")
+                lines.append(f"- 예상 총 개선(동시 적용/중복 반영): {total_impr:,}원")
+                if total_filters > 0:
+                    lines.append(f"- 개별개선합(단순 합산): {naive_impr:,}원, 중복/상쇄: {overlap_loss:+,}원")
+
+                steps = generated_code.get('combine_steps') or []
+                if steps:
+                    lines.append("- 적용 순서(추가개선→누적개선, 누적제외%):")
+                    for st in steps[: min(8, len(steps))]:
+                        lines.append(
+                            f"  {st.get('순서', '')}. {str(st.get('필터명', ''))[:18]}: "
+                            f"+{int(st.get('추가개선(중복반영)', 0)):,} → 누적 +{int(st.get('누적개선(동시적용)', 0)):,} "
+                            f"(제외 {st.get('누적제외비율', 0)}%)"
+                        )
+
+                buy_lines = generated_code.get('buy_conditions') or []
+                if buy_lines:
+                    lines.append("- 조합 코드(기존 매수조건에 AND 추가):")
+                    for l in buy_lines[: min(8, len(buy_lines))]:
+                        lines.append(f"  {l.strip()}")
+                    lines.append("- 전체 설명/코드/산출물 목록은 report.txt 참고")
+
+                teleQ.put("\n".join(lines))
 
     except Exception as e:
         print_exc()
