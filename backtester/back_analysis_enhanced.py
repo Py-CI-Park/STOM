@@ -1592,34 +1592,97 @@ def AnalyzeFilterEffectsLookahead(df_tsg):
 
 def AnalyzeFeatureImportance(df_tsg):
     """
-    Decision Tree를 사용하여 특성 중요도를 분석합니다.
+    RandomForest를 사용하여 특성 중요도를 분석합니다.
+    
+    개선사항:
+    - 매수 시점에서 사용 가능한 모든 숫자형 변수를 동적으로 탐지
+    - 불균형 데이터에서 class_weight='balanced' 사용
+    - F1 Score (macro) 기반 평가로 소수 클래스 성능 반영
 
     Returns:
         dict: 특성 중요도 분석 결과
             - feature_importance: 특성별 중요도
             - top_features: 상위 특성
             - decision_rules: 주요 분기 규칙
+            - model_f1: F1 Score (불균형 데이터 평가에 적합)
     """
     try:
+        from sklearn.ensemble import RandomForestClassifier
         from sklearn.tree import DecisionTreeClassifier
         from sklearn.preprocessing import StandardScaler
         from sklearn.model_selection import train_test_split
+        from sklearn.metrics import f1_score, balanced_accuracy_score
     except ImportError:
         return None
 
-    # 분석에 사용할 특성 선택
-    feature_columns = [
-         '매수등락율', '매수체결강도', '매수당일거래대금', '매수전일비',
-        '매수회전율', '시가총액', '매수호가잔량비'
+    # ================================================================
+    # 매수 시점에서 사용 가능한 모든 숫자형 변수를 동적으로 탐지
+    # ================================================================
+    # 1) 명시적 매수 시점 컬럼 (접두사 '매수')
+    # 2) 매수 시점에서 확정된 컬럼 (시가총액, 위험도점수, 모멘텀점수 등 파생 지표)
+    # 3) 제외할 컬럼: 매도 시점 변수, 결과 변수, 변화량 지표(룩어헤드)
+    
+    # 매도 시점 또는 결과 관련 컬럼 패턴 (제외)
+    exclude_patterns = [
+        '매도', '수익금', '수익률', '손실', '이익', '보유시간',
+        '변화', '추세', '위험도점수', '매수매도위험도점수',  # 사후 계산 위험도
+        '연속이익', '연속손실', '리스크조정수익률',  # 사후 통계
+        '합계', '누적', '수익금합계',
     ]
-
+    
+    # 명시적으로 매수 시점에서 사용 가능한 변수 목록
+    explicit_buy_columns = [
+        '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
+        '매수전일비', '매수회전율', '매수전일동시간비', '매수고가', '매수저가',
+        '매수고저평균대비등락율', '매수매도총잔량', '매수매수총잔량',
+        '매수호가잔량비', '매수매도호가1', '매수매수호가1', '매수스프레드',
+        '매수초당매수수량', '매수초당매도수량', '매수초당거래대금',
+        '시가총액', '매수가', '매수시', '매수분', '매수초',
+        # 파생 지표 (매수 시점 데이터만으로 계산된 것들)
+        '모멘텀점수', '매수변동폭', '매수변동폭비율', '거래품질점수',
+        '초당매수수량_매도총잔량_비율', '매도잔량_매수잔량_비율',
+        '매수잔량_매도잔량_비율', '초당매도_매수_비율', '초당매수_매도_비율',
+        '현재가_고저범위_위치', '초당거래대금_당일비중',
+        '초당순매수수량', '초당순매수금액', '초당순매수비율',
+    ]
+    
+    # 동적으로 사용 가능한 컬럼 선택
+    feature_columns = []
+    for col in df_tsg.columns:
+        # 숫자형 컬럼만
+        if not pd.api.types.is_numeric_dtype(df_tsg[col]):
+            continue
+        
+        # 제외 패턴 확인
+        col_lower = col.lower()
+        should_exclude = False
+        for pattern in exclude_patterns:
+            if pattern.lower() in col_lower:
+                should_exclude = True
+                break
+        
+        if should_exclude:
+            continue
+        
+        # 명시적 매수 컬럼이거나 매수 접두사가 있는 경우
+        if col in explicit_buy_columns:
+            feature_columns.append(col)
+        elif col.startswith('매수') and col not in feature_columns:
+            feature_columns.append(col)
+    
+    # 추가: 시가총액 등 명시적으로 매수 시점 확정 변수
+    for col in ['시가총액', '모멘텀점수', '거래품질점수']:
+        if col in df_tsg.columns and col not in feature_columns:
+            feature_columns.append(col)
+    
     available_features = [col for col in feature_columns if col in df_tsg.columns]
 
     if len(available_features) < 3:
         return None
 
     # 타겟 변수: 이익 여부
-    df_analysis = df_tsg[available_features + ['수익금']].dropna()
+    required_cols = available_features + ['수익금']
+    df_analysis = df_tsg[required_cols].dropna()
 
     if len(df_analysis) < 50:
         return None
@@ -1627,12 +1690,15 @@ def AnalyzeFeatureImportance(df_tsg):
     X = df_analysis[available_features]
     y = (df_analysis['수익금'] > 0).astype(int)
 
-    # 기준선(다수 클래스) 정확도: 이 값보다 의미 있게 높지 않다면 과대해석 금지
+    # 기준선(다수 클래스) 정확도 및 Random Baseline F1
     try:
         pos_ratio = float(y.mean())
     except Exception:
         pos_ratio = 0.0
     baseline_accuracy = round(max(pos_ratio, 1 - pos_ratio) * 100, 1)
+    # Random baseline F1 (for balanced metric)
+    # 완전 랜덤 예측시 F1: 2*p*(1-p)/(p+(1-p)) = 2*p*(1-p) where p=minority ratio
+    random_f1 = round(2 * pos_ratio * (1 - pos_ratio) * 100, 1) if pos_ratio > 0 else 0.0
 
     # Train/Test 분리(과대평가 방지)
     try:
@@ -1643,18 +1709,36 @@ def AnalyzeFeatureImportance(df_tsg):
         # 샘플 수가 작거나 stratify 불가 등 예외 시 전체 학습으로 폴백
         X_train, X_test, y_train, y_test = X, X, y, y
 
-    # 표준화(임계값을 원 스케일로 복원하기 위함; 트리 자체는 스케일에 민감하지 않음)
+    # 표준화
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test) if len(X_test) else X_train_scaled
 
-    # Decision Tree 학습
-    clf = DecisionTreeClassifier(max_depth=4, min_samples_leaf=10, random_state=42)
-    clf.fit(X_train_scaled, y_train)
+    # ================================================================
+    # RandomForest with class_weight='balanced' for imbalanced data
+    # ================================================================
+    rf_clf = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=6,
+        min_samples_leaf=10,
+        class_weight='balanced',  # 불균형 데이터 처리
+        random_state=42,
+        n_jobs=-1
+    )
+    rf_clf.fit(X_train_scaled, y_train)
 
-    # 특성 중요도
-    importance = dict(zip(available_features, clf.feature_importances_))
+    # 특성 중요도 (RandomForest)
+    importance = dict(zip(available_features, rf_clf.feature_importances_))
     importance_sorted = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+
+    # Decision Tree도 학습 (분기 규칙 추출용)
+    clf = DecisionTreeClassifier(
+        max_depth=4, 
+        min_samples_leaf=10, 
+        class_weight='balanced',
+        random_state=42
+    )
+    clf.fit(X_train_scaled, y_train)
 
     # 분기 규칙 추출 (간략화)
     tree = clf.tree_
@@ -1695,23 +1779,260 @@ def AnalyzeFeatureImportance(df_tsg):
 
     extract_rules(0, 0)
 
+    # 성능 평가 (F1 Score, Balanced Accuracy 사용)
     try:
-        train_acc = round(clf.score(X_train_scaled, y_train) * 100, 1)
+        y_pred_train = rf_clf.predict(X_train_scaled)
+        y_pred_test = rf_clf.predict(X_test_scaled)
+        
+        train_f1 = round(f1_score(y_train, y_pred_train, average='macro') * 100, 1)
+        test_f1 = round(f1_score(y_test, y_pred_test, average='macro') * 100, 1)
+        
+        train_acc = round(balanced_accuracy_score(y_train, y_pred_train) * 100, 1)
+        test_acc = round(balanced_accuracy_score(y_test, y_pred_test) * 100, 1)
     except Exception:
-        train_acc = 0.0
-    try:
-        test_acc = round(clf.score(X_test_scaled, y_test) * 100, 1)
-    except Exception:
-        test_acc = train_acc
+        train_f1 = test_f1 = 0.0
+        train_acc = test_acc = 0.0
 
     return {
         'feature_importance': importance_sorted,
-        'top_features': importance_sorted[:5],
+        'top_features': importance_sorted[:10],  # 상위 10개로 확장
         'decision_rules': rules[:10],
-        'model_accuracy': test_acc,
+        'model_accuracy': test_acc,  # Balanced Accuracy
         'model_accuracy_train': train_acc,
+        'model_f1': test_f1,
+        'model_f1_train': train_f1,
         'baseline_accuracy': baseline_accuracy,
+        'random_baseline_f1': random_f1,
+        'total_features_used': len(available_features),
+        'features_used': available_features,
     }
+
+
+# ============================================================================
+# 6.5. ML 기반 매수매도 위험도 예측 (NEW)
+# ============================================================================
+
+def PredictRiskWithML(df_tsg):
+    """
+    머신러닝을 사용하여 매수 시점의 위험도를 예측합니다.
+    
+    매수 시점에서 사용 가능한 모든 변수를 바탕으로:
+    1. 손실 확률(loss_prob_ml) 예측
+    2. ML 기반 위험도 점수(risk_score_ml) 계산
+    3. 실제 매수매도위험도점수와 비교
+    
+    Returns:
+        tuple: (updated_df, prediction_stats)
+        - updated_df: ML 예측값이 추가된 DataFrame
+        - prediction_stats: 예측 성능 통계
+    """
+    try:
+        from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import f1_score, balanced_accuracy_score, roc_auc_score
+    except ImportError:
+        return df_tsg, None
+    
+    df = df_tsg.copy()
+    
+    # ================================================================
+    # 매수 시점에서 사용 가능한 변수만 선택 (룩어헤드 방지)
+    # ================================================================
+    exclude_patterns = [
+        '매도', '수익금', '수익률', '손실', '이익', '보유시간',
+        '변화', '추세', '매수매도위험도점수',  # 사후 계산 위험도
+        '연속이익', '연속손실', '리스크조정수익률',
+        '합계', '누적', '수익금합계', '손실확률', 'risk_score_ml',
+    ]
+    
+    explicit_buy_columns = [
+        '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
+        '매수전일비', '매수회전율', '매수전일동시간비', '매수고가', '매수저가',
+        '매수고저평균대비등락율', '매수매도총잔량', '매수매수총잔량',
+        '매수호가잔량비', '매수매도호가1', '매수매수호가1', '매수스프레드',
+        '매수초당매수수량', '매수초당매도수량', '매수초당거래대금',
+        '시가총액', '매수가', '매수시', '매수분', '매수초',
+        '모멘텀점수', '매수변동폭', '매수변동폭비율', '거래품질점수',
+        '초당매수수량_매도총잔량_비율', '매도잔량_매수잔량_비율',
+        '매수잔량_매도잔량_비율', '초당매도_매수_비율', '초당매수_매도_비율',
+        '현재가_고저범위_위치', '초당거래대금_당일비중',
+        '초당순매수수량', '초당순매수금액', '초당순매수비율',
+        '위험도점수',  # 규칙 기반 위험도 (매수 시점 정보만 사용)
+    ]
+    
+    feature_columns = []
+    for col in df.columns:
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            continue
+        
+        col_lower = col.lower()
+        should_exclude = False
+        for pattern in exclude_patterns:
+            if pattern.lower() in col_lower:
+                should_exclude = True
+                break
+        
+        if should_exclude:
+            continue
+        
+        if col in explicit_buy_columns:
+            feature_columns.append(col)
+        elif col.startswith('매수') and col not in feature_columns:
+            feature_columns.append(col)
+    
+    for col in ['시가총액', '모멘텀점수', '거래품질점수', '위험도점수']:
+        if col in df.columns and col not in feature_columns:
+            feature_columns.append(col)
+    
+    available_features = [col for col in feature_columns if col in df.columns]
+    
+    if len(available_features) < 5:
+        # 피처가 부족하면 기본값 설정
+        df['손실확률_ML'] = 0.5
+        df['위험도_ML'] = 50
+        return df, None
+    
+    # ================================================================
+    # 타겟 변수: 손실 여부 (수익금 <= 0)
+    # ================================================================
+    required_cols = available_features + ['수익금']
+    df_analysis = df[required_cols].copy()
+    
+    # NaN 처리 (평균값으로 대체)
+    for col in available_features:
+        if df_analysis[col].isna().sum() > 0:
+            df_analysis[col] = df_analysis[col].fillna(df_analysis[col].median())
+    
+    df_clean = df_analysis.dropna(subset=['수익금'])
+    
+    if len(df_clean) < 50:
+        df['손실확률_ML'] = 0.5
+        df['위험도_ML'] = 50
+        return df, None
+    
+    X = df_clean[available_features].values
+    y = (df_clean['수익금'] <= 0).astype(int).values  # 손실=1, 이익=0
+    
+    # Train/Test 분리
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.25, random_state=42, stratify=y
+        )
+    except Exception:
+        X_train, X_test, y_train, y_test = X, X, y, y
+    
+    # 표준화
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # ================================================================
+    # 앙상블 모델: RandomForest + GradientBoosting
+    # ================================================================
+    rf_model = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=8,
+        min_samples_leaf=5,
+        class_weight='balanced',
+        random_state=42,
+        n_jobs=-1
+    )
+    
+    gb_model = GradientBoostingClassifier(
+        n_estimators=100,
+        max_depth=5,
+        min_samples_leaf=10,
+        random_state=42
+    )
+    
+    rf_model.fit(X_train_scaled, y_train)
+    gb_model.fit(X_train_scaled, y_train)
+    
+    # 앙상블 예측 (확률 평균)
+    rf_proba = rf_model.predict_proba(X_test_scaled)[:, 1]
+    gb_proba = gb_model.predict_proba(X_test_scaled)[:, 1]
+    ensemble_proba = (rf_proba + gb_proba) / 2
+    
+    # 성능 평가
+    try:
+        y_pred = (ensemble_proba >= 0.5).astype(int)
+        test_f1 = round(f1_score(y_test, y_pred, average='macro') * 100, 1)
+        test_acc = round(balanced_accuracy_score(y_test, y_pred) * 100, 1)
+        test_auc = round(roc_auc_score(y_test, ensemble_proba) * 100, 1)
+    except Exception:
+        test_f1 = test_acc = test_auc = 0.0
+    
+    # ================================================================
+    # 전체 데이터에 대해 예측
+    # ================================================================
+    # 전체 데이터 표준화
+    X_all = df_analysis[available_features].values
+    
+    # NaN을 median으로 채우기
+    for i, col in enumerate(available_features):
+        mask = np.isnan(X_all[:, i])
+        if mask.any():
+            X_all[mask, i] = np.nanmedian(X_all[:, i])
+    
+    X_all_scaled = scaler.transform(X_all)
+    
+    # 앙상블 예측
+    rf_proba_all = rf_model.predict_proba(X_all_scaled)[:, 1]
+    gb_proba_all = gb_model.predict_proba(X_all_scaled)[:, 1]
+    loss_prob_all = (rf_proba_all + gb_proba_all) / 2
+    
+    # DataFrame에 추가 (원본 인덱스 유지)
+    df['손실확률_ML'] = np.nan
+    df['위험도_ML'] = np.nan
+    
+    # df_analysis와 동일한 인덱스로 할당
+    df.loc[df_analysis.index, '손실확률_ML'] = loss_prob_all
+    df.loc[df_analysis.index, '위험도_ML'] = (loss_prob_all * 100).clip(0, 100)
+    
+    # NaN 채우기 (중앙값)
+    median_prob = float(np.nanmedian(loss_prob_all))
+    df['손실확률_ML'] = df['손실확률_ML'].fillna(median_prob)
+    df['위험도_ML'] = df['위험도_ML'].fillna(median_prob * 100)
+    
+    # ================================================================
+    # 실제 매수매도위험도점수와 비교 (상관관계)
+    # ================================================================
+    correlation_actual = None
+    if '매수매도위험도점수' in df.columns:
+        try:
+            corr = df[['위험도_ML', '매수매도위험도점수']].corr().iloc[0, 1]
+            correlation_actual = round(corr * 100, 1) if pd.notna(corr) else None
+        except Exception:
+            pass
+    
+    correlation_rule = None
+    if '위험도점수' in df.columns:
+        try:
+            corr = df[['위험도_ML', '위험도점수']].corr().iloc[0, 1]
+            correlation_rule = round(corr * 100, 1) if pd.notna(corr) else None
+        except Exception:
+            pass
+    
+    # Feature Importance 추출
+    feature_importance = sorted(
+        zip(available_features, rf_model.feature_importances_),
+        key=lambda x: x[1], reverse=True
+    )[:10]
+    
+    prediction_stats = {
+        'model_type': 'Ensemble (RandomForest + GradientBoosting)',
+        'test_f1': test_f1,
+        'test_balanced_accuracy': test_acc,
+        'test_auc': test_auc,
+        'total_features': len(available_features),
+        'top_features': feature_importance,
+        'correlation_with_actual_risk': correlation_actual,
+        'correlation_with_rule_risk': correlation_rule,
+        'loss_rate': round(y.mean() * 100, 1),
+    }
+    
+    return df, prediction_stats
 
 
 # ============================================================================
@@ -2635,12 +2956,21 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         'generated_code': None,
         'charts': [],
         'recommendations': [],
-        'csv_files': []
+        'csv_files': [],
+        'ml_prediction_stats': None,  # NEW: ML 예측 통계
     }
 
     try:
         # 1. 강화된 파생 지표 계산
         df_enhanced = CalculateEnhancedDerivedMetrics(df_tsg)
+        
+        # 1.5. ML 기반 위험도 예측 (NEW)
+        # - 손실확률_ML: ML이 예측한 손실 확률 (0~1)
+        # - 위험도_ML: ML 기반 위험도 점수 (0~100)
+        # - detail.csv에 추가하여 실제 매수매도위험도점수와 비교 가능
+        df_enhanced, ml_prediction_stats = PredictRiskWithML(df_enhanced)
+        result['ml_prediction_stats'] = ml_prediction_stats
+        
         result['enhanced_df'] = df_enhanced
 
         # 2. 강화된 필터 효과 분석 (통계 검정 포함)
@@ -2673,6 +3003,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
 
         # 8. CSV 파일 저장
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
+        # - 손실확률_ML, 위험도_ML 컬럼이 포함되어 실제값과 비교 가능
         detail_path = f"{GRAPH_PATH}/{save_file_name}_detail.csv"
         df_enhanced.to_csv(detail_path, encoding='utf-8-sig', index=True)
         result['csv_files'].append(detail_path)
@@ -2771,6 +3102,34 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
             if recommendations:
                 msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
                 teleQ.put(msg)
+
+            # ML 예측 통계 메시지 (NEW)
+            if ml_prediction_stats:
+                ml_lines = []
+                ml_lines.append("ML 위험도 예측 결과:")
+                ml_lines.append(f"- 모델: {ml_prediction_stats.get('model_type', 'N/A')}")
+                ml_lines.append(f"- 테스트 AUC: {ml_prediction_stats.get('test_auc', 0)}%")
+                ml_lines.append(f"- 테스트 F1: {ml_prediction_stats.get('test_f1', 0)}%")
+                ml_lines.append(f"- 사용 피처: {ml_prediction_stats.get('total_features', 0)}개")
+                
+                # 상관관계 정보
+                corr_actual = ml_prediction_stats.get('correlation_with_actual_risk')
+                corr_rule = ml_prediction_stats.get('correlation_with_rule_risk')
+                if corr_actual is not None:
+                    ml_lines.append(f"- 실제 매수매도위험도 상관: {corr_actual}%")
+                if corr_rule is not None:
+                    ml_lines.append(f"- 규칙기반 위험도점수 상관: {corr_rule}%")
+                
+                # 주요 피처
+                top_features = ml_prediction_stats.get('top_features', [])[:5]
+                if top_features:
+                    ml_lines.append("- 주요 피처(중요도):")
+                    for feat, imp in top_features:
+                        ml_lines.append(f"  • {feat}: {imp:.3f}")
+                
+                ml_lines.append("- detail.csv에 '손실확률_ML', '위험도_ML' 컬럼 추가됨")
+                
+                teleQ.put("\n".join(ml_lines))
 
             # 조건식 코드
             if generated_code and generated_code.get('summary'):
