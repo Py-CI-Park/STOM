@@ -3220,28 +3220,81 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         recommendations = []
 
         # 통계적으로 유의한 필터
-        significant_filters = [f for f in filter_results if f.get('유의함') == '예' and f['수익개선금액'] > 0][:3]
+        filter_results_safe = filter_results or []
+        filter_combinations_safe = filter_combinations or []
+        filter_stability_safe = filter_stability or []
+
+        significant_filters = [
+            f for f in filter_results_safe
+            if f.get('유의함') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
+        ][:3]
         for f in significant_filters:
-            recommendations.append(f"[통계적 유의] {f['필터명']}: +{f['수익개선금액']:,}원 (p={f['p값']})")
+            try:
+                recommendations.append(
+                    f"[통계적 유의] {f.get('필터명', '')}: +{int(f.get('수익개선금액', 0) or 0):,}원 (p={f.get('p값', 'N/A')})"
+                )
+            except Exception:
+                continue
 
         # 시너지 높은 조합
-        high_synergy = [c for c in filter_combinations if c['시너지비율'] > 10][:2]
+        high_synergy = [c for c in filter_combinations_safe if float(c.get('시너지비율', 0) or 0) > 10][:2]
         for c in high_synergy:
-            recommendations.append(f"[조합추천] {c['필터1'][:15]} + {c['필터2'][:15]}: 시너지 +{c['시너지효과']:,}원")
+            try:
+                recommendations.append(
+                    f"[조합추천] {str(c.get('필터1', ''))[:15]} + {str(c.get('필터2', ''))[:15]}: "
+                    f"시너지 +{int(c.get('시너지효과', 0) or 0):,}원"
+                )
+            except Exception:
+                continue
 
         # 안정적인 필터
-        stable_filters = [f for f in filter_stability if f['안정성등급'] == '안정' and f['평균개선'] > 0][:2]
+        stable_filters = [
+            f for f in filter_stability_safe
+            if f.get('안정성등급') == '안정' and float(f.get('평균개선', 0) or 0) > 0
+        ][:2]
         for f in stable_filters:
-            recommendations.append(f"[안정성] {f['필터명']}: 일관성 {f['일관성점수']}점")
+            try:
+                recommendations.append(
+                    f"[안정성] {f.get('필터명', '')}: 일관성 {f.get('일관성점수', 'N/A')}점"
+                )
+            except Exception:
+                continue
 
         result['recommendations'] = recommendations
 
         # 11. 텔레그램 전송
         if teleQ is not None:
+            def _safe_put(text: str):
+                try:
+                    teleQ.put(text)
+                except Exception:
+                    pass
+
             # 요약 메시지
             if recommendations:
                 msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
-                teleQ.put(msg)
+                _safe_put(msg)
+            else:
+                # 추천 메시지가 비어 있어도 "왜 비었는지" 요약을 보내도록 보강
+                try:
+                    pos_filters = sum(1 for f in filter_results_safe if float(f.get('수익개선금액', 0) or 0) > 0)
+                    sig_pos_filters = sum(
+                        1 for f in filter_results_safe
+                        if f.get('유의함') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
+                    )
+                except Exception:
+                    pos_filters = 0
+                    sig_pos_filters = 0
+
+                msg = (
+                    "강화된 필터 분석 결과:\n"
+                    "- 추천 조건을 만족하는 항목이 없어 요약만 전송합니다.\n"
+                    f"- 필터 결과: 총 {len(filter_results_safe):,}개 (개선(+) {pos_filters:,}개, 유의(+) {sig_pos_filters:,}개)\n"
+                    f"- 조합 분석: {len(filter_combinations_safe):,}개\n"
+                    f"- 안정성 분석: {len(filter_stability_safe):,}개\n"
+                    f"- 코드 생성: {'가능' if (generated_code and generated_code.get('summary')) else '불가'}"
+                )
+                _safe_put(msg)
 
             # ML 예측 통계 메시지 (NEW)
             if ml_prediction_stats:
@@ -3278,7 +3331,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
                 
                 ml_lines.append("- detail.csv에 '손실확률_ML', '위험도_ML', '예측매수매도위험도점수_ML' 컬럼 추가됨")
                 
-                teleQ.put("\n".join(ml_lines))
+                _safe_put("\n".join(ml_lines))
 
             # 조건식 코드
             if generated_code and generated_code.get('summary'):
@@ -3312,7 +3365,27 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
                         lines.append(f"  {l.strip()}")
                     lines.append("- 전체 설명/코드/산출물 목록은 report.txt 참고")
 
-                teleQ.put("\n".join(lines))
+                _safe_put("\n".join(lines))
+            else:
+                # 코드가 생성되지 않더라도 원인을 파악할 수 있도록 요약 메시지 전송
+                try:
+                    candidate_count = sum(
+                        1 for f in filter_results_safe
+                        if float(f.get('수익개선금액', 0) or 0) > 0 and f.get('적용코드') and f.get('조건식')
+                    )
+                    pos_count = sum(1 for f in filter_results_safe if float(f.get('수익개선금액', 0) or 0) > 0)
+                except Exception:
+                    candidate_count = 0
+                    pos_count = 0
+
+                msg = (
+                    "자동 생성 필터 코드(요약):\n"
+                    "- 생성 불가 또는 후보 없음\n"
+                    f"- 개선(+) 필터: {pos_count:,}개\n"
+                    f"- 코드 생성 후보(개선(+) + 적용코드 + 조건식): {candidate_count:,}개\n"
+                    "- filter.csv를 확인해 적용코드/조건식 유무를 점검하세요."
+                )
+                _safe_put(msg)
 
     except Exception as e:
         print_exc()
