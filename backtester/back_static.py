@@ -29,7 +29,8 @@ try:
         AnalyzeFilterStability,
         GenerateFilterCode,
         PltEnhancedAnalysisCharts,
-        RunEnhancedAnalysis
+        RunEnhancedAnalysis,
+        ComputeStrategyKey
     )
     ENHANCED_ANALYSIS_AVAILABLE = True
 except ImportError:
@@ -1957,7 +1958,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 
 def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
             backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None,
-            buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train'):
+            buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train', progress_logs=None):
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
     df_tsg['수익금합계120'] = df_tsg['수익금합계'].rolling(window=120).mean().round(2)
@@ -1972,6 +1973,38 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     # 우선 "진행 중" 메시지를 먼저 전송합니다.
     if teleQ is not None:
         try:
+            lines = []
+            has_condition = bool(buystg_name or sellstg_name or buystg or sellstg)
+            if has_condition:
+                sk_short = 'N/A'
+                try:
+                    if ENHANCED_ANALYSIS_AVAILABLE and (buystg or sellstg):
+                        sk = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
+                        if sk:
+                            sk_short = (str(sk)[:12] + '...') if len(str(sk)) > 12 else str(sk)
+                except Exception:
+                    sk_short = 'N/A'
+
+                is_opt = bool(backname and ('최적화' in str(backname)))
+                buy_label = "매수 최적화 조건식" if is_opt else "매수 조건식"
+                sell_label = "매도 최적화 조건식" if is_opt else "매도 조건식"
+                buy_name = buystg_name if buystg_name else 'N/A'
+                sell_name = sellstg_name if sellstg_name else 'N/A'
+
+                lines.append("매수/매도 조건식(이름):")
+                lines.append(f"- 전략키: {sk_short}")
+                lines.append(f"- {buy_label}: {buy_name}")
+                lines.append(f"- {sell_label}: {sell_name}")
+                lines.append("- 상세 설명/코드/산출물: report.txt 및 models/strategy_code.txt 참고")
+
+            if progress_logs:
+                if lines:
+                    lines.append("")
+                lines.append("백테스트 진행 로그:")
+                lines.extend([str(x) for x in progress_logs])
+
+            if lines:
+                teleQ.put("\n".join(lines))
             teleQ.put(f'{backname} {save_file_name.split("_")[1]} 분석/차트 생성 중... (거래 {len(df_tsg):,}회)')
         except:
             pass
@@ -2255,10 +2288,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 sellstg_name=sellstg_name,
                 backname=backname,
                 ml_train_mode=ml_train_mode,
+                send_condition_summary=False,
             )
-            if teleQ is not None and enhanced_result and enhanced_result.get('recommendations'):
-                for rec in enhanced_result['recommendations'][:5]:
-                    teleQ.put(rec)
 
             # [2025-12-19] 자동 생성 필터 조합 적용 미리보기 차트(2개) 생성/전송
             try:

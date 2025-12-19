@@ -3828,7 +3828,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
 
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
                         buystg_name=None, sellstg_name=None, backname=None,
-                        ml_train_mode: str = 'train'):
+                        ml_train_mode: str = 'train', send_condition_summary: bool = True):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -4051,34 +4051,35 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     pass
 
             # 매수/매도 조건식(이름만)
-            try:
-                if buystg_name or sellstg_name or buystg or sellstg:
-                    sk = None
-                    try:
-                        if isinstance(ml_prediction_stats, dict):
-                            sk = ml_prediction_stats.get('strategy_key')
-                    except Exception:
+            if send_condition_summary:
+                try:
+                    if buystg_name or sellstg_name or buystg or sellstg:
                         sk = None
-                    if not sk:
-                        sk = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
+                        try:
+                            if isinstance(ml_prediction_stats, dict):
+                                sk = ml_prediction_stats.get('strategy_key')
+                        except Exception:
+                            sk = None
+                        if not sk:
+                            sk = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
 
-                    sk_short = (str(sk)[:12] + '...') if sk else 'N/A'
-                    is_opt = bool(backname and ('최적화' in str(backname)))
-                    buy_label = "매수 최적화 조건식" if is_opt else "매수 조건식"
-                    sell_label = "매도 최적화 조건식" if is_opt else "매도 조건식"
+                        sk_short = (str(sk)[:12] + '...') if sk else 'N/A'
+                        is_opt = bool(backname and ('최적화' in str(backname)))
+                        buy_label = "매수 최적화 조건식" if is_opt else "매수 조건식"
+                        sell_label = "매도 최적화 조건식" if is_opt else "매도 조건식"
 
-                    buy_name = buystg_name if buystg_name else 'N/A'
-                    sell_name = sellstg_name if sellstg_name else 'N/A'
+                        buy_name = buystg_name if buystg_name else 'N/A'
+                        sell_name = sellstg_name if sellstg_name else 'N/A'
 
-                    lines = []
-                    lines.append("매수/매도 조건식(이름):")
-                    lines.append(f"- 전략키: {sk_short}")
-                    lines.append(f"- {buy_label}: {buy_name}")
-                    lines.append(f"- {sell_label}: {sell_name}")
-                    lines.append("- 전체 원문/산출물 목록은 report.txt 및 models/strategy_code.txt 참고")
-                    _safe_put("\n".join(lines))
-            except Exception:
-                pass
+                        lines = []
+                        lines.append("매수/매도 조건식(이름):")
+                        lines.append(f"- 전략키: {sk_short}")
+                        lines.append(f"- {buy_label}: {buy_name}")
+                        lines.append(f"- {sell_label}: {sell_name}")
+                        lines.append("- 전체 원문/산출물 목록은 report.txt 및 models/strategy_code.txt 참고")
+                        _safe_put("\n".join(lines))
+                except Exception:
+                    pass
 
             # 요약 메시지
             if recommendations:
