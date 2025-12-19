@@ -34,6 +34,7 @@ from traceback import print_exc
 from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
 from utility.setting import GRAPH_PATH
+from backtester.detail_schema import reorder_detail_columns
 
 
 # ============================================================================
@@ -60,6 +61,54 @@ def ComputeStrategyKey(buystg: str = None, sellstg: str = None) -> str:
     sell = _normalize_text_for_hash(sellstg)
     payload = f"BUY:\n{buy}\n\nSELL:\n{sell}".encode('utf-8')
     return hashlib.sha256(payload).hexdigest()
+
+
+def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str | None = None,
+                                 max_lines: int = 12, max_line_len: int = 140) -> list[str]:
+    """
+    전략 문자열에서 특정 블록(예: 'if 매수:' ~ 'if 매도:') 라인 일부만 추출합니다.
+    - 텔레그램/차트 표시 목적이므로, 너무 긴 라인은 잘라냅니다.
+    """
+    try:
+        s = _normalize_text_for_hash(code)
+        if not s:
+            return []
+        lines = s.splitlines()
+
+        start_idx = None
+        for i, ln in enumerate(lines):
+            if start_marker in ln:
+                start_idx = i
+                break
+
+        if start_idx is None:
+            selected = lines[:max_lines]
+        else:
+            selected = lines[start_idx:]
+            if end_marker:
+                end_idx = None
+                for j in range(1, len(selected)):
+                    if end_marker in selected[j]:
+                        end_idx = j
+                        break
+                if end_idx is not None:
+                    selected = selected[:end_idx]
+            selected = selected[:max_lines]
+
+        out: list[str] = []
+        for ln in selected:
+            # 주석 제거(간단 버전)
+            if '#' in ln:
+                ln = ln.split('#', 1)[0]
+            ln = ln.rstrip()
+            if not ln.strip():
+                continue
+            if len(ln) > max_line_len:
+                ln = ln[: max_line_len - 3] + "..."
+            out.append(ln)
+        return out
+    except Exception:
+        return []
 
 
 def _safe_filename(name: str, max_len: int = 90) -> str:
@@ -2951,7 +3000,8 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                               filter_results=None, filter_results_lookahead=None,
                               feature_importance=None,
                               optimal_thresholds=None, filter_combinations=None,
-                              filter_stability=None, generated_code=None):
+                              filter_stability=None, generated_code=None,
+                              buystg: str = None, sellstg: str = None):
     """
     강화된 분석 차트를 생성합니다.
 
@@ -2992,11 +3042,11 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         # 타임프레임 감지
         tf_info = DetectTimeframe(df_tsg, save_file_name)
 
-        fig = plt.figure(figsize=(20, 34))
+        fig = plt.figure(figsize=(20, 38))
         fig.suptitle(f'백테스팅 필터 분석 차트 - {save_file_name} ({tf_info["label"]})',
                      fontsize=16, fontweight='bold')
 
-        gs = gridspec.GridSpec(7, 3, figure=fig, hspace=0.45, wspace=0.3)
+        gs = gridspec.GridSpec(8, 3, figure=fig, hspace=0.45, wspace=0.3)
 
         color_profit = '#2ECC71'
         color_loss = '#E74C3C'
@@ -3504,12 +3554,78 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         개선: {top_threshold.get('improvement', 0):,.0f}원
                 """
 
+        # 매수/매도 조건식(요약) 추가 (공부/검증 목적)
+        try:
+            if buystg or sellstg:
+                sk = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
+                sk_short = (str(sk)[:12] + '...') if sk else 'N/A'
+                buy_block = _extract_strategy_block_lines(
+                    buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=5
+                )
+                sell_block = _extract_strategy_block_lines(
+                    sellstg, start_marker='if 매도:', end_marker=None, max_lines=5
+                )
+
+                summary_text += f"""
+        === 조건식(요약) ===
+        전략키: {sk_short}
+        매수:
+        """ + ("\n".join([f"        {ln}" for ln in buy_block]) if buy_block else "        (없음)") + """
+        매도:
+        """ + ("\n".join([f"        {ln}" for ln in sell_block]) if sell_block else "        (없음)")
+        except Exception:
+            pass
+
         ax16.text(0.1, 0.9, summary_text, transform=ax16.transAxes, fontsize=10,
                  verticalalignment='top',
                  bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
+        # ============ Chart 18: 자동 생성 필터 조합 적용 시 수익금 변화 (NEW) ============
+        ax18 = fig.add_subplot(gs[6, :])
+        if generated_code and generated_code.get('combine_steps') and '수익금' in df_tsg.columns:
+            try:
+                steps = generated_code.get('combine_steps') or []
+                base_profit = float(pd.to_numeric(df_tsg['수익금'], errors='coerce').fillna(0).sum())
+
+                labels = ['기준']
+                cum_imp = [0.0]
+                ex_pct = [0.0]
+                for st in steps[:8]:
+                    labels.append(str(st.get('필터명', ''))[:16])
+                    cum_imp.append(float(st.get('누적개선(동시적용)', 0) or 0))
+                    ex_pct.append(float(st.get('누적제외비율', 0) or 0))
+
+                x = list(range(len(labels)))
+                profit_after = [base_profit + v for v in cum_imp]
+
+                ax18.plot(x, profit_after, 'o-', color=color_profit, linewidth=2.2, markersize=5, label='예상 수익금(원)')
+                ax18.axhline(y=base_profit, color='gray', linestyle='--', linewidth=0.8, alpha=0.8)
+                ax18.set_xticks(x)
+                ax18.set_xticklabels(labels, rotation=20, ha='right', fontsize=9)
+                ax18.set_ylabel('예상 수익금(원)')
+                ax18.set_title('자동 생성 필터 조합 적용 시 예상 수익금 변화\n(누적개선=동시 적용/중복 반영, 단계별 제외비율 함께 표시)', fontsize=11)
+                ax18.grid(axis='y', alpha=0.4)
+
+                ax18_t = ax18.twinx()
+                ax18_t.plot(x, ex_pct, 's--', color='red', linewidth=1.6, markersize=4, label='누적 제외(%)')
+                ax18_t.set_ylabel('누적 제외 비율(%)', color='red')
+                ax18_t.tick_params(axis='y', labelcolor='red')
+                ax18_t.set_ylim(0, min(100, max(ex_pct) * 1.2 + 5))
+
+                # 값 라벨
+                for xi, p in zip(x, profit_after):
+                    ax18.text(xi, p, f"{int(p):,}", fontsize=8, ha='center', va='bottom')
+            except Exception:
+                ax18.text(0.5, 0.5, '필터 조합 변화 그래프 생성 실패', ha='center', va='center',
+                          fontsize=12, transform=ax18.transAxes)
+                ax18.axis('off')
+        else:
+            ax18.text(0.5, 0.5, '자동 생성 코드(combine_steps) 또는 수익금 컬럼 없음', ha='center', va='center',
+                      fontsize=12, transform=ax18.transAxes)
+            ax18.axis('off')
+
         # ============ Chart 17: (진단용) 룩어헤드 포함 필터 효과 Top ============
-        ax17 = fig.add_subplot(gs[6, :])
+        ax17 = fig.add_subplot(gs[7, :])
         if filter_results_lookahead and len(filter_results_lookahead) > 0:
             top_15 = [f for f in filter_results_lookahead if f.get('수익개선금액', 0) > 0][:15]
             if top_15:
@@ -3649,7 +3765,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
         # - 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML 컬럼이 포함되어 비교 가능
         detail_path = f"{GRAPH_PATH}/{save_file_name}_detail.csv"
-        df_enhanced.to_csv(detail_path, encoding='utf-8-sig', index=True)
+        df_enhanced_out = reorder_detail_columns(df_enhanced)
+        df_enhanced_out.to_csv(detail_path, encoding='utf-8-sig', index=True)
         result['csv_files'].append(detail_path)
 
         # 필터 분석 결과
@@ -3715,7 +3832,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             optimal_thresholds=optimal_thresholds,
             filter_combinations=filter_combinations,
             filter_stability=filter_stability,
-            generated_code=generated_code
+            generated_code=generated_code,
+            buystg=buystg,
+            sellstg=sellstg
         )
         if chart_path:
             result['charts'].append(chart_path)
@@ -3773,6 +3892,44 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     teleQ.put(text)
                 except Exception:
                     pass
+
+            # 매수/매도 조건식(요약) (공부/검증 목적)
+            try:
+                if buystg or sellstg:
+                    sk = None
+                    try:
+                        if isinstance(ml_prediction_stats, dict):
+                            sk = ml_prediction_stats.get('strategy_key')
+                    except Exception:
+                        sk = None
+                    if not sk:
+                        sk = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
+
+                    sk_short = (str(sk)[:12] + '...') if sk else 'N/A'
+                    lines = []
+                    lines.append("매수/매도 조건식(요약):")
+                    lines.append(f"- 전략키: {sk_short}")
+
+                    buy_block = _extract_strategy_block_lines(
+                        buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=10
+                    )
+                    if buy_block:
+                        lines.append("- 매수:")
+                        for ln in buy_block:
+                            lines.append(f"  {ln}")
+
+                    sell_block = _extract_strategy_block_lines(
+                        sellstg, start_marker='if 매도:', end_marker=None, max_lines=10
+                    )
+                    if sell_block:
+                        lines.append("- 매도:")
+                        for ln in sell_block:
+                            lines.append(f"  {ln}")
+
+                    lines.append("- 전체 원문/산출물 목록은 report.txt 및 models/strategy_code.txt 참고")
+                    _safe_put("\n".join(lines))
+            except Exception:
+                pass
 
             # 요약 메시지
             if recommendations:

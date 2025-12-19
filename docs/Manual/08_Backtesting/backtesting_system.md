@@ -1104,4 +1104,43 @@ if not is_safe:
 
 ---
 
+## 텔레그램/차트 기반 강화 분석 (v2.4)
+
+백테스팅 완료 시 `backtester/back_static.py`가 기본 그래프를 생성한 뒤, `backtester/back_analysis_enhanced.py`의 `RunEnhancedAnalysis()`를 호출해 **강화 분석(통계/필터/ML)** 을 수행합니다.
+
+### 생성되는 산출물(요약)
+
+- **그래프** (`backtester/graph/`)
+  - `{save_file_name}.png` / `{save_file_name}_.png` : 기본 2종(수익곡선/부가정보)
+  - `{save_file_name}_analysis.png` / `{save_file_name}_comparison.png` : 분석 2종
+  - `{save_file_name}_enhanced.png` : 강화 분석 차트(18개, Chart 18 포함)
+  - `{save_file_name}_filtered.png` / `{save_file_name}_filtered_.png` : 자동 생성 필터 적용 미리보기(NEW)
+- **CSV/TXT**
+  - `{save_file_name}_detail.csv` : 거래 상세 기록(ML 컬럼 포함: `손실확률_ML`, `위험도_ML`, `예측매수매도위험도점수_ML`)
+  - `{save_file_name}_filter.csv` : 필터 분석 결과(t-test/효과크기 포함)
+  - `{save_file_name}_optimal_thresholds.csv`, `{save_file_name}_filter_combinations.csv`, `{save_file_name}_filter_stability.csv`
+  - `{save_file_name}_report.txt` : 산출물 목록/조건식/요약/컬럼 설명(인코딩 `utf-8-sig`)
+
+### 텔레그램 전송(요약)
+
+- 매수/매도 조건식(요약) + 전략키(`strategy_key`) 표시(공부/검증 목적)
+- 강화된 필터 분석 결과(통계적 유의/조합/안정성 추천)
+- ML 위험도 예측 결과(AUC, F1 등) + 모델 저장 정보
+- 자동 생성 필터 코드(요약) + 기존 매수조건에 AND로 추가할 “조합 코드”
+- 필터 적용 미리보기 2개 이미지(`*_filtered_.png`, `*_filtered.png`)
+
+### ML 모델 저장/재현(요약)
+
+- 저장 위치: `backtester/models/strategies/{strategy_key}/`
+- 실행별(run) 번들을 누적 저장하고, `latest_ml_bundle.joblib`로 최신 모델 재사용
+- 재현 모드: `ml_train_mode='load_latest'` (학습 없이 최신 번들 로드)
+
+### detail.csv 컬럼 순서(가독성)
+
+detail.csv는 저장 시 컬럼을 그룹 단위로 재정렬합니다(일반/성과 → 매수 → 매도 → 리스크/ML → 차트 보조).
+
+상세 설명(차트 정의/메시지/ML 용어): `docs/Study/SystemAnalysis/Telegram/Telegram_Charts_Analysis.md`
+
+---
+
 *다음: [09. 사용자 매뉴얼](../09_Manual/user_manual.md)*

@@ -1,5 +1,6 @@
 import math
 import random
+import re
 import pyupbit
 import sqlite3
 import operator
@@ -15,6 +16,7 @@ from optuna_dashboard import run_server
 from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time, thread_decorator
 from utility.setting import ui_num, GRAPH_PATH, DB_SETTING, DB_OPTUNA, columns_bt, columns_btf
+from backtester.detail_schema import reorder_detail_columns
 
 # [2025-12-10] 강화된 분석 모듈 임포트
 try:
@@ -32,6 +34,327 @@ try:
     ENHANCED_ANALYSIS_AVAILABLE = True
 except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
+
+
+def _convert_bool_ops_to_pandas(expr: str) -> str:
+    """
+    자동 생성 조건식(문자열)의 and/or를 pandas eval용(&/|)으로 변환합니다.
+    - generated_code['buy_conditions']는 'and (...)' 형태이므로 앞의 and도 제거합니다.
+    """
+    s = str(expr).strip() if expr is not None else ''
+    if not s:
+        return ''
+    if s.lower().startswith('and '):
+        s = s[4:].strip()
+    # 단순 치환(단어 경계) - 컬럼명이 유니코드/언더스코어 기반이라 충돌 가능성 낮음
+    s = re.sub(r'\band\b', '&', s)
+    s = re.sub(r'\bor\b', '|', s)
+    return s.strip()
+
+
+def _build_filter_mask_from_generated_code(df: pd.DataFrame, generated_code: dict):
+    """
+    generated_code['buy_conditions']를 이용해 df에서 '매수 유지(keep)' 마스크를 생성합니다.
+    Returns:
+        dict:
+          - mask: pd.Series[bool] | None
+          - exprs: list[str]
+          - error: str | None
+          - failed_expr: str | None
+    """
+    result = {'mask': None, 'exprs': [], 'error': None, 'failed_expr': None}
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        result['error'] = 'df가 비어있음'
+        return result
+    if not isinstance(generated_code, dict):
+        result['error'] = 'generated_code가 dict가 아님'
+        return result
+
+    lines = generated_code.get('buy_conditions') or []
+    if not lines:
+        result['error'] = 'buy_conditions 없음'
+        return result
+
+    mask = pd.Series(True, index=df.index)
+    safe_globals = {"__builtins__": {}}
+    # 컬럼명을 그대로 변수로 제공(유니코드 식별자 포함 가능)
+    safe_locals = {str(c): df[c] for c in df.columns}
+    safe_locals.update({"np": np, "pd": pd})
+    for raw in lines:
+        expr = _convert_bool_ops_to_pandas(raw)
+        if not expr:
+            continue
+        try:
+            cond = eval(expr, safe_globals, safe_locals)
+        except Exception as e:
+            result['error'] = str(e)
+            result['failed_expr'] = expr
+            return result
+        try:
+            cond = cond.astype(bool)
+        except Exception:
+            pass
+        mask = mask & cond
+        result['exprs'].append(expr)
+
+    result['mask'] = mask
+    return result
+
+
+def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str = None,
+                                 max_lines: int = 8, max_line_len: int = 140):
+    """
+    차트/텔레그램 표시용 전략 블록 라인 추출(간단 버전).
+    """
+    try:
+        s = str(code) if code is not None else ''
+        s = s.replace('\r\n', '\n').replace('\r', '\n').strip()
+        if not s:
+            return []
+        lines = s.splitlines()
+
+        start_idx = None
+        for i, ln in enumerate(lines):
+            if start_marker in ln:
+                start_idx = i
+                break
+
+        if start_idx is None:
+            selected = lines[:max_lines]
+        else:
+            selected = lines[start_idx:]
+            if end_marker:
+                end_idx = None
+                for j in range(1, len(selected)):
+                    if end_marker in selected[j]:
+                        end_idx = j
+                        break
+                if end_idx is not None:
+                    selected = selected[:end_idx]
+            selected = selected[:max_lines]
+
+        out = []
+        for ln in selected:
+            if '#' in ln:
+                ln = ln.split('#', 1)[0]
+            ln = ln.rstrip()
+            if not ln.strip():
+                continue
+            if len(ln) > max_line_len:
+                ln = ln[: max_line_len - 3] + '...'
+            out.append(ln)
+        return out
+    except Exception:
+        return []
+
+
+def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
+                                  save_file_name: str, backname: str, seed: int,
+                                  generated_code: dict = None,
+                                  buystg: str = None, sellstg: str = None):
+    """
+    자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
+    - {전략명}_filtered.png
+    - {전략명}_filtered_.png
+    """
+    if df_all is None or df_filtered is None:
+        return None, None
+    if len(df_all) < 2 or len(df_filtered) < 2:
+        return None, None
+    if '수익금' not in df_all.columns or '수익금' not in df_filtered.columns:
+        return None, None
+
+    # 폰트(한글) 설정
+    font_path = 'C:/Windows/Fonts/malgun.ttf'
+    try:
+        font_family = font_manager.FontProperties(fname=font_path).get_name()
+        plt.rcParams['font.family'] = font_family
+        plt.rcParams['font.sans-serif'] = [font_family]
+    except Exception:
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
+
+    total_profit = float(pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).sum())
+    filtered_profit = float(pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).sum())
+    improvement = filtered_profit - total_profit
+    excluded_ratio = (1.0 - (len(df_filtered) / max(1, len(df_all)))) * 100.0
+
+    # ===== 1) filtered.png (수익곡선 요약) =====
+    path_main = f"{GRAPH_PATH}/{save_file_name}_filtered.png"
+    fig = plt.figure(figsize=(12, 10))
+    gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 3])
+
+    ax0 = fig.add_subplot(gs[0])
+    base_cum = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).cumsum()
+    filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
+    ax0.plot(range(len(base_cum)), base_cum, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
+    ax0.plot(range(len(filt_cum)), filt_cum, linewidth=2.2, label='필터 적용', color='orange')
+    ax0.set_title('누적 수익금(원)')
+    ax0.legend(loc='best')
+    ax0.grid()
+
+    ax1 = fig.add_subplot(gs[1])
+    profits = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+    x = range(len(profits))
+    ax1.bar(x, profits.clip(lower=0), label='이익금액', color='r', alpha=0.7)
+    ax1.bar(x, profits.clip(upper=0), label='손실금액', color='b', alpha=0.7)
+    ax1.plot(range(len(filt_cum)), filt_cum, linewidth=2.0, label='누적(필터)', color='orange')
+    ax1.set_xlabel('거래 순번(필터 적용 후)')
+    ax1.set_ylabel('수익금(원)')
+    ax1.legend(loc='upper left')
+    ax1.grid()
+
+    # 조건식/필터 요약 텍스트
+    summary_lines = [
+        "=== 필터 적용 요약 ===",
+        f"- 거래수: {len(df_all):,} → {len(df_filtered):,} (제외 {excluded_ratio:.1f}%)",
+        f"- 수익금: {int(total_profit):,}원 → {int(filtered_profit):,}원 (개선 {int(improvement):+,}원)",
+    ]
+    if isinstance(generated_code, dict) and generated_code.get('summary'):
+        s = generated_code.get('summary') or {}
+        try:
+            summary_lines.append(f"- 자동 생성 필터: {int(s.get('total_filters', 0) or 0):,}개")
+            summary_lines.append(f"- 예상 총 개선(동시 적용): {int(s.get('total_improvement_combined', s.get('total_improvement_naive', 0)) or 0):,}원")
+        except Exception:
+            pass
+    if isinstance(generated_code, dict) and generated_code.get('buy_conditions'):
+        summary_lines.append("- 적용 조건(일부):")
+        for ln in (generated_code.get('buy_conditions') or [])[:5]:
+            summary_lines.append(f"  {str(ln).strip()}")
+
+    buy_block = _extract_strategy_block_lines(buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=6)
+    sell_block = _extract_strategy_block_lines(sellstg, start_marker='if 매도:', end_marker=None, max_lines=6)
+    if buy_block or sell_block:
+        summary_lines.append("- 조건식(일부):")
+        if buy_block:
+            summary_lines.append("  [매수]")
+            summary_lines.extend([f"    {ln}" for ln in buy_block])
+        if sell_block:
+            summary_lines.append("  [매도]")
+            summary_lines.extend([f"    {ln}" for ln in sell_block])
+
+    fig.suptitle(f'{backname} 필터 적용 결과 - {save_file_name}', fontsize=14, fontweight='bold')
+    fig.text(0.01, 0.01, "\n".join(summary_lines), fontsize=9, family='monospace',
+             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+    plt.tight_layout(rect=(0, 0.05, 1, 0.96))
+    plt.savefig(path_main, dpi=120, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+
+    # ===== 2) filtered_.png (분포/단계 요약) =====
+    path_sub = f"{GRAPH_PATH}/{save_file_name}_filtered_.png"
+    fig = plt.figure(figsize=(12, 10))
+    gs = gridspec.GridSpec(nrows=2, ncols=2, figure=fig, hspace=0.35, wspace=0.25)
+
+    # (1) 누적 수익률(%) - 일자 기준(가능하면 매수일자 사용)
+    ax = fig.add_subplot(gs[0, 0])
+    if '매수일자' in df_all.columns and '매수일자' in df_filtered.columns:
+        base_profit_daily = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).groupby(df_all['매수일자']).sum()
+        filt_profit_daily = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).groupby(df_filtered['매수일자']).sum()
+        dates = sorted(set(base_profit_daily.index.tolist()) | set(filt_profit_daily.index.tolist()))
+        base_profit_daily = base_profit_daily.reindex(dates, fill_value=0)
+        filt_profit_daily = filt_profit_daily.reindex(dates, fill_value=0)
+
+        base_daily = base_profit_daily.cumsum()
+        filt_daily = filt_profit_daily.cumsum()
+        x = np.arange(len(dates))
+        if seed:
+            base_daily_pct = (base_daily + float(seed)) / float(seed) * 100 - 100
+            filt_daily_pct = (filt_daily + float(seed)) / float(seed) * 100 - 100
+            ax.plot(x, base_daily_pct.values, label='기준(%)', color='gray', linewidth=1.2)
+            ax.plot(x, filt_daily_pct.values, label='필터(%)', color='orange', linewidth=2.0)
+            ax.set_ylabel('누적 수익률(%)')
+        else:
+            ax.plot(x, base_daily.values, label='기준(원)', color='gray', linewidth=1.2)
+            ax.plot(x, filt_daily.values, label='필터(원)', color='orange', linewidth=2.0)
+            ax.set_ylabel('누적 수익금(원)')
+        ax.set_title('일자별 누적 성과(필터 적용 비교)')
+        tick_step = max(1, int(len(dates) / 10))
+        ax.set_xticks(list(x[::tick_step]))
+        ax.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
+    else:
+        ax.text(0.5, 0.5, '매수일자 컬럼 없음', ha='center', va='center', transform=ax.transAxes)
+        ax.axis('off')
+    ax.legend(loc='best')
+    ax.grid()
+
+    # (2) 단계별 누적개선/제외비율
+    ax = fig.add_subplot(gs[0, 1])
+    ax2 = ax.twinx()
+    steps = (generated_code or {}).get('combine_steps') or []
+    if steps:
+        x = list(range(1, len(steps) + 1))
+        cum_imp = [float(st.get('누적개선(동시적용)', 0) or 0) for st in steps]
+        ex_pct = [float(st.get('누적제외비율', 0) or 0) for st in steps]
+        ax.plot(x, cum_imp, 'o-', color='green', linewidth=2.0, markersize=4, label='누적개선(원)')
+        ax2.plot(x, ex_pct, 's--', color='red', linewidth=1.5, markersize=4, label='누적제외(%)')
+        ax.set_title('필터 조합 적용 단계별 누적개선/제외비율')
+        ax.set_xlabel('단계')
+        ax.set_ylabel('누적개선(원)', color='green')
+        ax2.set_ylabel('누적제외(%)', color='red')
+        ax.grid()
+    else:
+        ax.text(0.5, 0.5, 'combine_steps 없음', ha='center', va='center', transform=ax.transAxes)
+        ax.axis('off')
+
+    # (3) 시간대별 수익금
+    ax = fig.add_subplot(gs[1, 0])
+    if '매수시' in df_all.columns and '매수시' in df_filtered.columns:
+        base_by_hour = df_all.groupby('매수시')['수익금'].sum()
+        filt_by_hour = df_filtered.groupby('매수시')['수익금'].sum()
+        hours = sorted(set(base_by_hour.index.tolist()) | set(filt_by_hour.index.tolist()))
+        base_vals = [float(base_by_hour.get(h, 0) or 0) for h in hours]
+        filt_vals = [float(filt_by_hour.get(h, 0) or 0) for h in hours]
+        x = np.arange(len(hours))
+        ax.bar(x - 0.2, base_vals, width=0.4, label='기준', color='gray', alpha=0.6)
+        ax.bar(x + 0.2, filt_vals, width=0.4, label='필터', color='orange', alpha=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels([str(h) for h in hours], rotation=0, fontsize=8)
+        ax.set_title('시간대별 수익금(매수시 기준)')
+        ax.axhline(y=0, color='black', linewidth=0.8)
+        ax.legend(loc='best')
+        ax.grid(axis='y')
+    else:
+        ax.text(0.5, 0.5, '매수시 컬럼 없음', ha='center', va='center', transform=ax.transAxes)
+        ax.axis('off')
+
+    # (4) 요일별 수익금
+    ax = fig.add_subplot(gs[1, 1])
+    if '매수일자' in df_all.columns and '매수일자' in df_filtered.columns:
+        base_dates = pd.to_datetime(df_all['매수일자'].astype(str), format='%Y%m%d', errors='coerce')
+        filt_dates = pd.to_datetime(df_filtered['매수일자'].astype(str), format='%Y%m%d', errors='coerce')
+
+        base_tmp = df_all.copy()
+        base_tmp['_wd'] = base_dates.dt.weekday
+        filt_tmp = df_filtered.copy()
+        filt_tmp['_wd'] = filt_dates.dt.weekday
+
+        base_wd = pd.to_numeric(base_tmp['수익금'], errors='coerce').fillna(0).groupby(base_tmp['_wd']).sum()
+        filt_wd = pd.to_numeric(filt_tmp['수익금'], errors='coerce').fillna(0).groupby(filt_tmp['_wd']).sum()
+        wds = sorted(set(base_wd.index.tolist()) | set(filt_wd.index.tolist()))
+        labels_map = ['월', '화', '수', '목', '금', '토', '일']
+        labels = [labels_map[int(w)] if (w is not None and 0 <= int(w) <= 6) else str(w) for w in wds]
+        x = np.arange(len(wds))
+        base_vals = [float(base_wd.get(w, 0) or 0) for w in wds]
+        filt_vals = [float(filt_wd.get(w, 0) or 0) for w in wds]
+        ax.bar(x - 0.2, base_vals, width=0.4, label='기준', color='gray', alpha=0.6)
+        ax.bar(x + 0.2, filt_vals, width=0.4, label='필터', color='orange', alpha=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels)
+        ax.set_title('요일별 수익금(매수일자 기준)')
+        ax.axhline(y=0, color='black', linewidth=0.8)
+        ax.legend(loc='best')
+        ax.grid(axis='y')
+    else:
+        ax.text(0.5, 0.5, '매수일자 컬럼 없음', ha='center', va='center', transform=ax.transAxes)
+        ax.axis('off')
+
+    fig.suptitle(f'{backname} 필터 적용 분포/단계 요약 - {save_file_name}', fontsize=14, fontweight='bold')
+    plt.savefig(path_sub, dpi=120, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+
+    return path_main, path_sub
 
 
 @thread_decorator
@@ -104,6 +427,12 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             lines_local: list[str] = []
             if df_report is None:
                 return lines_local
+
+            # detail.csv 저장과 동일한 컬럼 순서를 사용(가독성)
+            try:
+                df_report = reorder_detail_columns(df_report)
+            except Exception:
+                pass
 
             # 파생 지표(분석 모듈 계산) 중심으로 공식 정의.
             # 그 외 컬럼은 "엔진 수집값"으로 표시하되, 가능한 경우 기본 정의를 제공합니다.
@@ -1597,6 +1926,55 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             if teleQ is not None and enhanced_result and enhanced_result.get('recommendations'):
                 for rec in enhanced_result['recommendations'][:5]:
                     teleQ.put(rec)
+
+            # [2025-12-19] 자동 생성 필터 조합 적용 미리보기 차트(2개) 생성/전송
+            try:
+                if teleQ is not None and enhanced_result:
+                    gen = enhanced_result.get('generated_code')
+                    df_enh = enhanced_result.get('enhanced_df')
+                    if isinstance(gen, dict) and isinstance(df_enh, pd.DataFrame) and not df_enh.empty:
+                        mask_info = _build_filter_mask_from_generated_code(df_enh, gen)
+                        if mask_info and mask_info.get('mask') is not None:
+                            df_filt = df_enh[mask_info['mask']].copy()
+
+                            try:
+                                total_profit = int(pd.to_numeric(df_enh['수익금'], errors='coerce').fillna(0).sum())
+                                filt_profit = int(pd.to_numeric(df_filt['수익금'], errors='coerce').fillna(0).sum())
+                                ex_pct = (1.0 - (len(df_filt) / max(1, len(df_enh)))) * 100.0
+                                teleQ.put(
+                                    "필터 적용 미리보기:\n"
+                                    f"- 거래수: {len(df_enh):,} → {len(df_filt):,} (제외 {ex_pct:.1f}%)\n"
+                                    f"- 수익금: {total_profit:,}원 → {filt_profit:,}원 ({(filt_profit-total_profit):+,}원)\n"
+                                    "- 이미지: *_filtered_.png / *_filtered.png"
+                                )
+                            except Exception:
+                                pass
+
+                            p_main, p_sub = PltFilterAppliedPreviewCharts(
+                                df_enh,
+                                df_filt,
+                                save_file_name=save_file_name,
+                                backname=backname,
+                                seed=seed,
+                                generated_code=gen,
+                                buystg=buystg,
+                                sellstg=sellstg
+                            )
+                            if p_sub:
+                                teleQ.put(p_sub)
+                            if p_main:
+                                teleQ.put(p_main)
+                        else:
+                            err = mask_info.get('error') if isinstance(mask_info, dict) else 'N/A'
+                            failed_expr = mask_info.get('failed_expr') if isinstance(mask_info, dict) else None
+                            msg = "필터 적용 미리보기: 마스크 생성 실패"
+                            if err:
+                                msg += f"\n- 오류: {err}"
+                            if failed_expr:
+                                msg += f"\n- 실패 조건식: {failed_expr}"
+                            teleQ.put(msg)
+            except Exception:
+                print_exc()
         except Exception as e:
             enhanced_error = e
             print_exc()
@@ -2330,6 +2708,7 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, wri
     try:
         # 파생 지표 계산
         df_analysis = CalculateDerivedMetrics(df_tsg)
+        df_analysis = reorder_detail_columns(df_analysis)
 
         detail_path, summary_path, filter_path = None, None, None
 

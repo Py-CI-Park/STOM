@@ -863,7 +863,7 @@ backtester/
 
 ### 새로운 출력 파일
 
-백테스팅 완료 시 다음 파일들이 `_graph/` 폴더에 자동 생성됩니다:
+백테스팅 완료 시 다음 파일들이 `backtester/graph/` 폴더(`GRAPH_PATH`)에 자동 생성됩니다:
 
 | 파일명 패턴 | 내용 |
 |-------------|------|
@@ -872,8 +872,16 @@ backtester/
 | `{전략명}_optimal_thresholds.csv` | 동적 최적 임계값 탐색 결과 |
 | `{전략명}_filter_combinations.csv` | 필터 조합 시너지 분석 |
 | `{전략명}_filter_stability.csv` | 기간별 필터 안정성 검증 |
-| `{전략명}_enhanced.png` | 필터 기능 분석 차트 (16개) |
+| `{전략명}_enhanced.png` | 필터 기능 분석 차트 (18개) |
+| `{전략명}_filtered_.png` | (NEW) 자동 생성 필터 적용 미리보기(분포/단계 요약) |
+| `{전략명}_filtered.png` | (NEW) 자동 생성 필터 적용 미리보기(수익곡선 요약) |
 | `{전략명}_report.txt` | 실행 산출물 리포트(파일/시간/조건/요약) |
+
+### ML 모델 저장/재현 (v2.3+)
+
+- ML 번들은 `backtester/models/strategies/{strategy_key}/`에 **실행별(run)로 누적 저장**되며, `latest_ml_bundle.joblib`로 **재현(load_latest)** 가능합니다.
+- 텔레그램 메시지에 AUC/F1/피처수/저장경로 및 매수·매도 조건식(요약)이 함께 전송됩니다.
+- 상세 문서: `docs/Study/SystemAnalysis/Telegram/Telegram_Charts_Analysis.md`
 
 ### 새로운 파생 지표
 
