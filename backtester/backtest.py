@@ -29,6 +29,7 @@ class Total:
 
         self.back_count   = None
         self.buystg_name  = None
+        self.sellstg_name = None
         self.buystg       = None
         self.sellstg      = None
         self.dict_cn      = None
@@ -93,16 +94,17 @@ class Total:
                 self.starttime   = data[5]
                 self.endtime     = data[6]
                 self.buystg_name = data[7]
-                self.buystg      = data[8]
-                self.sellstg     = data[9]
-                self.dict_cn     = data[10]
-                self.back_count  = data[11]
-                self.day_count   = data[12]
-                self.blacklist   = data[13]
-                self.schedul     = data[14]
-                self.df_kp       = data[15]
-                self.df_kd       = data[16]
-                self.back_club   = data[17]
+                self.sellstg_name = data[8]
+                self.buystg      = data[9]
+                self.sellstg     = data[10]
+                self.dict_cn     = data[11]
+                self.back_count  = data[12]
+                self.day_count   = data[13]
+                self.blacklist   = data[14]
+                self.schedul     = data[15]
+                self.df_kp       = data[16]
+                self.df_kd       = data[17]
+                self.back_club   = data[18]
 
             elif data == '백테중지':
                 self.mq.put('백테중지')
@@ -210,12 +212,14 @@ class Total:
 
             PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
                     self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False,
-                    buy_vars=buy_vars, sell_vars=sell_vars, buystg=self.buystg, sellstg=self.sellstg)
+                    buy_vars=buy_vars, sell_vars=sell_vars, buystg=self.buystg, sellstg=self.sellstg,
+                    buystg_name=self.buystg_name, sellstg_name=getattr(self, 'sellstg_name', None))
         else:
             if not self.dict_set['그래프저장하지않기']:
                 PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
                         self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'],
-                        buystg=self.buystg, sellstg=self.sellstg)
+                        buystg=self.buystg, sellstg=self.sellstg,
+                        buystg_name=self.buystg_name, sellstg_name=getattr(self, 'sellstg_name', None))
 
         self.mq.put(f'{self.backname} 완료')
 
@@ -298,8 +302,8 @@ class BackTest:
             args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.lq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)
         ).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
-        self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
-                     dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
+        self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, sellstg_name,
+                     buystg, sellstg, dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
 
         time.sleep(1)
         data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg)

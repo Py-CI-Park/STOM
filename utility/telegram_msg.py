@@ -1,3 +1,4 @@
+import os
 import telegram
 import pandas as pd
 import time
@@ -27,10 +28,10 @@ class TelegramMsg:
         while True:
             data = self.teleQ.get()
             if type(data) == str:
-                if '.png' not in data:
-                    self.SendMsg(data)
-                else:
+                if '.png' in data and os.path.exists(data):
                     self.SendPhoto(data)
+                else:
+                    self.SendMsg(data)
             elif type(data) == pd.DataFrame:
                 self.UpdateDataframe(data)
             elif data[0] == '설정변경':

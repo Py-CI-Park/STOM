@@ -3826,7 +3826,9 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
 # 10. 전체 강화 분석 실행
 # ============================================================================
 
-def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None, ml_train_mode: str = 'train'):
+def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
+                        buystg_name=None, sellstg_name=None, backname=None,
+                        ml_train_mode: str = 'train'):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -4048,9 +4050,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 except Exception:
                     pass
 
-            # 매수/매도 조건식(요약) (공부/검증 목적)
+            # 매수/매도 조건식(이름만)
             try:
-                if buystg or sellstg:
+                if buystg_name or sellstg_name or buystg or sellstg:
                     sk = None
                     try:
                         if isinstance(ml_prediction_stats, dict):
@@ -4061,26 +4063,18 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         sk = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
 
                     sk_short = (str(sk)[:12] + '...') if sk else 'N/A'
+                    is_opt = bool(backname and ('최적화' in str(backname)))
+                    buy_label = "매수 최적화 조건식" if is_opt else "매수 조건식"
+                    sell_label = "매도 최적화 조건식" if is_opt else "매도 조건식"
+
+                    buy_name = buystg_name if buystg_name else 'N/A'
+                    sell_name = sellstg_name if sellstg_name else 'N/A'
+
                     lines = []
-                    lines.append("매수/매도 조건식(요약):")
+                    lines.append("매수/매도 조건식(이름):")
                     lines.append(f"- 전략키: {sk_short}")
-
-                    buy_block = _extract_strategy_block_lines(
-                        buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=10
-                    )
-                    if buy_block:
-                        lines.append("- 매수:")
-                        for ln in buy_block:
-                            lines.append(f"  {ln}")
-
-                    sell_block = _extract_strategy_block_lines(
-                        sellstg, start_marker='if 매도:', end_marker=None, max_lines=10
-                    )
-                    if sell_block:
-                        lines.append("- 매도:")
-                        for ln in sell_block:
-                            lines.append(f"  {ln}")
-
+                    lines.append(f"- {buy_label}: {buy_name}")
+                    lines.append(f"- {sell_label}: {sell_name}")
                     lines.append("- 전체 원문/산출물 목록은 report.txt 및 models/strategy_code.txt 참고")
                     _safe_put("\n".join(lines))
             except Exception:

@@ -344,7 +344,8 @@ class Total:
         self.mq.put('백테스트 완료')
         PltShow('최적화', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
                 self.df_kp, self.df_kd, self.list_days, self.backname, back_text, label_text, save_file_name, self.schedul, False,
-                buystg=self.buystg, sellstg=self.sellstg)
+                buystg=self.buystg, sellstg=self.sellstg,
+                buystg_name=self.buystg_name, sellstg_name=getattr(self, 'sellstg_name', None))
         self.mq.put('백테스트 완료')
 
 

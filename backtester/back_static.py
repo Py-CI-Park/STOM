@@ -186,21 +186,58 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 3])
 
     ax0 = fig.add_subplot(gs[0])
-    base_cum = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).cumsum()
-    filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
-    ax0.plot(range(len(base_cum)), base_cum, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
-    ax0.plot(range(len(filt_cum)), filt_cum, linewidth=2.2, label='필터 적용', color='orange')
-    ax0.set_title('누적 수익금(원)')
+    use_dates = False
+    dates = None
+    base_cum = None
+    filt_cum = None
+    try:
+        if '매수일자' in df_all.columns and '매수일자' in df_filtered.columns:
+            base_profit_daily = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).groupby(df_all['매수일자']).sum()
+            filt_profit_daily = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).groupby(df_filtered['매수일자']).sum()
+            dates = sorted(set(base_profit_daily.index.tolist()) | set(filt_profit_daily.index.tolist()))
+            base_profit_daily = base_profit_daily.reindex(dates, fill_value=0)
+            filt_profit_daily = filt_profit_daily.reindex(dates, fill_value=0)
+            base_cum = base_profit_daily.cumsum()
+            filt_cum = filt_profit_daily.cumsum()
+            use_dates = True
+    except Exception:
+        use_dates = False
+
+    if not use_dates:
+        base_cum = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).cumsum()
+        filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
+        ax0.plot(range(len(base_cum)), base_cum, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
+        ax0.plot(range(len(filt_cum)), filt_cum, linewidth=2.2, label='필터 적용', color='orange')
+        ax0.set_title('누적 수익금(원)')
+    else:
+        x = np.arange(len(dates))
+        ax0.plot(x, base_cum.values, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
+        ax0.plot(x, filt_cum.values, linewidth=2.2, label='필터 적용', color='orange')
+        ax0.set_title('누적 수익금(원) - 일자 기준')
+        tick_step = max(1, int(len(dates) / 10))
+        ax0.set_xticks(list(x[::tick_step]))
+        ax0.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
     ax0.legend(loc='best')
     ax0.grid()
 
     ax1 = fig.add_subplot(gs[1])
-    profits = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
-    x = range(len(profits))
-    ax1.bar(x, profits.clip(lower=0), label='이익금액', color='r', alpha=0.7)
-    ax1.bar(x, profits.clip(upper=0), label='손실금액', color='b', alpha=0.7)
-    ax1.plot(range(len(filt_cum)), filt_cum, linewidth=2.0, label='누적(필터)', color='orange')
-    ax1.set_xlabel('거래 순번(필터 적용 후)')
+    if not use_dates:
+        profits = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+        x = range(len(profits))
+        ax1.bar(x, profits.clip(lower=0), label='이익금액', color='r', alpha=0.7)
+        ax1.bar(x, profits.clip(upper=0), label='손실금액', color='b', alpha=0.7)
+        ax1.plot(range(len(filt_cum)), filt_cum, linewidth=2.0, label='누적(필터)', color='orange')
+        ax1.set_xlabel('거래 순번(필터 적용 후)')
+    else:
+        profits = filt_cum.diff().fillna(filt_cum.iloc[0])
+        x = np.arange(len(dates))
+        ax1.bar(x, profits.clip(lower=0).values, label='이익금액', color='r', alpha=0.7)
+        ax1.bar(x, profits.clip(upper=0).values, label='손실금액', color='b', alpha=0.7)
+        ax1.plot(x, filt_cum.values, linewidth=2.0, label='누적(필터)', color='orange')
+        ax1.set_xlabel('매수일자')
+        tick_step = max(1, int(len(dates) / 10))
+        ax1.set_xticks(list(x[::tick_step]))
+        ax1.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
     ax1.set_ylabel('수익금(원)')
     ax1.legend(loc='upper left')
     ax1.grid()
@@ -270,6 +307,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
             ax.plot(x, filt_daily.values, label='필터(원)', color='orange', linewidth=2.0)
             ax.set_ylabel('누적 수익금(원)')
         ax.set_title('일자별 누적 성과(필터 적용 비교)')
+        ax.set_xlabel('매수일자')
         tick_step = max(1, int(len(dates) / 10))
         ax.set_xticks(list(x[::tick_step]))
         ax.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
@@ -1919,7 +1957,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 
 def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
             backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None,
-            buystg=None, sellstg=None, ml_train_mode='train'):
+            buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train'):
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
     df_tsg['수익금합계120'] = df_tsg['수익금합계'].rolling(window=120).mean().round(2)
@@ -2213,6 +2251,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 teleQ,
                 buystg=buystg,
                 sellstg=sellstg,
+                buystg_name=buystg_name,
+                sellstg_name=sellstg_name,
+                backname=backname,
                 ml_train_mode=ml_train_mode,
             )
             if teleQ is not None and enhanced_result and enhanced_result.get('recommendations'):
@@ -2237,7 +2278,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                     "필터 적용 미리보기:\n"
                                     f"- 거래수: {len(df_enh):,} → {len(df_filt):,} (제외 {ex_pct:.1f}%)\n"
                                     f"- 수익금: {total_profit:,}원 → {filt_profit:,}원 ({(filt_profit-total_profit):+,}원)\n"
-                                    "- 이미지: *_filtered_.png / *_filtered.png"
+                                    "- 이미지: 필터 적용 미리보기 2종 전송"
                                 )
                             except Exception:
                                 pass
@@ -3095,10 +3136,6 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, wri
                 df_filter = pd.DataFrame(filter_data)
                 df_filter = df_filter.sort_values('수익개선금액', ascending=False)
                 df_filter.to_csv(filter_path, encoding='utf-8-sig', index=False)
-
-        # 텔레그램 알림
-        if teleQ is not None and (write_detail or write_summary or write_filter):
-            teleQ.put(f"CSV 파일 생성 완료: {save_file_name}")
 
         return detail_path, summary_path, filter_path
 
