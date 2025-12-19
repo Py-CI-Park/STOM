@@ -2429,10 +2429,35 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     # DataFrame에 추가 (원본 인덱스 유지)
     df['손실확률_ML'] = np.nan
     df['위험도_ML'] = np.nan
-    
-    # df_analysis와 동일한 인덱스로 할당
-    df.loc[df_analysis.index, '손실확률_ML'] = loss_prob_all
-    df.loc[df_analysis.index, '위험도_ML'] = (loss_prob_all * 100).clip(0, 100)
+
+    # df_analysis와 동일한 인덱스로 할당 (안전한 방식)
+    # - 대용량 데이터에서 인덱스 중복/불일치 문제 방지를 위해 Series.update() 사용
+    try:
+        # 방법 1: Series를 생성하여 update로 안전하게 할당
+        loss_prob_series = pd.Series(loss_prob_all, index=df_analysis.index)
+        risk_prob_series = pd.Series((loss_prob_all * 100).clip(0, 100), index=df_analysis.index)
+
+        # df의 해당 컬럼을 Series로 변환 후 update
+        df['손실확률_ML'] = df['손실확률_ML'].astype(float)
+        df['위험도_ML'] = df['위험도_ML'].astype(float)
+
+        # update는 인덱스가 일치하는 위치에만 값을 할당
+        df['손실확률_ML'].update(loss_prob_series)
+        df['위험도_ML'].update(risk_prob_series)
+    except Exception:
+        # 방법 2: 폴백 - iloc 기반 위치 매핑 (인덱스 무관)
+        try:
+            # df_analysis의 원본 위치를 추적하여 할당
+            analysis_idx_set = set(df_analysis.index)
+            idx_to_pos = {idx: i for i, idx in enumerate(df_analysis.index)}
+
+            for df_idx in df.index:
+                if df_idx in idx_to_pos:
+                    pos = idx_to_pos[df_idx]
+                    df.at[df_idx, '손실확률_ML'] = loss_prob_all[pos]
+                    df.at[df_idx, '위험도_ML'] = min(max(loss_prob_all[pos] * 100, 0), 100)
+        except Exception:
+            pass  # 최종 폴백: NaN 유지 후 중앙값으로 채움
     
     # NaN 채우기 (중앙값)
     median_prob = float(np.nanmedian(loss_prob_all))
