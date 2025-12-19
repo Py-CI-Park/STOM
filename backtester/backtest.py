@@ -209,11 +209,13 @@ class Total:
                     sell_vars = f'{sell_vars}, {text}'
 
             PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
-                    self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False, buy_vars=buy_vars, sell_vars=sell_vars)
+                    self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False,
+                    buy_vars=buy_vars, sell_vars=sell_vars, buystg=self.buystg, sellstg=self.sellstg)
         else:
             if not self.dict_set['그래프저장하지않기']:
                 PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
-                        self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'])
+                        self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'],
+                        buystg=self.buystg, sellstg=self.sellstg)
 
         self.mq.put(f'{self.backname} 완료')
 

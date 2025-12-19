@@ -22,12 +22,340 @@ Date: 2025-12-10, Updated: 2025-12-13
 
 import numpy as np
 import pandas as pd
+import hashlib
+import json
+import os
+import shutil
+from datetime import datetime
+from pathlib import Path
 from scipy import stats
 from itertools import combinations
 from traceback import print_exc
 from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
 from utility.setting import GRAPH_PATH
+
+
+# ============================================================================
+# ML 모델 저장/로드 유틸
+# ============================================================================
+
+MODEL_BASE_DIR = (Path(__file__).resolve().parent / 'models')
+
+
+def _normalize_text_for_hash(text) -> str:
+    if text is None:
+        return ''
+    s = str(text)
+    s = s.replace('\r\n', '\n').replace('\r', '\n')
+    return s.strip()
+
+
+def ComputeStrategyKey(buystg: str = None, sellstg: str = None) -> str:
+    """
+    매수/매도 전략 코드(전체 텍스트)를 바탕으로 전략 식별키를 생성합니다.
+    - 가장 정확한 식별을 위해 sha256(매수코드 + 매도코드) 기반으로 생성
+    """
+    buy = _normalize_text_for_hash(buystg)
+    sell = _normalize_text_for_hash(sellstg)
+    payload = f"BUY:\n{buy}\n\nSELL:\n{sell}".encode('utf-8')
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _safe_filename(name: str, max_len: int = 90) -> str:
+    """
+    Windows 경로 길이 이슈를 줄이기 위한 안전한 파일명 생성.
+    - 너무 길면 앞부분 + 해시로 축약
+    """
+    s = str(name) if name is not None else 'run'
+    s = s.replace('\\', '_').replace('/', '_').replace(':', '_').replace('*', '_').replace('?', '_').replace('"', '_') \
+         .replace('<', '_').replace('>', '_').replace('|', '_')
+    s = s.strip()
+    if len(s) <= max_len:
+        return s
+    h = hashlib.sha1(s.encode('utf-8')).hexdigest()[:10]
+    return f"{s[:max_len - 11]}_{h}"
+
+
+def _write_json(path: Path, data: dict):
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8-sig')
+    except Exception:
+        pass
+
+
+def _append_jsonl(path: Path, data: dict):
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open('a', encoding='utf-8-sig') as f:
+            f.write(json.dumps(data, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def _save_ml_bundle(bundle: dict, strategy_key: str, save_file_name: str):
+    """
+    ML 번들을 실행별로 저장하고(누적), 전략 폴더의 latest도 갱신합니다.
+    Returns:
+        dict: 저장 결과(경로/오류)
+    """
+    result = {
+        'saved': False,
+        'strategy_key': strategy_key,
+        'run_bundle_path': None,
+        'latest_bundle_path': None,
+        'run_meta_path': None,
+        'latest_meta_path': None,
+        'strategy_dir': None,
+        'error': None,
+    }
+    if not strategy_key or not save_file_name:
+        result['error'] = 'strategy_key/save_file_name 누락'
+        return result
+
+    try:
+        from joblib import dump as joblib_dump
+    except Exception as e:
+        result['error'] = f'joblib import 실패: {e}'
+        return result
+
+    try:
+        ts = datetime.now().strftime('%Y%m%d%H%M%S')
+        safe_save = _safe_filename(save_file_name, max_len=80)
+        run_id = hashlib.sha1(str(save_file_name).encode('utf-8')).hexdigest()[:10]
+
+        strategy_dir = MODEL_BASE_DIR / 'strategies' / str(strategy_key)
+        runs_dir = strategy_dir / 'runs'
+        runs_dir.mkdir(parents=True, exist_ok=True)
+
+        run_bundle_path = runs_dir / f"{safe_save}_{run_id}_{ts}_ml_bundle.joblib"
+        run_meta_path = runs_dir / f"{safe_save}_{run_id}_{ts}_ml_bundle_meta.json"
+
+        # 저장 (압축 레벨은 속도/용량 균형)
+        joblib_dump(bundle, run_bundle_path, compress=3)
+
+        meta = {
+            'bundle_version': bundle.get('bundle_version'),
+            'created_at': bundle.get('created_at'),
+            'save_file_name': bundle.get('save_file_name'),
+            'strategy_key': bundle.get('strategy_key'),
+            'feature_schema_hash': bundle.get('feature_schema_hash'),
+            'n_features': len(bundle.get('features_loss') or []),
+            'model_type': (bundle.get('train_stats') or {}).get('model_type'),
+            'train_mode': bundle.get('train_mode'),
+            'paths': {
+                'run_bundle': str(run_bundle_path),
+            },
+        }
+        _write_json(run_meta_path, meta)
+
+        # latest 갱신
+        latest_bundle_path = strategy_dir / 'latest_ml_bundle.joblib'
+        latest_meta_path = strategy_dir / 'latest_ml_bundle_meta.json'
+        try:
+            shutil.copy2(run_bundle_path, latest_bundle_path)
+            shutil.copy2(run_meta_path, latest_meta_path)
+        except Exception:
+            # 복사 실패하더라도 run 저장은 성공으로 처리
+            pass
+
+        # 전략 코드(해시 대상) 저장 (있으면 유지)
+        try:
+            strategy_code_path = strategy_dir / 'strategy_code.txt'
+            if not strategy_code_path.exists():
+                buystg = bundle.get('strategy', {}).get('buystg', '')
+                sellstg = bundle.get('strategy', {}).get('sellstg', '')
+                strategy_code_path.write_text(
+                    "=== BUY STRATEGY ===\n"
+                    + _normalize_text_for_hash(buystg)
+                    + "\n\n=== SELL STRATEGY ===\n"
+                    + _normalize_text_for_hash(sellstg)
+                    + "\n",
+                    encoding='utf-8-sig'
+                )
+        except Exception:
+            pass
+
+        # 인덱스(누적 로그)
+        _append_jsonl(strategy_dir / 'runs_index.jsonl', meta)
+
+        result.update({
+            'saved': True,
+            'run_bundle_path': str(run_bundle_path),
+            'latest_bundle_path': str(latest_bundle_path) if latest_bundle_path.exists() else None,
+            'run_meta_path': str(run_meta_path),
+            'latest_meta_path': str(latest_meta_path) if latest_meta_path.exists() else None,
+            'strategy_dir': str(strategy_dir),
+        })
+        return result
+    except Exception as e:
+        result['error'] = str(e)
+        return result
+
+
+def _load_ml_bundle(path: Path):
+    try:
+        from joblib import load as joblib_load
+        return joblib_load(path)
+    except Exception:
+        return None
+
+
+def _feature_schema_hash(features) -> str:
+    try:
+        cols = [str(c) for c in (features or [])]
+        cols_sorted = sorted(set(cols))
+        payload = ("\n".join(cols_sorted)).encode('utf-8')
+        return hashlib.sha256(payload).hexdigest()
+    except Exception:
+        return None
+
+
+def _prepare_feature_matrix(df: pd.DataFrame, feature_list):
+    """
+    feature_list 순서대로 X를 생성합니다.
+    - 컬럼이 없으면 생성(NaN) 후 0으로 채움
+    - NaN은 각 컬럼 median으로 채움(모두 NaN이면 0)
+    """
+    df_local = df.copy()
+    features = [str(c) for c in (feature_list or [])]
+    for col in features:
+        if col not in df_local.columns:
+            df_local[col] = np.nan
+        df_local[col] = pd.to_numeric(df_local[col], errors='coerce')
+        med = float(df_local[col].median()) if df_local[col].notna().any() else 0.0
+        df_local[col] = df_local[col].fillna(med)
+    X = df_local[features].to_numpy(dtype=np.float64)
+    return X
+
+
+def _apply_ml_bundle(df: pd.DataFrame, bundle: dict):
+    """
+    저장된 ML 번들을 이용해 df에 _ML 컬럼을 채웁니다.
+    Returns:
+        (df, info_dict)
+    """
+    info = {
+        'used_saved_model': False,
+        'missing_features': [],
+        'strategy_key': None,
+        'feature_schema_hash': None,
+    }
+    if not isinstance(bundle, dict):
+        return df, info
+
+    try:
+        features = bundle.get('features_loss') or []
+        scaler = bundle.get('scaler_loss')
+        rf_model = bundle.get('rf_model')
+        gb_model = bundle.get('gb_model')
+
+        info['strategy_key'] = bundle.get('strategy_key')
+        info['feature_schema_hash'] = bundle.get('feature_schema_hash')
+
+        # 결측 피처 체크
+        missing = [c for c in features if c not in df.columns]
+        info['missing_features'] = missing
+
+        X_all = _prepare_feature_matrix(df, features)
+        X_all_scaled = scaler.transform(X_all) if scaler is not None else X_all
+
+        rf_proba_all = rf_model.predict_proba(X_all_scaled)[:, 1] if rf_model is not None else None
+        gb_proba_all = gb_model.predict_proba(X_all_scaled)[:, 1] if gb_model is not None else None
+
+        if rf_proba_all is not None and gb_proba_all is not None:
+            loss_prob_all = (rf_proba_all + gb_proba_all) / 2
+        elif rf_proba_all is not None:
+            loss_prob_all = rf_proba_all
+        elif gb_proba_all is not None:
+            loss_prob_all = gb_proba_all
+        else:
+            loss_prob_all = np.full(len(df), 0.5, dtype=np.float64)
+
+        df = df.copy()
+        df['손실확률_ML'] = loss_prob_all
+        df['위험도_ML'] = (loss_prob_all * 100).clip(0, 100)
+
+        # (옵션) 매수매도위험도 회귀 예측
+        rr = bundle.get('risk_regression') if isinstance(bundle.get('risk_regression'), dict) else None
+        if rr and rr.get('model') is not None and rr.get('scaler') is not None:
+            try:
+                Xr_all = _prepare_feature_matrix(df, rr.get('features') or features)
+                Xr_all_s = rr['scaler'].transform(Xr_all)
+                pred_all = rr['model'].predict(Xr_all_s)
+                df['예측매수매도위험도점수_ML'] = np.clip(pred_all, 0, 100)
+            except Exception:
+                df['예측매수매도위험도점수_ML'] = np.nan
+        else:
+            if '예측매수매도위험도점수_ML' not in df.columns:
+                df['예측매수매도위험도점수_ML'] = np.nan
+
+        info['used_saved_model'] = True
+        return df, info
+    except Exception:
+        return df, info
+
+
+def _extract_tree_rules(tree_model, scaler, feature_names, max_depth: int = 2):
+    """
+    설명용(규칙화) 간단 트리 규칙 추출.
+    - scaler가 있으면 임계값을 원 스케일로 복원합니다.
+    """
+    rules = []
+    try:
+        tree = tree_model.tree_
+    except Exception:
+        return rules
+
+    def _inv_scale(feature_idx: int, thr: float) -> float:
+        try:
+            if scaler is None:
+                return float(thr)
+            return float(thr) * float(scaler.scale_[feature_idx]) + float(scaler.mean_[feature_idx])
+        except Exception:
+            return float(thr)
+
+    def _walk(node_id: int, depth: int):
+        if depth > max_depth:
+            return
+        # 내부 노드인지 확인
+        if tree.feature[node_id] == -2:
+            return
+        feature_idx = int(tree.feature[node_id])
+        feature_name = feature_names[feature_idx] if feature_idx < len(feature_names) else f"f{feature_idx}"
+        thr_scaled = float(tree.threshold[node_id])
+        thr = _inv_scale(feature_idx, thr_scaled)
+        left = int(tree.children_left[node_id])
+        right = int(tree.children_right[node_id])
+        try:
+            left_n = int(tree.n_node_samples[left])
+            right_n = int(tree.n_node_samples[right])
+            left_val = tree.value[left][0]
+            right_val = tree.value[right][0]
+            left_loss_rate = float(left_val[1] / (left_val[0] + left_val[1]) * 100) if (left_val[0] + left_val[1]) > 0 else 0.0
+            right_loss_rate = float(right_val[1] / (right_val[0] + right_val[1]) * 100) if (right_val[0] + right_val[1]) > 0 else 0.0
+        except Exception:
+            left_n = right_n = 0
+            left_loss_rate = right_loss_rate = 0.0
+
+        rules.append({
+            'depth': depth,
+            'feature': feature_name,
+            'threshold': round(thr, 6),
+            'rule_left': f"{feature_name} < {thr:.6g}",
+            'rule_right': f"{feature_name} >= {thr:.6g}",
+            'left_samples': left_n,
+            'right_samples': right_n,
+            'left_loss_rate': round(left_loss_rate, 2),
+            'right_loss_rate': round(right_loss_rate, 2),
+        })
+
+        _walk(left, depth + 1)
+        _walk(right, depth + 1)
+
+    _walk(0, 0)
+    return rules[:15]
 
 
 # ============================================================================
@@ -1843,7 +2171,7 @@ def AnalyzeFeatureImportance(df_tsg):
 # 6.5. ML 기반 매수매도 위험도 예측 (NEW)
 # ============================================================================
 
-def PredictRiskWithML(df_tsg):
+def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, strategy_key=None, train_mode: str = 'train'):
     """
     머신러닝을 사용하여 매수 시점의 위험도를 예측합니다.
     
@@ -1851,6 +2179,10 @@ def PredictRiskWithML(df_tsg):
     1. 손실 확률(loss_prob_ml) 예측
     2. ML 기반 위험도 점수(risk_score_ml) 계산
     3. 실제 매수매도위험도점수와 비교
+
+    추가 기능:
+    - (저장) 실행별로 학습된 모델 번들(joblib)을 저장하고, 전략(조건식) 폴더의 latest도 갱신합니다.
+    - (로드) train_mode를 'load_latest'로 주면, 동일 전략키의 latest 모델로 예측값을 재현할 수 있습니다.
     
     Returns:
         tuple: (updated_df, prediction_stats)
@@ -1861,6 +2193,7 @@ def PredictRiskWithML(df_tsg):
         from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.neural_network import MLPRegressor
+        from sklearn.tree import DecisionTreeClassifier
         from sklearn.preprocessing import StandardScaler
         from sklearn.model_selection import train_test_split
         from sklearn.metrics import f1_score, balanced_accuracy_score, roc_auc_score
@@ -1869,6 +2202,49 @@ def PredictRiskWithML(df_tsg):
         return df_tsg, None
     
     df = df_tsg.copy()
+
+    # 전략키(조건식 식별) 계산
+    strategy_key_local = strategy_key
+    if not strategy_key_local and (buystg is not None or sellstg is not None):
+        try:
+            strategy_key_local = ComputeStrategyKey(buystg=buystg, sellstg=sellstg)
+        except Exception:
+            strategy_key_local = None
+
+    # 모델 로드(옵션)
+    if train_mode in ('load_latest', 'load_only') and strategy_key_local:
+        latest_path = MODEL_BASE_DIR / 'strategies' / str(strategy_key_local) / 'latest_ml_bundle.joblib'
+        if latest_path.exists():
+            bundle = _load_ml_bundle(latest_path)
+            if isinstance(bundle, dict) and bundle.get('rf_model') is not None:
+                df_loaded, info = _apply_ml_bundle(df, bundle)
+                stats = {
+                    'model_type': (bundle.get('train_stats') or {}).get('model_type', 'SavedBundle'),
+                    'train_mode': 'loaded_latest',
+                    'strategy_key': strategy_key_local,
+                    'feature_schema_hash': bundle.get('feature_schema_hash'),
+                    'total_features': len(bundle.get('features_loss') or []),
+                    'top_features': (bundle.get('train_stats') or {}).get('top_features'),
+                    'loaded_from': str(latest_path),
+                    'missing_features': info.get('missing_features') or [],
+                    'artifacts': {
+                        'latest_bundle_path': str(latest_path),
+                        'strategy_dir': str(latest_path.parent),
+                        'saved': True,
+                    }
+                }
+                return df_loaded, stats
+        if train_mode == 'load_only':
+            # 로드만 허용인데 실패한 경우: 기본값으로 폴백
+            df['손실확률_ML'] = 0.5
+            df['위험도_ML'] = 50
+            df['예측매수매도위험도점수_ML'] = np.nan
+            return df, {
+                'model_type': 'N/A',
+                'train_mode': 'load_only_failed',
+                'strategy_key': strategy_key_local,
+                'error': 'latest 모델을 찾지 못해 예측을 수행하지 못했습니다.',
+            }
     
     # ================================================================
     # 매수 시점에서 사용 가능한 변수만 선택 (룩어헤드 방지)
@@ -1925,7 +2301,14 @@ def PredictRiskWithML(df_tsg):
         # 피처가 부족하면 기본값 설정
         df['손실확률_ML'] = 0.5
         df['위험도_ML'] = 50
-        return df, None
+        df['예측매수매도위험도점수_ML'] = np.nan
+        return df, {
+            'model_type': 'N/A',
+            'train_mode': 'insufficient_features',
+            'strategy_key': strategy_key_local,
+            'total_features': len(available_features),
+            'feature_schema_hash': _feature_schema_hash(available_features),
+        }
     
     # ================================================================
     # 타겟 변수: 손실 여부 (수익금 <= 0)
@@ -1943,7 +2326,15 @@ def PredictRiskWithML(df_tsg):
     if len(df_clean) < 50:
         df['손실확률_ML'] = 0.5
         df['위험도_ML'] = 50
-        return df, None
+        df['예측매수매도위험도점수_ML'] = np.nan
+        return df, {
+            'model_type': 'N/A',
+            'train_mode': 'insufficient_samples',
+            'strategy_key': strategy_key_local,
+            'total_features': len(available_features),
+            'feature_schema_hash': _feature_schema_hash(available_features),
+            'n_samples': int(len(df_clean)),
+        }
     
     X = df_clean[available_features].values
     y = (df_clean['수익금'] <= 0).astype(int).values  # 손실=1, 이익=0
@@ -1982,6 +2373,25 @@ def PredictRiskWithML(df_tsg):
     
     rf_model.fit(X_train_scaled, y_train)
     gb_model.fit(X_train_scaled, y_train)
+
+    # ================================================================
+    # 설명용(규칙화) 얕은 트리 학습 (공식/조건식 형태로 참고용)
+    # - 실제 필터로 쓰기 전 반드시 검증 필요(과최적화/분포변화 위험)
+    # ================================================================
+    explain_tree = None
+    explain_rules = []
+    try:
+        explain_tree = DecisionTreeClassifier(
+            max_depth=4,
+            min_samples_leaf=50,
+            class_weight='balanced',
+            random_state=42
+        )
+        explain_tree.fit(X_train_scaled, y_train)
+        explain_rules = _extract_tree_rules(explain_tree, scaler, available_features, max_depth=2)
+    except Exception:
+        explain_tree = None
+        explain_rules = []
     
     # 앙상블 예측 (확률 평균)
     rf_proba = rf_model.predict_proba(X_test_scaled)[:, 1]
@@ -2034,6 +2444,9 @@ def PredictRiskWithML(df_tsg):
     # - 목적: 룩어헤드로 계산된 위험도(사후 점수)를 매수시점 정보만으로 얼마나 근사할 수 있는지 확인
     # ================================================================
     risk_regression_stats = None
+    risk_reg_model = None
+    risk_reg_scaler = None
+    risk_reg_model_name = None
     df['예측매수매도위험도점수_ML'] = np.nan
     if '매수매도위험도점수' in df.columns:
         try:
@@ -2130,6 +2543,9 @@ def PredictRiskWithML(df_tsg):
                     'mae_rf': round(mae_rf, 2),
                     'mae_mlp': round(mae_mlp, 2),
                 }
+                risk_reg_model = best_model
+                risk_reg_scaler = scaler_r
+                risk_reg_model_name = best_name
         except Exception:
             pass
 
@@ -2157,9 +2573,16 @@ def PredictRiskWithML(df_tsg):
         zip(available_features, rf_model.feature_importances_),
         key=lambda x: x[1], reverse=True
     )[:10]
+
+    schema_hash = _feature_schema_hash(available_features)
     
     prediction_stats = {
         'model_type': 'Ensemble (RandomForest + GradientBoosting)',
+        'train_mode': 'trained_new',
+        'requested_train_mode': train_mode,
+        'save_file_name': save_file_name,
+        'strategy_key': strategy_key_local,
+        'feature_schema_hash': schema_hash,
         'test_f1': test_f1,
         'test_balanced_accuracy': test_acc,
         'test_auc': test_auc,
@@ -2168,8 +2591,58 @@ def PredictRiskWithML(df_tsg):
         'correlation_with_actual_risk': correlation_actual,
         'correlation_with_rule_risk': correlation_rule,
         'risk_regression': risk_regression_stats,
+        'risk_regression_model': risk_reg_model_name,
+        'explain_rules': explain_rules,
         'loss_rate': round(y.mean() * 100, 1),
     }
+
+    # ================================================================
+    # 모델 번들 저장(실행별 + 전략 latest)
+    # ================================================================
+    artifacts = None
+    try:
+        if save_file_name and strategy_key_local:
+            bundle = {
+                'bundle_version': 1,
+                'created_at': datetime.now().isoformat(timespec='seconds'),
+                'save_file_name': save_file_name,
+                'strategy_key': strategy_key_local,
+                'train_mode': prediction_stats.get('train_mode'),
+                'feature_schema_hash': schema_hash,
+                'features_loss': list(available_features),
+                'scaler_loss': scaler,
+                'rf_model': rf_model,
+                'gb_model': gb_model,
+                'loss_threshold': 0.5,
+                'risk_regression': {
+                    'features': list(available_features),
+                    'scaler': risk_reg_scaler,
+                    'model': risk_reg_model,
+                    'best_model_name': risk_reg_model_name,
+                    'stats': risk_regression_stats,
+                } if (risk_reg_model is not None and risk_reg_scaler is not None) else None,
+                'explain_tree': explain_tree,
+                'explain_rules': explain_rules,
+                'train_stats': {
+                    'model_type': prediction_stats.get('model_type'),
+                    'test_auc': prediction_stats.get('test_auc'),
+                    'test_f1': prediction_stats.get('test_f1'),
+                    'test_balanced_accuracy': prediction_stats.get('test_balanced_accuracy'),
+                    'loss_rate': prediction_stats.get('loss_rate'),
+                    'top_features': feature_importance,
+                },
+                'strategy': {
+                    'buystg': buystg,
+                    'sellstg': sellstg,
+                }
+            }
+            artifacts = _save_ml_bundle(bundle, strategy_key=strategy_key_local, save_file_name=save_file_name)
+        else:
+            artifacts = {'saved': False, 'error': 'save_file_name/strategy_key 누락'}
+    except Exception as e:
+        artifacts = {'saved': False, 'error': str(e)}
+
+    prediction_stats['artifacts'] = artifacts
     
     return df, prediction_stats
 
@@ -3067,7 +3540,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
 # 10. 전체 강화 분석 실행
 # ============================================================================
 
-def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
+def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None, ml_train_mode: str = 'train'):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -3108,7 +3581,13 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
         # - 위험도_ML: ML 기반 위험도 점수 (0~100)
         # - 예측매수매도위험도점수_ML: 매수 시점 변수로 예측한 매수매도위험도점수(0~100)
         # - detail.csv에 추가하여 실제 매수매도위험도점수와 비교 가능
-        df_enhanced, ml_prediction_stats = PredictRiskWithML(df_enhanced)
+        df_enhanced, ml_prediction_stats = PredictRiskWithML(
+            df_enhanced,
+            save_file_name=save_file_name,
+            buystg=buystg,
+            sellstg=sellstg,
+            train_mode=ml_train_mode
+        )
         result['ml_prediction_stats'] = ml_prediction_stats
         
         result['enhanced_df'] = df_enhanced
@@ -3321,6 +3800,23 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None):
                         f"- 매수매도위험도 예측(회귀): MAE {risk_reg.get('test_mae', 'N/A')}점, "
                         f"R2 {risk_reg.get('test_r2', 'N/A')}{corr_txt} ({risk_reg.get('best_model')})"
                     )
+
+                # 모델 저장 정보
+                artifacts = ml_prediction_stats.get('artifacts') if isinstance(ml_prediction_stats, dict) else None
+                if isinstance(artifacts, dict):
+                    sk = ml_prediction_stats.get('strategy_key') or artifacts.get('strategy_key')
+                    sk_short = (str(sk)[:12] + '...') if sk else 'N/A'
+                    if artifacts.get('saved'):
+                        ml_lines.append(f"- 모델 저장: 성공 (전략키 {sk_short})")
+                        p = artifacts.get('latest_bundle_path') or artifacts.get('run_bundle_path')
+                        if p:
+                            try:
+                                ml_lines.append(f"- 모델 파일: {Path(p).name}")
+                            except Exception:
+                                pass
+                    else:
+                        err = artifacts.get('error')
+                        ml_lines.append(f"- 모델 저장: 실패/미수행 ({err})" if err else "- 모델 저장: 실패/미수행")
                 
                 # 주요 피처
                 top_features = ml_prediction_stats.get('top_features', [])[:5]

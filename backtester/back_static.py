@@ -44,8 +44,8 @@ def RunOptunaServer():
 
 def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd=None,
                            startday=None, endday=None, starttime=None, endtime=None,
-                           buy_vars=None, sell_vars=None, full_result=None,
-                           enhanced_result=None, enhanced_error=None):
+                           buy_vars=None, sell_vars=None, buystg=None, sellstg=None,
+                           full_result=None, enhanced_result=None, enhanced_error=None):
     """
     backtester/graph 폴더에 이번 실행의 산출물 목록/요약을 txt로 저장합니다.
 
@@ -564,6 +564,92 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             lines.append("=== 강화 분석 추천(Top) ===")
             for rec in enhanced_result['recommendations'][:10]:
                 lines.append(f"- {rec}")
+
+        # ML 모델 저장/기록 (강화 분석)
+        if enhanced_result and enhanced_result.get('ml_prediction_stats'):
+            try:
+                ml = enhanced_result.get('ml_prediction_stats') or {}
+                lines.append("")
+                lines.append("=== ML 모델 정보(손실확률_ML/위험도_ML) ===")
+                lines.append(f"- 학습모드: {ml.get('train_mode', ml.get('requested_train_mode', 'N/A'))}")
+                lines.append(f"- 모델: {ml.get('model_type', 'N/A')}")
+                lines.append(
+                    f"- 테스트(AUC/F1/BA): {ml.get('test_auc', 'N/A')}% / {ml.get('test_f1', 'N/A')}% / {ml.get('test_balanced_accuracy', 'N/A')}%"
+                )
+                lines.append(f"- 손실 비율(y=손실): {ml.get('loss_rate', 'N/A')}%")
+                if ml.get('total_features') is not None:
+                    lines.append(f"- 피처 수: {ml.get('total_features')}개")
+                if ml.get('strategy_key'):
+                    lines.append(f"- 전략키(sha256): {ml.get('strategy_key')}")
+                if ml.get('feature_schema_hash'):
+                    lines.append(f"- 피처 스키마 해시: {ml.get('feature_schema_hash')}")
+
+                # 저장 경로/결과
+                artifacts = ml.get('artifacts') if isinstance(ml, dict) else None
+                if isinstance(artifacts, dict):
+                    lines.append("")
+                    lines.append("=== ML 모델 저장 결과 ===")
+                    lines.append(f"- 저장 성공: {artifacts.get('saved', False)}")
+                    if artifacts.get('strategy_dir'):
+                        lines.append(f"- 전략 폴더: {artifacts.get('strategy_dir')}")
+                        try:
+                            code_path = Path(artifacts.get('strategy_dir')) / 'strategy_code.txt'
+                            if code_path.exists():
+                                lines.append(f"- 전략 코드 파일: {str(code_path)}")
+                            idx_path = Path(artifacts.get('strategy_dir')) / 'runs_index.jsonl'
+                            if idx_path.exists():
+                                lines.append(f"- 실행 인덱스: {str(idx_path)}")
+                        except Exception:
+                            pass
+                    if artifacts.get('run_bundle_path'):
+                        lines.append(f"- 실행 모델(run): {artifacts.get('run_bundle_path')}")
+                    if artifacts.get('latest_bundle_path'):
+                        lines.append(f"- 최신 모델(latest): {artifacts.get('latest_bundle_path')}")
+                    if artifacts.get('run_meta_path'):
+                        lines.append(f"- 실행 메타(run): {artifacts.get('run_meta_path')}")
+                    if artifacts.get('latest_meta_path'):
+                        lines.append(f"- 최신 메타(latest): {artifacts.get('latest_meta_path')}")
+                    if artifacts.get('error'):
+                        lines.append(f"- 저장 오류: {artifacts.get('error')}")
+
+                # 설명용 규칙(얕은 트리)
+                rules = ml.get('explain_rules')
+                if isinstance(rules, list) and len(rules) > 0:
+                    lines.append("")
+                    lines.append("=== 설명용 규칙(얕은 트리, 참고용) ===")
+                    for r in rules[:10]:
+                        lines.append(
+                            f"- D{r.get('depth')} {r.get('feature')} @ {r.get('threshold')}: "
+                            f"left 손실 {r.get('left_loss_rate')}%(n={r.get('left_samples')}), "
+                            f"right 손실 {r.get('right_loss_rate')}%(n={r.get('right_samples')})"
+                        )
+
+                # 매수매도위험도 회귀 예측 요약
+                rr = ml.get('risk_regression')
+                if isinstance(rr, dict) and rr.get('best_model'):
+                    lines.append("")
+                    lines.append("=== 매수매도위험도 예측(회귀) 요약 ===")
+                    lines.append(f"- 모델: {rr.get('best_model')}")
+                    lines.append(
+                        f"- MAE/RMSE/R2/상관: {rr.get('test_mae', 'N/A')} / {rr.get('test_rmse', 'N/A')} / "
+                        f"{rr.get('test_r2', 'N/A')} / {rr.get('test_corr', 'N/A')}%"
+                    )
+
+                # 로드/재현 방법 안내
+                lines.append("")
+                lines.append("=== ML 모델 로드/재현 방법(요약) ===")
+                lines.append("- 목적: 동일 전략키의 latest 모델을 로드하면, 같은 입력 데이터에 대해 동일 _ML 값을 재현할 수 있습니다.")
+                lines.append("- 방법1(코드 옵션): PltShow(..., ml_train_mode='load_latest') 또는 RunEnhancedAnalysis(..., ml_train_mode='load_latest') 또는 PredictRiskWithML(..., train_mode='load_latest')")
+                lines.append("- 방법2(joblib 직접): joblib.load(latest_ml_bundle.joblib) -> bundle의 scaler/model로 손실확률/위험도 예측")
+
+                # 추후 개선 아이디어
+                lines.append("")
+                lines.append("=== ML 개선 아이디어(추후) ===")
+                lines.append("- 시계열 분할(TimeSeriesSplit/Walk-Forward)로 미래 구간 검증 후 모델 선택")
+                lines.append("- 확률 보정(Platt/Isotonic) 및 임계값(0.5) 최적화로 필터 기준 개선")
+                lines.append("- 피처 추가/삭제 등 스키마 변경은 feature_schema_hash로 감지하여 자동 재학습/백업(추후 구현)")
+            except Exception:
+                pass
 
         if enhanced_error is not None:
             lines.append("")
@@ -1211,7 +1297,8 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 
 
 def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, starttime, endtime, df_kp_, df_kd_, list_days,
-            backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None):
+            backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None,
+            buystg=None, sellstg=None, ml_train_mode='train'):
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
     df_tsg['수익금합계120'] = df_tsg['수익금합계'].rolling(window=120).mean().round(2)
@@ -1499,7 +1586,14 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     enhanced_error = None
     if ENHANCED_ANALYSIS_AVAILABLE:
         try:
-            enhanced_result = RunEnhancedAnalysis(df_tsg, save_file_name, teleQ)
+            enhanced_result = RunEnhancedAnalysis(
+                df_tsg,
+                save_file_name,
+                teleQ,
+                buystg=buystg,
+                sellstg=sellstg,
+                ml_train_mode=ml_train_mode,
+            )
             if teleQ is not None and enhanced_result and enhanced_result.get('recommendations'):
                 for rec in enhanced_result['recommendations'][:5]:
                     teleQ.put(rec)
@@ -1542,6 +1636,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         endtime=endtime,
         buy_vars=buy_vars,
         sell_vars=sell_vars,
+        buystg=buystg,
+        sellstg=sellstg,
         full_result=full_result,
         enhanced_result=enhanced_result,
         enhanced_error=enhanced_error
