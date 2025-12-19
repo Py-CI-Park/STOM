@@ -26,6 +26,7 @@ import hashlib
 import json
 import os
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from scipy import stats
@@ -42,6 +43,80 @@ from backtester.detail_schema import reorder_detail_columns
 # ============================================================================
 
 MODEL_BASE_DIR = (Path(__file__).resolve().parent / 'models')
+
+# ML 신뢰도 기준(게이팅)
+# - 기준 미달이면: 자동 필터 분석/코드 생성에서 *_ML 컬럼 사용 금지(공부/검증 목적의 컬럼 생성은 유지)
+ML_RELIABILITY_CRITERIA = {
+    'min_test_auc': 55.0,               # 50%는 랜덤 수준
+    'min_test_f1': 50.0,                # macro F1
+    'min_test_balanced_accuracy': 55.0, # 불균형 데이터 기준
+}
+
+
+def AssessMlReliability(ml_prediction_stats: dict | None,
+                        criteria: dict | None = None) -> dict:
+    """
+    ML 모델 신뢰도 기준을 평가해, *_ML 기반 필터 사용 허용 여부를 반환합니다.
+
+    Returns:
+        dict:
+            - allow_ml_filters: bool
+            - criteria: dict
+            - metrics: dict
+            - reasons: list[str]
+    """
+    criteria_local = dict(ML_RELIABILITY_CRITERIA)
+    if isinstance(criteria, dict):
+        criteria_local.update({k: v for k, v in criteria.items() if v is not None})
+
+    def _to_float_or_none(v):
+        try:
+            if v is None:
+                return None
+            if isinstance(v, str) and v.strip().lower() in ('n/a', 'na', 'none', ''):
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    stats = ml_prediction_stats if isinstance(ml_prediction_stats, dict) else {}
+
+    auc = _to_float_or_none(stats.get('test_auc'))
+    f1 = _to_float_or_none(stats.get('test_f1'))
+    ba = _to_float_or_none(stats.get('test_balanced_accuracy'))
+
+    reasons: list[str] = []
+    allow = True
+
+    if auc is None or f1 is None or ba is None:
+        allow = False
+        if auc is None:
+            reasons.append("AUC 값이 없어 신뢰도 판정 불가")
+        if f1 is None:
+            reasons.append("F1 값이 없어 신뢰도 판정 불가")
+        if ba is None:
+            reasons.append("Balanced Accuracy 값이 없어 신뢰도 판정 불가")
+    else:
+        if auc < float(criteria_local['min_test_auc']):
+            allow = False
+            reasons.append(f"AUC {auc:.1f}% < 기준 {float(criteria_local['min_test_auc']):.1f}%")
+        if f1 < float(criteria_local['min_test_f1']):
+            allow = False
+            reasons.append(f"F1 {f1:.1f}% < 기준 {float(criteria_local['min_test_f1']):.1f}%")
+        if ba < float(criteria_local['min_test_balanced_accuracy']):
+            allow = False
+            reasons.append(f"BA {ba:.1f}% < 기준 {float(criteria_local['min_test_balanced_accuracy']):.1f}%")
+
+    return {
+        'allow_ml_filters': bool(allow),
+        'criteria': criteria_local,
+        'metrics': {
+            'test_auc': auc,
+            'test_f1': f1,
+            'test_balanced_accuracy': ba,
+        },
+        'reasons': reasons,
+    }
 
 
 def _normalize_text_for_hash(text) -> str:
@@ -1474,9 +1549,13 @@ def AnalyzeFilterCombinations(df_tsg, single_filters=None, max_filters=3, top_n=
 # 5. 강화된 필터 효과 분석
 # ============================================================================
 
-def AnalyzeFilterEffectsEnhanced(df_tsg):
+def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
     """
     강화된 필터 효과 분석 (통계적 유의성 + 동적 임계값 포함)
+
+    Args:
+        df_tsg: DataFrame
+        allow_ml_filters: True면 *_ML 컬럼(손실확률_ML/위험도_ML 등)도 필터 후보로 포함합니다.
 
     Returns:
         list: 필터 효과 분석 결과 (통계 검정 결과 포함)
@@ -1604,6 +1683,8 @@ def AnalyzeFilterEffectsEnhanced(df_tsg):
     candidate_cols = []
     for col in df_tsg.columns:
         col = str(col)
+        if (not allow_ml_filters) and col.endswith('_ML'):
+            continue
         if not _is_buytime_candidate(col):
             continue
         try:
@@ -2247,9 +2328,13 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         from sklearn.model_selection import train_test_split
         from sklearn.metrics import f1_score, balanced_accuracy_score, roc_auc_score
         from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+        from sklearn.utils.class_weight import compute_sample_weight
     except ImportError:
         return df_tsg, None
     
+    timing = {}
+    total_start = time.perf_counter()
+
     df = df_tsg.copy()
 
     # 전략키(조건식 식별) 계산
@@ -2262,18 +2347,27 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
 
     # 모델 로드(옵션)
     if train_mode in ('load_latest', 'load_only') and strategy_key_local:
+        t0_load = time.perf_counter()
         latest_path = MODEL_BASE_DIR / 'strategies' / str(strategy_key_local) / 'latest_ml_bundle.joblib'
         if latest_path.exists():
             bundle = _load_ml_bundle(latest_path)
             if isinstance(bundle, dict) and bundle.get('rf_model') is not None:
                 df_loaded, info = _apply_ml_bundle(df, bundle)
+                train_stats = bundle.get('train_stats') or {}
+                timing['load_latest_s'] = round(time.perf_counter() - t0_load, 4)
+                timing['total_s'] = round(time.perf_counter() - total_start, 4)
                 stats = {
-                    'model_type': (bundle.get('train_stats') or {}).get('model_type', 'SavedBundle'),
+                    'model_type': train_stats.get('model_type', 'SavedBundle'),
                     'train_mode': 'loaded_latest',
                     'strategy_key': strategy_key_local,
                     'feature_schema_hash': bundle.get('feature_schema_hash'),
                     'total_features': len(bundle.get('features_loss') or []),
-                    'top_features': (bundle.get('train_stats') or {}).get('top_features'),
+                    'top_features': train_stats.get('top_features'),
+                    'test_auc': train_stats.get('test_auc'),
+                    'test_f1': train_stats.get('test_f1'),
+                    'test_balanced_accuracy': train_stats.get('test_balanced_accuracy'),
+                    'loss_rate': train_stats.get('loss_rate'),
+                    'timing': timing,
                     'loaded_from': str(latest_path),
                     'missing_features': info.get('missing_features') or [],
                     'artifacts': {
@@ -2288,11 +2382,14 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
             df['손실확률_ML'] = 0.5
             df['위험도_ML'] = 50
             df['예측매수매도위험도점수_ML'] = np.nan
+            timing['load_only_failed_s'] = round(time.perf_counter() - t0_load, 4)
+            timing['total_s'] = round(time.perf_counter() - total_start, 4)
             return df, {
                 'model_type': 'N/A',
                 'train_mode': 'load_only_failed',
                 'strategy_key': strategy_key_local,
                 'error': 'latest 모델을 찾지 못해 예측을 수행하지 못했습니다.',
+                'timing': timing,
             }
     
     # ================================================================
@@ -2351,12 +2448,14 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         df['손실확률_ML'] = 0.5
         df['위험도_ML'] = 50
         df['예측매수매도위험도점수_ML'] = np.nan
+        timing['total_s'] = round(time.perf_counter() - total_start, 4)
         return df, {
             'model_type': 'N/A',
             'train_mode': 'insufficient_features',
             'strategy_key': strategy_key_local,
             'total_features': len(available_features),
             'feature_schema_hash': _feature_schema_hash(available_features),
+            'timing': timing,
         }
     
     # ================================================================
@@ -2376,6 +2475,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         df['손실확률_ML'] = 0.5
         df['위험도_ML'] = 50
         df['예측매수매도위험도점수_ML'] = np.nan
+        timing['total_s'] = round(time.perf_counter() - total_start, 4)
         return df, {
             'model_type': 'N/A',
             'train_mode': 'insufficient_samples',
@@ -2383,27 +2483,33 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
             'total_features': len(available_features),
             'feature_schema_hash': _feature_schema_hash(available_features),
             'n_samples': int(len(df_clean)),
+            'timing': timing,
         }
     
     X = df_clean[available_features].values
     y = (df_clean['수익금'] <= 0).astype(int).values  # 손실=1, 이익=0
     
     # Train/Test 분리
+    t0 = time.perf_counter()
     try:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.25, random_state=42, stratify=y
         )
     except Exception:
         X_train, X_test, y_train, y_test = X, X, y, y
+    timing['split_s'] = round(time.perf_counter() - t0, 4)
     
     # 표준화
+    t0 = time.perf_counter()
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
+    timing['scale_s'] = round(time.perf_counter() - t0, 4)
     
     # ================================================================
     # 앙상블 모델: RandomForest + GradientBoosting
     # ================================================================
+    t0 = time.perf_counter()
     rf_model = RandomForestClassifier(
         n_estimators=100,
         max_depth=8,
@@ -2420,8 +2526,18 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         random_state=42
     )
     
+    sample_weight = None
+    try:
+        sample_weight = compute_sample_weight(class_weight='balanced', y=y_train)
+    except Exception:
+        sample_weight = None
+
     rf_model.fit(X_train_scaled, y_train)
-    gb_model.fit(X_train_scaled, y_train)
+    if sample_weight is not None:
+        gb_model.fit(X_train_scaled, y_train, sample_weight=sample_weight)
+    else:
+        gb_model.fit(X_train_scaled, y_train)
+    timing['train_classifiers_s'] = round(time.perf_counter() - t0, 4)
 
     # ================================================================
     # 설명용(규칙화) 얕은 트리 학습 (공식/조건식 형태로 참고용)
@@ -2429,6 +2545,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     # ================================================================
     explain_tree = None
     explain_rules = []
+    t0 = time.perf_counter()
     try:
         explain_tree = DecisionTreeClassifier(
             max_depth=4,
@@ -2441,13 +2558,17 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     except Exception:
         explain_tree = None
         explain_rules = []
+    timing['train_explain_tree_s'] = round(time.perf_counter() - t0, 4)
     
     # 앙상블 예측 (확률 평균)
+    t0 = time.perf_counter()
     rf_proba = rf_model.predict_proba(X_test_scaled)[:, 1]
     gb_proba = gb_model.predict_proba(X_test_scaled)[:, 1]
     ensemble_proba = (rf_proba + gb_proba) / 2
+    timing['predict_test_s'] = round(time.perf_counter() - t0, 4)
     
     # 성능 평가
+    t0 = time.perf_counter()
     try:
         y_pred = (ensemble_proba >= 0.5).astype(int)
         test_f1 = round(f1_score(y_test, y_pred, average='macro') * 100, 1)
@@ -2455,11 +2576,13 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         test_auc = round(roc_auc_score(y_test, ensemble_proba) * 100, 1)
     except Exception:
         test_f1 = test_acc = test_auc = 0.0
+    timing['eval_s'] = round(time.perf_counter() - t0, 4)
     
     # ================================================================
     # 전체 데이터에 대해 예측
     # ================================================================
     # 전체 데이터 표준화
+    t0 = time.perf_counter()
     X_all = df_analysis[available_features].values
     
     # NaN을 median으로 채우기
@@ -2474,6 +2597,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     rf_proba_all = rf_model.predict_proba(X_all_scaled)[:, 1]
     gb_proba_all = gb_model.predict_proba(X_all_scaled)[:, 1]
     loss_prob_all = (rf_proba_all + gb_proba_all) / 2
+    timing['predict_all_s'] = round(time.perf_counter() - t0, 4)
     
     # DataFrame에 추가 (원본 인덱스 유지)
     df['손실확률_ML'] = np.nan
@@ -2523,6 +2647,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     risk_reg_model_name = None
     df['예측매수매도위험도점수_ML'] = np.nan
     if '매수매도위험도점수' in df.columns:
+        t0 = time.perf_counter()
         try:
             df_risk = df[available_features + ['매수매도위험도점수']].copy()
             df_risk['매수매도위험도점수'] = pd.to_numeric(df_risk['매수매도위험도점수'], errors='coerce')
@@ -2622,6 +2747,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                 risk_reg_model_name = best_name
         except Exception:
             pass
+        timing['risk_regression_s'] = round(time.perf_counter() - t0, 4)
 
     # ================================================================
     # 실제 매수매도위험도점수와 비교 (상관관계)
@@ -2674,6 +2800,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     # 모델 번들 저장(실행별 + 전략 latest)
     # ================================================================
     artifacts = None
+    t0 = time.perf_counter()
     try:
         if save_file_name and strategy_key_local:
             bundle = {
@@ -2716,6 +2843,9 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     except Exception as e:
         artifacts = {'saved': False, 'error': str(e)}
 
+    timing['save_bundle_s'] = round(time.perf_counter() - t0, 4)
+    timing['total_s'] = round(time.perf_counter() - total_start, 4)
+    prediction_stats['timing'] = timing
     prediction_stats['artifacts'] = artifacts
     
     return df, prediction_stats
@@ -2809,7 +2939,7 @@ def AnalyzeFilterStability(df_tsg, n_periods=5):
 # 8. 조건식 코드 자동 생성
 # ============================================================================
 
-def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
+def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: bool = True):
     """
     필터 분석 결과를 바탕으로 실제 적용 가능한 조건식 코드를 생성합니다.
 
@@ -2818,6 +2948,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
         df_tsg: (선택) 원본 DataFrame. 전달되면 "동시 적용(중복 반영)" 기준으로
                 예상 총 개선/누적 제외비율/추가 개선(증분)을 계산합니다.
         top_n: 상위 N개 필터(최대)
+        allow_ml_filters: False면 *_ML 필터는 코드 생성에서 제외합니다.
 
     Returns:
         dict: 코드 생성 결과
@@ -2828,9 +2959,21 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
     if not filter_results:
         return None
 
+    filtered = list(filter_results)
+    excluded_ml_count = 0
+    if not allow_ml_filters:
+        filtered_no_ml = []
+        for f in filtered:
+            text = f"{f.get('필터명', '')} {f.get('조건식', '')} {f.get('적용코드', '')}"
+            if '_ML' in str(text):
+                excluded_ml_count += 1
+                continue
+            filtered_no_ml.append(f)
+        filtered = filtered_no_ml
+
     # 기본 후보: 개선(+) + 적용코드/조건식이 있는 항목
     candidates = [
-        f for f in filter_results
+        f for f in filtered
         if f.get('수익개선금액', 0) > 0 and f.get('적용코드') and f.get('조건식')
     ]
 
@@ -2987,7 +3130,9 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
             'total_improvement_combined': int(combined_improvement) if combined_improvement is not None else int(naive_sum),
             'total_improvement_naive': int(naive_sum),
             'overlap_loss': int(naive_sum - (combined_improvement if combined_improvement is not None else naive_sum)),
-            'categories': list(conditions_by_category.keys())
+            'categories': list(conditions_by_category.keys()),
+            'allow_ml_filters': bool(allow_ml_filters),
+            'excluded_ml_filters': int(excluded_ml_count),
         }
     }
 
@@ -3711,6 +3856,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         'recommendations': [],
         'csv_files': [],
         'ml_prediction_stats': None,  # NEW: ML 예측 통계
+        'ml_reliability': None,       # NEW: ML 신뢰도/게이트 결과
     }
 
     try:
@@ -3730,11 +3876,20 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             train_mode=ml_train_mode
         )
         result['ml_prediction_stats'] = ml_prediction_stats
+
+        ml_reliability = AssessMlReliability(ml_prediction_stats)
+        result['ml_reliability'] = ml_reliability
+        allow_ml_filters = bool((ml_reliability or {}).get('allow_ml_filters', False))
+        try:
+            if isinstance(ml_prediction_stats, dict):
+                ml_prediction_stats['reliability'] = ml_reliability
+        except Exception:
+            pass
         
         result['enhanced_df'] = df_enhanced
 
         # 2. 강화된 필터 효과 분석 (통계 검정 포함)
-        filter_results = AnalyzeFilterEffectsEnhanced(df_enhanced)
+        filter_results = AnalyzeFilterEffectsEnhanced(df_enhanced, allow_ml_filters=allow_ml_filters)
         result['filter_results'] = filter_results
 
         # 2-1. (진단용) 룩어헤드 포함 필터 효과 분석
@@ -3758,7 +3913,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         result['filter_stability'] = filter_stability
 
         # 7. 조건식 코드 생성
-        generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced)
+        generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced, allow_ml_filters=allow_ml_filters)
         result['generated_code'] = generated_code
 
         # 8. CSV 파일 저장
@@ -3962,10 +4117,66 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 ml_lines = []
                 ml_lines.append("ML 위험도 예측 결과:")
                 ml_lines.append(f"- 모델: {ml_prediction_stats.get('model_type', 'N/A')}")
-                ml_lines.append(f"- 테스트 AUC: {ml_prediction_stats.get('test_auc', 0)}%")
-                ml_lines.append(f"- 테스트 F1: {ml_prediction_stats.get('test_f1', 0)}%")
+                ml_lines.append(
+                    f"- 테스트(AUC/F1/BA): "
+                    f"{ml_prediction_stats.get('test_auc', 'N/A')}% / "
+                    f"{ml_prediction_stats.get('test_f1', 'N/A')}% / "
+                    f"{ml_prediction_stats.get('test_balanced_accuracy', 'N/A')}%"
+                )
                 ml_lines.append(f"- 사용 피처: {ml_prediction_stats.get('total_features', 0)}개")
-                
+
+                # 소요 시간(학습/예측/저장) 요약
+                try:
+                    tinfo = ml_prediction_stats.get('timing') if isinstance(ml_prediction_stats, dict) else None
+                    if isinstance(tinfo, dict):
+                        def _fmt_sec(v):
+                            try:
+                                return f"{float(v):.2f}s"
+                            except Exception:
+                                return str(v)
+
+                        total_s = tinfo.get('total_s')
+                        parts = []
+                        if tinfo.get('load_latest_s') is not None:
+                            parts.append(f"load { _fmt_sec(tinfo.get('load_latest_s')) }")
+                        if tinfo.get('train_classifiers_s') is not None:
+                            parts.append(f"train { _fmt_sec(tinfo.get('train_classifiers_s')) }")
+                        if tinfo.get('predict_all_s') is not None:
+                            parts.append(f"predict { _fmt_sec(tinfo.get('predict_all_s')) }")
+                        if tinfo.get('save_bundle_s') is not None:
+                            parts.append(f"save { _fmt_sec(tinfo.get('save_bundle_s')) }")
+                        if total_s is not None:
+                            if parts:
+                                ml_lines.append(f"- 소요 시간: {_fmt_sec(total_s)} ({', '.join(parts)})")
+                            else:
+                                ml_lines.append(f"- 소요 시간: {_fmt_sec(total_s)}")
+                except Exception:
+                    pass
+
+                # ML 신뢰도(게이트) 결과: 기준 미달이면 *_ML 필터 자동 생성/추천에서 제외
+                try:
+                    rel = None
+                    if isinstance(ml_prediction_stats, dict):
+                        rel = ml_prediction_stats.get('reliability')
+                    if not isinstance(rel, dict):
+                        rel = result.get('ml_reliability') if isinstance(result, dict) else None
+                    if isinstance(rel, dict):
+                        allow_ml = bool(rel.get('allow_ml_filters', False))
+                        crit = rel.get('criteria') or {}
+                        crit_txt = (
+                            f"AUC≥{crit.get('min_test_auc')}%, "
+                            f"F1≥{crit.get('min_test_f1')}%, "
+                            f"BA≥{crit.get('min_test_balanced_accuracy')}%"
+                        )
+                        ml_lines.append(f"- 신뢰도 판정: {'PASS' if allow_ml else 'FAIL'} ({crit_txt})")
+                        if not allow_ml:
+                            reasons = rel.get('reasons') or []
+                            for r in reasons[:2]:
+                                ml_lines.append(f"  - {r}")
+                            ml_lines.append("- *_ML 기반 필터: 자동 생성/추천에서 제외됨")
+                except Exception:
+                    pass
+                 
                 # 상관관계 정보
                 corr_actual = ml_prediction_stats.get('correlation_with_actual_risk')
                 corr_rule = ml_prediction_stats.get('correlation_with_rule_risk')
@@ -4018,14 +4229,21 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 total_impr = int(summary.get('total_improvement_combined', summary.get('total_improvement_naive', 0)))
                 naive_impr = int(summary.get('total_improvement_naive', total_impr))
                 overlap_loss = int(summary.get('overlap_loss', naive_impr - total_impr))
-
+                allow_ml_filters_summary = summary.get('allow_ml_filters')
+                excluded_ml_filters_summary = int(summary.get('excluded_ml_filters', 0) or 0)
+ 
                 lines = []
                 lines.append("자동 생성 필터 코드(요약):")
                 lines.append(f"- 총 {total_filters}개 필터 (조합: AND, 즉 '모든 조건을 만족해야 매수')")
                 lines.append(f"- 예상 총 개선(동시 적용/중복 반영): {total_impr:,}원")
                 if total_filters > 0:
                     lines.append(f"- 개별개선합(단순 합산): {naive_impr:,}원, 중복/상쇄: {overlap_loss:+,}원")
-
+                if allow_ml_filters_summary is not None:
+                    lines.append(
+                        f"- ML 필터 사용: {'허용' if bool(allow_ml_filters_summary) else '금지'}"
+                        + (f" (제외 {excluded_ml_filters_summary}개)" if excluded_ml_filters_summary > 0 else "")
+                    )
+ 
                 steps = generated_code.get('combine_steps') or []
                 if steps:
                     lines.append("- 적용 순서(추가개선→누적개선, 누적제외%):")

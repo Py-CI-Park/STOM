@@ -1104,7 +1104,7 @@ if not is_safe:
 
 ---
 
-## 텔레그램/차트 기반 강화 분석 (v2.4)
+## 텔레그램/차트 기반 강화 분석 (v2.5)
 
 백테스팅 완료 시 `backtester/back_static.py`가 기본 그래프를 생성한 뒤, `backtester/back_analysis_enhanced.py`의 `RunEnhancedAnalysis()`를 호출해 **강화 분석(통계/필터/ML)** 을 수행합니다.
 
@@ -1120,12 +1120,14 @@ if not is_safe:
   - `{save_file_name}_filter.csv` : 필터 분석 결과(t-test/효과크기 포함)
   - `{save_file_name}_optimal_thresholds.csv`, `{save_file_name}_filter_combinations.csv`, `{save_file_name}_filter_stability.csv`
   - `{save_file_name}_report.txt` : 산출물 목록/조건식/요약/컬럼 설명(인코딩 `utf-8-sig`)
+  - `{save_file_name}_condition_study.md` : 조건식/필터 스터디 노트(자동 생성, 학습용)
 
 ### 텔레그램 전송(요약)
 
 - 매수/매도 조건식(요약) + 전략키(`strategy_key`) 표시(공부/검증 목적)
 - 강화된 필터 분석 결과(통계적 유의/조합/안정성 추천)
-- ML 위험도 예측 결과(AUC, F1 등) + 모델 저장 정보
+- ML 위험도 예측 결과(AUC/F1/BA + 소요 시간 + 신뢰도 PASS/FAIL) + 모델 저장 정보
+  - 신뢰도 기준 미달이면 `*_ML` 기반 필터는 자동 생성/추천/코드 생성에서 제외됨(게이트)
 - 자동 생성 필터 코드(요약) + 기존 매수조건에 AND로 추가할 “조합 코드”
 - 필터 적용 미리보기 2개 이미지(`*_filtered_.png`, `*_filtered.png`)
 

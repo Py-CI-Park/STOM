@@ -379,6 +379,12 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
     """
     try:
         def _describe_output_file(filename: str) -> str:
+            if filename.endswith('_filtered_.png'):
+                return '자동 생성 필터 적용 분포/단계 요약(미리보기)'
+            if filename.endswith('_filtered.png'):
+                return '자동 생성 필터 적용 수익곡선(미리보기)'
+            if filename.endswith('_condition_study.md'):
+                return '조건식/필터 스터디 노트(md, 자동 생성)'
             if filename.endswith('_analysis.png'):
                 return '백테스팅 결과 분석 차트(분 단위 시간축/구간별 수익 분포)'
             if filename.endswith('_comparison.png'):
@@ -894,6 +900,58 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             for rec in enhanced_result['recommendations'][:10]:
                 lines.append(f"- {rec}")
 
+        # 자동 생성 필터 코드(강화 분석)
+        if enhanced_result and enhanced_result.get('generated_code'):
+            try:
+                gen = enhanced_result.get('generated_code') or {}
+                lines.append("")
+                lines.append("=== 자동 생성 필터 코드(요약) ===")
+                if isinstance(gen, dict) and gen.get('summary'):
+                    summary = gen.get('summary') or {}
+                    total_filters = int(summary.get('total_filters', 0) or 0)
+                    total_impr = int(summary.get('total_improvement_combined', summary.get('total_improvement_naive', 0)) or 0)
+                    naive_impr = int(summary.get('total_improvement_naive', 0) or 0)
+                    overlap_loss = int(summary.get('overlap_loss', 0) or 0)
+                    lines.append(f"- 필터 수: {total_filters:,}개 (조합: AND)")
+                    lines.append(f"- 예상 총 개선(동시 적용/중복 반영): {total_impr:,}원")
+                    if total_filters > 0:
+                        lines.append(f"- 개별개선합/중복: {naive_impr:,}원 / {overlap_loss:+,}원")
+
+                    allow_ml = summary.get('allow_ml_filters')
+                    excluded_ml = int(summary.get('excluded_ml_filters', 0) or 0)
+                    if allow_ml is not None:
+                        lines.append(
+                            f"- ML 필터 사용: {'허용' if bool(allow_ml) else '금지'}"
+                            + (f" (제외 {excluded_ml}개)" if excluded_ml > 0 else "")
+                        )
+
+                    steps = gen.get('combine_steps') or []
+                    if steps:
+                        lines.append("")
+                        lines.append("[적용 순서(추가개선→누적개선, 누적제외%)]")
+                        for st in steps[:10]:
+                            try:
+                                lines.append(
+                                    f"- {st.get('순서', '')}. {str(st.get('필터명', ''))[:24]}: "
+                                    f"+{int(st.get('추가개선(중복반영)', 0) or 0):,} → "
+                                    f"누적 +{int(st.get('누적개선(동시적용)', 0) or 0):,} "
+                                    f"(제외 {st.get('누적제외비율', 0)}%)"
+                                )
+                            except Exception:
+                                continue
+
+                    buy_lines = gen.get('buy_conditions') or []
+                    if buy_lines:
+                        lines.append("")
+                        lines.append("[조합 코드(기존 매수조건에 AND 추가)]")
+                        for ln in buy_lines[:15]:
+                            lines.append(str(ln).rstrip())
+                        lines.append("- 상세 후보/조건식은 *_filter.csv 참고")
+                else:
+                    lines.append("- 생성 불가 또는 후보 없음")
+            except Exception:
+                pass
+
         # ML 모델 저장/기록 (강화 분석)
         if enhanced_result and enhanced_result.get('ml_prediction_stats'):
             try:
@@ -906,6 +964,59 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     f"- 테스트(AUC/F1/BA): {ml.get('test_auc', 'N/A')}% / {ml.get('test_f1', 'N/A')}% / {ml.get('test_balanced_accuracy', 'N/A')}%"
                 )
                 lines.append(f"- 손실 비율(y=손실): {ml.get('loss_rate', 'N/A')}%")
+
+                # ML 소요 시간(학습/예측/저장) - 텔레그램/리포트 공통 확인용
+                try:
+                    timing = ml.get('timing') if isinstance(ml, dict) else None
+                    if isinstance(timing, dict):
+                        def _fmt_sec(v):
+                            try:
+                                return f"{float(v):.2f}s"
+                            except Exception:
+                                return str(v)
+
+                        total_s = timing.get('total_s')
+                        parts = []
+                        if timing.get('load_latest_s') is not None:
+                            parts.append(f"load {_fmt_sec(timing.get('load_latest_s'))}")
+                        if timing.get('train_classifiers_s') is not None:
+                            parts.append(f"train {_fmt_sec(timing.get('train_classifiers_s'))}")
+                        if timing.get('predict_all_s') is not None:
+                            parts.append(f"predict {_fmt_sec(timing.get('predict_all_s'))}")
+                        if timing.get('save_bundle_s') is not None:
+                            parts.append(f"save {_fmt_sec(timing.get('save_bundle_s'))}")
+
+                        if total_s is not None:
+                            lines.append(
+                                f"- 소요 시간: {_fmt_sec(total_s)}"
+                                + (f" ({', '.join(parts)})" if parts else "")
+                            )
+                except Exception:
+                    pass
+
+                # ML 신뢰도(게이트) - 기준 미달이면 *_ML 필터 자동 생성/추천에서 제외
+                try:
+                    rel = None
+                    if isinstance(enhanced_result, dict):
+                        rel = enhanced_result.get('ml_reliability')
+                    if not isinstance(rel, dict) and isinstance(ml, dict):
+                        rel = ml.get('reliability')
+
+                    if isinstance(rel, dict):
+                        allow_ml = bool(rel.get('allow_ml_filters', False))
+                        crit = rel.get('criteria') or {}
+                        crit_txt = (
+                            f"AUC≥{crit.get('min_test_auc')}%, "
+                            f"F1≥{crit.get('min_test_f1')}%, "
+                            f"BA≥{crit.get('min_test_balanced_accuracy')}%"
+                        )
+                        lines.append(f"- ML 필터 사용: {'허용' if allow_ml else '금지'} ({crit_txt})")
+                        if not allow_ml:
+                            for r in (rel.get('reasons') or [])[:5]:
+                                lines.append(f"  - {r}")
+                except Exception:
+                    pass
+
                 if ml.get('total_features') is not None:
                     lines.append(f"- 피처 수: {ml.get('total_features')}개")
                 if ml.get('strategy_key'):
@@ -1028,6 +1139,187 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 lines.append("")
                 lines.append("=== detail.csv 컬럼 설명/공식 ===")
                 lines.append("(컬럼 설명 생성 중 오류가 발생했습니다. 실행은 계속됩니다.)")
+
+        # [2025-12-19] 조건식/필터 스터디 파일(md) 자동 생성
+        # - 최근 백테스팅에 사용한 매수/매도 조건식 + 자동 생성 필터 코드 + 컬럼(거래 항목) 목록을 한 파일로 묶어 학습용으로 제공
+        try:
+            study_path = graph_dir / f"{save_file_name}_condition_study.md"
+            study_lines: list[str] = []
+
+            study_lines.append("# 조건식/필터 스터디 노트 (자동 생성)")
+            study_lines.append("")
+            study_lines.append(f"- 생성 시각: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+            study_lines.append(f"- save_file_name: {save_file_name}")
+
+            strategy_key = None
+            ml_stats = (enhanced_result or {}).get('ml_prediction_stats') if isinstance(enhanced_result, dict) else None
+            if isinstance(ml_stats, dict):
+                strategy_key = ml_stats.get('strategy_key')
+            if strategy_key:
+                study_lines.append(f"- 전략키(strategy_key): {strategy_key}")
+
+            # 전략 원문 파일 경로(가능 시)
+            try:
+                artifacts = (ml_stats or {}).get('artifacts') if isinstance(ml_stats, dict) else None
+                if isinstance(artifacts, dict) and artifacts.get('strategy_dir'):
+                    code_path = Path(str(artifacts.get('strategy_dir'))) / 'strategy_code.txt'
+                    if code_path.exists():
+                        study_lines.append(f"- 전략 원문: {str(code_path)}")
+            except Exception:
+                pass
+
+            # ML 신뢰도(게이트) 요약
+            try:
+                rel = (enhanced_result or {}).get('ml_reliability') if isinstance(enhanced_result, dict) else None
+                if isinstance(rel, dict):
+                    allow_ml = bool(rel.get('allow_ml_filters', False))
+                    crit = rel.get('criteria') or {}
+                    crit_txt = (
+                        f"AUC≥{crit.get('min_test_auc')}%, "
+                        f"F1≥{crit.get('min_test_f1')}%, "
+                        f"BA≥{crit.get('min_test_balanced_accuracy')}%"
+                    )
+                    study_lines.append(f"- ML 필터 사용: {'허용' if allow_ml else '금지'} ({crit_txt})")
+                    if not allow_ml:
+                        for r in (rel.get('reasons') or [])[:5]:
+                            study_lines.append(f"  - {r}")
+            except Exception:
+                pass
+
+            study_lines.append("")
+            study_lines.append("## 참고 파일")
+            study_lines.append(f"- `{save_file_name}_enhanced.png`: 강화 분석 차트(Chart 18 포함)")
+            study_lines.append(f"- `{save_file_name}_filter.csv`: 필터 후보/조건식 목록")
+            study_lines.append(f"- `{save_file_name}_detail.csv`: 거래 상세 기록(컬럼=거래 항목)")
+            study_lines.append(f"- `{save_file_name}_report.txt`: 실행 리포트")
+
+            # 매수/매도 조건식(요약)
+            study_lines.append("")
+            study_lines.append("## 1) 매수/매도 조건식(요약)")
+            buy_block = _extract_strategy_block_lines(buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=30)
+            if buy_block:
+                study_lines.append("")
+                study_lines.append("### 매수(요약)")
+                study_lines.append("```text")
+                study_lines.extend([str(x) for x in buy_block])
+                study_lines.append("```")
+            sell_block = _extract_strategy_block_lines(sellstg, start_marker='if 매도:', end_marker=None, max_lines=30)
+            if sell_block:
+                study_lines.append("")
+                study_lines.append("### 매도(요약)")
+                study_lines.append("```text")
+                study_lines.extend([str(x) for x in sell_block])
+                study_lines.append("```")
+
+            # 자동 생성 필터 코드(요약)
+            gen = (enhanced_result or {}).get('generated_code') if isinstance(enhanced_result, dict) else None
+            if isinstance(gen, dict):
+                study_lines.append("")
+                study_lines.append("## 2) 자동 생성 필터 코드(요약)")
+                s = gen.get('summary') or {}
+                if s:
+                    study_lines.append(f"- 필터 수: {int(s.get('total_filters', 0) or 0):,}개 (조합: AND)")
+                    study_lines.append(
+                        f"- 예상 총 개선(동시 적용/중복 반영): "
+                        f"{int(s.get('total_improvement_combined', s.get('total_improvement_naive', 0)) or 0):,}원"
+                    )
+                    allow_ml = s.get('allow_ml_filters')
+                    excluded_ml = int(s.get('excluded_ml_filters', 0) or 0)
+                    if allow_ml is not None:
+                        study_lines.append(
+                            f"- ML 필터 사용: {'허용' if bool(allow_ml) else '금지'}"
+                            + (f" (제외 {excluded_ml}개)" if excluded_ml > 0 else "")
+                        )
+
+                steps = gen.get('combine_steps') or []
+                if steps:
+                    study_lines.append("")
+                    study_lines.append("### 적용 순서(추가개선→누적개선, 누적제외%)")
+                    for st in steps[:10]:
+                        try:
+                            study_lines.append(
+                                f"- {st.get('순서', '')}. {str(st.get('필터명', ''))[:30]}: "
+                                f"+{int(st.get('추가개선(중복반영)', 0) or 0):,} → "
+                                f"누적 +{int(st.get('누적개선(동시적용)', 0) or 0):,} "
+                                f"(제외 {st.get('누적제외비율', 0)}%)"
+                            )
+                        except Exception:
+                            continue
+
+                buy_lines = gen.get('buy_conditions') or []
+                if buy_lines:
+                    study_lines.append("")
+                    study_lines.append("### 조합 코드(기존 매수조건에 AND 추가)")
+                    study_lines.append("```python")
+                    for ln in buy_lines[:20]:
+                        study_lines.append(str(ln).rstrip())
+                    study_lines.append("```")
+
+            # 컬럼(거래 항목) 스터디
+            try:
+                df_ref = (enhanced_result or {}).get('enhanced_df') if isinstance(enhanced_result, dict) else None
+                if not isinstance(df_ref, pd.DataFrame):
+                    df_ref = df_tsg
+                if isinstance(df_ref, pd.DataFrame) and not df_ref.empty:
+                    df_ref = reorder_detail_columns(df_ref)
+                    cols = [str(c) for c in df_ref.columns]
+
+                    base_cols = [
+                        '종목명', '시가총액', '포지션', '매수시간', '매도시간', '보유시간', '매도조건', '추가매수시간',
+                        '매수가', '매도가', '매수금액', '매도금액', '수익률', '수익금', '수익금합계',
+                        '매수일자', '매수시', '매수분', '매수초',
+                    ]
+                    core_cols = [
+                        '모멘텀점수', '거래품질점수', '위험도점수',
+                        '손실확률_ML', '위험도_ML', '예측매수매도위험도점수_ML',
+                        '매수매도위험도점수', '리스크조정수익률', '급락신호',
+                    ]
+
+                    colset = set(cols)
+                    base_present = [c for c in base_cols if c in colset]
+                    core_present = [c for c in core_cols if c in colset]
+                    buy_cols = [c for c in cols if c.startswith('매수') and c not in base_present]
+                    sell_cols = [c for c in cols if c.startswith('매도')]
+                    ml_cols = [c for c in cols if c.endswith('_ML')]
+                    rest = [c for c in cols if c not in set(base_present + core_present + buy_cols + sell_cols)]
+
+                    study_lines.append("")
+                    study_lines.append("## 3) 거래 항목(컬럼) 목록(이번 실행 기준)")
+                    study_lines.append("- 아래 컬럼들은 `detail.csv`/`filter.csv`에서 필터 후보로 활용할 수 있는 항목입니다.")
+                    study_lines.append("- 룩어헤드 방지 원칙: 매도 시점/사후 확정 컬럼은 실거래 필터에 사용 금지")
+
+                    def _dump_cols(title: str, items: list[str]):
+                        if not items:
+                            return
+                        study_lines.append("")
+                        study_lines.append(f"### {title} ({len(items)}개)")
+                        study_lines.append("```text")
+                        study_lines.extend(items)
+                        study_lines.append("```")
+
+                    _dump_cols("기본/시간/성과", base_present)
+                    _dump_cols("매수 스냅샷(매수*)", buy_cols)
+                    _dump_cols("매도 스냅샷(매도*)", sell_cols)
+                    _dump_cols("핵심 파생/리스크/ML", core_present)
+                    if ml_cols:
+                        _dump_cols("ML 컬럼(*_ML)", ml_cols)
+                    _dump_cols("기타", rest)
+
+                    study_lines.append("")
+                    study_lines.append("## 4) 필터 스터디 템플릿(복사/붙여넣기용)")
+                    study_lines.append("- `*_filter.csv`의 `적용코드`를 그대로 매수 조건에 AND로 추가하는 방식이 가장 빠릅니다.")
+                    study_lines.append("- 예시(형식):")
+                    study_lines.append("```python")
+                    study_lines.append("# and (매수등락율 < 8.0)")
+                    study_lines.append("# and ((모멘텀점수 < 5.4) or (모멘텀점수 >= 6.7))")
+                    study_lines.append("# and (초당순매수수량 < 35000)")
+                    study_lines.append("```")
+            except Exception:
+                pass
+
+            study_path.write_text("\n".join(study_lines), encoding='utf-8-sig')
+        except Exception:
+            pass
 
         report_path.write_text("\n".join(lines), encoding='utf-8-sig')
         return str(report_path)

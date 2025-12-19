@@ -70,7 +70,11 @@ Deep_Data/
 /backtester/graph/*.csv
 /backtester/graph/*.png
 /backtester/graph/*_report.txt
+/backtester/graph/*_condition_study.md
 /backtester/graph/Temp_Check_*/
+
+# ML model artifacts
+/backtester/models/
 
 # Local shortcuts
 STOM V1 venv.lnk

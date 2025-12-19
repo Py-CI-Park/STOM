@@ -876,12 +876,14 @@ backtester/
 | `{전략명}_filtered_.png` | (NEW) 자동 생성 필터 적용 미리보기(분포/단계 요약) |
 | `{전략명}_filtered.png` | (NEW) 자동 생성 필터 적용 미리보기(수익곡선 요약) |
 | `{전략명}_report.txt` | 실행 산출물 리포트(파일/시간/조건/요약) |
+| `{전략명}_condition_study.md` | (NEW) 조건식/필터 스터디 노트(자동 생성) |
 
 ### ML 모델 저장/재현 (v2.3+)
 
 - ML 번들은 `backtester/models/strategies/{strategy_key}/`에 **실행별(run)로 누적 저장**되며, `latest_ml_bundle.joblib`로 **재현(load_latest)** 가능합니다.
-- 텔레그램 메시지에 AUC/F1/피처수/저장경로 및 매수·매도 조건식(요약)이 함께 전송됩니다.
-- 상세 문서: `docs/Study/SystemAnalysis/Telegram/Telegram_Charts_Analysis.md`
+- 텔레그램 메시지에 **AUC/F1/BA + 소요 시간 + 신뢰도 PASS/FAIL** 및 매수·매도 조건식(요약)이 함께 전송됩니다.
+- 신뢰도 기준 미달이면 `*_ML` 기반 필터는 자동 생성/추천/코드 생성에서 제외됩니다(게이트).
+- 상세 문서: `docs/Study/SystemAnalysis/Telegram/Telegram_Charts_Analysis.md`, `docs/Study/SystemAnalysis/ML/ML_Model_Improvement_Study.md`
 
 ### 새로운 파생 지표
 

@@ -122,6 +122,20 @@ backtester/models/
 5. **detail.csv 컬럼 순서 가독성 개선**
    - 저장 시 컬럼을 그룹 단위로 재정렬하여(일반/성과→매수→매도→리스크/ML→기타) 확인이 쉬워짐
 
+### 1.4.3 v2.5 추가 개선 사항 (ML 시간/신뢰도 게이트/리포트·스터디 문서)
+
+1. **ML 소요 시간 측정/출력**
+   - `PredictRiskWithML()`에서 단계별 타임(`timing`)을 수집하고, 텔레그램/`*_report.txt`에 출력
+   - 예: total/load/train/predict/save
+2. **ML 신뢰도 기준(게이트) 도입**
+   - 기준 미달이면 `*_ML` 컬럼 기반 필터를 **자동 생성/추천/코드 생성에서 제외**
+   - 기준/사유는 텔레그램 및 `*_report.txt`에 함께 출력
+3. **`*_report.txt` 가독성 강화**
+   - `자동 생성 필터 코드(요약)` 섹션 추가(필터 수/총 개선/단계별 적용 순서/조합 코드)
+4. **학습용 산출물 `*_condition_study.md` 추가**
+   - 최근 백테스팅 조건식(요약) + 자동 생성 필터 코드 + 컬럼(거래 항목) 목록 + 필터 템플릿을 한 파일로 묶어 생성
+   - 생성 위치: `backtester/graph/{save_file_name}_condition_study.md`
+
 ### 1.5 시스템 아키텍처
 
 ```
@@ -1006,7 +1020,7 @@ detail.csv는 저장 시 `backtester/detail_schema.py`의 `reorder_detail_column
 
 ## 11. 텔레그램 전송 내용
 
-### 11.1 전송 순서 (v2.4)
+### 11.1 전송 순서 (v2.5)
 
 1. **텍스트**: `"{전략명} {날짜} 완료."`
 2. **이미지**: `{전략명}_.png` (부가정보 차트)
@@ -1015,7 +1029,7 @@ detail.csv는 저장 시 `backtester/detail_schema.py`의 `reorder_detail_column
 5. **이미지**: `{전략명}_comparison.png` (매수/매도 시점 상세 비교 차트)
 6. **이미지**: `{전략명}_enhanced.png` (필터 기능 분석 차트 - 18개)
 7. **텍스트**: 매수/매도 조건식(요약) (NEW)
-8. **텍스트**: ML 위험도 예측 결과(AUC/F1 등) (NEW)
+8. **텍스트**: ML 위험도 예측 결과(AUC/F1/BA + 소요 시간 + 신뢰도 PASS/FAIL) (NEW)
 9. **텍스트**: 필터 추천/조합 추천/안정성 요약
 10. **텍스트**: 자동 생성 조건식 요약
 11. **텍스트**: 필터 적용 미리보기 요약 (NEW)
@@ -1023,6 +1037,7 @@ detail.csv는 저장 시 `backtester/detail_schema.py`의 `reorder_detail_column
 13. **이미지**: `{전략명}_filtered.png` (필터 적용 수익곡선 요약) (NEW)
 
 ※ CSV/PNG 생성 목록은 `{전략명}_report.txt`로 `backtester/graph`에 저장되며, 기본 설정에서는 텔레그램으로 전송하지 않습니다.
+※ 학습용 산출물 `{전략명}_condition_study.md`도 `backtester/graph`에 생성되며, 텔레그램으로 전송하지 않습니다.
 
 ### 11.2 메시지 예시 (v2.2)
 
