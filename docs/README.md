@@ -3,7 +3,7 @@
 > STOM (System Trading Optimization Manager) 프로젝트의 모든 문서를 체계적으로 관리하는 중앙 저장소
 
 **📍 위치**: `docs/`
-**📅 최종 업데이트**: 2025-01-18
+**📅 최종 업데이트**: 2025-12-20
 **🔖 버전**: STOM V1
 
 ---
@@ -81,7 +81,7 @@ docs/
 ├── study/                       # 📚 연구 및 분석 문서
 │   ├── README.md
 │   ├── DocumentationReviews/    # 문서 리뷰 (1개)
-│   ├── ResearchReports/         # 연구 보고서 (3개)
+│   ├── ResearchReports/         # 연구 보고서 (4개)
 │   ├── SystemAnalysis/          # 시스템 분석 (3개)
 │   ├── ConditionStudies/        # 조건 분석 (2개)
 │   └── Guides/                  # 가이드 (1개)
@@ -238,7 +238,7 @@ docs/
 
 **주요 카테고리** (10개 문서):
 - **DocumentationReviews (1개)**: 문서 품질 검증 및 개선
-- **ResearchReports (3개)**: AI/ML 기반 트레이딩 전략 자동화 연구
+- **ResearchReports (4개)**: AI/ML 기반 트레이딩 전략 자동화 연구
 - **SystemAnalysis (3개)**: 시스템 최적화, Git 브랜치 구조 분석
 - **ConditionStudies (2개)**: 트레이딩 조건 심층 분석
 - **Guides (1개)**: 조건 최적화 및 분석 가이드

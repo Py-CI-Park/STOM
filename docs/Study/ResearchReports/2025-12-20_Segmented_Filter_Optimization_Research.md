@@ -20,6 +20,7 @@
 | 지표 | 값 | 해석 |
 |------|-----|------|
 | 기간 | 2022-04-01 ~ 2025-12-19 | 약 3년 8개월 |
+| 시간대 | 09:00 ~ 09:20 | 조건식 기준(장초 구간 분석) |
 | 거래 수 | 14,977건 | 충분한 표본 크기 |
 | 총 수익금 | -2,276,225,190원 | 심각한 손실 |
 | 승률 | 33.07% | 낮음 |
@@ -46,7 +47,7 @@
 
 #### 필터 조합의 시너지 문제
 
-현재 필터 조합 분석 결과 (상위 5개):
+현재 필터 조합 분석 결과 (상위 3개):
 
 | 조합 | 개별 개선합 | 조합 개선 | 시너지 | 잔여 거래수 |
 |------|-----------|----------|--------|-----------|
@@ -73,7 +74,7 @@
 
 #### A. 시가총액 분할 (Primary Dimension)
 
-조건식 문서(`Condition_Tick_900_920_Enhanced.md`)와 일치:
+조건식 문서(`Condition_Tick_900_920_Enhanced_FilterStudy.md`)와 일치:
 
 ```python
 시가총액_구간 = {
@@ -101,6 +102,8 @@
 }
 ```
 
+**분석 범위**: 09:00~09:20 구간(조건식 기준)만 포함하며 이후 구간은 제외.
+
 **분할 근거**:
 - T1 (09:00-09:05): 동시호가 해제 직후, 극심한 변동성
 - T2 (09:05-09:10): 초기 추세 형성, 갭 조정
@@ -123,11 +126,14 @@
 
 ```python
 MIN_TRADES_PER_SEGMENT = {
-    'absolute_min': 30,         # 절대 최소치 (통계적 유의성)
+    'absolute_min': 30,         # 대표본 구간 최소치
+    'small_segment_min': 10,    # 소표본 구간 완화 최소치
     'relative_min': 0.15,       # 세그먼트 내 거래의 15% 이상 유지
-    'dynamic_formula': lambda n: max(30, int(n * 0.15))
+    'dynamic_formula': lambda n: max(10, min(30, int(n * 0.15)))
 }
 ```
+
+- 소표본 세그먼트는 최소 거래수를 완화하고, 필터 미적용 조합을 허용해 과도한 제약을 방지한다.
 
 #### 최대 제외율 제약
 
@@ -255,6 +261,13 @@ def OptimizeGlobalCombination(segment_candidates, config):
             max_filters=config.max_filters_per_segment,
             top_k=config.beam_width
         )
+        # baseline(no_filter) 추가: 세그먼트가 강제 필터링되지 않도록 보장
+        local_combos.append({
+            'filters': [],
+            'improvement': 0,
+            'excluded_trades': 0,
+            'label': 'no_filter'
+        })
         segment_combos[seg_id] = local_combos
 
     # 2. Beam Search 기반 전역 탐색
@@ -323,6 +336,9 @@ def MultiObjectiveOptimization(segment_data, config):
         pareto_front: Pareto 최적 해 집합
     """
     from pymoo.algorithms.moo.nsga2 import NSGA2
+    from pymoo.operators.sampling.rnd import BinaryRandomSampling
+    from pymoo.operators.crossover.pntx import TwoPointCrossover
+    from pymoo.operators.mutation.bitflip import BitflipMutation
     from pymoo.optimize import minimize
     from pymoo.core.problem import Problem
 
@@ -357,7 +373,14 @@ def MultiObjectiveOptimization(segment_data, config):
             out["G"] = g
 
     problem = FilterOptProblem(segment_data, n_segments=12, n_filters=20)
-    algorithm = NSGA2(pop_size=100)
+    # 바이너리 선택 변수에 맞는 연산자 지정
+    algorithm = NSGA2(
+        pop_size=100,
+        sampling=BinaryRandomSampling(),
+        crossover=TwoPointCrossover(),
+        mutation=BitflipMutation(),
+        eliminate_duplicates=True
+    )
 
     result = minimize(
         problem,
