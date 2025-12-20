@@ -594,7 +594,7 @@ OUTPUT_FILES = {
 
     # 필터 후보
     '*_segment_filters.csv': {
-        'columns': ['segment_id', 'filter_name', 'threshold', 'direction',
+        'columns': ['segment_id', 'filter_name', 'column', 'threshold', 'direction',
                     'improvement', 'exclusion_ratio', 'p_value', 'effect_size',
                     'efficiency', 'stability_score'],
         'description': '세그먼트별 필터 후보 및 성과'
@@ -795,9 +795,12 @@ OVERFITTING_PREVENTION = {
 
 ### Phase 2: 최적화 알고리즘 (1주)
 
-- [ ] Beam Search 기반 조합 최적화 구현
+- [x] Beam Search 기반 조합 최적화 구현 (`combination_optimizer.py`)
 - [ ] Optuna 임계값 탐색 통합
-- [ ] 제약 조건 검증 로직
+- [x] 제약 조건 검증 로직 (`validation.py`)
+
+**Phase 2-1 진행 결과**
+- 세그먼트별 조합 생성 + 전역 조합 탐색 기본 골격 구현
 
 ### Phase 3: 검증 및 시각화 (1주)
 

@@ -13,10 +13,12 @@ Date: 2025-12-20
 
 from .segmentation import SegmentConfig, SegmentBuilder
 from .filter_evaluator import FilterEvaluatorConfig, FilterEvaluator
+from .combination_optimizer import CombinationOptimizerConfig
 
 __all__ = [
     'SegmentConfig',
     'SegmentBuilder',
     'FilterEvaluatorConfig',
     'FilterEvaluator',
+    'CombinationOptimizerConfig',
 ]

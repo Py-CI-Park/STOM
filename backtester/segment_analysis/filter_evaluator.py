@@ -103,6 +103,7 @@ class FilterEvaluator:
                         continue
                     result.update({
                         'segment_id': segment_id,
+                        'column': col,
                         'filter_name': self._format_filter_name(col, thr, direction),
                         'threshold': float(thr),
                         'direction': direction,
@@ -151,7 +152,12 @@ class FilterEvaluator:
             return None
 
         p_value, effect_size = self._calc_stats(filtered_out, remaining)
-        if p_value >= 1.0:
+        if stats is not None:
+            if p_value >= self.config.p_threshold:
+                return None
+            if abs(effect_size) < self.config.effect_threshold:
+                return None
+        elif p_value >= 1.0:
             effect_size = 0.0
 
         efficiency = improvement / max(1.0, exclusion_ratio * 100.0)
