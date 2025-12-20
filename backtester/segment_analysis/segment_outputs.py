@@ -133,6 +133,16 @@ def save_segment_validation(df_validation: pd.DataFrame, output_dir: str, prefix
     return str(validation_path)
 
 
+def save_pareto_front(df_pareto: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_pareto is None or df_pareto.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    pareto_path = path / f"{prefix}_pareto_front.csv"
+    df_pareto.to_csv(pareto_path, index=False, encoding='utf-8-sig')
+    return str(pareto_path)
+
+
 def _summarize_segment(segment_id: str, df: pd.DataFrame) -> dict:
     trades = len(df)
     profit = _sum_safe(df, '수익금')

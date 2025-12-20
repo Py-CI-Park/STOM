@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.3 (리스크 지표 확장 반영)
+- **버전**: 2.4 (다목적 최적화 실험 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -509,7 +509,9 @@ backtester/
 │   ├── threshold_optimizer.py       # Optuna 임계값 최적화
 │   ├── validation.py                # 제약 조건 검증
 │   ├── segment_visualizer.py        # 히트맵/효율 차트 시각화
-│   ├── multi_objective.py           # NSGA-II 다목적 최적화
+│   ├── risk_metrics.py              # 리스크 지표(MDD/변동성) 계산
+│   ├── multi_objective.py           # Pareto 기반 다목적 평가
+│   ├── multi_objective_runner.py    # Pareto front 산출 실행 흐름
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
 
@@ -650,6 +652,7 @@ OUTPUT_FILES = {
     },
 
     # 시각화
+    '*_pareto_front.csv': 'Pareto front 후보 집합(다목적 평가 결과)',
     '*_segment_heatmap.png': '세그먼트별 성과 히트맵',
     '*_filter_efficiency.png': '필터 효율성 차트',
     '*_pareto_front.png': 'Pareto 최적 전선 시각화'
@@ -858,6 +861,15 @@ OVERFITTING_PREVENTION = {
 - [x] 전역 조합 결과 리스크 지표(MDD/변동성) 산출 확장
 - [ ] 실전 조건식 반영 후 성능 비교/리스크 지표 고도화
 
+### Phase 6: 다목적 최적화 실험(선택)
+
+- [x] Pareto front 평가 모듈 및 실행 흐름 추가
+- [x] Pareto front CSV/시각화 산출 (`*_pareto_front.csv`, `*_pareto_front.png`)
+- [ ] NSGA-II/Optuna 등 고급 탐색 실험(필요 시)
+
+**Phase 6-1 실행 옵션**
+- `python -m backtester.segment_analysis.multi_objective_runner <detail.csv>`
+
 ---
 
 ## 8. 결론 및 다음 단계
@@ -873,8 +885,8 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. Optuna/NSGA-II 기반 다목적 최적화 실험(선택)
-2. 세그먼트 분할의 반-동적 전환(분포 기반 구간 재조정)
+1. 세그먼트 분할의 반-동적 전환(분포 기반 구간 재조정)
+2. NSGA-II/Optuna 기반 고급 탐색(필요 시)
 
 ---
 
@@ -887,6 +899,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.3
+**문서 버전**: 2.4
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code

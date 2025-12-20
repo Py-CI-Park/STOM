@@ -112,6 +112,46 @@ def optimize_global_combination(
     return beam[0] if beam else None
 
 
+def collect_global_combinations(
+    segment_combos: Dict[str, List[dict]],
+    total_trades: int,
+    config: Optional[CombinationOptimizerConfig] = None,
+    top_n: Optional[int] = None,
+) -> List[dict]:
+    """
+    전역 조합 후보를 Beam Search 결과로 수집합니다.
+    """
+    config = config or CombinationOptimizerConfig()
+    limit = top_n if top_n is not None else config.beam_width
+
+    beam = [{
+        'combination': {},
+        'score': 0.0,
+        'excluded_trades': 0,
+    }]
+
+    for seg_id in sorted(segment_combos.keys()):
+        new_beam: List[dict] = []
+        for state in beam:
+            for combo in segment_combos[seg_id]:
+                new_excluded = state['excluded_trades'] + combo['excluded_trades']
+                if not validate_global_state(new_excluded, total_trades, config):
+                    continue
+
+                new_state = {
+                    'combination': {**state['combination'], seg_id: combo},
+                    'score': state['score'] + combo['improvement'],
+                    'excluded_trades': new_excluded,
+                }
+                new_beam.append(new_state)
+
+        new_beam.sort(key=lambda x: x['score'], reverse=True)
+        beam = new_beam[:config.beam_width]
+
+    beam.sort(key=lambda x: x['score'], reverse=True)
+    return beam[:limit]
+
+
 def apply_filter_mask(df: pd.DataFrame, candidate: dict) -> np.ndarray:
     column = candidate.get('column')
     threshold = candidate.get('threshold')

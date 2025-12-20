@@ -18,6 +18,7 @@ from .threshold_optimizer import ThresholdOptimizerConfig
 from .validation import StabilityValidationConfig
 from .code_generator import build_segment_filter_code, save_segment_code
 from .risk_metrics import summarize_risk
+from .multi_objective import MultiObjectiveConfig, evaluate_candidates, build_pareto_front
 
 __all__ = [
     'SegmentConfig',
@@ -30,4 +31,7 @@ __all__ = [
     'build_segment_filter_code',
     'save_segment_code',
     'summarize_risk',
+    'MultiObjectiveConfig',
+    'evaluate_candidates',
+    'build_pareto_front',
 ]

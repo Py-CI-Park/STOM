@@ -73,3 +73,34 @@ def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: in
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
     return output_path
+
+
+def plot_pareto_front(pareto_df: pd.DataFrame, output_path: str) -> Optional[str]:
+    if plt is None or pareto_df is None or pareto_df.empty:
+        return None
+
+    if 'remaining_ratio' not in pareto_df.columns or 'total_improvement' not in pareto_df.columns:
+        return None
+
+    x = pareto_df['remaining_ratio'].astype(float).to_numpy()
+    y = pareto_df['total_improvement'].astype(float).to_numpy()
+    color = None
+    if 'mdd_pct' in pareto_df.columns:
+        color = pareto_df['mdd_pct'].astype(float).to_numpy()
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    if color is not None:
+        sc = ax.scatter(x, y, c=color, cmap='viridis', alpha=0.8)
+        fig.colorbar(sc, ax=ax, fraction=0.046, pad=0.04, label='MDD(%)')
+    else:
+        ax.scatter(x, y, color='#1f77b4', alpha=0.8)
+
+    ax.set_xlabel('Remaining Ratio')
+    ax.set_ylabel('Total Improvement')
+    ax.set_title('Pareto Front (Multi-Objective)')
+    ax.grid(True, linestyle='--', alpha=0.4)
+
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+    return output_path
