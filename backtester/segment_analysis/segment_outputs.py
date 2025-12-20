@@ -71,7 +71,8 @@ def save_segment_local_combos(df_local: pd.DataFrame, output_dir: str, prefix: s
     return str(combo_path)
 
 
-def build_global_combo_df(global_best: Optional[dict], total_trades: int) -> pd.DataFrame:
+def build_global_combo_df(global_best: Optional[dict], total_trades: int,
+                          risk_metrics: Optional[Dict[str, float]] = None) -> pd.DataFrame:
     if not global_best:
         return pd.DataFrame()
     remaining_trades = total_trades - int(global_best.get('excluded_trades', 0))
@@ -81,7 +82,7 @@ def build_global_combo_df(global_best: Optional[dict], total_trades: int) -> pd.
 
     filters = _format_global_filters(global_best.get('combination', {}))
 
-    return pd.DataFrame([{
+    row = {
         'combo_id': 1,
         'segments': ",".join(sorted(global_best.get('combination', {}).keys())),
         'filters': filters,
@@ -89,7 +90,17 @@ def build_global_combo_df(global_best: Optional[dict], total_trades: int) -> pd.
         'remaining_trades': remaining_trades,
         'remaining_ratio': remaining_ratio,
         'validation_score': validation_score,
-    }])
+    }
+
+    if isinstance(risk_metrics, dict):
+        row.update({
+            'mdd_won': risk_metrics.get('mdd_won'),
+            'mdd_pct': risk_metrics.get('mdd_pct'),
+            'profit_volatility': risk_metrics.get('profit_volatility'),
+            'return_volatility': risk_metrics.get('return_volatility'),
+        })
+
+    return pd.DataFrame([row])
 
 
 def save_segment_combos(df_combos: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:

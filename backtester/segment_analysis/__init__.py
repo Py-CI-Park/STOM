@@ -17,6 +17,7 @@ from .combination_optimizer import CombinationOptimizerConfig
 from .threshold_optimizer import ThresholdOptimizerConfig
 from .validation import StabilityValidationConfig
 from .code_generator import build_segment_filter_code, save_segment_code
+from .risk_metrics import summarize_risk
 
 __all__ = [
     'SegmentConfig',
@@ -28,4 +29,5 @@ __all__ = [
     'StabilityValidationConfig',
     'build_segment_filter_code',
     'save_segment_code',
+    'summarize_risk',
 ]

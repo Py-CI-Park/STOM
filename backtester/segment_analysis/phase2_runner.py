@@ -32,6 +32,7 @@ from .segment_outputs import (
     save_segment_combos,
     save_segment_thresholds,
 )
+from .risk_metrics import summarize_risk
 
 
 @dataclass
@@ -83,7 +84,9 @@ def run_phase2(
     local_combo_path = save_segment_local_combos(local_combo_df, runner_config.output_dir, output_prefix)
 
     global_best = optimize_global_combination(segment_combos, total_trades, combo_config)
-    global_combo_df = build_global_combo_df(global_best, total_trades)
+    filtered_df = _apply_global_combination(segments, global_best)
+    risk_metrics = summarize_risk(filtered_df)
+    global_combo_df = build_global_combo_df(global_best, total_trades, risk_metrics=risk_metrics)
     global_combo_path = save_segment_combos(global_combo_df, runner_config.output_dir, output_prefix)
 
     segment_code_path = None
@@ -134,6 +137,68 @@ def _build_prefix(filename: str) -> str:
     if filename.endswith('_detail.csv'):
         return filename.replace('_detail.csv', '')
     return filename.replace('.csv', '')
+
+
+def _apply_global_combination(segments: dict, global_best: Optional[dict]) -> pd.DataFrame:
+    if not isinstance(global_best, dict) or not isinstance(segments, dict):
+        return pd.DataFrame()
+    combo_map = global_best.get('combination')
+    if not isinstance(combo_map, dict):
+        return pd.DataFrame()
+
+    filtered_parts = []
+    for seg_id, seg_df in segments.items():
+        combo = combo_map.get(seg_id)
+        if combo is None or seg_df is None or seg_df.empty:
+            continue
+        filters = combo.get('filters') or []
+        seg_filtered = _apply_filters(seg_df, filters)
+        if not seg_filtered.empty:
+            filtered_parts.append(seg_filtered)
+
+    if not filtered_parts:
+        return pd.DataFrame()
+
+    filtered_df = pd.concat(filtered_parts, axis=0)
+    return _sort_detail_df(filtered_df)
+
+
+def _apply_filters(seg_df: pd.DataFrame, filters: list) -> pd.DataFrame:
+    if not filters:
+        return seg_df.copy()
+    mask = pd.Series(True, index=seg_df.index)
+    for flt in filters:
+        column = flt.get('column')
+        threshold = flt.get('threshold')
+        direction = flt.get('direction')
+        if column is None or column not in seg_df.columns:
+            continue
+        values = pd.to_numeric(seg_df[column], errors='coerce')
+        if direction == 'less':
+            cond = values >= threshold
+        else:
+            cond = values < threshold
+        mask &= cond.fillna(False)
+    return seg_df.loc[mask].copy()
+
+
+def _sort_detail_df(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    if '매수시간' in df.columns:
+        return df.sort_values('매수시간')
+    if all(c in df.columns for c in ('매수일자', '매수시', '매수분', '매수초')):
+        try:
+            sort_key = (
+                pd.to_numeric(df['매수일자'], errors='coerce').fillna(0).astype(int) * 1000000 +
+                pd.to_numeric(df['매수시'], errors='coerce').fillna(0).astype(int) * 10000 +
+                pd.to_numeric(df['매수분'], errors='coerce').fillna(0).astype(int) * 100 +
+                pd.to_numeric(df['매수초'], errors='coerce').fillna(0).astype(int)
+            )
+            return df.assign(_sort_key=sort_key).sort_values('_sort_key').drop(columns=['_sort_key'])
+        except Exception:
+            return df
+    return df
 
 
 if __name__ == '__main__':

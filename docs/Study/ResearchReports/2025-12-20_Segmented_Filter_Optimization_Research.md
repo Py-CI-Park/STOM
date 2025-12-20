@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.2 (Phase 5 적용/검증 반영)
+- **버전**: 2.3 (리스크 지표 확장 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -607,7 +607,8 @@ OUTPUT_FILES = {
     # 조합 결과
     '*_segment_combos.csv': {
         'columns': ['combo_id', 'segments', 'filters', 'total_improvement',
-                    'remaining_trades', 'remaining_ratio', 'validation_score'],
+                    'remaining_trades', 'remaining_ratio', 'validation_score',
+                    'mdd_won', 'mdd_pct', 'profit_volatility', 'return_volatility'],
         'description': '전역 최적 조합(요약)'
     },
 
@@ -854,7 +855,8 @@ OVERFITTING_PREVENTION = {
 
 - [x] 전역 조합 기반 세그먼트 필터 마스크 적용
 - [x] 세그먼트 필터 미리보기 차트 생성 (`*_segment_filtered.png`, `*_segment_filtered_.png`)
-- [ ] 실전 조건식 반영 후 성능 비교/리스크 지표 확장
+- [x] 전역 조합 결과 리스크 지표(MDD/변동성) 산출 확장
+- [ ] 실전 조건식 반영 후 성능 비교/리스크 지표 고도화
 
 ---
 
@@ -871,9 +873,8 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. 세그먼트 조합 결과의 리스크 지표(MDD/변동성) 확장
-2. Optuna/NSGA-II 기반 다목적 최적화 실험(선택)
-3. 세그먼트 분할의 반-동적 전환(분포 기반 구간 재조정)
+1. Optuna/NSGA-II 기반 다목적 최적화 실험(선택)
+2. 세그먼트 분할의 반-동적 전환(분포 기반 구간 재조정)
 
 ---
 
@@ -886,6 +887,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.2
+**문서 버전**: 2.3
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code
