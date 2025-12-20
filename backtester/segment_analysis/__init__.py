@@ -14,6 +14,7 @@ Date: 2025-12-20
 from .segmentation import SegmentConfig, SegmentBuilder
 from .filter_evaluator import FilterEvaluatorConfig, FilterEvaluator
 from .combination_optimizer import CombinationOptimizerConfig
+from .threshold_optimizer import ThresholdOptimizerConfig
 
 __all__ = [
     'SegmentConfig',
@@ -21,4 +22,5 @@ __all__ = [
     'FilterEvaluatorConfig',
     'FilterEvaluator',
     'CombinationOptimizerConfig',
+    'ThresholdOptimizerConfig',
 ]

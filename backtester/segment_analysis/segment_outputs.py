@@ -8,7 +8,7 @@ Segment Output Helpers
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -44,6 +44,72 @@ def save_segment_filters(df_filters: pd.DataFrame, output_dir: str, prefix: str)
     filter_path = path / f"{prefix}_segment_filters.csv"
     df_filters.to_csv(filter_path, index=False, encoding='utf-8-sig')
     return str(filter_path)
+
+
+def build_local_combos_df(segment_combos: Dict[str, List[dict]]) -> pd.DataFrame:
+    rows = []
+    for seg_id, combos in segment_combos.items():
+        for rank, combo in enumerate(combos, start=1):
+            rows.append({
+                'segment_id': seg_id,
+                'combo_rank': rank,
+                'filters': _format_filters(combo.get('filters', [])),
+                'improvement': combo.get('improvement', 0),
+                'remaining_trades': combo.get('remaining_trades', 0),
+                'exclusion_ratio': combo.get('exclusion_ratio', 0),
+            })
+    return pd.DataFrame(rows)
+
+
+def save_segment_local_combos(df_local: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_local is None or df_local.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    combo_path = path / f"{prefix}_segment_local_combos.csv"
+    df_local.to_csv(combo_path, index=False, encoding='utf-8-sig')
+    return str(combo_path)
+
+
+def build_global_combo_df(global_best: Optional[dict], total_trades: int) -> pd.DataFrame:
+    if not global_best:
+        return pd.DataFrame()
+    remaining_trades = total_trades - int(global_best.get('excluded_trades', 0))
+    remaining_ratio = remaining_trades / max(1, total_trades)
+    score = float(global_best.get('score', 0))
+    validation_score = score / max(1.0, (1.0 - remaining_ratio) * 100.0)
+
+    filters = _format_global_filters(global_best.get('combination', {}))
+
+    return pd.DataFrame([{
+        'combo_id': 1,
+        'segments': ",".join(sorted(global_best.get('combination', {}).keys())),
+        'filters': filters,
+        'total_improvement': score,
+        'remaining_trades': remaining_trades,
+        'remaining_ratio': remaining_ratio,
+        'validation_score': validation_score,
+    }])
+
+
+def save_segment_combos(df_combos: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_combos is None or df_combos.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    combo_path = path / f"{prefix}_segment_combos.csv"
+    df_combos.to_csv(combo_path, index=False, encoding='utf-8-sig')
+    return str(combo_path)
+
+
+def save_segment_thresholds(df_thresholds: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_thresholds is None or df_thresholds.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    threshold_path = path / f"{prefix}_segment_thresholds.csv"
+    df_thresholds.to_csv(threshold_path, index=False, encoding='utf-8-sig')
+    return str(threshold_path)
 
 
 def _summarize_segment(segment_id: str, df: pd.DataFrame) -> dict:
@@ -92,3 +158,20 @@ def _winrate_safe(df: pd.DataFrame) -> float:
     if profit.notna().sum() == 0:
         return np.nan
     return float((profit > 0).mean() * 100.0)
+
+
+def _format_filters(filters: List[dict]) -> str:
+    names = []
+    for item in filters:
+        name = item.get('filter_name') or ''
+        if name:
+            names.append(name)
+    return " | ".join(names)
+
+
+def _format_global_filters(combo_map: Dict[str, dict]) -> str:
+    parts = []
+    for seg_id, combo in combo_map.items():
+        names = _format_filters(combo.get('filters', []))
+        parts.append(f"{seg_id}: {names}" if names else f"{seg_id}: (no_filter)")
+    return " / ".join(parts)

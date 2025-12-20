@@ -503,9 +503,11 @@ backtester/
 │   ├── filter_evaluator.py          # 세그먼트별 필터 평가
 │   ├── segment_outputs.py           # 요약/필터 CSV 산출물
 │   ├── phase1_runner.py             # Phase 1 실행 흐름
+│   ├── phase2_runner.py             # Phase 2 실행 흐름
 │   ├── combination_optimizer.py     # 조합 최적화 알고리즘
+│   ├── threshold_optimizer.py       # Optuna 임계값 최적화
+│   ├── validation.py                # 제약 조건 검증
 │   ├── multi_objective.py           # NSGA-II 다목적 최적화
-│   └── validation.py                # 검증 및 안정성 분석
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
 
@@ -604,7 +606,20 @@ OUTPUT_FILES = {
     '*_segment_combos.csv': {
         'columns': ['combo_id', 'segments', 'filters', 'total_improvement',
                     'remaining_trades', 'remaining_ratio', 'validation_score'],
-        'description': '세그먼트별 최적 조합 후보'
+        'description': '전역 최적 조합(요약)'
+    },
+
+    # 세그먼트별 로컬 조합
+    '*_segment_local_combos.csv': {
+        'columns': ['segment_id', 'combo_rank', 'filters', 'improvement',
+                    'remaining_trades', 'exclusion_ratio'],
+        'description': '세그먼트별 조합 후보(로컬)'
+    },
+
+    # Optuna 임계값 최적화 (옵션)
+    '*_segment_thresholds.csv': {
+        'columns': ['segment_id', 'best_value', 'best_params', 'n_trials'],
+        'description': '세그먼트별 Optuna 임계값 결과(선택 실행)'
     },
 
     # 최적 조합
@@ -796,11 +811,15 @@ OVERFITTING_PREVENTION = {
 ### Phase 2: 최적화 알고리즘 (1주)
 
 - [x] Beam Search 기반 조합 최적화 구현 (`combination_optimizer.py`)
-- [ ] Optuna 임계값 탐색 통합
+- [x] Optuna 임계값 탐색 통합 (`threshold_optimizer.py`, 선택 실행)
 - [x] 제약 조건 검증 로직 (`validation.py`)
 
 **Phase 2-1 진행 결과**
 - 세그먼트별 조합 생성 + 전역 조합 탐색 기본 골격 구현
+
+**Phase 2-2 진행 결과**
+- Optuna 임계값 최적화 모듈 및 Phase 2 실행 흐름 추가 (`phase2_runner.py`)
+- 실행 옵션: `python -m backtester.segment_analysis.phase2_runner <detail.csv> --optuna`
 
 ### Phase 3: 검증 및 시각화 (1주)
 
