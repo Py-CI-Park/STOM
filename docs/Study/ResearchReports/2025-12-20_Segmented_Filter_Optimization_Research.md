@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.5 (반-동적 분할 구현 반영)
+- **버전**: 2.6 (분할 모드 비교 리포트 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -530,6 +530,7 @@ backtester/
 │   ├── risk_metrics.py              # 리스크 지표(MDD/변동성) 계산
 │   ├── multi_objective.py           # Pareto 기반 다목적 평가
 │   ├── multi_objective_runner.py    # Pareto front 산출 실행 흐름
+│   ├── segment_mode_comparator.py   # 분할 모드 비교 리포트 실행
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
 
@@ -677,6 +678,7 @@ OUTPUT_FILES = {
 
     # 시각화
     '*_pareto_front.csv': 'Pareto front 후보 집합(다목적 평가 결과)',
+    '*_segment_mode_comparison.csv': '분할 모드 비교 리포트(고정/반-동적/동적)',
     '*_segment_heatmap.png': '세그먼트별 성과 히트맵',
     '*_filter_efficiency.png': '필터 효율성 차트',
     '*_pareto_front.png': 'Pareto 최적 전선 시각화'
@@ -894,11 +896,19 @@ OVERFITTING_PREVENTION = {
 **Phase 6-1 실행 옵션**
 - `python -m backtester.segment_analysis.multi_objective_runner <detail.csv>`
 
+**Phase 8-1 실행 옵션**
+- `python -m backtester.segment_analysis.segment_mode_comparator <detail.csv>`
+
 ### Phase 7: 반-동적 분할 적용(1주)
 
 - [x] 시가총액/시간 분포 기반 구간 재산정 옵션 추가
 - [x] 세그먼트 분할 범위 CSV 저장(`*_segment_ranges.csv`)
-- [ ] 고정/반-동적/동적 성능 비교 리포트 정리
+- [x] 고정/반-동적/동적 성능 비교 리포트 실행 흐름 추가
+
+### Phase 8: 분할 모드 비교 리포트(1주)
+
+- [x] 모드별 비교 리포트 CSV 산출(`*_segment_mode_comparison.csv`)
+- [ ] 비교 결과 해석/의사결정 가이드 정리
 
 ---
 
@@ -915,7 +925,7 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. 고정/반-동적/동적 분할 성능 비교 리포트 정리
+1. 비교 결과 해석/의사결정 가이드 정리
 2. NSGA-II/Optuna 기반 고급 탐색(필요 시)
 
 ---
@@ -929,6 +939,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.5
+**문서 버전**: 2.6
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code
