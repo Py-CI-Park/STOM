@@ -163,6 +163,26 @@ def save_segment_mode_comparison(df_comp: pd.DataFrame, output_dir: str, prefix:
     return str(comp_path)
 
 
+def save_advanced_optuna_result(df_result: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_result is None or df_result.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    optuna_path = path / f"{prefix}_advanced_optuna.csv"
+    df_result.to_csv(optuna_path, index=False, encoding='utf-8-sig')
+    return str(optuna_path)
+
+
+def save_nsga2_front(df_front: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_front is None or df_front.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    nsga2_path = path / f"{prefix}_nsga2_front.csv"
+    df_front.to_csv(nsga2_path, index=False, encoding='utf-8-sig')
+    return str(nsga2_path)
+
+
 def _summarize_segment(segment_id: str, df: pd.DataFrame) -> dict:
     trades = len(df)
     profit = _sum_safe(df, '수익금')

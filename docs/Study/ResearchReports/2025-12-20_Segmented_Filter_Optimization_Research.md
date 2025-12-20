@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.6 (분할 모드 비교 리포트 반영)
+- **버전**: 2.7 (비교 해석/고급 탐색 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -531,6 +531,7 @@ backtester/
 │   ├── multi_objective.py           # Pareto 기반 다목적 평가
 │   ├── multi_objective_runner.py    # Pareto front 산출 실행 흐름
 │   ├── segment_mode_comparator.py   # 분할 모드 비교 리포트 실행
+│   ├── advanced_search_runner.py    # Optuna/NSGA-II 고급 탐색 실행
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
 
@@ -679,6 +680,8 @@ OUTPUT_FILES = {
     # 시각화
     '*_pareto_front.csv': 'Pareto front 후보 집합(다목적 평가 결과)',
     '*_segment_mode_comparison.csv': '분할 모드 비교 리포트(고정/반-동적/동적)',
+    '*_advanced_optuna.csv': 'Optuna 가중치 탐색 결과(최적 조합 1건)',
+    '*_nsga2_front.csv': 'NSGA-II 전선(미설치 시 Pareto 대체)',
     '*_segment_heatmap.png': '세그먼트별 성과 히트맵',
     '*_filter_efficiency.png': '필터 효율성 차트',
     '*_pareto_front.png': 'Pareto 최적 전선 시각화'
@@ -891,13 +894,11 @@ OVERFITTING_PREVENTION = {
 
 - [x] Pareto front 평가 모듈 및 실행 흐름 추가
 - [x] Pareto front CSV/시각화 산출 (`*_pareto_front.csv`, `*_pareto_front.png`)
-- [ ] NSGA-II/Optuna 등 고급 탐색 실험(필요 시)
+- [x] NSGA-II/Optuna 고급 탐색 실행 흐름 추가(옵션)
 
 **Phase 6-1 실행 옵션**
 - `python -m backtester.segment_analysis.multi_objective_runner <detail.csv>`
-
-**Phase 8-1 실행 옵션**
-- `python -m backtester.segment_analysis.segment_mode_comparator <detail.csv>`
+- `python -m backtester.segment_analysis.advanced_search_runner <detail.csv>`
 
 ### Phase 7: 반-동적 분할 적용(1주)
 
@@ -908,7 +909,22 @@ OVERFITTING_PREVENTION = {
 ### Phase 8: 분할 모드 비교 리포트(1주)
 
 - [x] 모드별 비교 리포트 CSV 산출(`*_segment_mode_comparison.csv`)
-- [ ] 비교 결과 해석/의사결정 가이드 정리
+- [x] 비교 결과 해석/의사결정 가이드 정리
+
+**Phase 8-1 실행 옵션**
+- `python -m backtester.segment_analysis.segment_mode_comparator <detail.csv>`
+
+**비교 결과 해석/의사결정 가이드**
+1. **1차 기준**: `total_improvement`가 +이고 `remaining_ratio`가 0.2 이상인 모드를 우선한다.
+2. **2차 기준**: `mdd_pct`가 고정 모드 대비 과도하게 악화되면(예: +20%p 이상) 보류한다.
+3. **3차 기준**: `profit_volatility`가 낮은 모드를 선호한다(동일 성과일 때 안정성 우선).
+4. **분할 안정성 확인**: `*_segment_ranges.csv`에서 구간이 급격히 좁아지는지 점검한다.
+5. **해석 가능성**: 조건식 설명이 어렵다면 고정 또는 반-동적 모드를 유지한다.
+
+### Phase 9: 고급 탐색(선택)
+
+- [x] Optuna 가중치 탐색 결과 CSV 산출(`*_advanced_optuna.csv`)
+- [x] NSGA-II front CSV 산출(`*_nsga2_front.csv`, 미설치 시 Pareto 대체)
 
 ---
 
@@ -925,8 +941,7 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. 비교 결과 해석/의사결정 가이드 정리
-2. NSGA-II/Optuna 기반 고급 탐색(필요 시)
+1. 없음 (추가 요청 시 진행)
 
 ---
 
@@ -939,6 +954,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.6
+**문서 버전**: 2.7
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code
