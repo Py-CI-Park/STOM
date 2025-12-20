@@ -21,6 +21,7 @@ from .segment_outputs import (
     save_segment_summary,
     save_segment_filters,
     save_segment_validation,
+    save_segment_ranges,
 )
 from .segment_visualizer import plot_segment_heatmap, plot_filter_efficiency
 
@@ -51,6 +52,8 @@ def run_phase3(
 
     summary_df = build_segment_summary(segments, builder.out_of_range)
     summary_path = save_segment_summary(summary_df, runner_config.output_dir, output_prefix)
+    ranges_df = builder.get_range_summary_df()
+    ranges_path = save_segment_ranges(ranges_df, runner_config.output_dir, output_prefix)
 
     evaluator = FilterEvaluator(filter_config)
     filters_df = evaluator.evaluate_all_segments(segments)
@@ -76,6 +79,7 @@ def run_phase3(
 
     return {
         'summary_path': summary_path,
+        'ranges_path': ranges_path,
         'filters_path': filters_path,
         'validation_path': validation_path,
         'heatmap_path': heatmap_path,

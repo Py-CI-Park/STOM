@@ -31,6 +31,7 @@ from .segment_outputs import (
     build_global_combo_df,
     save_segment_combos,
     save_segment_thresholds,
+    save_segment_ranges,
 )
 from .risk_metrics import summarize_risk
 
@@ -62,6 +63,8 @@ def run_phase2(
 
     summary_df = build_segment_summary(segments, builder.out_of_range)
     summary_path = save_segment_summary(summary_df, runner_config.output_dir, output_prefix)
+    ranges_df = builder.get_range_summary_df()
+    ranges_path = save_segment_ranges(ranges_df, runner_config.output_dir, output_prefix)
 
     evaluator = FilterEvaluator(filter_config)
     filters_df = evaluator.evaluate_all_segments(segments)
@@ -123,6 +126,7 @@ def run_phase2(
 
     return {
         'summary_path': summary_path,
+        'ranges_path': ranges_path,
         'filters_path': filters_path,
         'local_combo_path': local_combo_path,
         'global_combo_path': global_combo_path,

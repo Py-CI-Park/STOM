@@ -67,6 +67,12 @@ class SegmentConfig:
         'track_out_of_range': True,  # 구간 외 데이터 비중 추적
     })
 
+    # 반-동적 분할 옵션
+    dynamic_mode: str = 'fixed'  # fixed | semi | dynamic | time_only
+    dynamic_market_cap_quantiles: Tuple[float, float] = (0.33, 0.66)
+    dynamic_time_quantiles: Tuple[float, float, float] = (0.25, 0.5, 0.75)
+    dynamic_min_samples: int = 200
+
     def get_dynamic_min_trades(self, segment_size: int) -> int:
         """
         세그먼트 크기에 따른 동적 최소 거래수 계산
@@ -100,6 +106,10 @@ class SegmentBuilder:
         self.segments: Dict[str, pd.DataFrame] = {}
         self.segment_stats: Dict[str, dict] = {}
         self.out_of_range: pd.DataFrame = pd.DataFrame()
+        self.runtime_market_cap_ranges: Dict[str, Tuple[float, float]] = {}
+        self.runtime_time_ranges: Dict[str, Tuple[int, int]] = {}
+        self.range_summary: pd.DataFrame = pd.DataFrame()
+        self.dynamic_flags = {'market_cap': False, 'time': False}
 
     def build_segments(self, df_detail: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
@@ -120,6 +130,9 @@ class SegmentBuilder:
 
         # 2. 시분초 컬럼 생성 (없으면)
         df_work = self._prepare_time_column(df_detail.copy())
+
+        # 2-1. 반-동적 분할 범위 적용
+        self._refresh_ranges(df_work)
 
         # 3. 세그먼트 ID 할당
         df_work['세그먼트ID'] = self._assign_segment_ids(df_work)
@@ -270,13 +283,13 @@ class SegmentBuilder:
 
         # 시가총액 구간 결정
         cap_segments = pd.Series(['Unknown'] * len(df), index=df.index)
-        for cap_name, (cap_min, cap_max) in self.config.market_cap_ranges.items():
+        for cap_name, (cap_min, cap_max) in self.runtime_market_cap_ranges.items():
             mask = (df['시가총액'] >= cap_min) & (df['시가총액'] < cap_max)
             cap_segments[mask] = cap_name
 
         # 시간 구간 결정
         time_segments = pd.Series(['Unknown'] * len(df), index=df.index)
-        for time_name, (time_min, time_max) in self.config.time_ranges.items():
+        for time_name, (time_min, time_max) in self.runtime_time_ranges.items():
             mask = (df['시분초'] >= time_min) & (df['시분초'] < time_max)
             time_segments[mask] = time_name
 
@@ -291,8 +304,8 @@ class SegmentBuilder:
     def _get_all_segment_ids(self) -> List[str]:
         """모든 가능한 세그먼트 ID 목록 생성"""
         segment_ids = []
-        for cap_name in self.config.market_cap_ranges.keys():
-            for time_name in self.config.time_ranges.keys():
+        for cap_name in self.runtime_market_cap_ranges.keys():
+            for time_name in self.runtime_time_ranges.keys():
                 segment_ids.append(f"{cap_name}_{time_name}")
         return segment_ids
 
@@ -396,6 +409,14 @@ class SegmentBuilder:
             orient='index'
         ).reset_index(drop=True)
 
+    def get_range_summary_df(self) -> pd.DataFrame:
+        """
+        세그먼트 분할에 사용된 구간 요약을 반환
+        """
+        if self.range_summary is None or self.range_summary.empty:
+            self.range_summary = self._build_range_summary()
+        return self.range_summary.copy()
+
     def get_valid_segments(self) -> Dict[str, pd.DataFrame]:
         """
         최소 거래수 조건을 만족하는 유효 세그먼트만 반환
@@ -445,6 +466,121 @@ class SegmentBuilder:
         saved_files.append(summary_path)
 
         return saved_files
+
+    def _refresh_ranges(self, df: pd.DataFrame) -> None:
+        """
+        설정에 따라 고정/반-동적 분할 범위를 갱신
+        """
+        self.runtime_market_cap_ranges = dict(self.config.market_cap_ranges)
+        self.runtime_time_ranges = dict(self.config.time_ranges)
+        self.dynamic_flags = {'market_cap': False, 'time': False}
+
+        mode = str(self.config.dynamic_mode or 'fixed').lower()
+        dynamic_cap = mode in ('semi', 'semi_dynamic', 'semi-dynamic', 'dynamic', 'all', 'market')
+        dynamic_time = mode in ('dynamic', 'all', 'time', 'time_only', 'time_dynamic')
+
+        if dynamic_cap:
+            ranges = self._build_dynamic_market_cap_ranges(df)
+            if ranges:
+                self.runtime_market_cap_ranges = ranges
+                self.dynamic_flags['market_cap'] = True
+
+        if dynamic_time:
+            ranges = self._build_dynamic_time_ranges(df)
+            if ranges:
+                self.runtime_time_ranges = ranges
+                self.dynamic_flags['time'] = True
+
+        self.range_summary = self._build_range_summary()
+
+    def _build_dynamic_market_cap_ranges(self, df: pd.DataFrame) -> Optional[Dict[str, Tuple[float, float]]]:
+        series = pd.to_numeric(df.get('시가총액'), errors='coerce').dropna()
+        if series.size < self.config.dynamic_min_samples:
+            return None
+
+        q1, q2 = self.config.dynamic_market_cap_quantiles
+        try:
+            v1 = float(series.quantile(q1))
+            v2 = float(series.quantile(q2))
+        except Exception:
+            return None
+
+        base_min = min(r[0] for r in self.config.market_cap_ranges.values())
+        if not (v1 > base_min and v2 > v1):
+            return None
+
+        return {
+            '소형주': (base_min, v1),
+            '중형주': (v1, v2),
+            '대형주': (v2, float('inf')),
+        }
+
+    def _build_dynamic_time_ranges(self, df: pd.DataFrame) -> Optional[Dict[str, Tuple[int, int]]]:
+        series = pd.to_numeric(df.get('시분초'), errors='coerce').dropna()
+        if series.size < self.config.dynamic_min_samples:
+            return None
+
+        base_min = min(r[0] for r in self.config.time_ranges.values())
+        base_max = max(r[1] for r in self.config.time_ranges.values())
+        series = series[(series >= base_min) & (series < base_max)]
+        if series.size < self.config.dynamic_min_samples:
+            return None
+
+        qs = list(self.config.dynamic_time_quantiles)
+        if len(qs) != 3:
+            return None
+
+        try:
+            q_values = [int(series.quantile(q)) for q in qs]
+        except Exception:
+            return None
+
+        boundaries = [int(base_min)] + q_values + [int(base_max)]
+        if len(set(boundaries)) < 5:
+            return None
+        if not all(boundaries[i] < boundaries[i + 1] for i in range(len(boundaries) - 1)):
+            return None
+
+        labels = []
+        for label in self.config.time_ranges.keys():
+            prefix = str(label).split('_')[0]
+            labels.append(prefix)
+
+        if len(labels) != 4:
+            labels = ['T1', 'T2', 'T3', 'T4']
+
+        ranges: Dict[str, Tuple[int, int]] = {}
+        for idx, prefix in enumerate(labels):
+            start = boundaries[idx]
+            end = boundaries[idx + 1]
+            name = f"{prefix}_{start:06d}_{end:06d}"
+            ranges[name] = (start, end)
+        return ranges
+
+    def _build_range_summary(self) -> pd.DataFrame:
+        rows = []
+        cap_source = 'dynamic' if self.dynamic_flags.get('market_cap') else 'fixed'
+        time_source = 'dynamic' if self.dynamic_flags.get('time') else 'fixed'
+
+        for label, (min_v, max_v) in self.runtime_market_cap_ranges.items():
+            rows.append({
+                'range_type': 'market_cap',
+                'label': label,
+                'min': float(min_v),
+                'max': float(max_v) if max_v != float('inf') else None,
+                'source': cap_source,
+            })
+
+        for label, (min_v, max_v) in self.runtime_time_ranges.items():
+            rows.append({
+                'range_type': 'time',
+                'label': label,
+                'min': int(min_v),
+                'max': int(max_v),
+                'source': time_source,
+            })
+
+        return pd.DataFrame(rows)
 
 
 # ============================================================================

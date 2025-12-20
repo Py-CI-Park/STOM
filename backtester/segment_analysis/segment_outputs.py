@@ -133,6 +133,16 @@ def save_segment_validation(df_validation: pd.DataFrame, output_dir: str, prefix
     return str(validation_path)
 
 
+def save_segment_ranges(df_ranges: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_ranges is None or df_ranges.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    range_path = path / f"{prefix}_segment_ranges.csv"
+    df_ranges.to_csv(range_path, index=False, encoding='utf-8-sig')
+    return str(range_path)
+
+
 def save_pareto_front(df_pareto: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
     if df_pareto is None or df_pareto.empty:
         return None

@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.4 (다목적 최적화 실험 반영)
+- **버전**: 2.5 (반-동적 분할 구현 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -188,6 +188,24 @@ MAX_EXCLUSION_RATIO = {
 1. **고정 유지 단계**: 현재 기준으로 필터 성과/안정성 지표를 확보하고 베이스라인을 만든다.
 2. **반-동적 단계**: 상위 분할(시가총액/시간)은 유지하고, 하위 구간만 분포 기반으로 재조정한다.
 3. **동적 확장 단계**: 레짐 변화 감지 시에만 재분할하며, 모든 분할 정의를 메타데이터로 저장해 재현성을 확보한다.
+
+### 2.5 반-동적 분할 구현(코드 반영)
+
+고정 기준을 유지하면서 분포 기반으로 구간을 보정할 수 있도록 `SegmentConfig`에 반-동적 옵션을 추가했다.
+
+```python
+SegmentConfig(
+    dynamic_mode='semi',  # fixed | semi | dynamic | time_only
+    dynamic_market_cap_quantiles=(0.33, 0.66),
+    dynamic_time_quantiles=(0.25, 0.5, 0.75),
+    dynamic_min_samples=200
+)
+```
+
+- `semi`: 시가총액 구간만 분포 기반으로 재산정, 시간 구간은 고정 유지
+- `dynamic`: 시가총액/시간 모두 재산정
+- `time_only`: 시간 구간만 재산정
+- 분할 결과는 `*_segment_ranges.csv`로 저장되어 재현성과 비교 가능성을 확보한다.
 
 ---
 
@@ -598,6 +616,12 @@ OUTPUT_FILES = {
         'description': '세그먼트별 기본 통계'
     },
 
+    # 세그먼트 분할 범위
+    '*_segment_ranges.csv': {
+        'columns': ['range_type', 'label', 'min', 'max', 'source'],
+        'description': '세그먼트 분할 구간(고정/반-동적) 기록'
+    },
+
     # 필터 후보
     '*_segment_filters.csv': {
         'columns': ['segment_id', 'filter_name', 'column', 'threshold', 'direction',
@@ -870,6 +894,12 @@ OVERFITTING_PREVENTION = {
 **Phase 6-1 실행 옵션**
 - `python -m backtester.segment_analysis.multi_objective_runner <detail.csv>`
 
+### Phase 7: 반-동적 분할 적용(1주)
+
+- [x] 시가총액/시간 분포 기반 구간 재산정 옵션 추가
+- [x] 세그먼트 분할 범위 CSV 저장(`*_segment_ranges.csv`)
+- [ ] 고정/반-동적/동적 성능 비교 리포트 정리
+
 ---
 
 ## 8. 결론 및 다음 단계
@@ -885,7 +915,7 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. 세그먼트 분할의 반-동적 전환(분포 기반 구간 재조정)
+1. 고정/반-동적/동적 분할 성능 비교 리포트 정리
 2. NSGA-II/Optuna 기반 고급 탐색(필요 시)
 
 ---
@@ -899,6 +929,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.4
+**문서 버전**: 2.5
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code

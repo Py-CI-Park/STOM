@@ -15,7 +15,12 @@ import pandas as pd
 
 from .segmentation import SegmentBuilder, SegmentConfig
 from .filter_evaluator import FilterEvaluator, FilterEvaluatorConfig
-from .segment_outputs import build_segment_summary, save_segment_summary, save_segment_filters
+from .segment_outputs import (
+    build_segment_summary,
+    save_segment_summary,
+    save_segment_filters,
+    save_segment_ranges,
+)
 
 
 @dataclass
@@ -40,6 +45,8 @@ def run_phase1(
     summary_df = build_segment_summary(segments, builder.out_of_range)
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
     summary_path = save_segment_summary(summary_df, runner_config.output_dir, output_prefix)
+    ranges_df = builder.get_range_summary_df()
+    save_segment_ranges(ranges_df, runner_config.output_dir, output_prefix)
 
     evaluator = FilterEvaluator(filter_config)
     filters_df = evaluator.evaluate_all_segments(segments)
