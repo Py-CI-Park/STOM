@@ -46,11 +46,19 @@ MODEL_BASE_DIR = (Path(__file__).resolve().parent / 'models')
 
 # ML 신뢰도 기준(게이팅)
 # - 기준 미달이면: 자동 필터 분석/코드 생성에서 *_ML 컬럼 사용 금지(공부/검증 목적의 컬럼 생성은 유지)
+# - 2025-12-20 개선: 기준 상향 (55→65 AUC, 50→55 F1, 55→60 BA)
+#   기존 55%는 랜덤(50%) 대비 너무 낮음. 학술적으로 AUC 0.7이 "fair", 0.8이 "good" 수준
 ML_RELIABILITY_CRITERIA = {
-    'min_test_auc': 55.0,               # 50%는 랜덤 수준
-    'min_test_f1': 50.0,                # macro F1
-    'min_test_balanced_accuracy': 55.0, # 불균형 데이터 기준
+    'min_test_auc': 65.0,               # 55→65: 실용적 최소 수준 (랜덤 50% 대비 15%p 이상)
+    'min_test_f1': 55.0,                # 50→55: macro F1
+    'min_test_balanced_accuracy': 60.0, # 55→60: 불균형 데이터 기준
 }
+
+# 필터 조합 선택 시 제외율/잔여거래 제한 (2025-12-20 신규)
+# - 제외율이 100%가 되면 거래가 0건이 되어 무의미함
+# - 최소한의 거래가 남아야 실제 트레이딩이 가능함
+FILTER_MAX_EXCLUSION_RATIO = 0.85   # 최대 제외율 85% (거래의 15% 이상은 남겨야 함)
+FILTER_MIN_REMAINING_TRADES = 30    # 최소 잔여 거래 수 (30건 미만이면 통계적 의미 없음)
 
 
 def AssessMlReliability(ml_prediction_stats: dict | None,
@@ -3008,6 +3016,10 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
             cum_impr = 0.0
             chosen_idx = set()
 
+            # 2025-12-20: 제외율/잔여거래 제한을 적용하여 100% 제외 방지
+            max_exclusion_ratio = FILTER_MAX_EXCLUSION_RATIO  # 기본값 0.85
+            min_remaining_trades = FILTER_MIN_REMAINING_TRADES  # 기본값 30
+
             max_steps = min(int(top_n), len(candidates))
             for step in range(max_steps):
                 best_i = None
@@ -3015,6 +3027,19 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
 
                 for i, (f, mask) in enumerate(zip(candidates, cand_masks)):
                     if i in chosen_idx or mask is None:
+                        continue
+
+                    # 2025-12-20: 새 필터 추가 시 제외율/잔여거래 제한 체크
+                    new_excluded_mask = excluded_mask | mask
+                    new_excluded_count = int(np.sum(new_excluded_mask))
+                    new_remaining_count = total_trades - new_excluded_count
+                    new_exclusion_ratio = new_excluded_count / total_trades
+
+                    # 제외율이 MAX를 초과하면 이 필터는 선택하지 않음
+                    if new_exclusion_ratio > max_exclusion_ratio:
+                        continue
+                    # 잔여 거래 수가 MIN 미만이면 이 필터는 선택하지 않음
+                    if new_remaining_count < min_remaining_trades:
                         continue
 
                     add_mask = mask & (~excluded_mask)

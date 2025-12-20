@@ -157,12 +157,62 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
     - {전략명}_filtered.png
     - {전략명}_filtered_.png
+
+    2025-12-20 개선: 필터 적용 후 거래가 0건이어도 경고 차트를 생성합니다.
     """
-    if df_all is None or df_filtered is None:
+    if df_all is None:
         return None, None
-    if len(df_all) < 2 or len(df_filtered) < 2:
+    if len(df_all) < 2:
         return None, None
-    if '수익금' not in df_all.columns or '수익금' not in df_filtered.columns:
+    if '수익금' not in df_all.columns:
+        return None, None
+
+    # 2025-12-20: 필터 적용 후 거래 0건인 경우 경고 차트 생성
+    if df_filtered is None or len(df_filtered) < 1:
+        # 폰트(한글) 설정
+        font_path = 'C:/Windows/Fonts/malgun.ttf'
+        try:
+            font_family = font_manager.FontProperties(fname=font_path).get_name()
+            plt.rcParams['font.family'] = font_family
+            plt.rcParams['font.sans-serif'] = [font_family]
+        except Exception:
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+            plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
+        plt.rcParams['axes.unicode_minus'] = False
+
+        total_profit = int(pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).sum())
+        total_trades = len(df_all)
+
+        fig, ax = plt.subplots(figsize=(12, 8))
+        warning_text = (
+            f"⚠️ 필터 적용 결과: 모든 거래 제외됨\n\n"
+            f"• 원본 거래: {total_trades:,}건\n"
+            f"• 원본 수익금: {total_profit:,}원\n"
+            f"• 필터 후: 0건 (제외율 100%)\n\n"
+            f"💡 필터 조건이 너무 엄격합니다.\n"
+            f"   FILTER_MAX_EXCLUSION_RATIO (기본값 85%)를 확인하세요.\n"
+            f"   또는 다른 필터 조합을 시도해 보세요.\n\n"
+            f"🔧 back_analysis_enhanced.py에서 다음 상수를 조정할 수 있습니다:\n"
+            f"   - FILTER_MAX_EXCLUSION_RATIO: 최대 제외율 (기본 0.85)\n"
+            f"   - FILTER_MIN_REMAINING_TRADES: 최소 잔여 거래 수 (기본 30)"
+        )
+
+        ax.text(0.5, 0.5, warning_text, ha='center', va='center', fontsize=13,
+                transform=ax.transAxes,
+                bbox=dict(facecolor='lightyellow', edgecolor='orange', alpha=0.9, linewidth=2))
+        ax.set_title(f'{backname} - 필터 적용 결과 경고 (거래 0건)', fontsize=14, color='red')
+        ax.axis('off')
+
+        path_main = f"{GRAPH_PATH}/{save_file_name}_filtered.png"
+        plt.savefig(path_main, dpi=100, bbox_inches='tight', facecolor='white')
+        plt.close(fig)
+
+        return path_main, None
+
+    # 필터 적용 후 거래가 1건인 경우도 처리
+    if len(df_filtered) < 2:
+        return None, None
+    if '수익금' not in df_filtered.columns:
         return None, None
 
     # 폰트(한글) 설정
