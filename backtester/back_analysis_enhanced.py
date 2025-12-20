@@ -3018,7 +3018,8 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
 
             # 2025-12-20: 제외율/잔여거래 제한을 적용하여 100% 제외 방지
             max_exclusion_ratio = FILTER_MAX_EXCLUSION_RATIO  # 기본값 0.85
-            min_remaining_trades = FILTER_MIN_REMAINING_TRADES  # 기본값 30
+            # 작은 샘플에서도 필터 조합을 시도할 수 있도록, "전체의 15%"와 "기본 30건" 중 더 작은 값을 사용
+            dynamic_min_remaining = max(1, min(int(total_trades * 0.15), FILTER_MIN_REMAINING_TRADES))
 
             max_steps = min(int(top_n), len(candidates))
             for step in range(max_steps):
@@ -3039,7 +3040,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
                     if new_exclusion_ratio > max_exclusion_ratio:
                         continue
                     # 잔여 거래 수가 MIN 미만이면 이 필터는 선택하지 않음
-                    if new_remaining_count < min_remaining_trades:
+                    if new_remaining_count < dynamic_min_remaining:
                         continue
 
                     add_mask = mask & (~excluded_mask)
