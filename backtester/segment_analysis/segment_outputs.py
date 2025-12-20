@@ -183,6 +183,16 @@ def save_nsga2_front(df_front: pd.DataFrame, output_dir: str, prefix: str) -> Op
     return str(nsga2_path)
 
 
+def save_decision_report(df_score: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_score is None or df_score.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    score_path = path / f"{prefix}_decision_score.csv"
+    df_score.to_csv(score_path, index=False, encoding='utf-8-sig')
+    return str(score_path)
+
+
 def _summarize_segment(segment_id: str, df: pd.DataFrame) -> dict:
     trades = len(df)
     profit = _sum_safe(df, '수익금')

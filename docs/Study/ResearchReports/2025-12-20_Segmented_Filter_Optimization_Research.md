@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.7 (비교 해석/고급 탐색 반영)
+- **버전**: 2.8 (의사결정 리포트 자동화 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -532,6 +532,7 @@ backtester/
 │   ├── multi_objective_runner.py    # Pareto front 산출 실행 흐름
 │   ├── segment_mode_comparator.py   # 분할 모드 비교 리포트 실행
 │   ├── advanced_search_runner.py    # Optuna/NSGA-II 고급 탐색 실행
+│   ├── decision_report_runner.py    # 의사결정 리포트 자동 생성
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
 
@@ -682,6 +683,9 @@ OUTPUT_FILES = {
     '*_segment_mode_comparison.csv': '분할 모드 비교 리포트(고정/반-동적/동적)',
     '*_advanced_optuna.csv': 'Optuna 가중치 탐색 결과(최적 조합 1건)',
     '*_nsga2_front.csv': 'NSGA-II 전선(미설치 시 Pareto 대체)',
+    '*_decision_report.md': '의사결정 리포트(추천 모드/근거)',
+    '*_decision_report.json': '의사결정 리포트 메타(정책/추천/근거)',
+    '*_decision_score.csv': '모드 비교 스코어/순위 테이블',
     '*_segment_heatmap.png': '세그먼트별 성과 히트맵',
     '*_filter_efficiency.png': '필터 효율성 차트',
     '*_pareto_front.png': 'Pareto 최적 전선 시각화'
@@ -926,6 +930,14 @@ OVERFITTING_PREVENTION = {
 - [x] Optuna 가중치 탐색 결과 CSV 산출(`*_advanced_optuna.csv`)
 - [x] NSGA-II front CSV 산출(`*_nsga2_front.csv`, 미설치 시 Pareto 대체)
 
+### Phase 10: 의사결정 리포트 자동화
+
+- [x] 모드 비교 + 후보 탐색 결과를 기반으로 의사결정 리포트 자동 생성
+- [x] 리포트/메타/스코어 산출(`*_decision_report.md`, `*_decision_report.json`, `*_decision_score.csv`)
+
+**Phase 10-1 실행 옵션**
+- `python -m backtester.segment_analysis.decision_report_runner <detail.csv>`
+
 ---
 
 ## 8. 결론 및 다음 단계
@@ -954,6 +966,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.7
+**문서 버전**: 2.8
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code
