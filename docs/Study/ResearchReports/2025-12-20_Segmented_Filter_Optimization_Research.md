@@ -496,11 +496,13 @@ def OptunaThresholdOptimization(segment_data, filter_columns, config):
 ```
 backtester/
 ├── back_analysis_enhanced.py        # 기존 분석 모듈
-├── segment_filter_optimizer.py      # 신규: 세그먼트 필터 최적화 메인
+├── segment_filter_optimizer.py      # Phase 1 실행 진입점
 ├── segment_analysis/
 │   ├── __init__.py
 │   ├── segmentation.py              # 세그먼트 분할 로직
 │   ├── filter_evaluator.py          # 세그먼트별 필터 평가
+│   ├── segment_outputs.py           # 요약/필터 CSV 산출물
+│   ├── phase1_runner.py             # Phase 1 실행 흐름
 │   ├── combination_optimizer.py     # 조합 최적화 알고리즘
 │   ├── multi_objective.py           # NSGA-II 다목적 최적화
 │   └── validation.py                # 검증 및 안정성 분석
@@ -782,9 +784,14 @@ OVERFITTING_PREVENTION = {
 
 ### Phase 1: 기반 구축 (1주)
 
-- [ ] 세그먼트 분할 모듈 구현 (`segmentation.py`)
-- [ ] 세그먼트별 필터 평가 모듈 (`filter_evaluator.py`)
-- [ ] 기본 산출물 생성 (CSV, 요약)
+- [x] 세그먼트 분할 모듈 구현 (`segmentation.py`)
+- [x] 세그먼트별 필터 평가 모듈 (`filter_evaluator.py`)
+- [x] 기본 산출물 생성 (CSV, 요약)
+  - `segment_outputs.py`, `phase1_runner.py`로 요약/필터 CSV 생성
+
+**Phase 1-1 진행 결과**
+- 매수시간 파싱 보강 및 `Out_of_Range` 비중 추적 포함
+- 최신 detail.csv 자동 선택/실행 스크립트 보강
 
 ### Phase 2: 최적화 알고리즘 (1주)
 
