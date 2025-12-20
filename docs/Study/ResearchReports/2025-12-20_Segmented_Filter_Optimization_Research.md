@@ -504,9 +504,11 @@ backtester/
 │   ├── segment_outputs.py           # 요약/필터 CSV 산출물
 │   ├── phase1_runner.py             # Phase 1 실행 흐름
 │   ├── phase2_runner.py             # Phase 2 실행 흐름
+│   ├── phase3_runner.py             # Phase 3 실행 흐름
 │   ├── combination_optimizer.py     # 조합 최적화 알고리즘
 │   ├── threshold_optimizer.py       # Optuna 임계값 최적화
 │   ├── validation.py                # 제약 조건 검증
+│   ├── segment_visualizer.py        # 히트맵/효율 차트 시각화
 │   ├── multi_objective.py           # NSGA-II 다목적 최적화
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
@@ -823,9 +825,14 @@ OVERFITTING_PREVENTION = {
 
 ### Phase 3: 검증 및 시각화 (1주)
 
-- [ ] Walk-Forward 검증 구현
-- [ ] 안정성 지표 계산
-- [ ] 히트맵/차트 시각화
+- [x] Walk-Forward 검증 구현 (`validation.py`)
+- [x] 안정성 지표 계산 (`segment_validation.csv`)
+- [x] 히트맵/차트 시각화 (`segment_visualizer.py`, `phase3_runner.py`)
+
+**Phase 3-1 진행 결과**
+- 워크포워드 기반 안정성 검증 CSV 산출
+- 세그먼트 히트맵/필터 효율 차트 생성 흐름 추가
+- 실행 옵션: `python -m backtester.segment_analysis.phase3_runner <detail.csv>`
 
 ### Phase 4: 통합 및 자동화 (1주)
 

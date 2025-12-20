@@ -112,6 +112,16 @@ def save_segment_thresholds(df_thresholds: pd.DataFrame, output_dir: str, prefix
     return str(threshold_path)
 
 
+def save_segment_validation(df_validation: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_validation is None or df_validation.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    validation_path = path / f"{prefix}_segment_validation.csv"
+    df_validation.to_csv(validation_path, index=False, encoding='utf-8-sig')
+    return str(validation_path)
+
+
 def _summarize_segment(segment_id: str, df: pd.DataFrame) -> dict:
     trades = len(df)
     profit = _sum_safe(df, '수익금')
