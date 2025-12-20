@@ -36,6 +36,10 @@ try:
 except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
 
+SEGMENT_ANALYSIS_MODE = 'phase2+3'
+SEGMENT_ANALYSIS_OUTPUT_DIR = 'backtester/segment_outputs'
+SEGMENT_ANALYSIS_OPTUNA = False
+
 
 def _convert_bool_ops_to_pandas(expr: str) -> str:
     """
@@ -913,6 +917,42 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
 
             return lines_local
 
+        def _collect_segment_outputs(segment_outputs: dict) -> list[tuple[str, str]]:
+            if not isinstance(segment_outputs, dict):
+                return []
+
+            label_map = {
+                'summary_path': '세그먼트 요약',
+                'filters_path': '세그먼트 필터 후보',
+                'local_combo_path': '세그먼트 로컬 조합',
+                'global_combo_path': '전역 조합 요약',
+                'thresholds_path': 'Optuna 임계값',
+                'segment_code_path': '세그먼트 조건식 코드',
+                'validation_path': '안정성 검증',
+                'heatmap_path': '세그먼트 히트맵',
+                'efficiency_path': '필터 효율 차트',
+            }
+
+            items: list[tuple[str, str]] = []
+            for phase_key in ('phase2', 'phase3'):
+                phase = segment_outputs.get(phase_key) or {}
+                if not isinstance(phase, dict):
+                    continue
+                for key, label in label_map.items():
+                    path = phase.get(key)
+                    if path:
+                        items.append((label, str(path)))
+
+            seen = set()
+            deduped = []
+            for label, path in items:
+                if path in seen:
+                    continue
+                seen.add(path)
+                deduped.append((label, path))
+
+            return deduped
+
         graph_dir = Path(GRAPH_PATH)
         graph_dir.mkdir(parents=True, exist_ok=True)
         report_path = graph_dir / f"{save_file_name}_report.txt"
@@ -1182,6 +1222,17 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             lines.append("=== 강화 분석 오류 ===")
             lines.append(str(enhanced_error))
 
+        # 세그먼트 분석 산출물
+        if enhanced_result and enhanced_result.get('segment_outputs'):
+            lines.append("")
+            lines.append("=== 세그먼트 분석 산출물 ===")
+            seg_items = _collect_segment_outputs(enhanced_result.get('segment_outputs') or {})
+            if not seg_items:
+                lines.append("- 없음")
+            else:
+                for label, path in seg_items:
+                    lines.append(f"- {label}: {path}")
+
         # 파일 목록
         lines.append("")
         lines.append("=== 생성 파일 목록 ===")
@@ -1278,6 +1329,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             study_lines.append(f"- `{save_file_name}_filter.csv`: 필터 후보/조건식 목록")
             study_lines.append(f"- `{save_file_name}_detail.csv`: 거래 상세 기록(컬럼=거래 항목)")
             study_lines.append(f"- `{save_file_name}_report.txt`: 실행 리포트")
+
+            seg_items = _collect_segment_outputs((enhanced_result or {}).get('segment_outputs') or {})
+            if seg_items:
+                study_lines.append("")
+                study_lines.append("### 세그먼트 분석 산출물")
+                for label, path in seg_items:
+                    try:
+                        study_lines.append(f"- `{Path(path).name}`: {label}")
+                    except Exception:
+                        study_lines.append(f"- {path}: {label}")
 
             # 매수/매도 조건식(요약)
             study_lines.append("")
@@ -2336,6 +2397,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 backname=backname,
                 ml_train_mode=ml_train_mode,
                 send_condition_summary=False,
+                segment_analysis_mode=SEGMENT_ANALYSIS_MODE,
+                segment_output_dir=SEGMENT_ANALYSIS_OUTPUT_DIR,
+                segment_optuna=SEGMENT_ANALYSIS_OPTUNA,
             )
 
             # [2025-12-19] 자동 생성 필터 조합 적용 미리보기 차트(2개) 생성/전송

@@ -21,6 +21,7 @@ from .combination_optimizer import (
     optimize_global_combination,
 )
 from .threshold_optimizer import ThresholdOptimizerConfig, optimize_thresholds
+from .code_generator import build_segment_filter_code, save_segment_code
 from .segment_outputs import (
     build_segment_summary,
     save_segment_summary,
@@ -85,6 +86,13 @@ def run_phase2(
     global_combo_df = build_global_combo_df(global_best, total_trades)
     global_combo_path = save_segment_combos(global_combo_df, runner_config.output_dir, output_prefix)
 
+    segment_code_path = None
+    segment_code_summary = None
+    if global_best:
+        code_lines, code_summary = build_segment_filter_code(global_best, seg_config)
+        segment_code_summary = code_summary
+        segment_code_path = save_segment_code(code_lines, runner_config.output_dir, output_prefix)
+
     thresholds_path = None
     if runner_config.enable_optuna:
         threshold_config = threshold_config or ThresholdOptimizerConfig()
@@ -116,6 +124,9 @@ def run_phase2(
         'local_combo_path': local_combo_path,
         'global_combo_path': global_combo_path,
         'thresholds_path': thresholds_path,
+        'segment_code_path': segment_code_path,
+        'segment_code_summary': segment_code_summary,
+        'global_best': global_best,
     }
 
 
@@ -138,5 +149,7 @@ if __name__ == '__main__':
     print(f"[Phase2] Filters: {result['filters_path']}")
     print(f"[Phase2] Local combos: {result['local_combo_path']}")
     print(f"[Phase2] Global combo: {result['global_combo_path']}")
+    if result.get('segment_code_path'):
+        print(f"[Phase2] Segment code: {result['segment_code_path']}")
     if enable_optuna:
         print(f"[Phase2] Thresholds: {result['thresholds_path']}")

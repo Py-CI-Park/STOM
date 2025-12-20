@@ -3854,7 +3854,10 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
 
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
                         buystg_name=None, sellstg_name=None, backname=None,
-                        ml_train_mode: str = 'train', send_condition_summary: bool = True):
+                        ml_train_mode: str = 'train', send_condition_summary: bool = True,
+                        segment_analysis_mode: str = 'off',
+                        segment_output_dir: str = 'backtester/segment_outputs',
+                        segment_optuna: bool = False):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -3867,6 +3870,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
     6. 기간별 필터 안정성
     7. 조건식 코드 자동 생성
     8. 강화된 시각화
+    9. 세그먼트 분석(Phase2/3) 통합(옵션)
 
     Returns:
         dict: 분석 결과 요약
@@ -3885,6 +3889,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         'csv_files': [],
         'ml_prediction_stats': None,  # NEW: ML 예측 통계
         'ml_reliability': None,       # NEW: ML 신뢰도/게이트 결과
+        'segment_outputs': None,      # NEW: 세그먼트 분석 산출물
     }
 
     try:
@@ -4021,6 +4026,44 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         )
         if chart_path:
             result['charts'].append(chart_path)
+
+        # 9-1. 세그먼트 분석(옵션)
+        segment_outputs = None
+        if segment_analysis_mode and str(segment_analysis_mode).lower() not in ('off', 'false', 'none'):
+            try:
+                from backtester.segment_analysis.phase2_runner import run_phase2, Phase2RunnerConfig
+                from backtester.segment_analysis.phase3_runner import run_phase3, Phase3RunnerConfig
+                from backtester.segment_analysis.filter_evaluator import FilterEvaluatorConfig
+
+                mode = str(segment_analysis_mode).lower()
+                output_dir = segment_output_dir or 'backtester/segment_outputs'
+                filter_config = FilterEvaluatorConfig(allow_ml_filters=allow_ml_filters)
+                segment_outputs = {}
+
+                if mode in ('phase2', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
+                    segment_outputs['phase2'] = run_phase2(
+                        detail_path,
+                        filter_config=filter_config,
+                        runner_config=Phase2RunnerConfig(
+                            output_dir=output_dir,
+                            prefix=save_file_name,
+                            enable_optuna=segment_optuna
+                        )
+                    )
+
+                if mode in ('phase3', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
+                    segment_outputs['phase3'] = run_phase3(
+                        detail_path,
+                        filter_config=filter_config,
+                        runner_config=Phase3RunnerConfig(
+                            output_dir=output_dir,
+                            prefix=save_file_name
+                        )
+                    )
+            except Exception:
+                print_exc()
+
+        result['segment_outputs'] = segment_outputs
 
         # 10. 추천 메시지 생성
         recommendations = []
@@ -4303,6 +4346,73 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     "- filter.csv를 확인해 적용코드/조건식 유무를 점검하세요."
                 )
                 _safe_put(msg)
+
+            # 세그먼트 분석 리포트(옵션)
+            segment_outputs = result.get('segment_outputs') if isinstance(result, dict) else None
+            if segment_outputs:
+                try:
+                    seg_lines = ["세그먼트 분석 결과:"]
+                    phase2 = segment_outputs.get('phase2') or {}
+                    phase3 = segment_outputs.get('phase3') or {}
+
+                    code_summary = phase2.get('segment_code_summary') or {}
+                    if code_summary:
+                        seg_lines.append(
+                            f"- 조건식 요약: {code_summary.get('segments', 0)}구간, "
+                            f"필터 {code_summary.get('filters', 0)}개"
+                        )
+
+                    combo_path = phase2.get('global_combo_path')
+                    if combo_path and Path(combo_path).exists():
+                        try:
+                            df_combo = pd.read_csv(combo_path, encoding='utf-8-sig')
+                            if not df_combo.empty:
+                                row = df_combo.iloc[0]
+                                total_impr = int(row.get('total_improvement', 0) or 0)
+                                remaining_trades = int(row.get('remaining_trades', 0) or 0)
+                                remaining_ratio = float(row.get('remaining_ratio', 0) or 0)
+                                seg_lines.append(
+                                    f"- 전역 조합 개선: {total_impr:+,}원, "
+                                    f"잔여 {remaining_trades:,}건 ({remaining_ratio * 100:.1f}%)"
+                                )
+                        except Exception:
+                            pass
+
+                    summary_path = phase3.get('summary_path') or phase2.get('summary_path')
+                    if summary_path and Path(summary_path).exists():
+                        try:
+                            df_summary = pd.read_csv(summary_path, encoding='utf-8-sig')
+                            if not df_summary.empty and 'trades' in df_summary.columns:
+                                total_trades = int(df_summary['trades'].sum())
+                                out_row = df_summary[df_summary['segment_id'] == 'Out_of_Range']
+                                if not out_row.empty and total_trades > 0:
+                                    out_trades = int(out_row.iloc[0].get('trades', 0) or 0)
+                                    seg_lines.append(
+                                        f"- 구간 외 거래: {out_trades:,}건 ({out_trades / total_trades * 100:.1f}%)"
+                                    )
+                                if 'profit' in df_summary.columns:
+                                    df_main = df_summary[df_summary['segment_id'] != 'Out_of_Range']
+                                    top_rows = df_main.sort_values('profit', ascending=False).head(2)
+                                    if not top_rows.empty:
+                                        tops = []
+                                        for _, row in top_rows.iterrows():
+                                            seg_id = row.get('segment_id')
+                                            profit = int(row.get('profit', 0) or 0)
+                                            if seg_id:
+                                                tops.append(f"{seg_id}({profit:,}원)")
+                                        if tops:
+                                            seg_lines.append("- 상위 세그먼트: " + ", ".join(tops))
+                        except Exception:
+                            pass
+
+                    _safe_put("\n".join(seg_lines))
+
+                    for key in ('heatmap_path', 'efficiency_path'):
+                        p = phase3.get(key)
+                        if p and Path(p).exists():
+                            teleQ.put(str(Path(p)))
+                except Exception:
+                    pass
 
     except Exception as e:
         print_exc()

@@ -16,6 +16,7 @@ from .filter_evaluator import FilterEvaluatorConfig, FilterEvaluator
 from .combination_optimizer import CombinationOptimizerConfig
 from .threshold_optimizer import ThresholdOptimizerConfig
 from .validation import StabilityValidationConfig
+from .code_generator import build_segment_filter_code, save_segment_code
 
 __all__ = [
     'SegmentConfig',
@@ -25,4 +26,6 @@ __all__ = [
     'CombinationOptimizerConfig',
     'ThresholdOptimizerConfig',
     'StabilityValidationConfig',
+    'build_segment_filter_code',
+    'save_segment_code',
 ]

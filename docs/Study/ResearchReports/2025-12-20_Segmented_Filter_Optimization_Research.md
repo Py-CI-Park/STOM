@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.0 (확장 연구)
+- **버전**: 2.1 (Phase 4 통합 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -624,6 +624,11 @@ OUTPUT_FILES = {
         'description': '세그먼트별 Optuna 임계값 결과(선택 실행)'
     },
 
+    # 세그먼트 조건식 코드
+    '*_segment_code.txt': {
+        'description': '세그먼트별 최적 조합 조건식 코드(자동 생성)'
+    },
+
     # 최적 조합
     '*_optimal_combination.json': {
         'content': {
@@ -836,9 +841,14 @@ OVERFITTING_PREVENTION = {
 
 ### Phase 4: 통합 및 자동화 (1주)
 
-- [ ] 기존 `back_analysis_enhanced.py` 통합
-- [ ] 조건식 코드 자동 생성
-- [ ] 텔레그램 리포트 연동
+- [x] 기존 `back_analysis_enhanced.py` 통합
+- [x] 세그먼트 조건식 코드 자동 생성 (`*_segment_code.txt`)
+- [x] 텔레그램 리포트 연동(요약 + 히트맵/효율 차트)
+
+**Phase 4-1 진행 결과**
+- `RunEnhancedAnalysis()`에서 Phase2/Phase3 실행 옵션 지원(기본: `phase2+3`)
+- 세그먼트 산출물은 `backtester/segment_outputs/`에 저장
+- 텔레그램에 세그먼트 요약/전역 조합 개선 요약 및 차트 자동 전송
 
 ---
 
@@ -855,10 +865,10 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. `segment_filter_optimizer.py` 신규 모듈 구현
-2. `back_analysis_enhanced.py` 세그먼트 분석 통합
-3. 세그먼트별 산출물 자동 생성
-4. 텔레그램 리포트에 세그먼트 분석 추가
+1. 세그먼트 조건식의 전략 적용/검증(실전 조건식 반영)
+2. 세그먼트 조합 결과의 리스크 지표(MDD/변동성) 확장
+3. Optuna/NSGA-II 기반 다목적 최적화 실험(선택)
+4. 세그먼트 분할의 반-동적 전환(분포 기반 구간 재조정)
 
 ---
 
@@ -871,6 +881,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.0
+**문서 버전**: 2.1
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code
