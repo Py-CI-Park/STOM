@@ -106,6 +106,79 @@ def _build_filter_mask_from_generated_code(df: pd.DataFrame, generated_code: dic
     return result
 
 
+def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
+    """
+    세그먼트 전역 조합(global_best)을 이용해 df에서 통과 마스크를 생성합니다.
+    """
+    result = {
+        'mask': None,
+        'error': None,
+        'segment_trades': {},
+        'missing_columns': [],
+        'out_of_range_trades': 0,
+    }
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        result['error'] = 'df가 비어있음'
+        return result
+    if not isinstance(global_best, dict):
+        result['error'] = 'global_best가 dict가 아님'
+        return result
+
+    combo_map = global_best.get('combination')
+    if not isinstance(combo_map, dict) or not combo_map:
+        result['error'] = 'combination 없음'
+        return result
+
+    try:
+        from backtester.segment_analysis.segmentation import SegmentBuilder
+    except Exception as e:
+        result['error'] = f"세그먼트 모듈 로드 실패: {e}"
+        return result
+
+    try:
+        builder = SegmentBuilder()
+        segments = builder.build_segments(df)
+    except Exception as e:
+        result['error'] = f"세그먼트 분할 실패: {e}"
+        return result
+
+    mask = pd.Series(False, index=df.index)
+    missing = set()
+
+    for seg_id, seg_df in segments.items():
+        combo = combo_map.get(seg_id)
+        if combo is None:
+            continue
+        filters = combo.get('filters') or []
+        seg_mask = pd.Series(True, index=seg_df.index)
+
+        for flt in filters:
+            column = flt.get('column')
+            threshold = flt.get('threshold')
+            direction = flt.get('direction')
+            if column is None or column not in seg_df.columns:
+                if column:
+                    missing.add(column)
+                continue
+
+            values = pd.to_numeric(seg_df[column], errors='coerce')
+            if direction == 'less':
+                cond = values >= threshold
+            else:
+                cond = values < threshold
+            seg_mask &= cond.fillna(False)
+
+        mask.loc[seg_mask.index] = seg_mask
+        result['segment_trades'][seg_id] = int(seg_mask.sum())
+
+    if hasattr(builder, 'out_of_range') and isinstance(builder.out_of_range, pd.DataFrame):
+        result['out_of_range_trades'] = int(len(builder.out_of_range))
+
+    result['mask'] = mask
+    result['missing_columns'] = sorted(missing)
+    return result
+
+
 def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str = None,
                                  max_lines: int = 8, max_line_len: int = 140):
     """
@@ -156,11 +229,12 @@ def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str 
 def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
                                   save_file_name: str, backname: str, seed: int,
                                   generated_code: dict = None,
-                                  buystg: str = None, sellstg: str = None):
+                                  buystg: str = None, sellstg: str = None,
+                                  file_tag: str = ''):
     """
     자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
-    - {전략명}_filtered.png
-    - {전략명}_filtered_.png
+    - {전략명}{_tag}_filtered.png
+    - {전략명}{_tag}_filtered_.png
 
     2025-12-20 개선: 필터 적용 후 거래가 0건이어도 경고 차트를 생성합니다.
     """
@@ -170,6 +244,8 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         return None, None
     if '수익금' not in df_all.columns:
         return None, None
+
+    tag = f"_{file_tag}" if file_tag else ""
 
     # 2025-12-20: 필터 적용 후 거래 0~1건인 경우 경고 차트 생성
     if df_filtered is None or len(df_filtered) < 2 or '수익금' not in df_filtered.columns:
@@ -210,7 +286,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.set_title(f'{backname} - 필터 적용 결과 경고 (거래 0건)', fontsize=14, color='red')
         ax.axis('off')
 
-        path_main = f"{GRAPH_PATH}/{save_file_name}_filtered.png"
+        path_main = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered.png"
         plt.savefig(path_main, dpi=100, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
@@ -233,7 +309,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     excluded_ratio = (1.0 - (len(df_filtered) / max(1, len(df_all)))) * 100.0
 
     # ===== 1) filtered.png (수익곡선 요약) =====
-    path_main = f"{GRAPH_PATH}/{save_file_name}_filtered.png"
+    path_main = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered.png"
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 3])
 
@@ -332,7 +408,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     plt.close(fig)
 
     # ===== 2) filtered_.png (분포/단계 요약) =====
-    path_sub = f"{GRAPH_PATH}/{save_file_name}_filtered_.png"
+    path_sub = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered_.png"
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=2, figure=fig, hspace=0.35, wspace=0.25)
 
@@ -469,6 +545,10 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
     """
     try:
         def _describe_output_file(filename: str) -> str:
+            if filename.endswith('_segment_filtered_.png'):
+                return '세그먼트 필터 적용 분포/단계 요약(미리보기)'
+            if filename.endswith('_segment_filtered.png'):
+                return '세그먼트 필터 적용 수익곡선(미리보기)'
             if filename.endswith('_filtered_.png'):
                 return '자동 생성 필터 적용 분포/단계 요약(미리보기)'
             if filename.endswith('_filtered.png'):
@@ -2447,6 +2527,69 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 msg += f"\n- 오류: {err}"
                             if failed_expr:
                                 msg += f"\n- 실패 조건식: {failed_expr}"
+                            teleQ.put(msg)
+            except Exception:
+                print_exc()
+
+            # [2025-12-20] 세그먼트 필터 조합 적용 미리보기 차트(2개) 생성/전송
+            try:
+                if teleQ is not None and enhanced_result:
+                    seg_outputs = enhanced_result.get('segment_outputs') or {}
+                    phase2 = seg_outputs.get('phase2') or {}
+                    global_best = phase2.get('global_best')
+                    df_enh = enhanced_result.get('enhanced_df')
+                    if isinstance(global_best, dict) and isinstance(df_enh, pd.DataFrame) and not df_enh.empty:
+                        seg_mask_info = _build_segment_mask_from_global_best(df_enh, global_best)
+                        if seg_mask_info and seg_mask_info.get('mask') is not None:
+                            df_seg_filt = df_enh[seg_mask_info['mask']].copy()
+                            try:
+                                total_profit = int(pd.to_numeric(df_enh['수익금'], errors='coerce').fillna(0).sum())
+                                filt_profit = int(pd.to_numeric(df_seg_filt['수익금'], errors='coerce').fillna(0).sum())
+                                ex_pct = (1.0 - (len(df_seg_filt) / max(1, len(df_enh)))) * 100.0
+                                combo_map = global_best.get('combination') or {}
+                                total_filters = sum(len(v.get('filters') or []) for v in combo_map.values())
+                                seg_lines = [
+                                    "세그먼트 필터 적용 미리보기:",
+                                    f"- 구간/필터: {len(combo_map):,}구간, 필터 {total_filters:,}개",
+                                    f"- 거래수: {len(df_enh):,} → {len(df_seg_filt):,} (제외 {ex_pct:.1f}%)",
+                                    f"- 수익금: {total_profit:,}원 → {filt_profit:,}원 ({(filt_profit-total_profit):+,}원)",
+                                ]
+
+                                out_range = int(seg_mask_info.get('out_of_range_trades', 0) or 0)
+                                if out_range > 0:
+                                    seg_lines.append(f"- 구간 외 거래: {out_range:,}건")
+
+                                miss_cols = seg_mask_info.get('missing_columns') or []
+                                if miss_cols:
+                                    sample = ", ".join(miss_cols[:5])
+                                    tail = "..." if len(miss_cols) > 5 else ""
+                                    seg_lines.append(f"- 누락 컬럼: {sample}{tail}")
+
+                                seg_lines.append("- 이미지: 세그먼트 필터 미리보기 2종 전송")
+                                teleQ.put("\n".join(seg_lines))
+                            except Exception:
+                                pass
+
+                            p_main, p_sub = PltFilterAppliedPreviewCharts(
+                                df_enh,
+                                df_seg_filt,
+                                save_file_name=save_file_name,
+                                backname=f"{backname} 세그먼트" if backname else "세그먼트",
+                                seed=seed,
+                                generated_code=None,
+                                buystg=buystg,
+                                sellstg=sellstg,
+                                file_tag='segment'
+                            )
+                            if p_sub:
+                                teleQ.put(p_sub)
+                            if p_main:
+                                teleQ.put(p_main)
+                        else:
+                            err = seg_mask_info.get('error') if isinstance(seg_mask_info, dict) else 'N/A'
+                            msg = "세그먼트 필터 미리보기: 마스크 생성 실패"
+                            if err:
+                                msg += f"\n- 오류: {err}"
                             teleQ.put(msg)
             except Exception:
                 print_exc()
