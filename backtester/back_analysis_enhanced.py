@@ -2998,6 +2998,9 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
         try:
             total_trades = int(len(df_tsg))
             profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+            return_arr = None
+            if '수익률' in df_tsg.columns:
+                return_arr = pd.to_numeric(df_tsg['수익률'], errors='coerce').fillna(0).to_numpy(dtype=np.float64)
 
             safe_globals = {"__builtins__": {}}
             safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
@@ -3059,6 +3062,9 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
                 excluded_count = int(np.sum(excluded_mask))
                 remaining_count = total_trades - excluded_count
                 remaining_winrate = float((profit_arr[~excluded_mask] > 0).mean() * 100) if remaining_count > 0 else 0.0
+                remaining_return = None
+                if return_arr is not None and remaining_count > 0:
+                    remaining_return = float(np.mean(return_arr[~excluded_mask]))
 
                 selected.append(candidates[best_i])
                 combine_steps.append({
@@ -3071,6 +3077,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
                     '누적제외비율': round(excluded_count / total_trades * 100, 1),
                     '잔여거래수': int(remaining_count),
                     '잔여승률': round(remaining_winrate, 1),
+                    '잔여평균수익률': round(remaining_return, 2) if remaining_return is not None else None,
                 })
 
             combined_improvement = int(cum_impr)
@@ -4153,7 +4160,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             # ML 예측 통계 메시지 (NEW)
             if ml_prediction_stats:
                 ml_lines = []
-                ml_lines.append("ML 위험도 예측 결과:")
+                ml_lines.append("머신러닝 변수 예측 결과:")
                 ml_lines.append(f"- 모델: {ml_prediction_stats.get('model_type', 'N/A')}")
                 ml_lines.append(
                     f"- 테스트(AUC/F1/BA): "
@@ -4162,6 +4169,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     f"{ml_prediction_stats.get('test_balanced_accuracy', 'N/A')}%"
                 )
                 ml_lines.append(f"- 사용 피처: {ml_prediction_stats.get('total_features', 0)}개")
+                ml_lines.append("- 예측 변수: 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML")
 
                 # 소요 시간(학습/예측/저장) 요약
                 try:
@@ -4312,9 +4320,12 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 if steps:
                     lines.append("- 적용 순서(추가개선→누적개선, 누적제외%):")
                     for st in steps[: min(8, len(steps))]:
+                        ret_val = st.get('잔여평균수익률')
+                        ret_text = f"{ret_val}%" if ret_val is not None else "N/A"
                         lines.append(
                             f"  {st.get('순서', '')}. {str(st.get('필터명', ''))[:18]}: "
                             f"+{int(st.get('추가개선(중복반영)', 0)):,} → 누적 +{int(st.get('누적개선(동시적용)', 0)):,} "
+                            f"(수익률 {ret_text}) "
                             f"(제외 {st.get('누적제외비율', 0)}%)"
                         )
 

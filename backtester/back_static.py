@@ -2578,9 +2578,14 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 ex_pct = (1.0 - (len(df_seg_filt) / max(1, len(df_enh)))) * 100.0
                                 combo_map = global_best.get('combination') or {}
                                 total_filters = sum(len(v.get('filters') or []) for v in combo_map.values())
+                                excluded_segments = sum(1 for v in combo_map.values() if v.get('exclude_segment'))
+                                filter_segments = sum(1 for v in combo_map.values() if v.get('filters'))
+                                no_filter_segments = max(0, len(combo_map) - filter_segments - excluded_segments)
                                 seg_lines = [
                                     "세그먼트 필터 적용 미리보기:",
                                     f"- 구간/필터: {len(combo_map):,}구간, 필터 {total_filters:,}개",
+                                    "- 적용 방식: 시가총액/시간 구간 분리 → 구간별 필터 AND 적용",
+                                    f"- 구간 상태: 필터적용 {filter_segments:,}구간, 무필터 {no_filter_segments:,}구간, 전체제외 {excluded_segments:,}구간",
                                     f"- 거래수: {len(df_enh):,} → {len(df_seg_filt):,} (제외 {ex_pct:.1f}%)",
                                     f"- 수익금: {total_profit:,}원 → {filt_profit:,}원 ({(filt_profit-total_profit):+,}원)",
                                 ]
@@ -2594,6 +2599,20 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                     sample = ", ".join(miss_cols[:5])
                                     tail = "..." if len(miss_cols) > 5 else ""
                                     seg_lines.append(f"- 누락 컬럼: {sample}{tail}")
+
+                                file_refs = []
+                                for key in ('segment_code_path', 'global_combo_path', 'local_combo_path',
+                                            'filters_path', 'ranges_path', 'summary_path'):
+                                    p = phase2.get(key)
+                                    if p:
+                                        try:
+                                            file_refs.append(Path(p).name)
+                                        except Exception:
+                                            file_refs.append(str(p))
+                                if file_refs:
+                                    seg_lines.append("- 상세 파일: " + ", ".join(file_refs[:6]))
+                                    if len(file_refs) > 6:
+                                        seg_lines.append(f"- 상세 파일 추가: 외 {len(file_refs) - 6}개")
 
                                 seg_lines.append("- 이미지: 세그먼트 필터 미리보기 2종 전송")
                                 teleQ.put("\n".join(seg_lines))
