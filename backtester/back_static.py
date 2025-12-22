@@ -260,7 +260,8 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
                                   save_file_name: str, backname: str, seed: int,
                                   generated_code: dict = None,
                                   buystg: str = None, sellstg: str = None,
-                                  file_tag: str = ''):
+                                  file_tag: str = '',
+                                  segment_combo_map: dict = None):
     """
     자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
     - {전략명}{_tag}_filtered.png
@@ -337,6 +338,13 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     filtered_profit = float(pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).sum())
     improvement = filtered_profit - total_profit
     excluded_ratio = (1.0 - (len(df_filtered) / max(1, len(df_all)))) * 100.0
+    is_segment = file_tag == 'segment' or isinstance(segment_combo_map, dict)
+
+    avg_return_all = None
+    avg_return_filt = None
+    if '수익률' in df_all.columns and '수익률' in df_filtered.columns:
+        avg_return_all = float(pd.to_numeric(df_all['수익률'], errors='coerce').fillna(0).mean())
+        avg_return_filt = float(pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0).mean())
 
     # ===== 1) filtered.png (수익곡선 요약) =====
     path_main = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered.png"
@@ -402,10 +410,14 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
     # 조건식/필터 요약 텍스트
     summary_lines = [
-        "=== 필터 적용 요약 ===",
+        "=== 세그먼트 필터 적용 요약 ===" if is_segment else "=== 필터 적용 요약 ===",
         f"- 거래수: {len(df_all):,} → {len(df_filtered):,} (제외 {excluded_ratio:.1f}%)",
         f"- 수익금: {int(total_profit):,}원 → {int(filtered_profit):,}원 (개선 {int(improvement):+,}원)",
     ]
+    if avg_return_all is not None and avg_return_filt is not None:
+        summary_lines.append(
+            f"- 평균 수익률: {avg_return_all:.4f}% → {avg_return_filt:.4f}% ({avg_return_filt - avg_return_all:+.4f}%)"
+        )
     if isinstance(generated_code, dict) and generated_code.get('summary'):
         s = generated_code.get('summary') or {}
         try:
@@ -413,21 +425,61 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
             summary_lines.append(f"- 예상 총 개선(동시 적용): {int(s.get('total_improvement_combined', s.get('total_improvement_naive', 0)) or 0):,}원")
         except Exception:
             pass
+    if is_segment and isinstance(segment_combo_map, dict) and segment_combo_map:
+        def _format_segment_combo_lines(combo_map, max_lines=12, max_len=90):
+            lines = []
+            for seg_id in sorted(combo_map.keys()):
+                combo = combo_map.get(seg_id) or {}
+                if combo.get('exclude_segment'):
+                    line = f"{seg_id}: 전체 제외"
+                else:
+                    filters = combo.get('filters') or []
+                    names = []
+                    for flt in filters:
+                        name = flt.get('filter_name') or flt.get('name') or ''
+                        if not name:
+                            col = flt.get('column')
+                            threshold = flt.get('threshold')
+                            direction = flt.get('direction')
+                            if col and threshold is not None and direction in ('less', 'greater'):
+                                op = ">=" if direction == 'less' else "<"
+                                name = f"{col} {op} {threshold}"
+                        if name:
+                            names.append(str(name))
+                    if names:
+                        line = f"{seg_id}: " + " | ".join(names)
+                    else:
+                        line = f"{seg_id}: (필터 없음)"
+                if len(line) > max_len:
+                    line = line[: max_len - 3] + "..."
+                lines.append(line)
+                if len(lines) >= max_lines:
+                    break
+            remaining = max(0, len(combo_map) - max_lines)
+            return lines, remaining
+
+        seg_lines, seg_remaining = _format_segment_combo_lines(segment_combo_map)
+        summary_lines.append("- 세그먼트 필터 조합(요약):")
+        summary_lines.extend([f"  {ln}" for ln in seg_lines])
+        if seg_remaining > 0:
+            summary_lines.append(f"  ... 외 {seg_remaining}개")
+        summary_lines.append("  (상세: *_segment_code.txt, *_segment_combos.csv)")
     if isinstance(generated_code, dict) and generated_code.get('buy_conditions'):
         summary_lines.append("- 적용 조건(일부):")
         for ln in (generated_code.get('buy_conditions') or [])[:5]:
             summary_lines.append(f"  {str(ln).strip()}")
 
-    buy_block = _extract_strategy_block_lines(buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=6)
-    sell_block = _extract_strategy_block_lines(sellstg, start_marker='if 매도:', end_marker=None, max_lines=6)
-    if buy_block or sell_block:
-        summary_lines.append("- 조건식(일부):")
-        if buy_block:
-            summary_lines.append("  [매수]")
-            summary_lines.extend([f"    {ln}" for ln in buy_block])
-        if sell_block:
-            summary_lines.append("  [매도]")
-            summary_lines.extend([f"    {ln}" for ln in sell_block])
+    if not is_segment:
+        buy_block = _extract_strategy_block_lines(buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=6)
+        sell_block = _extract_strategy_block_lines(sellstg, start_marker='if 매도:', end_marker=None, max_lines=6)
+        if buy_block or sell_block:
+            summary_lines.append("- 조건식(일부):")
+            if buy_block:
+                summary_lines.append("  [매수]")
+                summary_lines.extend([f"    {ln}" for ln in buy_block])
+            if sell_block:
+                summary_lines.append("  [매도]")
+                summary_lines.extend([f"    {ln}" for ln in sell_block])
 
     fig.suptitle(f'{backname} 필터 적용 결과 - {save_file_name}', fontsize=14, fontweight='bold')
     fig.text(0.01, 0.01, "\n".join(summary_lines), fontsize=9, family='monospace',
@@ -2628,7 +2680,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 generated_code=None,
                                 buystg=buystg,
                                 sellstg=sellstg,
-                                file_tag='segment'
+                                file_tag='segment',
+                                segment_combo_map=combo_map
                             )
                             if p_sub:
                                 teleQ.put(p_sub)
