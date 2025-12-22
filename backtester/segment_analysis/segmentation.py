@@ -4,7 +4,7 @@ Segmentation Module - 세그먼트 분할 모듈
 
 시가총액/시간 구간 기반 데이터 세그먼트 분할:
 - 시가총액: 소형주(<3000억), 중형주(3000-10000억), 대형주(≥10000억)
-- 시간: T1(09:00-05), T2(09:05-10), T3(09:10-15), T4(09:15-20)
+- 시간: S1(09:00-05), S2(09:05-10), S3(09:10-15), S4(09:15-20)
 - 총 12개 세그먼트 생성 (3 × 4)
 
 Research: docs/Study/ResearchReports/2025-12-20_Segmented_Filter_Optimization_Research.md
@@ -39,10 +39,10 @@ class SegmentConfig:
 
     # 시간 구간 (시분초 형식: HHMMSS)
     time_ranges: Dict[str, Tuple[int, int]] = field(default_factory=lambda: {
-        'T1_090000_090500': (90000, 90500),  # 09:00:00 ~ 09:05:00
-        'T2_090500_091000': (90500, 91000),  # 09:05:00 ~ 09:10:00
-        'T3_091000_091500': (91000, 91500),  # 09:10:00 ~ 09:15:00
-        'T4_091500_092000': (91500, 92000),  # 09:15:00 ~ 09:20:00
+        'S1_090000_090500': (90000, 90500),  # 09:00:00 ~ 09:05:00
+        'S2_090500_091000': (90500, 91000),  # 09:05:00 ~ 09:10:00
+        'S3_091000_091500': (91000, 91500),  # 09:10:00 ~ 09:15:00
+        'S4_091500_092000': (91500, 92000),  # 09:15:00 ~ 09:20:00
     })
 
     # 최소 거래수 제약
@@ -277,7 +277,7 @@ class SegmentBuilder:
         각 거래에 세그먼트 ID 할당
 
         Returns:
-            세그먼트 ID 시리즈 (예: "소형주_T1_090000_090500")
+            세그먼트 ID 시리즈 (예: "소형주_S1_090000_090500")
         """
         segment_ids = pd.Series(['Unknown'] * len(df), index=df.index)
 
@@ -547,7 +547,7 @@ class SegmentBuilder:
             labels.append(prefix)
 
         if len(labels) != 4:
-            labels = ['T1', 'T2', 'T3', 'T4']
+            labels = ['S1', 'S2', 'S3', 'S4']
 
         ranges: Dict[str, Tuple[int, int]] = {}
         for idx, prefix in enumerate(labels):
@@ -617,7 +617,7 @@ def create_segment_matrix_view(segment_stats: pd.DataFrame) -> pd.DataFrame:
 
     # 행/열 정렬
     row_order = ['소형주', '중형주', '대형주']
-    col_order = ['T1', 'T2', 'T3', 'T4']
+    col_order = ['S1', 'S2', 'S3', 'S4']
 
     matrix = matrix.reindex(
         index=[r for r in row_order if r in matrix.index],

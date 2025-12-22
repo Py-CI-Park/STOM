@@ -208,15 +208,18 @@ class FilterEvaluator:
         return feature_columns
 
     def _should_exclude(self, col: str) -> bool:
-        if any(col.startswith(prefix) for prefix in self.config.exclude_prefixes):
-            return True
-
         col_lower = col.lower()
         for pattern in self.config.exclude_patterns:
             if pattern.lower() in col_lower:
                 return True
 
         if not self.config.allow_ml_filters and '_ml' in col_lower:
+            return True
+
+        if col in self.config.explicit_buy_columns:
+            return False
+
+        if any(col.startswith(prefix) for prefix in self.config.exclude_prefixes):
             return True
 
         return False
