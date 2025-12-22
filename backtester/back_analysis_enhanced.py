@@ -4150,32 +4150,6 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 except Exception:
                     pass
 
-            # 요약 메시지
-            if recommendations:
-                msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
-                _safe_put(msg)
-            else:
-                # 추천 메시지가 비어 있어도 "왜 비었는지" 요약을 보내도록 보강
-                try:
-                    pos_filters = sum(1 for f in filter_results_safe if float(f.get('수익개선금액', 0) or 0) > 0)
-                    sig_pos_filters = sum(
-                        1 for f in filter_results_safe
-                        if f.get('유의함') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
-                    )
-                except Exception:
-                    pos_filters = 0
-                    sig_pos_filters = 0
-
-                msg = (
-                    "강화된 필터 분석 결과:\n"
-                    "- 추천 조건을 만족하는 항목이 없어 요약만 전송합니다.\n"
-                    f"- 필터 결과: 총 {len(filter_results_safe):,}개 (개선(+) {pos_filters:,}개, 유의(+) {sig_pos_filters:,}개)\n"
-                    f"- 조합 분석: {len(filter_combinations_safe):,}개\n"
-                    f"- 안정성 분석: {len(filter_stability_safe):,}개\n"
-                    f"- 코드 생성: {'가능' if (generated_code and generated_code.get('summary')) else '불가'}"
-                )
-                _safe_put(msg)
-
             # ML 예측 통계 메시지 (NEW)
             if ml_prediction_stats:
                 ml_lines = []
@@ -4285,6 +4259,32 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 ml_lines.append("- detail.csv에 '손실확률_ML', '위험도_ML', '예측매수매도위험도점수_ML' 컬럼 추가됨")
                 
                 _safe_put("\n".join(ml_lines))
+
+            # 요약 메시지
+            if recommendations:
+                msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
+                _safe_put(msg)
+            else:
+                # 추천 메시지가 비어 있어도 "왜 비었는지" 요약을 보내도록 보강
+                try:
+                    pos_filters = sum(1 for f in filter_results_safe if float(f.get('수익개선금액', 0) or 0) > 0)
+                    sig_pos_filters = sum(
+                        1 for f in filter_results_safe
+                        if f.get('유의함') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
+                    )
+                except Exception:
+                    pos_filters = 0
+                    sig_pos_filters = 0
+
+                msg = (
+                    "강화된 필터 분석 결과:\n"
+                    "- 추천 조건을 만족하는 항목이 없어 요약만 전송합니다.\n"
+                    f"- 필터 결과: 총 {len(filter_results_safe):,}개 (개선(+) {pos_filters:,}개, 유의(+) {sig_pos_filters:,}개)\n"
+                    f"- 조합 분석: {len(filter_combinations_safe):,}개\n"
+                    f"- 안정성 분석: {len(filter_stability_safe):,}개\n"
+                    f"- 코드 생성: {'가능' if (generated_code and generated_code.get('summary')) else '불가'}"
+                )
+                _safe_put(msg)
 
             # 조건식 코드
             if generated_code and generated_code.get('summary'):

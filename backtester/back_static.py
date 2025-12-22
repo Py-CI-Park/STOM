@@ -193,6 +193,22 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
     return result
 
 
+def _format_progress_logs(progress_logs):
+    formatted = []
+    last_ts = False
+    for item in progress_logs:
+        text = str(item).strip()
+        if not text:
+            continue
+        if re.match(r'^\[\d{4}-\d{2}-\d{2} ', text):
+            formatted.append(f"- {text}")
+            last_ts = True
+        else:
+            prefix = "  - " if last_ts else "- "
+            formatted.append(f"{prefix}{text}")
+    return formatted
+
+
 def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str = None,
                                  max_lines: int = 8, max_line_len: int = 140):
     """
@@ -2203,7 +2219,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 if lines:
                     lines.append("")
                 lines.append("백테스트 진행 로그:")
-                lines.extend([str(x) for x in progress_logs])
+                lines.extend(_format_progress_logs(progress_logs))
 
             if lines:
                 teleQ.put("\n".join(lines))
