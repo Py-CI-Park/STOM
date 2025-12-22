@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
+import re
 
 import pandas as pd
 
@@ -39,6 +40,7 @@ def run_segment_mode_comparison(
     detail_path = Path(detail_path).expanduser().resolve()
 
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
+    global_stats = _load_global_filter_stats(detail_path, output_prefix)
     rows = []
     mode_results = {}
 
@@ -60,7 +62,7 @@ def run_segment_mode_comparison(
         )
 
         mode_results[mode_name] = phase2_result
-        row = _build_row(mode_name, phase2_result)
+        row = _build_row(mode_name, phase2_result, global_stats)
         rows.append(row)
 
     df_comp = pd.DataFrame(rows)
@@ -96,7 +98,7 @@ def _clone_segment_config(seg_config: Optional[SegmentConfig]) -> SegmentConfig:
     )
 
 
-def _build_row(mode: str, result: dict) -> dict:
+def _build_row(mode: str, result: dict, global_stats: Optional[dict] = None) -> dict:
     row = {
         'mode': mode,
         'summary_path': result.get('summary_path'),
@@ -105,6 +107,9 @@ def _build_row(mode: str, result: dict) -> dict:
         'local_combo_path': result.get('local_combo_path'),
         'filters_path': result.get('filters_path'),
     }
+
+    if isinstance(global_stats, dict) and global_stats:
+        row.update(global_stats)
 
     combo_path = result.get('global_combo_path')
     if combo_path and Path(combo_path).exists():
@@ -124,7 +129,102 @@ def _build_row(mode: str, result: dict) -> dict:
         except Exception:
             pass
 
+    _apply_global_comparison(row, global_stats)
     return row
+
+
+def _load_global_filter_stats(detail_path: Path, prefix: str) -> dict:
+    report_path = _find_global_report_path(detail_path, prefix)
+    if report_path is None:
+        return {}
+    return _parse_global_filter_report(report_path)
+
+
+def _find_global_report_path(detail_path: Path, prefix: str) -> Optional[Path]:
+    candidate = detail_path.with_name(f"{prefix}_report.txt")
+    if candidate.exists():
+        return candidate
+    fallback = Path('backtester/graph') / f"{prefix}_report.txt"
+    if fallback.exists():
+        return fallback
+    return None
+
+
+def _parse_global_filter_report(report_path: Path) -> dict:
+    try:
+        text = report_path.read_text(encoding='utf-8-sig', errors='ignore')
+    except Exception:
+        return {}
+
+    improvement = None
+    exclusion_ratio = None
+    filter_count = None
+    in_apply_block = False
+
+    for line in text.splitlines():
+        if '필터 수' in line:
+            match = re.search(r'필터 수:\s*(\d+)', line)
+            if match:
+                filter_count = int(match.group(1))
+
+        if '예상 총 개선' in line:
+            match = re.search(r'예상 총 개선[^:]*:\s*([+-]?[0-9,]+)원', line)
+            if match:
+                improvement = float(match.group(1).replace(',', ''))
+
+        if line.strip().startswith('[적용 순서'):
+            in_apply_block = True
+            continue
+
+        if in_apply_block:
+            if line.strip().startswith('[') and not line.strip().startswith('[적용 순서'):
+                in_apply_block = False
+            match = re.search(r'제외\s*([0-9.]+)%', line)
+            if match:
+                exclusion_ratio = float(match.group(1)) / 100.0
+
+    if exclusion_ratio is None:
+        for line in text.splitlines():
+            match = re.search(r'제외\s*([0-9.]+)%', line)
+            if match:
+                exclusion_ratio = float(match.group(1)) / 100.0
+
+    remaining_ratio = None
+    if exclusion_ratio is not None:
+        remaining_ratio = 1.0 - exclusion_ratio
+
+    stats = {}
+    if improvement is not None:
+        stats['global_filter_improvement'] = improvement
+    if exclusion_ratio is not None:
+        stats['global_filter_exclusion_ratio'] = exclusion_ratio
+    if remaining_ratio is not None:
+        stats['global_filter_remaining_ratio'] = remaining_ratio
+    if filter_count is not None:
+        stats['global_filter_count'] = filter_count
+    stats['global_filter_report_path'] = str(report_path)
+    return stats
+
+
+def _apply_global_comparison(row: dict, global_stats: Optional[dict]) -> None:
+    if not isinstance(global_stats, dict) or not global_stats:
+        return
+    total_improvement = _to_float(row.get('total_improvement'))
+    remaining_ratio = _to_float(row.get('remaining_ratio'))
+    global_improvement = _to_float(global_stats.get('global_filter_improvement'))
+    global_remaining = _to_float(global_stats.get('global_filter_remaining_ratio'))
+
+    if total_improvement is not None and global_improvement is not None:
+        row['improvement_vs_global'] = total_improvement - global_improvement
+    if remaining_ratio is not None and global_remaining is not None:
+        row['remaining_ratio_vs_global'] = remaining_ratio - global_remaining
+
+
+def _to_float(value: object) -> Optional[float]:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 if __name__ == '__main__':

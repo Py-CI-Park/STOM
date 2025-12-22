@@ -23,22 +23,46 @@ def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional
     if plt is None or summary_df is None or summary_df.empty:
         return None
 
-    matrix = create_segment_matrix_view(summary_df)
-    if matrix.empty:
+    df = summary_df.copy()
+    df = df[df['segment_id'] != 'Out_of_Range']
+    if df.empty:
         return None
 
-    fig, ax = plt.subplots(figsize=(6, 4))
-    im = ax.imshow(matrix.values, cmap='YlGnBu', aspect='auto')
-    ax.set_xticks(range(len(matrix.columns)))
-    ax.set_xticklabels(matrix.columns, rotation=0)
-    ax.set_yticks(range(len(matrix.index)))
-    ax.set_yticklabels(matrix.index)
-    ax.set_title('Segment Heatmap (Trades)')
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    df['cap'] = df['segment_id'].astype(str).str.split('_', n=1).str[0]
+    df['time_label'] = df['segment_id'].astype(str).str.split('_', n=1).str[1]
 
-    for i, row in enumerate(matrix.values):
-        for j, val in enumerate(row):
-            ax.text(j, i, f"{int(val):,}", ha='center', va='center', fontsize=8)
+    trades = df.pivot_table(index='cap', columns='time_label', values='trades', fill_value=0)
+    profits = df.pivot_table(index='cap', columns='time_label', values='profit', fill_value=0)
+
+    row_order = ['소형주', '중형주', '대형주']
+    row_order = [r for r in row_order if r in trades.index]
+    if row_order:
+        trades = trades.reindex(index=row_order)
+        profits = profits.reindex(index=row_order)
+
+    col_order = _sort_time_labels(trades.columns.tolist())
+    trades = trades.reindex(columns=col_order)
+    profits = profits.reindex(columns=col_order)
+
+    vmax = max(abs(profits.max().max()), abs(profits.min().min()))
+    if vmax == 0:
+        vmax = 1.0
+
+    fig, ax = plt.subplots(figsize=(7.5, 4.5))
+    im = ax.imshow(profits.values, cmap='RdYlGn', aspect='auto', vmin=-vmax, vmax=vmax)
+    ax.set_xticks(range(len(profits.columns)))
+    ax.set_xticklabels(profits.columns, rotation=0, fontsize=8)
+    ax.set_yticks(range(len(profits.index)))
+    ax.set_yticklabels(profits.index, fontsize=9)
+    ax.set_title('Segment Heatmap (Profit color / Trades text)')
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label='Profit')
+
+    for i, cap in enumerate(profits.index):
+        for j, label in enumerate(profits.columns):
+            trade_val = int(trades.loc[cap, label]) if label in trades.columns else 0
+            profit_val = float(profits.loc[cap, label]) if label in profits.columns else 0.0
+            text = f"T:{trade_val:,}\nP:{_fmt_profit(profit_val)}"
+            ax.text(j, i, text, ha='center', va='center', fontsize=7)
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
@@ -73,6 +97,29 @@ def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: in
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
     return output_path
+
+
+def _sort_time_labels(labels: list[str]) -> list[str]:
+    def _extract_start(label: str) -> int:
+        parts = str(label).split('_')
+        if len(parts) >= 2 and parts[1].isdigit():
+            return int(parts[1])
+        if len(parts) >= 3 and parts[2].isdigit():
+            return int(parts[2])
+        return 0
+
+    return sorted(labels, key=_extract_start)
+
+
+def _fmt_profit(value: float) -> str:
+    try:
+        v = float(value)
+    except Exception:
+        return "0"
+    sign = "+" if v >= 0 else ""
+    if abs(v) >= 100000000:
+        return f"{sign}{v/100000000:.1f}억"
+    return f"{sign}{v:,.0f}"
 
 
 def plot_pareto_front(pareto_df: pd.DataFrame, output_path: str) -> Optional[str]:

@@ -55,7 +55,7 @@ class SegmentConfig:
     # 최대 제외율 제약
     max_exclusion: Dict[str, float] = field(default_factory=lambda: {
         'per_segment': 0.85,        # 세그먼트별 최대 85% 제외
-        'global': 0.80,             # 전체 최대 80% 제외
+        'global': 0.90,             # 전체 최대 90% 제외
         'adaptive': True            # 세그먼트 크기에 따라 조정
     })
 

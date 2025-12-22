@@ -45,6 +45,9 @@ def run_decision_report(detail_path: str, config: Optional[DecisionReportConfig]
     decision = _decide_mode(mode_df, config)
     rationale = _build_rationale(decision, mode_df, config)
     candidate_summary = _summarize_candidates(pareto_df, optuna_df, nsga_df, config)
+    global_info = _extract_global_filter_info(mode_df)
+    if global_info.get('global_filter_report_path'):
+        sources['global_filter_report'] = global_info.get('global_filter_report_path')
 
     md_path = output_dir / f"{output_prefix}_decision_report.md"
     json_path = output_dir / f"{output_prefix}_decision_report.json"
@@ -71,6 +74,7 @@ def run_decision_report(detail_path: str, config: Optional[DecisionReportConfig]
             'status': decision.get('status'),
             'metrics': decision.get('metrics'),
         },
+        'global_filter': global_info if global_info else None,
         'criteria': {
             'min_remaining_ratio': config.min_remaining_ratio,
             'max_mdd_increase_pp': config.max_mdd_increase_pp,
@@ -194,6 +198,7 @@ def _build_rationale(decision: dict, mode_df: pd.DataFrame, config: DecisionRepo
     rec = decision.get('recommended_mode')
     status = decision.get('status')
     metrics = decision.get('metrics') or {}
+    global_info = _extract_global_filter_info(mode_df)
 
     if status == 'no_data':
         return ["비교 데이터가 없어 의사결정을 수행할 수 없습니다."]
@@ -210,8 +215,58 @@ def _build_rationale(decision: dict, mode_df: pd.DataFrame, config: DecisionRepo
             base_mdd = float(pd.to_numeric(fixed['mdd_pct'], errors='coerce').fillna(0.0).iloc[0])
             lines.append(f"- 기준(fixed) MDD: {base_mdd:.2f} (허용 +{config.max_mdd_increase_pp:.1f}p)")
 
+    if global_info:
+        improvement = global_info.get('global_filter_improvement')
+        remaining_ratio = global_info.get('global_filter_remaining_ratio')
+        exclusion_ratio = global_info.get('global_filter_exclusion_ratio')
+        if improvement is not None:
+            lines.append(f"- 글로벌 필터 예상 개선금액: {int(improvement):,}원")
+        if remaining_ratio is not None:
+            if exclusion_ratio is not None:
+                lines.append(f"- 글로벌 필터 잔여비율: {remaining_ratio:.2f} (제외 {exclusion_ratio*100:.1f}%)")
+            else:
+                lines.append(f"- 글로벌 필터 잔여비율: {remaining_ratio:.2f}")
+        if improvement is not None:
+            diff = float(metrics.get('total_improvement', 0.0)) - float(improvement)
+            lines.append(f"- 글로벌 필터 대비 개선금액 차이: {diff:+,.0f}원")
+
     lines.append(f"- 기준: remaining_ratio ≥ {config.min_remaining_ratio:.2f}")
     return lines
+
+
+def _extract_global_filter_info(mode_df: pd.DataFrame) -> dict:
+    if mode_df is None or mode_df.empty:
+        return {}
+
+    info = {}
+    columns = {
+        'global_filter_improvement': 'global_filter_improvement',
+        'global_filter_remaining_ratio': 'global_filter_remaining_ratio',
+        'global_filter_exclusion_ratio': 'global_filter_exclusion_ratio',
+        'global_filter_count': 'global_filter_count',
+        'global_filter_report_path': 'global_filter_report_path',
+    }
+
+    for key, col in columns.items():
+        if col not in mode_df.columns:
+            continue
+        series = mode_df[col]
+        value = series.dropna().iloc[0] if series.dropna().any() else None
+        if value is None or value == '':
+            continue
+        if key in ('global_filter_improvement', 'global_filter_remaining_ratio', 'global_filter_exclusion_ratio'):
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                continue
+        if key == 'global_filter_count':
+            try:
+                value = int(float(value))
+            except (TypeError, ValueError):
+                continue
+        info[key] = value
+
+    return info
 
 
 def _summarize_candidates(

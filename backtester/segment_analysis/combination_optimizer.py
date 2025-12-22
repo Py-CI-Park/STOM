@@ -19,9 +19,9 @@ from .validation import ConstraintConfig, validate_segment_combo, validate_globa
 
 @dataclass
 class CombinationOptimizerConfig(ConstraintConfig):
-    max_filters_per_segment: int = 2
-    max_candidates_per_segment: int = 20
-    beam_width: int = 20
+    max_filters_per_segment: int = 3
+    max_candidates_per_segment: int = 40
+    beam_width: int = 40
 
 
 def generate_local_combinations(
