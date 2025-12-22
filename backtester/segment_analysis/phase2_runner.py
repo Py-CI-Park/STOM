@@ -155,6 +155,8 @@ def _apply_global_combination(segments: dict, global_best: Optional[dict]) -> pd
         combo = combo_map.get(seg_id)
         if combo is None or seg_df is None or seg_df.empty:
             continue
+        if combo.get('exclude_segment'):
+            continue
         filters = combo.get('filters') or []
         seg_filtered = _apply_filters(seg_df, filters)
         if not seg_filtered.empty:

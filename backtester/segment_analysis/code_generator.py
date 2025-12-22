@@ -49,6 +49,11 @@ def build_segment_filter_code(
         else:
             lines.append("if True:")
 
+        if combo.get('exclude_segment'):
+            lines.append("    필터통과 = False  # 세그먼트 전체 제외")
+            lines.append("")
+            continue
+
         if filters:
             conditions = []
             for flt in filters:

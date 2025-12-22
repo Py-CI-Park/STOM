@@ -50,10 +50,14 @@ def build_local_combos_df(segment_combos: Dict[str, List[dict]]) -> pd.DataFrame
     rows = []
     for seg_id, combos in segment_combos.items():
         for rank, combo in enumerate(combos, start=1):
+            if combo.get('exclude_segment'):
+                filters_text = '세그먼트 전체 제외'
+            else:
+                filters_text = _format_filters(combo.get('filters', []))
             rows.append({
                 'segment_id': seg_id,
                 'combo_rank': rank,
-                'filters': _format_filters(combo.get('filters', [])),
+                'filters': filters_text,
                 'improvement': combo.get('improvement', 0),
                 'remaining_trades': combo.get('remaining_trades', 0),
                 'exclusion_ratio': combo.get('exclusion_ratio', 0),
@@ -253,6 +257,9 @@ def _format_filters(filters: List[dict]) -> str:
 def _format_global_filters(combo_map: Dict[str, dict]) -> str:
     parts = []
     for seg_id, combo in combo_map.items():
+        if combo.get('exclude_segment'):
+            parts.append(f"{seg_id}: (segment_excluded)")
+            continue
         names = _format_filters(combo.get('filters', []))
         parts.append(f"{seg_id}: {names}" if names else f"{seg_id}: (no_filter)")
     return " / ".join(parts)

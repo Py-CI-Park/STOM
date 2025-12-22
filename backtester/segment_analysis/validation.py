@@ -16,7 +16,7 @@ import pandas as pd
 
 @dataclass
 class ConstraintConfig:
-    min_trades_per_segment: int = 30
+    min_trades_per_segment: int = 15
     max_exclusion_per_segment: float = 0.85
     max_exclusion_global: float = 0.90
     min_total_trades: Optional[int] = None

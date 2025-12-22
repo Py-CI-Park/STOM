@@ -22,6 +22,8 @@ class CombinationOptimizerConfig(ConstraintConfig):
     max_filters_per_segment: int = 3
     max_candidates_per_segment: int = 40
     beam_width: int = 40
+    allow_segment_exclusion: bool = True
+    segment_exclusion_min_trades: int = 15
 
 
 def generate_local_combinations(
@@ -47,6 +49,18 @@ def generate_local_combinations(
         'exclusion_ratio': 0.0,
         'label': 'no_filter',
     }]
+
+    if (config.allow_segment_exclusion and total_trades >= config.segment_exclusion_min_trades
+            and total_profit < 0):
+        combos.append({
+            'filters': [],
+            'improvement': float(-total_profit),
+            'excluded_trades': total_trades,
+            'remaining_trades': 0,
+            'exclusion_ratio': 1.0,
+            'label': 'exclude_segment',
+            'exclude_segment': True,
+        })
 
     for r in range(1, config.max_filters_per_segment + 1):
         for idxs in combinations(range(len(local_candidates)), r):

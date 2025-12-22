@@ -159,6 +159,9 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
         combo = combo_map.get(seg_id)
         if combo is None:
             continue
+        if combo.get('exclude_segment'):
+            result['segment_trades'][seg_id] = 0
+            continue
         filters = combo.get('filters') or []
         seg_mask = np.ones(len(seg_df), dtype=bool)
 

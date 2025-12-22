@@ -121,6 +121,8 @@ def _apply_global_combination(segments: Dict[str, pd.DataFrame],
         combo = combo_map.get(seg_id)
         if combo is None or seg_df is None or seg_df.empty:
             continue
+        if combo.get('exclude_segment'):
+            continue
         filters = combo.get('filters') or []
         seg_filtered = _apply_filters(seg_df, filters)
         if not seg_filtered.empty:
@@ -174,6 +176,9 @@ def _sort_detail_df(df: pd.DataFrame) -> pd.DataFrame:
 def _format_global_filters(combo_map: Dict[str, dict]) -> str:
     parts = []
     for seg_id, combo in combo_map.items():
+        if combo.get('exclude_segment'):
+            parts.append(f"{seg_id}: (segment_excluded)")
+            continue
         names = []
         for flt in combo.get('filters', []):
             name = flt.get('filter_name') or ''

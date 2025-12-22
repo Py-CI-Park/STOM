@@ -29,7 +29,7 @@ class FilterEvaluatorConfig:
     p_threshold: float = 0.05
     effect_threshold: float = 0.2
     max_exclusion: float = 0.85
-    min_trades: int = 30
+    min_trades: int = 15
     min_improvement: float = 0.0
     top_k: int = 50
     quantiles: Tuple[float, ...] = (0.05, 0.1, 0.2, 0.8, 0.9, 0.95)
