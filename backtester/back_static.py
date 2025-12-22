@@ -136,13 +136,23 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
         return result
 
     try:
+        row_col = '__row_pos__'
+        if row_col in df.columns:
+            idx = 1
+            while f"{row_col}{idx}" in df.columns:
+                idx += 1
+            row_col = f"{row_col}{idx}"
+
+        df_work = df.copy()
+        df_work[row_col] = np.arange(len(df_work))
+
         builder = SegmentBuilder()
-        segments = builder.build_segments(df)
+        segments = builder.build_segments(df_work)
     except Exception as e:
         result['error'] = f"세그먼트 분할 실패: {e}"
         return result
 
-    mask = pd.Series(False, index=df.index)
+    mask = np.zeros(len(df_work), dtype=bool)
     missing = set()
 
     for seg_id, seg_df in segments.items():
@@ -150,7 +160,7 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
         if combo is None:
             continue
         filters = combo.get('filters') or []
-        seg_mask = pd.Series(True, index=seg_df.index)
+        seg_mask = np.ones(len(seg_df), dtype=bool)
 
         for flt in filters:
             column = flt.get('column')
@@ -166,9 +176,10 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
                 cond = values >= threshold
             else:
                 cond = values < threshold
-            seg_mask &= cond.fillna(False)
+            seg_mask &= cond.fillna(False).to_numpy(dtype=bool)
 
-        mask.loc[seg_mask.index] = seg_mask
+        row_positions = seg_df[row_col].to_numpy(dtype=int, copy=False)
+        mask[row_positions] = seg_mask
         result['segment_trades'][seg_id] = int(seg_mask.sum())
 
     if hasattr(builder, 'out_of_range') and isinstance(builder.out_of_range, pd.DataFrame):
