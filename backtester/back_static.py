@@ -543,8 +543,32 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax2.set_ylabel('누적제외(%)', color='red')
         ax.grid()
     else:
-        ax.text(0.5, 0.5, 'combine_steps 없음', ha='center', va='center', transform=ax.transAxes)
-        ax.axis('off')
+        if '수익률' in df_all.columns and '수익률' in df_filtered.columns:
+            base_returns = pd.to_numeric(df_all['수익률'], errors='coerce').fillna(0)
+            filt_returns = pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0)
+            bins = 30
+            ax.hist(base_returns, bins=bins, alpha=0.4, label='기준', color='gray')
+            ax.hist(filt_returns, bins=bins, alpha=0.7, label='필터', color='orange')
+            ax.axvline(x=0, color='black', linewidth=0.8)
+            ax.set_title('수익률 분포(필터 전/후)')
+            ax.set_xlabel('수익률(%)')
+            ax.set_ylabel('거래수')
+            ax.legend(loc='best')
+            ax.grid(axis='y', alpha=0.3)
+        else:
+            base_profit = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0)
+            filt_profit = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+            base_counts = [int((base_profit > 0).sum()), int((base_profit <= 0).sum())]
+            filt_counts = [int((filt_profit > 0).sum()), int((filt_profit <= 0).sum())]
+            x = np.arange(2)
+            ax.bar(x - 0.2, base_counts, width=0.4, label='기준', color='gray', alpha=0.6)
+            ax.bar(x + 0.2, filt_counts, width=0.4, label='필터', color='orange', alpha=0.8)
+            ax.set_xticks(x)
+            ax.set_xticklabels(['이익', '손실'])
+            ax.set_title('이익/손실 거래수 비교')
+            ax.set_ylabel('거래수')
+            ax.legend(loc='best')
+            ax.grid(axis='y', alpha=0.3)
 
     # (3) 시간대별 수익금
     ax = fig.add_subplot(gs[1, 0])
@@ -1216,13 +1240,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     steps = gen.get('combine_steps') or []
                     if steps:
                         lines.append("")
-                        lines.append("[적용 순서(추가개선→누적개선, 누적제외%)]")
+                        lines.append("[적용 순서(추가개선→누적개선, 누적수익금, 누적제외%)]")
                         for st in steps[:10]:
                             try:
+                                cum_profit_val = st.get('누적수익금')
+                                cum_profit_text = f"{int(cum_profit_val):,}원" if cum_profit_val is not None else "N/A"
                                 lines.append(
                                     f"- {st.get('순서', '')}. {str(st.get('필터명', ''))[:24]}: "
                                     f"+{int(st.get('추가개선(중복반영)', 0) or 0):,} → "
                                     f"누적 +{int(st.get('누적개선(동시적용)', 0) or 0):,} "
+                                    f"(누적 수익금 {cum_profit_text}) "
                                     f"(제외 {st.get('누적제외비율', 0)}%)"
                                 )
                             except Exception:
@@ -1543,13 +1570,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 steps = gen.get('combine_steps') or []
                 if steps:
                     study_lines.append("")
-                    study_lines.append("### 적용 순서(추가개선→누적개선, 누적제외%)")
+                    study_lines.append("### 적용 순서(추가개선→누적개선, 누적수익금, 누적제외%)")
                     for st in steps[:10]:
                         try:
+                            cum_profit_val = st.get('누적수익금')
+                            cum_profit_text = f"{int(cum_profit_val):,}원" if cum_profit_val is not None else "N/A"
                             study_lines.append(
                                 f"- {st.get('순서', '')}. {str(st.get('필터명', ''))[:30]}: "
                                 f"+{int(st.get('추가개선(중복반영)', 0) or 0):,} → "
                                 f"누적 +{int(st.get('누적개선(동시적용)', 0) or 0):,} "
+                                f"(누적 수익금 {cum_profit_text}) "
                                 f"(제외 {st.get('누적제외비율', 0)}%)"
                             )
                         except Exception:

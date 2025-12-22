@@ -2998,6 +2998,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
         try:
             total_trades = int(len(df_tsg))
             profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+            base_profit = float(np.sum(profit_arr))
             return_arr = None
             if '수익률' in df_tsg.columns:
                 return_arr = pd.to_numeric(df_tsg['수익률'], errors='coerce').fillna(0).to_numpy(dtype=np.float64)
@@ -3074,6 +3075,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
                     '개별개선': int(candidates[best_i].get('수익개선금액', 0)),
                     '추가개선(중복반영)': int(best_inc),
                     '누적개선(동시적용)': int(cum_impr),
+                    '누적수익금': int(base_profit + cum_impr),
                     '누적제외비율': round(excluded_count / total_trades * 100, 1),
                     '잔여거래수': int(remaining_count),
                     '잔여승률': round(remaining_winrate, 1),
@@ -4318,14 +4320,14 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
  
                 steps = generated_code.get('combine_steps') or []
                 if steps:
-                    lines.append("- 적용 순서(추가개선→누적개선, 누적제외%):")
+                    lines.append("- 적용 순서(추가개선→누적개선, 누적수익금, 누적제외%):")
                     for st in steps[: min(8, len(steps))]:
-                        ret_val = st.get('잔여평균수익률')
-                        ret_text = f"{ret_val}%" if ret_val is not None else "N/A"
+                        cum_profit_val = st.get('누적수익금')
+                        cum_profit_text = f"{int(cum_profit_val):,}원" if cum_profit_val is not None else "N/A"
                         lines.append(
                             f"  {st.get('순서', '')}. {str(st.get('필터명', ''))[:18]}: "
                             f"+{int(st.get('추가개선(중복반영)', 0)):,} → 누적 +{int(st.get('누적개선(동시적용)', 0)):,} "
-                            f"(수익률 {ret_text}) "
+                            f"(누적 수익금 {cum_profit_text}) "
                             f"(제외 {st.get('누적제외비율', 0)}%)"
                         )
 
