@@ -34,8 +34,7 @@ def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional
     trades = df.pivot_table(index='cap', columns='time_label', values='trades', fill_value=0)
     profits = df.pivot_table(index='cap', columns='time_label', values='profit', fill_value=0)
 
-    row_order = ['소형주', '중형주', '대형주']
-    row_order = [r for r in row_order if r in trades.index]
+    row_order = _sort_cap_labels(trades.index.tolist())
     if row_order:
         trades = trades.reindex(index=row_order)
         profits = profits.reindex(index=row_order)
@@ -109,6 +108,13 @@ def _sort_time_labels(labels: list[str]) -> list[str]:
         return 0
 
     return sorted(labels, key=_extract_start)
+
+
+def _sort_cap_labels(labels: list[str]) -> list[str]:
+    priority = ['초소형주', '소형주', '중소형주', '중형주', '중대형주', '대형주']
+    ordered = [name for name in priority if name in labels]
+    rest = sorted([name for name in labels if name not in ordered])
+    return ordered + rest
 
 
 def _fmt_profit(value: float) -> str:

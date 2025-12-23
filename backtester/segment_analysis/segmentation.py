@@ -615,16 +615,34 @@ def create_segment_matrix_view(segment_stats: pd.DataFrame) -> pd.DataFrame:
         fill_value=0
     )
 
-    # 행/열 정렬
-    row_order = ['소형주', '중형주', '대형주']
-    col_order = ['T1', 'T2', 'T3', 'T4']
+    # 행/열 정렬 (라벨 변화 대응)
+    row_order = _sort_cap_labels(matrix.index.tolist())
+    col_order = _sort_time_labels(matrix.columns.tolist())
 
-    matrix = matrix.reindex(
-        index=[r for r in row_order if r in matrix.index],
-        columns=[c for c in col_order if c in matrix.columns]
-    )
+    matrix = matrix.reindex(index=row_order, columns=col_order)
 
     return matrix
+
+
+def _sort_time_labels(labels: list[str]) -> list[str]:
+    def _extract_start(label: str) -> int:
+        parts = str(label).split('_')
+        for part in parts:
+            if part.isdigit():
+                return int(part)
+        match = re.search(r'(\d{4,6})', str(label))
+        if match:
+            return int(match.group(1))
+        return 0
+
+    return sorted(labels, key=_extract_start)
+
+
+def _sort_cap_labels(labels: list[str]) -> list[str]:
+    priority = ['초소형주', '소형주', '중소형주', '중형주', '중대형주', '대형주']
+    ordered = [name for name in priority if name in labels]
+    rest = sorted([name for name in labels if name not in ordered])
+    return ordered + rest
 
 
 if __name__ == '__main__':

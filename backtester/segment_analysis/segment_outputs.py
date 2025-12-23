@@ -167,6 +167,16 @@ def save_segment_mode_comparison(df_comp: pd.DataFrame, output_dir: str, prefix:
     return str(comp_path)
 
 
+def save_segment_template_comparison(df_comp: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
+    if df_comp is None or df_comp.empty:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    comp_path = path / f"{prefix}_segment_template_comparison.csv"
+    df_comp.to_csv(comp_path, index=False, encoding='utf-8-sig')
+    return str(comp_path)
+
+
 def save_advanced_optuna_result(df_result: pd.DataFrame, output_dir: str, prefix: str) -> Optional[str]:
     if df_result is None or df_result.empty:
         return None

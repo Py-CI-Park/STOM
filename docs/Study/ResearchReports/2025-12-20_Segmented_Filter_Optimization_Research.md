@@ -207,6 +207,15 @@ SegmentConfig(
 - `time_only`: 시간 구간만 재산정
 - 분할 결과는 `*_segment_ranges.csv`로 저장되어 재현성과 비교 가능성을 확보한다.
 
+### 2.6 세그먼트 템플릿 비교(신규)
+
+- 시간/시총 구간을 여러 템플릿으로 정의한 뒤, 동일 데이터에서 **성능 점수 기반으로 비교**한다.
+- 점수 기준(기본 가중치):
+  - 개선금액(상향), 잔여비율(상향), MDD(하향), 수익금 변동성(하향), 복잡도(세그먼트 수) 페널티
+- 상위 템플릿만 동적 확장(semi/time_only)을 추가 평가하여 **시간 증가를 최소화**한다.
+- 실행 예시:
+  - `python -m backtester.segment_analysis.segment_template_comparator <detail.csv>`
+
 ---
 
 ## 3. 최적화 알고리즘 상세 설계
@@ -681,6 +690,7 @@ OUTPUT_FILES = {
     # 시각화
     '*_pareto_front.csv': 'Pareto front 후보 집합(다목적 평가 결과)',
     '*_segment_mode_comparison.csv': '분할 모드 비교 리포트(고정/반-동적/동적)',
+    '*_segment_template_comparison.csv': '세그먼트 템플릿 비교 리포트(시간/시총 조합)',
     '*_advanced_optuna.csv': 'Optuna 가중치 탐색 결과(최적 조합 1건)',
     '*_nsga2_front.csv': 'NSGA-II 전선(미설치 시 Pareto 대체)',
     '*_decision_report.md': '의사결정 리포트(추천 모드/근거)',

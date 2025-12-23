@@ -20,6 +20,12 @@ from .code_generator import build_segment_filter_code, save_segment_code
 from .risk_metrics import summarize_risk
 from .multi_objective import MultiObjectiveConfig, evaluate_candidates, build_pareto_front
 from .segment_mode_comparator import SegmentModeComparisonConfig, run_segment_mode_comparison
+from .segment_template_comparator import (
+    SegmentTemplateComparisonConfig,
+    SegmentTemplateScoreConfig,
+    SegmentTemplate,
+    run_segment_template_comparison,
+)
 from .advanced_search_runner import AdvancedSearchRunnerConfig, run_advanced_search
 from .decision_report_runner import DecisionReportConfig, run_decision_report
 
@@ -39,6 +45,10 @@ __all__ = [
     'build_pareto_front',
     'SegmentModeComparisonConfig',
     'run_segment_mode_comparison',
+    'SegmentTemplateComparisonConfig',
+    'SegmentTemplateScoreConfig',
+    'SegmentTemplate',
+    'run_segment_template_comparison',
     'AdvancedSearchRunnerConfig',
     'run_advanced_search',
     'DecisionReportConfig',
