@@ -36,6 +36,11 @@ try:
 except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
 
+SEGMENT_ANALYSIS_MODE = 'phase2+3'
+SEGMENT_ANALYSIS_OUTPUT_DIR = 'backtester/segment_outputs'
+SEGMENT_ANALYSIS_OPTUNA = False
+SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
+
 
 def _convert_bool_ops_to_pandas(expr: str) -> str:
     """
@@ -102,6 +107,109 @@ def _build_filter_mask_from_generated_code(df: pd.DataFrame, generated_code: dic
     return result
 
 
+def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
+    """
+    세그먼트 전역 조합(global_best)을 이용해 df에서 통과 마스크를 생성합니다.
+    """
+    result = {
+        'mask': None,
+        'error': None,
+        'segment_trades': {},
+        'missing_columns': [],
+        'out_of_range_trades': 0,
+    }
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        result['error'] = 'df가 비어있음'
+        return result
+    if not isinstance(global_best, dict):
+        result['error'] = 'global_best가 dict가 아님'
+        return result
+
+    combo_map = global_best.get('combination')
+    if not isinstance(combo_map, dict) or not combo_map:
+        result['error'] = 'combination 없음'
+        return result
+
+    try:
+        from backtester.segment_analysis.segmentation import SegmentBuilder
+    except Exception as e:
+        result['error'] = f"세그먼트 모듈 로드 실패: {e}"
+        return result
+
+    try:
+        row_col = '__row_pos__'
+        if row_col in df.columns:
+            idx = 1
+            while f"{row_col}{idx}" in df.columns:
+                idx += 1
+            row_col = f"{row_col}{idx}"
+
+        df_work = df.copy()
+        df_work[row_col] = np.arange(len(df_work))
+
+        builder = SegmentBuilder()
+        segments = builder.build_segments(df_work)
+    except Exception as e:
+        result['error'] = f"세그먼트 분할 실패: {e}"
+        return result
+
+    mask = np.zeros(len(df_work), dtype=bool)
+    missing = set()
+
+    for seg_id, seg_df in segments.items():
+        combo = combo_map.get(seg_id)
+        if combo is None:
+            continue
+        if combo.get('exclude_segment'):
+            result['segment_trades'][seg_id] = 0
+            continue
+        filters = combo.get('filters') or []
+        seg_mask = np.ones(len(seg_df), dtype=bool)
+
+        for flt in filters:
+            column = flt.get('column')
+            threshold = flt.get('threshold')
+            direction = flt.get('direction')
+            if column is None or column not in seg_df.columns:
+                if column:
+                    missing.add(column)
+                continue
+
+            values = pd.to_numeric(seg_df[column], errors='coerce')
+            if direction == 'less':
+                cond = values >= threshold
+            else:
+                cond = values < threshold
+            seg_mask &= cond.fillna(False).to_numpy(dtype=bool)
+
+        row_positions = seg_df[row_col].to_numpy(dtype=int, copy=False)
+        mask[row_positions] = seg_mask
+        result['segment_trades'][seg_id] = int(seg_mask.sum())
+
+    if hasattr(builder, 'out_of_range') and isinstance(builder.out_of_range, pd.DataFrame):
+        result['out_of_range_trades'] = int(len(builder.out_of_range))
+
+    result['mask'] = mask
+    result['missing_columns'] = sorted(missing)
+    return result
+
+
+def _format_progress_logs(progress_logs):
+    formatted = []
+    last_ts = False
+    for item in progress_logs:
+        text = str(item).strip()
+        if not text:
+            continue
+        if re.match(r'^\[\d{4}-\d{2}-\d{2} ', text):
+            formatted.append(f"- {text}")
+            last_ts = True
+        else:
+            prefix = "  - " if last_ts else "- "
+            formatted.append(f"{prefix}{text}")
+    return formatted
+
+
 def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str = None,
                                  max_lines: int = 8, max_line_len: int = 140):
     """
@@ -152,11 +260,13 @@ def _extract_strategy_block_lines(code: str, start_marker: str, end_marker: str 
 def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
                                   save_file_name: str, backname: str, seed: int,
                                   generated_code: dict = None,
-                                  buystg: str = None, sellstg: str = None):
+                                  buystg: str = None, sellstg: str = None,
+                                  file_tag: str = '',
+                                  segment_combo_map: dict = None):
     """
     자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
-    - {전략명}_filtered.png
-    - {전략명}_filtered_.png
+    - {전략명}{_tag}_filtered.png
+    - {전략명}{_tag}_filtered_.png
 
     2025-12-20 개선: 필터 적용 후 거래가 0건이어도 경고 차트를 생성합니다.
     """
@@ -166,6 +276,8 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         return None, None
     if '수익금' not in df_all.columns:
         return None, None
+
+    tag = f"_{file_tag}" if file_tag else ""
 
     # 2025-12-20: 필터 적용 후 거래 0~1건인 경우 경고 차트 생성
     if df_filtered is None or len(df_filtered) < 2 or '수익금' not in df_filtered.columns:
@@ -206,7 +318,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.set_title(f'{backname} - 필터 적용 결과 경고 (거래 0건)', fontsize=14, color='red')
         ax.axis('off')
 
-        path_main = f"{GRAPH_PATH}/{save_file_name}_filtered.png"
+        path_main = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered.png"
         plt.savefig(path_main, dpi=100, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
@@ -227,9 +339,16 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     filtered_profit = float(pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).sum())
     improvement = filtered_profit - total_profit
     excluded_ratio = (1.0 - (len(df_filtered) / max(1, len(df_all)))) * 100.0
+    is_segment = file_tag == 'segment' or isinstance(segment_combo_map, dict)
+
+    avg_return_all = None
+    avg_return_filt = None
+    if '수익률' in df_all.columns and '수익률' in df_filtered.columns:
+        avg_return_all = float(pd.to_numeric(df_all['수익률'], errors='coerce').fillna(0).mean())
+        avg_return_filt = float(pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0).mean())
 
     # ===== 1) filtered.png (수익곡선 요약) =====
-    path_main = f"{GRAPH_PATH}/{save_file_name}_filtered.png"
+    path_main = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered.png"
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 3])
 
@@ -292,10 +411,14 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
     # 조건식/필터 요약 텍스트
     summary_lines = [
-        "=== 필터 적용 요약 ===",
+        "=== 세그먼트 필터 적용 요약 ===" if is_segment else "=== 필터 적용 요약 ===",
         f"- 거래수: {len(df_all):,} → {len(df_filtered):,} (제외 {excluded_ratio:.1f}%)",
         f"- 수익금: {int(total_profit):,}원 → {int(filtered_profit):,}원 (개선 {int(improvement):+,}원)",
     ]
+    if avg_return_all is not None and avg_return_filt is not None:
+        summary_lines.append(
+            f"- 평균 수익률: {avg_return_all:.4f}% → {avg_return_filt:.4f}% ({avg_return_filt - avg_return_all:+.4f}%)"
+        )
     if isinstance(generated_code, dict) and generated_code.get('summary'):
         s = generated_code.get('summary') or {}
         try:
@@ -303,21 +426,61 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
             summary_lines.append(f"- 예상 총 개선(동시 적용): {int(s.get('total_improvement_combined', s.get('total_improvement_naive', 0)) or 0):,}원")
         except Exception:
             pass
+    if is_segment and isinstance(segment_combo_map, dict) and segment_combo_map:
+        def _format_segment_combo_lines(combo_map, max_lines=12, max_len=90):
+            lines = []
+            for seg_id in sorted(combo_map.keys()):
+                combo = combo_map.get(seg_id) or {}
+                if combo.get('exclude_segment'):
+                    line = f"{seg_id}: 전체 제외"
+                else:
+                    filters = combo.get('filters') or []
+                    names = []
+                    for flt in filters:
+                        name = flt.get('filter_name') or flt.get('name') or ''
+                        if not name:
+                            col = flt.get('column')
+                            threshold = flt.get('threshold')
+                            direction = flt.get('direction')
+                            if col and threshold is not None and direction in ('less', 'greater'):
+                                op = ">=" if direction == 'less' else "<"
+                                name = f"{col} {op} {threshold}"
+                        if name:
+                            names.append(str(name))
+                    if names:
+                        line = f"{seg_id}: " + " | ".join(names)
+                    else:
+                        line = f"{seg_id}: (필터 없음)"
+                if len(line) > max_len:
+                    line = line[: max_len - 3] + "..."
+                lines.append(line)
+                if len(lines) >= max_lines:
+                    break
+            remaining = max(0, len(combo_map) - max_lines)
+            return lines, remaining
+
+        seg_lines, seg_remaining = _format_segment_combo_lines(segment_combo_map)
+        summary_lines.append("- 세그먼트 필터 조합(요약):")
+        summary_lines.extend([f"  {ln}" for ln in seg_lines])
+        if seg_remaining > 0:
+            summary_lines.append(f"  ... 외 {seg_remaining}개")
+        summary_lines.append("  (상세: *_segment_code.txt, *_segment_combos.csv)")
     if isinstance(generated_code, dict) and generated_code.get('buy_conditions'):
         summary_lines.append("- 적용 조건(일부):")
         for ln in (generated_code.get('buy_conditions') or [])[:5]:
             summary_lines.append(f"  {str(ln).strip()}")
 
-    buy_block = _extract_strategy_block_lines(buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=6)
-    sell_block = _extract_strategy_block_lines(sellstg, start_marker='if 매도:', end_marker=None, max_lines=6)
-    if buy_block or sell_block:
-        summary_lines.append("- 조건식(일부):")
-        if buy_block:
-            summary_lines.append("  [매수]")
-            summary_lines.extend([f"    {ln}" for ln in buy_block])
-        if sell_block:
-            summary_lines.append("  [매도]")
-            summary_lines.extend([f"    {ln}" for ln in sell_block])
+    if not is_segment:
+        buy_block = _extract_strategy_block_lines(buystg, start_marker='if 매수:', end_marker='if 매도:', max_lines=6)
+        sell_block = _extract_strategy_block_lines(sellstg, start_marker='if 매도:', end_marker=None, max_lines=6)
+        if buy_block or sell_block:
+            summary_lines.append("- 조건식(일부):")
+            if buy_block:
+                summary_lines.append("  [매수]")
+                summary_lines.extend([f"    {ln}" for ln in buy_block])
+            if sell_block:
+                summary_lines.append("  [매도]")
+                summary_lines.extend([f"    {ln}" for ln in sell_block])
 
     fig.suptitle(f'{backname} 필터 적용 결과 - {save_file_name}', fontsize=14, fontweight='bold')
     fig.text(0.01, 0.01, "\n".join(summary_lines), fontsize=9, family='monospace',
@@ -328,7 +491,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     plt.close(fig)
 
     # ===== 2) filtered_.png (분포/단계 요약) =====
-    path_sub = f"{GRAPH_PATH}/{save_file_name}_filtered_.png"
+    path_sub = f"{GRAPH_PATH}/{save_file_name}{tag}_filtered_.png"
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=2, figure=fig, hspace=0.35, wspace=0.25)
 
@@ -381,8 +544,32 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax2.set_ylabel('누적제외(%)', color='red')
         ax.grid()
     else:
-        ax.text(0.5, 0.5, 'combine_steps 없음', ha='center', va='center', transform=ax.transAxes)
-        ax.axis('off')
+        if '수익률' in df_all.columns and '수익률' in df_filtered.columns:
+            base_returns = pd.to_numeric(df_all['수익률'], errors='coerce').fillna(0)
+            filt_returns = pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0)
+            bins = 30
+            ax.hist(base_returns, bins=bins, alpha=0.4, label='기준', color='gray')
+            ax.hist(filt_returns, bins=bins, alpha=0.7, label='필터', color='orange')
+            ax.axvline(x=0, color='black', linewidth=0.8)
+            ax.set_title('수익률 분포(필터 전/후)')
+            ax.set_xlabel('수익률(%)')
+            ax.set_ylabel('거래수')
+            ax.legend(loc='best')
+            ax.grid(axis='y', alpha=0.3)
+        else:
+            base_profit = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0)
+            filt_profit = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+            base_counts = [int((base_profit > 0).sum()), int((base_profit <= 0).sum())]
+            filt_counts = [int((filt_profit > 0).sum()), int((filt_profit <= 0).sum())]
+            x = np.arange(2)
+            ax.bar(x - 0.2, base_counts, width=0.4, label='기준', color='gray', alpha=0.6)
+            ax.bar(x + 0.2, filt_counts, width=0.4, label='필터', color='orange', alpha=0.8)
+            ax.set_xticks(x)
+            ax.set_xticklabels(['이익', '손실'])
+            ax.set_title('이익/손실 거래수 비교')
+            ax.set_ylabel('거래수')
+            ax.legend(loc='best')
+            ax.grid(axis='y', alpha=0.3)
 
     # (3) 시간대별 수익금
     ax = fig.add_subplot(gs[1, 0])
@@ -465,6 +652,10 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
     """
     try:
         def _describe_output_file(filename: str) -> str:
+            if filename.endswith('_segment_filtered_.png'):
+                return '세그먼트 필터 적용 분포/단계 요약(미리보기)'
+            if filename.endswith('_segment_filtered.png'):
+                return '세그먼트 필터 적용 수익곡선(미리보기)'
             if filename.endswith('_filtered_.png'):
                 return '자동 생성 필터 적용 분포/단계 요약(미리보기)'
             if filename.endswith('_filtered.png'):
@@ -913,6 +1104,54 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
 
             return lines_local
 
+        def _collect_segment_outputs(segment_outputs: dict) -> list[tuple[str, str]]:
+            if not isinstance(segment_outputs, dict):
+                return []
+
+            label_map = {
+                'summary_path': '세그먼트 요약',
+                'filters_path': '세그먼트 필터 후보',
+                'local_combo_path': '세그먼트 로컬 조합',
+                'global_combo_path': '전역 조합 요약',
+                'thresholds_path': 'Optuna 임계값',
+                'segment_code_path': '세그먼트 조건식 코드',
+                'validation_path': '안정성 검증',
+                'heatmap_path': '세그먼트 히트맵',
+                'efficiency_path': '필터 효율 차트',
+                'comparison_path': '세그먼트 템플릿 비교',
+                'summary_report_path': '세그먼트 종합 요약',
+            }
+
+            items: list[tuple[str, str]] = []
+            for phase_key in ('phase2', 'phase3'):
+                phase = segment_outputs.get(phase_key) or {}
+                if not isinstance(phase, dict):
+                    continue
+                for key, label in label_map.items():
+                    path = phase.get(key)
+                    if path:
+                        items.append((label, str(path)))
+
+            template_comp = segment_outputs.get('template_comparison') or {}
+            if isinstance(template_comp, dict):
+                path = template_comp.get('comparison_path')
+                if path:
+                    items.append((label_map['comparison_path'], str(path)))
+
+            summary_report_path = segment_outputs.get('summary_report_path')
+            if summary_report_path:
+                items.append((label_map['summary_report_path'], str(summary_report_path)))
+
+            seen = set()
+            deduped = []
+            for label, path in items:
+                if path in seen:
+                    continue
+                seen.add(path)
+                deduped.append((label, path))
+
+            return deduped
+
         graph_dir = Path(GRAPH_PATH)
         graph_dir.mkdir(parents=True, exist_ok=True)
         report_path = graph_dir / f"{save_file_name}_report.txt"
@@ -1014,13 +1253,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     steps = gen.get('combine_steps') or []
                     if steps:
                         lines.append("")
-                        lines.append("[적용 순서(추가개선→누적개선, 누적제외%)]")
+                        lines.append("[적용 순서(추가개선→누적개선, 누적수익금, 누적제외%)]")
                         for st in steps[:10]:
                             try:
+                                cum_profit_val = st.get('누적수익금')
+                                cum_profit_text = f"{int(cum_profit_val):,}원" if cum_profit_val is not None else "N/A"
                                 lines.append(
                                     f"- {st.get('순서', '')}. {str(st.get('필터명', ''))[:24]}: "
                                     f"+{int(st.get('추가개선(중복반영)', 0) or 0):,} → "
                                     f"누적 +{int(st.get('누적개선(동시적용)', 0) or 0):,} "
+                                    f"(누적 수익금 {cum_profit_text}) "
                                     f"(제외 {st.get('누적제외비율', 0)}%)"
                                 )
                             except Exception:
@@ -1182,6 +1424,17 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             lines.append("=== 강화 분석 오류 ===")
             lines.append(str(enhanced_error))
 
+        # 세그먼트 분석 산출물
+        if enhanced_result and enhanced_result.get('segment_outputs'):
+            lines.append("")
+            lines.append("=== 세그먼트 분석 산출물 ===")
+            seg_items = _collect_segment_outputs(enhanced_result.get('segment_outputs') or {})
+            if not seg_items:
+                lines.append("- 없음")
+            else:
+                for label, path in seg_items:
+                    lines.append(f"- {label}: {path}")
+
         # 파일 목록
         lines.append("")
         lines.append("=== 생성 파일 목록 ===")
@@ -1279,6 +1532,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             study_lines.append(f"- `{save_file_name}_detail.csv`: 거래 상세 기록(컬럼=거래 항목)")
             study_lines.append(f"- `{save_file_name}_report.txt`: 실행 리포트")
 
+            seg_items = _collect_segment_outputs((enhanced_result or {}).get('segment_outputs') or {})
+            if seg_items:
+                study_lines.append("")
+                study_lines.append("### 세그먼트 분석 산출물")
+                for label, path in seg_items:
+                    try:
+                        study_lines.append(f"- `{Path(path).name}`: {label}")
+                    except Exception:
+                        study_lines.append(f"- {path}: {label}")
+
             # 매수/매도 조건식(요약)
             study_lines.append("")
             study_lines.append("## 1) 매수/매도 조건식(요약)")
@@ -1320,13 +1583,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 steps = gen.get('combine_steps') or []
                 if steps:
                     study_lines.append("")
-                    study_lines.append("### 적용 순서(추가개선→누적개선, 누적제외%)")
+                    study_lines.append("### 적용 순서(추가개선→누적개선, 누적수익금, 누적제외%)")
                     for st in steps[:10]:
                         try:
+                            cum_profit_val = st.get('누적수익금')
+                            cum_profit_text = f"{int(cum_profit_val):,}원" if cum_profit_val is not None else "N/A"
                             study_lines.append(
                                 f"- {st.get('순서', '')}. {str(st.get('필터명', ''))[:30]}: "
                                 f"+{int(st.get('추가개선(중복반영)', 0) or 0):,} → "
                                 f"누적 +{int(st.get('누적개선(동시적용)', 0) or 0):,} "
+                                f"(누적 수익금 {cum_profit_text}) "
                                 f"(제외 {st.get('누적제외비율', 0)}%)"
                             )
                         except Exception:
@@ -2048,7 +2314,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 if lines:
                     lines.append("")
                 lines.append("백테스트 진행 로그:")
-                lines.extend([str(x) for x in progress_logs])
+                lines.extend(_format_progress_logs(progress_logs))
 
             if lines:
                 teleQ.put("\n".join(lines))
@@ -2336,6 +2602,10 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 backname=backname,
                 ml_train_mode=ml_train_mode,
                 send_condition_summary=False,
+                segment_analysis_mode=SEGMENT_ANALYSIS_MODE,
+                segment_output_dir=SEGMENT_ANALYSIS_OUTPUT_DIR,
+                segment_optuna=SEGMENT_ANALYSIS_OPTUNA,
+                segment_template_compare=SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
             )
 
             # [2025-12-19] 자동 생성 필터 조합 적용 미리보기 차트(2개) 생성/전송
@@ -2384,6 +2654,99 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                             if failed_expr:
                                 msg += f"\n- 실패 조건식: {failed_expr}"
                             teleQ.put(msg)
+            except Exception:
+                print_exc()
+
+            # [2025-12-20] 세그먼트 필터 조합 적용 미리보기 차트(2개) 생성/전송
+            try:
+                if teleQ is not None and enhanced_result:
+                    seg_outputs = enhanced_result.get('segment_outputs') or {}
+                    phase2 = seg_outputs.get('phase2') or {}
+                    global_best = phase2.get('global_best')
+                    df_enh = enhanced_result.get('enhanced_df')
+                    if isinstance(global_best, dict) and isinstance(df_enh, pd.DataFrame) and not df_enh.empty:
+                        seg_mask_info = _build_segment_mask_from_global_best(df_enh, global_best)
+                        if seg_mask_info and seg_mask_info.get('mask') is not None:
+                            df_seg_filt = df_enh[seg_mask_info['mask']].copy()
+                            try:
+                                total_profit = int(pd.to_numeric(df_enh['수익금'], errors='coerce').fillna(0).sum())
+                                filt_profit = int(pd.to_numeric(df_seg_filt['수익금'], errors='coerce').fillna(0).sum())
+                                ex_pct = (1.0 - (len(df_seg_filt) / max(1, len(df_enh)))) * 100.0
+                                combo_map = global_best.get('combination') or {}
+                                total_filters = sum(len(v.get('filters') or []) for v in combo_map.values())
+                                excluded_segments = sum(1 for v in combo_map.values() if v.get('exclude_segment'))
+                                filter_segments = sum(1 for v in combo_map.values() if v.get('filters'))
+                                no_filter_segments = max(0, len(combo_map) - filter_segments - excluded_segments)
+                                seg_lines = [
+                                    "세그먼트 필터 적용 미리보기:",
+                                    f"- 구간/필터: {len(combo_map):,}구간, 필터 {total_filters:,}개",
+                                    "- 적용 방식: 시가총액/시간 구간 분리 → 구간별 필터 AND 적용",
+                                    f"- 구간 상태: 필터적용 {filter_segments:,}구간, 무필터 {no_filter_segments:,}구간, 전체제외 {excluded_segments:,}구간",
+                                    f"- 거래수: {len(df_enh):,} → {len(df_seg_filt):,} (제외 {ex_pct:.1f}%)",
+                                    f"- 수익금: {total_profit:,}원 → {filt_profit:,}원 ({(filt_profit-total_profit):+,}원)",
+                                ]
+
+                                out_range = int(seg_mask_info.get('out_of_range_trades', 0) or 0)
+                                if out_range > 0:
+                                    seg_lines.append(f"- 구간 외 거래: {out_range:,}건")
+
+                                miss_cols = seg_mask_info.get('missing_columns') or []
+                                if miss_cols:
+                                    sample = ", ".join(miss_cols[:5])
+                                    tail = "..." if len(miss_cols) > 5 else ""
+                                    seg_lines.append(f"- 누락 컬럼: {sample}{tail}")
+
+                                file_refs = []
+                                for key in ('segment_code_path', 'global_combo_path', 'local_combo_path',
+                                            'filters_path', 'ranges_path', 'summary_path'):
+                                    p = phase2.get(key)
+                                    if p:
+                                        try:
+                                            file_refs.append(Path(p).name)
+                                        except Exception:
+                                            file_refs.append(str(p))
+                                if file_refs:
+                                    seg_lines.append("- 상세 파일: " + ", ".join(file_refs[:6]))
+                                    if len(file_refs) > 6:
+                                        seg_lines.append(f"- 상세 파일 추가: 외 {len(file_refs) - 6}개")
+
+                                seg_lines.append("- 이미지: 세그먼트 필터 미리보기 2종 전송")
+                                teleQ.put("\n".join(seg_lines))
+                            except Exception:
+                                pass
+
+                            p_main, p_sub = PltFilterAppliedPreviewCharts(
+                                df_enh,
+                                df_seg_filt,
+                                save_file_name=save_file_name,
+                                backname=f"{backname} 세그먼트" if backname else "세그먼트",
+                                seed=seed,
+                                generated_code=None,
+                                buystg=buystg,
+                                sellstg=sellstg,
+                                file_tag='segment',
+                                segment_combo_map=combo_map
+                            )
+                            if p_sub:
+                                teleQ.put(p_sub)
+                            if p_main:
+                                teleQ.put(p_main)
+                        else:
+                            err = seg_mask_info.get('error') if isinstance(seg_mask_info, dict) else 'N/A'
+                            msg = "세그먼트 필터 미리보기: 마스크 생성 실패"
+                            if err:
+                                msg += f"\n- 오류: {err}"
+                            teleQ.put(msg)
+                    else:
+                        msg_lines = ["세그먼트 필터 미리보기: 전역 조합(global_best) 없음"]
+                        if not isinstance(df_enh, pd.DataFrame) or df_enh.empty:
+                            msg_lines.append("- 강화 분석 데이터가 없거나 비어있어 미리보기를 건너뜀")
+                        else:
+                            msg_lines.append("- 전역 조합 생성 실패로 세그먼트 필터 적용 미리보기 생략")
+                            msg_lines.append("- 가능한 원인: 세그먼트별 유효 필터/조합 부족, 제외율/최소거래수 제약")
+                            msg_lines.append("- 확인 파일: *_segment_filters.csv, *_segment_local_combos.csv, *_segment_summary.csv")
+                            msg_lines.append("- 조정 후보: min_trades/max_exclusion, max_filters_per_segment/beam_width")
+                        teleQ.put("\n".join(msg_lines))
             except Exception:
                 print_exc()
         except Exception as e:

@@ -2998,6 +2998,10 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
         try:
             total_trades = int(len(df_tsg))
             profit_arr = df_tsg['수익금'].to_numpy(dtype=np.float64)
+            base_profit = float(np.sum(profit_arr))
+            return_arr = None
+            if '수익률' in df_tsg.columns:
+                return_arr = pd.to_numeric(df_tsg['수익률'], errors='coerce').fillna(0).to_numpy(dtype=np.float64)
 
             safe_globals = {"__builtins__": {}}
             safe_locals = {"df_tsg": df_tsg, "np": np, "pd": pd}
@@ -3059,6 +3063,9 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
                 excluded_count = int(np.sum(excluded_mask))
                 remaining_count = total_trades - excluded_count
                 remaining_winrate = float((profit_arr[~excluded_mask] > 0).mean() * 100) if remaining_count > 0 else 0.0
+                remaining_return = None
+                if return_arr is not None and remaining_count > 0:
+                    remaining_return = float(np.mean(return_arr[~excluded_mask]))
 
                 selected.append(candidates[best_i])
                 combine_steps.append({
@@ -3068,9 +3075,11 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5, allow_ml_filters: b
                     '개별개선': int(candidates[best_i].get('수익개선금액', 0)),
                     '추가개선(중복반영)': int(best_inc),
                     '누적개선(동시적용)': int(cum_impr),
+                    '누적수익금': int(base_profit + cum_impr),
                     '누적제외비율': round(excluded_count / total_trades * 100, 1),
                     '잔여거래수': int(remaining_count),
                     '잔여승률': round(remaining_winrate, 1),
+                    '잔여평균수익률': round(remaining_return, 2) if remaining_return is not None else None,
                 })
 
             combined_improvement = int(cum_impr)
@@ -3854,7 +3863,11 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
 
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
                         buystg_name=None, sellstg_name=None, backname=None,
-                        ml_train_mode: str = 'train', send_condition_summary: bool = True):
+                        ml_train_mode: str = 'train', send_condition_summary: bool = True,
+                        segment_analysis_mode: str = 'off',
+                        segment_output_dir: str = 'backtester/segment_outputs',
+                        segment_optuna: bool = False,
+                        segment_template_compare: bool = False):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -3867,6 +3880,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
     6. 기간별 필터 안정성
     7. 조건식 코드 자동 생성
     8. 강화된 시각화
+    9. 세그먼트 분석(Phase2/3) 통합(옵션)
 
     Returns:
         dict: 분석 결과 요약
@@ -3885,6 +3899,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         'csv_files': [],
         'ml_prediction_stats': None,  # NEW: ML 예측 통계
         'ml_reliability': None,       # NEW: ML 신뢰도/게이트 결과
+        'segment_outputs': None,      # NEW: 세그먼트 분석 산출물
     }
 
     try:
@@ -4022,6 +4037,86 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         if chart_path:
             result['charts'].append(chart_path)
 
+        # 9-1. 세그먼트 분석(옵션)
+        segment_outputs = None
+        if segment_analysis_mode and str(segment_analysis_mode).lower() not in ('off', 'false', 'none'):
+            try:
+                from backtester.segment_analysis.phase2_runner import run_phase2, Phase2RunnerConfig
+                from backtester.segment_analysis.phase3_runner import run_phase3, Phase3RunnerConfig
+                from backtester.segment_analysis.filter_evaluator import FilterEvaluatorConfig
+                from backtester.segment_analysis.segment_template_comparator import (
+                    run_segment_template_comparison,
+                    SegmentTemplateComparisonConfig,
+                )
+
+                mode = str(segment_analysis_mode).lower()
+                output_dir = segment_output_dir or 'backtester/segment_outputs'
+                filter_config = FilterEvaluatorConfig(allow_ml_filters=allow_ml_filters)
+                segment_outputs = {}
+                segment_timing = {}
+                segment_start = time.perf_counter()
+
+                if mode in ('phase2', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
+                    t0 = time.perf_counter()
+                    segment_outputs['phase2'] = run_phase2(
+                        detail_path,
+                        filter_config=filter_config,
+                        runner_config=Phase2RunnerConfig(
+                            output_dir=output_dir,
+                            prefix=save_file_name,
+                            enable_optuna=segment_optuna
+                        )
+                    )
+                    segment_timing['phase2_s'] = round(time.perf_counter() - t0, 4)
+
+                if mode in ('phase3', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
+                    t0 = time.perf_counter()
+                    segment_outputs['phase3'] = run_phase3(
+                        detail_path,
+                        filter_config=filter_config,
+                        runner_config=Phase3RunnerConfig(
+                            output_dir=output_dir,
+                            prefix=save_file_name
+                        )
+                    )
+                    segment_timing['phase3_s'] = round(time.perf_counter() - t0, 4)
+
+                if segment_template_compare and mode in ('phase2', 'phase2+3', 'phase2_phase3', 'all', 'auto', 'compare', 'template'):
+                    t0 = time.perf_counter()
+                    segment_outputs['template_comparison'] = run_segment_template_comparison(
+                        detail_path,
+                        filter_config=filter_config,
+                        runner_config=SegmentTemplateComparisonConfig(
+                            output_dir=output_dir,
+                            prefix=save_file_name,
+                            max_templates=4,
+                            top_n_dynamic=1,
+                            enable_dynamic_expansion=True,
+                            enable_optuna=segment_optuna,
+                        ),
+                    )
+                    segment_timing['template_s'] = round(time.perf_counter() - t0, 4)
+
+                segment_timing['total_s'] = round(time.perf_counter() - segment_start, 4)
+                segment_outputs['timing'] = segment_timing
+
+                try:
+                    from backtester.segment_analysis.segment_summary_report import write_segment_summary_report
+
+                    summary_path = write_segment_summary_report(
+                        output_dir,
+                        save_file_name,
+                        segment_outputs,
+                    )
+                    if summary_path:
+                        segment_outputs['summary_report_path'] = summary_path
+                except Exception:
+                    print_exc()
+            except Exception:
+                print_exc()
+
+        result['segment_outputs'] = segment_outputs
+
         # 10. 추천 메시지 생성
         recommendations = []
 
@@ -4107,36 +4202,10 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 except Exception:
                     pass
 
-            # 요약 메시지
-            if recommendations:
-                msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
-                _safe_put(msg)
-            else:
-                # 추천 메시지가 비어 있어도 "왜 비었는지" 요약을 보내도록 보강
-                try:
-                    pos_filters = sum(1 for f in filter_results_safe if float(f.get('수익개선금액', 0) or 0) > 0)
-                    sig_pos_filters = sum(
-                        1 for f in filter_results_safe
-                        if f.get('유의함') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
-                    )
-                except Exception:
-                    pos_filters = 0
-                    sig_pos_filters = 0
-
-                msg = (
-                    "강화된 필터 분석 결과:\n"
-                    "- 추천 조건을 만족하는 항목이 없어 요약만 전송합니다.\n"
-                    f"- 필터 결과: 총 {len(filter_results_safe):,}개 (개선(+) {pos_filters:,}개, 유의(+) {sig_pos_filters:,}개)\n"
-                    f"- 조합 분석: {len(filter_combinations_safe):,}개\n"
-                    f"- 안정성 분석: {len(filter_stability_safe):,}개\n"
-                    f"- 코드 생성: {'가능' if (generated_code and generated_code.get('summary')) else '불가'}"
-                )
-                _safe_put(msg)
-
             # ML 예측 통계 메시지 (NEW)
             if ml_prediction_stats:
                 ml_lines = []
-                ml_lines.append("ML 위험도 예측 결과:")
+                ml_lines.append("머신러닝 변수 예측 결과:")
                 ml_lines.append(f"- 모델: {ml_prediction_stats.get('model_type', 'N/A')}")
                 ml_lines.append(
                     f"- 테스트(AUC/F1/BA): "
@@ -4145,6 +4214,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     f"{ml_prediction_stats.get('test_balanced_accuracy', 'N/A')}%"
                 )
                 ml_lines.append(f"- 사용 피처: {ml_prediction_stats.get('total_features', 0)}개")
+                ml_lines.append("- 예측 변수: 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML")
 
                 # 소요 시간(학습/예측/저장) 요약
                 try:
@@ -4243,6 +4313,32 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 
                 _safe_put("\n".join(ml_lines))
 
+            # 요약 메시지
+            if recommendations:
+                msg = "강화된 필터 분석 결과:\n\n" + "\n".join(recommendations)
+                _safe_put(msg)
+            else:
+                # 추천 메시지가 비어 있어도 "왜 비었는지" 요약을 보내도록 보강
+                try:
+                    pos_filters = sum(1 for f in filter_results_safe if float(f.get('수익개선금액', 0) or 0) > 0)
+                    sig_pos_filters = sum(
+                        1 for f in filter_results_safe
+                        if f.get('유의함') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
+                    )
+                except Exception:
+                    pos_filters = 0
+                    sig_pos_filters = 0
+
+                msg = (
+                    "강화된 필터 분석 결과:\n"
+                    "- 추천 조건을 만족하는 항목이 없어 요약만 전송합니다.\n"
+                    f"- 필터 결과: 총 {len(filter_results_safe):,}개 (개선(+) {pos_filters:,}개, 유의(+) {sig_pos_filters:,}개)\n"
+                    f"- 조합 분석: {len(filter_combinations_safe):,}개\n"
+                    f"- 안정성 분석: {len(filter_stability_safe):,}개\n"
+                    f"- 코드 생성: {'가능' if (generated_code and generated_code.get('summary')) else '불가'}"
+                )
+                _safe_put(msg)
+
             # 조건식 코드
             if generated_code and generated_code.get('summary'):
                 summary = generated_code.get('summary', {})
@@ -4267,11 +4363,14 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
  
                 steps = generated_code.get('combine_steps') or []
                 if steps:
-                    lines.append("- 적용 순서(추가개선→누적개선, 누적제외%):")
+                    lines.append("- 적용 순서(추가개선→누적개선, 누적수익금, 누적제외%):")
                     for st in steps[: min(8, len(steps))]:
+                        cum_profit_val = st.get('누적수익금')
+                        cum_profit_text = f"{int(cum_profit_val):,}원" if cum_profit_val is not None else "N/A"
                         lines.append(
                             f"  {st.get('순서', '')}. {str(st.get('필터명', ''))[:18]}: "
                             f"+{int(st.get('추가개선(중복반영)', 0)):,} → 누적 +{int(st.get('누적개선(동시적용)', 0)):,} "
+                            f"(누적 수익금 {cum_profit_text}) "
                             f"(제외 {st.get('누적제외비율', 0)}%)"
                         )
 
@@ -4303,6 +4402,120 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     "- filter.csv를 확인해 적용코드/조건식 유무를 점검하세요."
                 )
                 _safe_put(msg)
+
+            # 세그먼트 분석 리포트(옵션)
+            segment_outputs = result.get('segment_outputs') if isinstance(result, dict) else None
+            if segment_outputs:
+                try:
+                    seg_lines = ["세그먼트 분석 결과:"]
+                    phase2 = segment_outputs.get('phase2') or {}
+                    phase3 = segment_outputs.get('phase3') or {}
+                    template_comp = segment_outputs.get('template_comparison') or {}
+                    timing = segment_outputs.get('timing') or {}
+
+                    code_summary = phase2.get('segment_code_summary') or {}
+                    if code_summary:
+                        seg_lines.append(
+                            f"- 조건식 요약: {code_summary.get('segments', 0)}구간, "
+                            f"필터 {code_summary.get('filters', 0)}개"
+                        )
+
+                    combo_path = phase2.get('global_combo_path')
+                    if combo_path and Path(combo_path).exists():
+                        try:
+                            df_combo = pd.read_csv(combo_path, encoding='utf-8-sig')
+                            if not df_combo.empty:
+                                row = df_combo.iloc[0]
+                                total_impr = int(row.get('total_improvement', 0) or 0)
+                                remaining_trades = int(row.get('remaining_trades', 0) or 0)
+                                remaining_ratio = float(row.get('remaining_ratio', 0) or 0)
+                                seg_lines.append(
+                                    f"- 전역 조합 개선: {total_impr:+,}원, "
+                                    f"잔여 {remaining_trades:,}건 ({remaining_ratio * 100:.1f}%)"
+                                )
+                        except Exception:
+                            pass
+
+                    summary_path = phase3.get('summary_path') or phase2.get('summary_path')
+                    if summary_path and Path(summary_path).exists():
+                        try:
+                            df_summary = pd.read_csv(summary_path, encoding='utf-8-sig')
+                            if not df_summary.empty and 'trades' in df_summary.columns:
+                                total_trades = int(df_summary['trades'].sum())
+                                out_row = df_summary[df_summary['segment_id'] == 'Out_of_Range']
+                                if not out_row.empty and total_trades > 0:
+                                    out_trades = int(out_row.iloc[0].get('trades', 0) or 0)
+                                    seg_lines.append(
+                                        f"- 구간 외 거래: {out_trades:,}건 ({out_trades / total_trades * 100:.1f}%)"
+                                    )
+                                if 'profit' in df_summary.columns:
+                                    df_main = df_summary[df_summary['segment_id'] != 'Out_of_Range']
+                                    top_rows = df_main.sort_values('profit', ascending=False).head(2)
+                                    if not top_rows.empty:
+                                        tops = []
+                                        for _, row in top_rows.iterrows():
+                                            seg_id = row.get('segment_id')
+                                            profit = int(row.get('profit', 0) or 0)
+                                            if seg_id:
+                                                tops.append(f"{seg_id}({profit:,}원)")
+                                        if tops:
+                                            seg_lines.append("- 상위 세그먼트: " + ", ".join(tops))
+                        except Exception:
+                            pass
+
+                    comp_path = template_comp.get('comparison_path')
+                    if comp_path and Path(comp_path).exists():
+                        try:
+                            df_comp = pd.read_csv(comp_path, encoding='utf-8-sig')
+                            if not df_comp.empty:
+                                df_rank = df_comp.copy()
+                                if 'score' in df_rank.columns:
+                                    df_rank = df_rank.sort_values(['score'], ascending=[False])
+                                best = df_rank.iloc[0]
+                                seg_lines.append(
+                                    f"- 템플릿 비교: {Path(comp_path).name} (최상: {best.get('template', 'N/A')})"
+                                )
+                        except Exception:
+                            seg_lines.append(f"- 템플릿 비교: {Path(comp_path).name}")
+
+                    summary_path = segment_outputs.get('summary_report_path')
+                    if summary_path:
+                        try:
+                            seg_lines.append(f"- 종합 요약: {Path(summary_path).name}")
+                        except Exception:
+                            seg_lines.append(f"- 종합 요약: {summary_path}")
+
+                    if timing:
+                        def _fmt_sec(v):
+                            try:
+                                return f"{float(v):.2f}s"
+                            except Exception:
+                                return str(v)
+
+                        total_s = timing.get('total_s')
+                        parts = []
+                        if timing.get('phase2_s') is not None:
+                            parts.append(f"phase2 {_fmt_sec(timing.get('phase2_s'))}")
+                        if timing.get('phase3_s') is not None:
+                            parts.append(f"phase3 {_fmt_sec(timing.get('phase3_s'))}")
+                        if timing.get('template_s') is not None:
+                            parts.append(f"template {_fmt_sec(timing.get('template_s'))}")
+                        if total_s is not None:
+                            if parts:
+                                seg_lines.append(f"- 세그먼트 분석 소요 시간: {_fmt_sec(total_s)} ({', '.join(parts)})")
+                            else:
+                                seg_lines.append(f"- 세그먼트 분석 소요 시간: {_fmt_sec(total_s)}")
+                        elif parts:
+                            seg_lines.append(f"- 세그먼트 분석 소요 시간: {', '.join(parts)}")
+
+                    _safe_put("\n".join(seg_lines))
+
+                    for key in ('heatmap_path', 'efficiency_path'):
+                        p = phase3.get(key)
+                        if p and Path(p).exists():
+                            teleQ.put(str(Path(p)))
+                except Exception:
+                    pass
 
     except Exception as e:
         print_exc()

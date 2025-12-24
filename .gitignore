@@ -78,3 +78,7 @@ Deep_Data/
 
 # Local shortcuts
 STOM V1 venv.lnk
+
+# Segment analysis outputs
+/backtester/segment_outputs/*
+!/backtester/segment_outputs/.gitkeep

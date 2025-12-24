@@ -3,7 +3,7 @@
 ## 개요
 
 - **작성일**: 2025-12-20
-- **버전**: 2.0 (확장 연구)
+- **버전**: 2.8 (의사결정 리포트 자동화 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
   - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
@@ -120,9 +120,9 @@
 
 | | T1 (09:00-05) | T2 (09:05-10) | T3 (09:10-15) | T4 (09:15-20) |
 |---|---|---|---|---|
-| **소형주** | S1-T1 | S1-T2 | S1-T3 | S1-T4 |
-| **중형주** | S2-T1 | S2-T2 | S2-T3 | S2-T4 |
-| **대형주** | S3-T1 | S3-T2 | S3-T3 | S3-T4 |
+| **소형주** | 소형주_T1 | 소형주_T2 | 소형주_T3 | 소형주_T4 |
+| **중형주** | 중형주_T1 | 중형주_T2 | 중형주_T3 | 중형주_T4 |
+| **대형주** | 대형주_T1 | 대형주_T2 | 대형주_T3 | 대형주_T4 |
 
 ### 2.2 세그먼트별 제약 조건
 
@@ -188,6 +188,33 @@ MAX_EXCLUSION_RATIO = {
 1. **고정 유지 단계**: 현재 기준으로 필터 성과/안정성 지표를 확보하고 베이스라인을 만든다.
 2. **반-동적 단계**: 상위 분할(시가총액/시간)은 유지하고, 하위 구간만 분포 기반으로 재조정한다.
 3. **동적 확장 단계**: 레짐 변화 감지 시에만 재분할하며, 모든 분할 정의를 메타데이터로 저장해 재현성을 확보한다.
+
+### 2.5 반-동적 분할 구현(코드 반영)
+
+고정 기준을 유지하면서 분포 기반으로 구간을 보정할 수 있도록 `SegmentConfig`에 반-동적 옵션을 추가했다.
+
+```python
+SegmentConfig(
+    dynamic_mode='semi',  # fixed | semi | dynamic | time_only
+    dynamic_market_cap_quantiles=(0.33, 0.66),
+    dynamic_time_quantiles=(0.25, 0.5, 0.75),
+    dynamic_min_samples=200
+)
+```
+
+- `semi`: 시가총액 구간만 분포 기반으로 재산정, 시간 구간은 고정 유지
+- `dynamic`: 시가총액/시간 모두 재산정
+- `time_only`: 시간 구간만 재산정
+- 분할 결과는 `*_segment_ranges.csv`로 저장되어 재현성과 비교 가능성을 확보한다.
+
+### 2.6 세그먼트 템플릿 비교(신규)
+
+- 시간/시총 구간을 여러 템플릿으로 정의한 뒤, 동일 데이터에서 **성능 점수 기반으로 비교**한다.
+- 점수 기준(기본 가중치):
+  - 개선금액(상향), 잔여비율(상향), MDD(하향), 수익금 변동성(하향), 복잡도(세그먼트 수) 페널티
+- 상위 템플릿만 동적 확장(semi/time_only)을 추가 평가하여 **시간 증가를 최소화**한다.
+- 실행 예시:
+  - `python -m backtester.segment_analysis.segment_template_comparator <detail.csv>`
 
 ---
 
@@ -496,14 +523,25 @@ def OptunaThresholdOptimization(segment_data, filter_columns, config):
 ```
 backtester/
 ├── back_analysis_enhanced.py        # 기존 분석 모듈
-├── segment_filter_optimizer.py      # 신규: 세그먼트 필터 최적화 메인
+├── segment_filter_optimizer.py      # Phase 1 실행 진입점
 ├── segment_analysis/
 │   ├── __init__.py
 │   ├── segmentation.py              # 세그먼트 분할 로직
 │   ├── filter_evaluator.py          # 세그먼트별 필터 평가
+│   ├── segment_outputs.py           # 요약/필터 CSV 산출물
+│   ├── phase1_runner.py             # Phase 1 실행 흐름
+│   ├── phase2_runner.py             # Phase 2 실행 흐름
+│   ├── phase3_runner.py             # Phase 3 실행 흐름
 │   ├── combination_optimizer.py     # 조합 최적화 알고리즘
-│   ├── multi_objective.py           # NSGA-II 다목적 최적화
-│   └── validation.py                # 검증 및 안정성 분석
+│   ├── threshold_optimizer.py       # Optuna 임계값 최적화
+│   ├── validation.py                # 제약 조건 검증
+│   ├── segment_visualizer.py        # 히트맵/효율 차트 시각화
+│   ├── risk_metrics.py              # 리스크 지표(MDD/변동성) 계산
+│   ├── multi_objective.py           # Pareto 기반 다목적 평가
+│   ├── multi_objective_runner.py    # Pareto front 산출 실행 흐름
+│   ├── segment_mode_comparator.py   # 분할 모드 비교 리포트 실행
+│   ├── advanced_search_runner.py    # Optuna/NSGA-II 고급 탐색 실행
+│   ├── decision_report_runner.py    # 의사결정 리포트 자동 생성
 └── segment_outputs/                  # 세그먼트 분석 산출물
 ```
 
@@ -590,9 +628,15 @@ OUTPUT_FILES = {
         'description': '세그먼트별 기본 통계'
     },
 
+    # 세그먼트 분할 범위
+    '*_segment_ranges.csv': {
+        'columns': ['range_type', 'label', 'min', 'max', 'source'],
+        'description': '세그먼트 분할 구간(고정/반-동적) 기록'
+    },
+
     # 필터 후보
     '*_segment_filters.csv': {
-        'columns': ['segment_id', 'filter_name', 'threshold', 'direction',
+        'columns': ['segment_id', 'filter_name', 'column', 'threshold', 'direction',
                     'improvement', 'exclusion_ratio', 'p_value', 'effect_size',
                     'efficiency', 'stability_score'],
         'description': '세그먼트별 필터 후보 및 성과'
@@ -601,8 +645,27 @@ OUTPUT_FILES = {
     # 조합 결과
     '*_segment_combos.csv': {
         'columns': ['combo_id', 'segments', 'filters', 'total_improvement',
-                    'remaining_trades', 'remaining_ratio', 'validation_score'],
-        'description': '세그먼트별 최적 조합 후보'
+                    'remaining_trades', 'remaining_ratio', 'validation_score',
+                    'mdd_won', 'mdd_pct', 'profit_volatility', 'return_volatility'],
+        'description': '전역 최적 조합(요약)'
+    },
+
+    # 세그먼트별 로컬 조합
+    '*_segment_local_combos.csv': {
+        'columns': ['segment_id', 'combo_rank', 'filters', 'improvement',
+                    'remaining_trades', 'exclusion_ratio'],
+        'description': '세그먼트별 조합 후보(로컬)'
+    },
+
+    # Optuna 임계값 최적화 (옵션)
+    '*_segment_thresholds.csv': {
+        'columns': ['segment_id', 'best_value', 'best_params', 'n_trials'],
+        'description': '세그먼트별 Optuna 임계값 결과(선택 실행)'
+    },
+
+    # 세그먼트 조건식 코드
+    '*_segment_code.txt': {
+        'description': '세그먼트별 최적 조합 조건식 코드(자동 생성)'
     },
 
     # 최적 조합
@@ -625,6 +688,14 @@ OUTPUT_FILES = {
     },
 
     # 시각화
+    '*_pareto_front.csv': 'Pareto front 후보 집합(다목적 평가 결과)',
+    '*_segment_mode_comparison.csv': '분할 모드 비교 리포트(고정/반-동적/동적)',
+    '*_segment_template_comparison.csv': '세그먼트 템플릿 비교 리포트(시간/시총 조합)',
+    '*_advanced_optuna.csv': 'Optuna 가중치 탐색 결과(최적 조합 1건)',
+    '*_nsga2_front.csv': 'NSGA-II 전선(미설치 시 Pareto 대체)',
+    '*_decision_report.md': '의사결정 리포트(추천 모드/근거)',
+    '*_decision_report.json': '의사결정 리포트 메타(정책/추천/근거)',
+    '*_decision_score.csv': '모드 비교 스코어/순위 테이블',
     '*_segment_heatmap.png': '세그먼트별 성과 히트맵',
     '*_filter_efficiency.png': '필터 효율성 차트',
     '*_pareto_front.png': 'Pareto 최적 전선 시각화'
@@ -782,27 +853,100 @@ OVERFITTING_PREVENTION = {
 
 ### Phase 1: 기반 구축 (1주)
 
-- [ ] 세그먼트 분할 모듈 구현 (`segmentation.py`)
-- [ ] 세그먼트별 필터 평가 모듈 (`filter_evaluator.py`)
-- [ ] 기본 산출물 생성 (CSV, 요약)
+- [x] 세그먼트 분할 모듈 구현 (`segmentation.py`)
+- [x] 세그먼트별 필터 평가 모듈 (`filter_evaluator.py`)
+- [x] 기본 산출물 생성 (CSV, 요약)
+  - `segment_outputs.py`, `phase1_runner.py`로 요약/필터 CSV 생성
+
+**Phase 1-1 진행 결과**
+- 매수시간 파싱 보강 및 `Out_of_Range` 비중 추적 포함
+- 최신 detail.csv 자동 선택/실행 스크립트 보강
 
 ### Phase 2: 최적화 알고리즘 (1주)
 
-- [ ] Beam Search 기반 조합 최적화 구현
-- [ ] Optuna 임계값 탐색 통합
-- [ ] 제약 조건 검증 로직
+- [x] Beam Search 기반 조합 최적화 구현 (`combination_optimizer.py`)
+- [x] Optuna 임계값 탐색 통합 (`threshold_optimizer.py`, 선택 실행)
+- [x] 제약 조건 검증 로직 (`validation.py`)
+
+**Phase 2-1 진행 결과**
+- 세그먼트별 조합 생성 + 전역 조합 탐색 기본 골격 구현
+
+**Phase 2-2 진행 결과**
+- Optuna 임계값 최적화 모듈 및 Phase 2 실행 흐름 추가 (`phase2_runner.py`)
+- 실행 옵션: `python -m backtester.segment_analysis.phase2_runner <detail.csv> --optuna`
 
 ### Phase 3: 검증 및 시각화 (1주)
 
-- [ ] Walk-Forward 검증 구현
-- [ ] 안정성 지표 계산
-- [ ] 히트맵/차트 시각화
+- [x] Walk-Forward 검증 구현 (`validation.py`)
+- [x] 안정성 지표 계산 (`segment_validation.csv`)
+- [x] 히트맵/차트 시각화 (`segment_visualizer.py`, `phase3_runner.py`)
+
+**Phase 3-1 진행 결과**
+- 워크포워드 기반 안정성 검증 CSV 산출
+- 세그먼트 히트맵/필터 효율 차트 생성 흐름 추가
+- 실행 옵션: `python -m backtester.segment_analysis.phase3_runner <detail.csv>`
 
 ### Phase 4: 통합 및 자동화 (1주)
 
-- [ ] 기존 `back_analysis_enhanced.py` 통합
-- [ ] 조건식 코드 자동 생성
-- [ ] 텔레그램 리포트 연동
+- [x] 기존 `back_analysis_enhanced.py` 통합
+- [x] 세그먼트 조건식 코드 자동 생성 (`*_segment_code.txt`)
+- [x] 텔레그램 리포트 연동(요약 + 히트맵/효율 차트)
+
+**Phase 4-1 진행 결과**
+- `RunEnhancedAnalysis()`에서 Phase2/Phase3 실행 옵션 지원(기본: `phase2+3`)
+- 세그먼트 산출물은 `backtester/segment_outputs/`에 저장
+- 텔레그램에 세그먼트 요약/전역 조합 개선 요약 및 차트 자동 전송
+
+### Phase 5: 적용 및 검증(1주)
+
+- [x] 전역 조합 기반 세그먼트 필터 마스크 적용
+- [x] 세그먼트 필터 미리보기 차트 생성 (`*_segment_filtered.png`, `*_segment_filtered_.png`)
+- [x] 전역 조합 결과 리스크 지표(MDD/변동성) 산출 확장
+- [ ] 실전 조건식 반영 후 성능 비교/리스크 지표 고도화
+
+### Phase 6: 다목적 최적화 실험(선택)
+
+- [x] Pareto front 평가 모듈 및 실행 흐름 추가
+- [x] Pareto front CSV/시각화 산출 (`*_pareto_front.csv`, `*_pareto_front.png`)
+- [x] NSGA-II/Optuna 고급 탐색 실행 흐름 추가(옵션)
+
+**Phase 6-1 실행 옵션**
+- `python -m backtester.segment_analysis.multi_objective_runner <detail.csv>`
+- `python -m backtester.segment_analysis.advanced_search_runner <detail.csv>`
+
+### Phase 7: 반-동적 분할 적용(1주)
+
+- [x] 시가총액/시간 분포 기반 구간 재산정 옵션 추가
+- [x] 세그먼트 분할 범위 CSV 저장(`*_segment_ranges.csv`)
+- [x] 고정/반-동적/동적 성능 비교 리포트 실행 흐름 추가
+
+### Phase 8: 분할 모드 비교 리포트(1주)
+
+- [x] 모드별 비교 리포트 CSV 산출(`*_segment_mode_comparison.csv`)
+- [x] 비교 결과 해석/의사결정 가이드 정리
+
+**Phase 8-1 실행 옵션**
+- `python -m backtester.segment_analysis.segment_mode_comparator <detail.csv>`
+
+**비교 결과 해석/의사결정 가이드**
+1. **1차 기준**: `total_improvement`가 +이고 `remaining_ratio`가 0.2 이상인 모드를 우선한다.
+2. **2차 기준**: `mdd_pct`가 고정 모드 대비 과도하게 악화되면(예: +20%p 이상) 보류한다.
+3. **3차 기준**: `profit_volatility`가 낮은 모드를 선호한다(동일 성과일 때 안정성 우선).
+4. **분할 안정성 확인**: `*_segment_ranges.csv`에서 구간이 급격히 좁아지는지 점검한다.
+5. **해석 가능성**: 조건식 설명이 어렵다면 고정 또는 반-동적 모드를 유지한다.
+
+### Phase 9: 고급 탐색(선택)
+
+- [x] Optuna 가중치 탐색 결과 CSV 산출(`*_advanced_optuna.csv`)
+- [x] NSGA-II front CSV 산출(`*_nsga2_front.csv`, 미설치 시 Pareto 대체)
+
+### Phase 10: 의사결정 리포트 자동화
+
+- [x] 모드 비교 + 후보 탐색 결과를 기반으로 의사결정 리포트 자동 생성
+- [x] 리포트/메타/스코어 산출(`*_decision_report.md`, `*_decision_report.json`, `*_decision_score.csv`)
+
+**Phase 10-1 실행 옵션**
+- `python -m backtester.segment_analysis.decision_report_runner <detail.csv>`
 
 ---
 
@@ -819,10 +963,7 @@ OVERFITTING_PREVENTION = {
 
 이 연구 보고서를 바탕으로 다음 코드 업데이트를 요청할 예정:
 
-1. `segment_filter_optimizer.py` 신규 모듈 구현
-2. `back_analysis_enhanced.py` 세그먼트 분석 통합
-3. 세그먼트별 산출물 자동 생성
-4. 텔레그램 리포트에 세그먼트 분석 추가
+1. 없음 (추가 요청 시 진행)
 
 ---
 
@@ -835,6 +976,6 @@ OVERFITTING_PREVENTION = {
 
 ---
 
-**문서 버전**: 2.0
+**문서 버전**: 2.8
 **최종 수정일**: 2025-12-20
 **작성자**: Claude Code
