@@ -26,6 +26,7 @@ from .segment_template_comparator import (
     SegmentTemplate,
     run_segment_template_comparison,
 )
+from .segment_summary_report import write_segment_summary_report
 from .advanced_search_runner import AdvancedSearchRunnerConfig, run_advanced_search
 from .decision_report_runner import DecisionReportConfig, run_decision_report
 
@@ -49,6 +50,7 @@ __all__ = [
     'SegmentTemplateScoreConfig',
     'SegmentTemplate',
     'run_segment_template_comparison',
+    'write_segment_summary_report',
     'AdvancedSearchRunnerConfig',
     'run_advanced_search',
     'DecisionReportConfig',

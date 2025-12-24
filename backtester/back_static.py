@@ -39,6 +39,7 @@ except ImportError:
 SEGMENT_ANALYSIS_MODE = 'phase2+3'
 SEGMENT_ANALYSIS_OUTPUT_DIR = 'backtester/segment_outputs'
 SEGMENT_ANALYSIS_OPTUNA = False
+SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
 
 
 def _convert_bool_ops_to_pandas(expr: str) -> str:
@@ -1117,6 +1118,8 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 'validation_path': '안정성 검증',
                 'heatmap_path': '세그먼트 히트맵',
                 'efficiency_path': '필터 효율 차트',
+                'comparison_path': '세그먼트 템플릿 비교',
+                'summary_report_path': '세그먼트 종합 요약',
             }
 
             items: list[tuple[str, str]] = []
@@ -1128,6 +1131,16 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     path = phase.get(key)
                     if path:
                         items.append((label, str(path)))
+
+            template_comp = segment_outputs.get('template_comparison') or {}
+            if isinstance(template_comp, dict):
+                path = template_comp.get('comparison_path')
+                if path:
+                    items.append((label_map['comparison_path'], str(path)))
+
+            summary_report_path = segment_outputs.get('summary_report_path')
+            if summary_report_path:
+                items.append((label_map['summary_report_path'], str(summary_report_path)))
 
             seen = set()
             deduped = []
@@ -2592,6 +2605,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 segment_analysis_mode=SEGMENT_ANALYSIS_MODE,
                 segment_output_dir=SEGMENT_ANALYSIS_OUTPUT_DIR,
                 segment_optuna=SEGMENT_ANALYSIS_OPTUNA,
+                segment_template_compare=SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
             )
 
             # [2025-12-19] 자동 생성 필터 조합 적용 미리보기 차트(2개) 생성/전송

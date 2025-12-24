@@ -3866,7 +3866,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         ml_train_mode: str = 'train', send_condition_summary: bool = True,
                         segment_analysis_mode: str = 'off',
                         segment_output_dir: str = 'backtester/segment_outputs',
-                        segment_optuna: bool = False):
+                        segment_optuna: bool = False,
+                        segment_template_compare: bool = False):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -4043,13 +4044,20 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 from backtester.segment_analysis.phase2_runner import run_phase2, Phase2RunnerConfig
                 from backtester.segment_analysis.phase3_runner import run_phase3, Phase3RunnerConfig
                 from backtester.segment_analysis.filter_evaluator import FilterEvaluatorConfig
+                from backtester.segment_analysis.segment_template_comparator import (
+                    run_segment_template_comparison,
+                    SegmentTemplateComparisonConfig,
+                )
 
                 mode = str(segment_analysis_mode).lower()
                 output_dir = segment_output_dir or 'backtester/segment_outputs'
                 filter_config = FilterEvaluatorConfig(allow_ml_filters=allow_ml_filters)
                 segment_outputs = {}
+                segment_timing = {}
+                segment_start = time.perf_counter()
 
                 if mode in ('phase2', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
+                    t0 = time.perf_counter()
                     segment_outputs['phase2'] = run_phase2(
                         detail_path,
                         filter_config=filter_config,
@@ -4059,8 +4067,10 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             enable_optuna=segment_optuna
                         )
                     )
+                    segment_timing['phase2_s'] = round(time.perf_counter() - t0, 4)
 
                 if mode in ('phase3', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
+                    t0 = time.perf_counter()
                     segment_outputs['phase3'] = run_phase3(
                         detail_path,
                         filter_config=filter_config,
@@ -4069,6 +4079,39 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             prefix=save_file_name
                         )
                     )
+                    segment_timing['phase3_s'] = round(time.perf_counter() - t0, 4)
+
+                if segment_template_compare and mode in ('phase2', 'phase2+3', 'phase2_phase3', 'all', 'auto', 'compare', 'template'):
+                    t0 = time.perf_counter()
+                    segment_outputs['template_comparison'] = run_segment_template_comparison(
+                        detail_path,
+                        filter_config=filter_config,
+                        runner_config=SegmentTemplateComparisonConfig(
+                            output_dir=output_dir,
+                            prefix=save_file_name,
+                            max_templates=4,
+                            top_n_dynamic=1,
+                            enable_dynamic_expansion=True,
+                            enable_optuna=segment_optuna,
+                        ),
+                    )
+                    segment_timing['template_s'] = round(time.perf_counter() - t0, 4)
+
+                segment_timing['total_s'] = round(time.perf_counter() - segment_start, 4)
+                segment_outputs['timing'] = segment_timing
+
+                try:
+                    from backtester.segment_analysis.segment_summary_report import write_segment_summary_report
+
+                    summary_path = write_segment_summary_report(
+                        output_dir,
+                        save_file_name,
+                        segment_outputs,
+                    )
+                    if summary_path:
+                        segment_outputs['summary_report_path'] = summary_path
+                except Exception:
+                    print_exc()
             except Exception:
                 print_exc()
 
@@ -4367,6 +4410,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     seg_lines = ["세그먼트 분석 결과:"]
                     phase2 = segment_outputs.get('phase2') or {}
                     phase3 = segment_outputs.get('phase3') or {}
+                    template_comp = segment_outputs.get('template_comparison') or {}
+                    timing = segment_outputs.get('timing') or {}
 
                     code_summary = phase2.get('segment_code_summary') or {}
                     if code_summary:
@@ -4417,6 +4462,51 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                                             seg_lines.append("- 상위 세그먼트: " + ", ".join(tops))
                         except Exception:
                             pass
+
+                    comp_path = template_comp.get('comparison_path')
+                    if comp_path and Path(comp_path).exists():
+                        try:
+                            df_comp = pd.read_csv(comp_path, encoding='utf-8-sig')
+                            if not df_comp.empty:
+                                df_rank = df_comp.copy()
+                                if 'score' in df_rank.columns:
+                                    df_rank = df_rank.sort_values(['score'], ascending=[False])
+                                best = df_rank.iloc[0]
+                                seg_lines.append(
+                                    f"- 템플릿 비교: {Path(comp_path).name} (최상: {best.get('template', 'N/A')})"
+                                )
+                        except Exception:
+                            seg_lines.append(f"- 템플릿 비교: {Path(comp_path).name}")
+
+                    summary_path = segment_outputs.get('summary_report_path')
+                    if summary_path:
+                        try:
+                            seg_lines.append(f"- 종합 요약: {Path(summary_path).name}")
+                        except Exception:
+                            seg_lines.append(f"- 종합 요약: {summary_path}")
+
+                    if timing:
+                        def _fmt_sec(v):
+                            try:
+                                return f"{float(v):.2f}s"
+                            except Exception:
+                                return str(v)
+
+                        total_s = timing.get('total_s')
+                        parts = []
+                        if timing.get('phase2_s') is not None:
+                            parts.append(f"phase2 {_fmt_sec(timing.get('phase2_s'))}")
+                        if timing.get('phase3_s') is not None:
+                            parts.append(f"phase3 {_fmt_sec(timing.get('phase3_s'))}")
+                        if timing.get('template_s') is not None:
+                            parts.append(f"template {_fmt_sec(timing.get('template_s'))}")
+                        if total_s is not None:
+                            if parts:
+                                seg_lines.append(f"- 세그먼트 분석 소요 시간: {_fmt_sec(total_s)} ({', '.join(parts)})")
+                            else:
+                                seg_lines.append(f"- 세그먼트 분석 소요 시간: {_fmt_sec(total_s)}")
+                        elif parts:
+                            seg_lines.append(f"- 세그먼트 분석 소요 시간: {', '.join(parts)}")
 
                     _safe_put("\n".join(seg_lines))
 
