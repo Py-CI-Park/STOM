@@ -33,7 +33,15 @@ def generate_local_combinations(
 ) -> List[dict]:
     config = config or CombinationOptimizerConfig()
     if segment_df.empty or '수익금' not in segment_df.columns:
-        return []
+        # 빈 세그먼트는 전역 조합에서 제외되지 않도록 기본 조합 1개만 반환
+        return [{
+            'filters': [],
+            'improvement': 0.0,
+            'excluded_trades': 0,
+            'remaining_trades': int(len(segment_df)) if segment_df is not None else 0,
+            'exclusion_ratio': 0.0,
+            'label': 'empty_segment',
+        }]
 
     total_trades = len(segment_df)
     total_profit = pd.to_numeric(segment_df['수익금'], errors='coerce').fillna(0).sum()
@@ -106,6 +114,8 @@ def optimize_global_combination(
     }]
 
     for seg_id in sorted(segment_combos.keys()):
+        if not segment_combos.get(seg_id):
+            continue
         new_beam: List[dict] = []
         for state in beam:
             for combo in segment_combos[seg_id]:
@@ -145,6 +155,8 @@ def collect_global_combinations(
     }]
 
     for seg_id in sorted(segment_combos.keys()):
+        if not segment_combos.get(seg_id):
+            continue
         new_beam: List[dict] = []
         for state in beam:
             for combo in segment_combos[seg_id]:
