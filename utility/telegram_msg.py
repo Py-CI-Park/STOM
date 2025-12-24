@@ -1,5 +1,7 @@
+import os
 import telegram
 import pandas as pd
+import time
 from utility.setting import DICT_SET
 from telegram.ext import Updater, MessageHandler, Filters
 
@@ -26,10 +28,10 @@ class TelegramMsg:
         while True:
             data = self.teleQ.get()
             if type(data) == str:
-                if '.png' not in data:
-                    self.SendMsg(data)
-                else:
+                if '.png' in data and os.path.exists(data):
                     self.SendPhoto(data)
+                else:
+                    self.SendMsg(data)
             elif type(data) == pd.DataFrame:
                 self.UpdateDataframe(data)
             elif data[0] == '설정변경':
@@ -88,11 +90,55 @@ class TelegramMsg:
     def SendMsg(self, msg):
         if self.bot is not None:
             try:
-                self.bot.sendMessage(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], text=msg)
+                text = '' if msg is None else str(msg)
+                # Telegram 메시지 길이 제한(약 4096자) 대응
+                max_len = 3500
+                if len(text) <= max_len:
+                    self.bot.sendMessage(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], text=text)
+                    return
+
+                for part in self._SplitText(text, max_len=max_len):
+                    self.bot.sendMessage(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], text=part)
+                    time.sleep(0.05)
             except Exception as e:
                 print(f'텔레그램 명령 오류 알림 - sendMessage {e}')
         else:
             print('텔레그램 설정 오류 알림 - 텔레그램 봇이 설정되지 않아 메세지를 보낼 수 없습니다.')
+
+    @staticmethod
+    def _SplitText(text: str, max_len: int = 3500):
+        """
+        Telegram 메시지 길이 제한 대응용 분할 유틸.
+        - 줄 단위로 최대한 유지하며, 한 줄이 너무 길면 강제 분할합니다.
+        """
+        if not text:
+            return []
+
+        lines = text.splitlines(keepends=True)
+        chunks = []
+        buf = ''
+
+        for line in lines:
+            if len(buf) + len(line) <= max_len:
+                buf += line
+                continue
+
+            if buf:
+                chunks.append(buf)
+                buf = ''
+
+            if len(line) <= max_len:
+                buf = line
+                continue
+
+            # 한 줄이 너무 긴 경우 강제 분할
+            for i in range(0, len(line), max_len):
+                chunks.append(line[i:i + max_len])
+
+        if buf:
+            chunks.append(buf)
+
+        return chunks
 
     def SendPhoto(self, path):
         if self.bot is not None:
@@ -105,8 +151,15 @@ class TelegramMsg:
             print('텔레그램 설정 오류 알림 - 텔레그램 봇이 설정되지 않아 스크린샷를 보낼 수 없습니다.')
 
     def UpdateDataframe(self, df):
+        total_rows = len(df)
+        max_rows = 200
+        prefix = ''
+        if total_rows > max_rows:
+            df = df.tail(max_rows).copy()
+            prefix = f'(최근 {max_rows}건만 표시, 총 {total_rows:,}건)\n'
+
         if '매수금액' in df.columns:
-            text = ''
+            text = prefix
             for index in df.index:
                 ct    = df['체결시간'][index][8:10] + ':' + df['체결시간'][index][10:12]
                 per   = df['수익률'][index]
@@ -115,7 +168,7 @@ class TelegramMsg:
                 text += f'{ct} {per:.2f}% {sg:,.0f}원 {name}\n'
             self.SendMsg(text)
         elif '매입가' in df.columns:
-            text   = ''
+            text   = prefix
             m_unit = '원' if df.columns[1] == '매입가' else 'USDT'
             for index in df.index:
                 per   = df['수익률'][index]
@@ -133,7 +186,7 @@ class TelegramMsg:
             text += f'{tbg:,.0f}{m_unit} {tpg:,.0f}{m_unit} {tpp:.2f}% {tsg:,.0f}{m_unit}\n'
             self.SendMsg(text)
         elif '주문구분' in df.columns:
-            text = ''
+            text = prefix
             for index in df.index:
                 ct   = df['체결시간'][index][8:10] + ':' + df['체결시간'][index][10:12]
                 bs   = df['주문구분'][index]

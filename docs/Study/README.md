@@ -9,10 +9,11 @@ Study/
 ├── README.md (현재 문서)
 ├── DocumentationReviews/    # 문서 리뷰 및 검증 (1개)
 │   └── 2025-11-17_Documentation_Review_Report.md
-├── ResearchReports/          # 연구 보고서 (3개)
+├── ResearchReports/          # 연구 보고서 (4개)
 │   ├── AI_ML_Trading_Strategy_Automation_Research.md
 │   ├── Research_Report_Automated_Condition_Finding.md
-│   └── AI_Driven_Condition_Automation_Circular_Research_System.md
+│   ├── AI_Driven_Condition_Automation_Circular_Research_System.md
+│   └── 2025-12-20_Segmented_Filter_Optimization_Research.md
 ├── SystemAnalysis/           # 시스템 분석 및 개선사항 (4개)
 │   ├── Optistd_System_Analysis.md
 │   ├── STOM_Optimization_System_Improvements.md
@@ -26,7 +27,7 @@ Study/
     └── Condition_Optimization_and_Analysis_Guide.md
 ```
 
-**총 문서 수**: 11개 | **총 용량**: ~390KB
+**총 문서 수**: 12개 | **총 용량**: ~400KB
 
 ---
 
@@ -47,13 +48,15 @@ Study/
 | 9 | **Optimization & Analysis Guide** | 가이드 | 2025-11-29 | 13KB | 전체 변수 사전 및 가이드 | • 826개 틱 변수 정리<br>• 7가지 카테고리 분류<br>• 무력화 설정값 제공 | Documentation | ✅ |
 | 10 | **AI Condition Automation Circular System** | 연구 보고서 | 2025-12-01 | 80KB | AI 기반 조건식 자동화 순환 연구 | • 133개 조건 분석 (826/752 변수)<br>• 4단계 순환 프로세스 설계<br>• LLM/GP/Feature Importance 통합 | LLM, DEAP, XGBoost, SHAP, SQLite | ✅ |
 | 11 | **Telegram Charts Analysis** | 시스템 분석 | 2025-12-14 | 40KB | 텔레그램 차트/CSV 기반 백테스팅 강화 분석 | • 기본/강화 CSV 산출물(최대 8종) 정의<br>• 필터 효과(통계)·시너지·안정성·임계값 분석 정리<br>• 텔레그램 전송 플로우 문서화 | pandas, SciPy, scikit-learn, Telegram | ✅ |
+| 12 | **Segmented Filter Optimization Research** | 연구 보고서 | 2025-12-20 | 45KB | 시가총액/시간 구간 분할 기반 필터 조합 최적화 연구 (v2.0) | • 12개 세그먼트(3시총×4시간) 분할 설계<br>• 2단계 계층적 최적화(Greedy+Beam Search) 알고리즘<br>• NSGA-II 다목적 최적화/Optuna 임계값 탐색<br>• Walk-Forward 검증 및 과적합 방지 전략<br>• 코드 자동 생성 아키텍처 설계 | Optimization, Segmentation, NSGA-II, Optuna, Walk-Forward | ✅ |
 
 ### 📊 스터디 주제별 분류
 
-#### 🤖 AI/ML 연구 (3개)
+#### 🤖 AI/ML 연구 (4개)
 - **자동화**: AI/ML 기반 전략 자동화, 조건식 자동 발굴, 순환 연구 시스템
-- **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning, DEAP
-- **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간), 완전 자동화된 순환 개선 프로세스
+- **최적화**: 세그먼트 분할 기반 필터 조합 최적화 (신규)
+- **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning, DEAP, NSGA-II, Optuna
+- **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간), 완전 자동화된 순환 개선 프로세스, 세그먼트별 필터 최적화
 
 #### ⚙️ 시스템 최적화 및 관리 (4개)
 - **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조, 텔레그램 차트/CSV 기반 분석 시스템
@@ -98,6 +101,7 @@ Study/
 | [AI_ML_Trading_Strategy_Automation_Research.md](./ResearchReports/AI_ML_Trading_Strategy_Automation_Research.md) | 2025-11-27 | ✅ 완료 | AI/ML 기반 트레이딩 전략 자동화 연구 (73KB) |
 | [Research_Report_Automated_Condition_Finding.md](./ResearchReports/Research_Report_Automated_Condition_Finding.md) | 2025-11-27 | ✅ 완료 | 조건식 자동 탐색 시스템 연구 |
 | [AI_Driven_Condition_Automation_Circular_Research_System.md](./ResearchReports/AI_Driven_Condition_Automation_Circular_Research_System.md) | 2025-12-01 | ✅ 완료 | AI 기반 조건식 자동화 순환 연구 시스템 (80KB) |
+| [2025-12-20_Segmented_Filter_Optimization_Research.md](./ResearchReports/2025-12-20_Segmented_Filter_Optimization_Research.md) | 2025-12-20 | ✅ 완료 | 시가총액/시간 구간 분할 기반 필터 조합 최적화 연구 (7KB) |
 
 **주요 내용:**
 - AI/ML 트레이딩 전략 적용 방안
@@ -167,11 +171,11 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | 카테고리 | 문서 수 | 완료 | 진행 중 | 계획 |
 |----------|---------|------|---------|------|
 | Documentation Reviews | 1 | 1 | 0 | 0 |
-| Research Reports | 3 | 3 | 0 | 0 |
+| Research Reports | 4 | 4 | 0 | 0 |
 | System Analysis | 4 | 4 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
 | Guides | 1 | 1 | 0 | 0 |
-| **전체** | **11** | **11** | **0** | **0** |
+| **전체** | **12** | **12** | **0** | **0** |
 
 ## 🎯 문서 상태 범례
 
@@ -296,6 +300,6 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 
 ---
 
-**최종 업데이트**: 2025-12-13
+**최종 업데이트**: 2025-12-20
 **문서 관리자**: STOM Development Team
-**문서 버전**: 2.1
+**문서 버전**: 2.2

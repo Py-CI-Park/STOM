@@ -11,6 +11,10 @@ from utility.setting import DB_STRATEGY, DB_BACKTEST, ui_num, stockreadlines, co
     DB_COIN_BACK_TICK, coinreadlines, DB_STOCK_BACK_MIN, DB_COIN_BACK_MIN
 
 
+def _format_progress_log(message: str) -> str:
+    return f"[{now().strftime('%Y-%m-%d %H:%M:%S')}] {message}"
+
+
 class Total:
     def __init__(self, wq, sq, tq, teleQ, mq, lq, bstq_list, backname, ui_gubun, gubun):
         self.wq           = wq
@@ -29,6 +33,7 @@ class Total:
 
         self.back_count   = None
         self.buystg_name  = None
+        self.sellstg_name = None
         self.buystg       = None
         self.sellstg      = None
         self.dict_cn      = None
@@ -50,6 +55,8 @@ class Total:
         self.back_club    = None
 
         self.insertlist   = []
+        self.progress_logs = None
+        self.progress_start_time = None
 
         self.MainLoop()
 
@@ -93,16 +100,21 @@ class Total:
                 self.starttime   = data[5]
                 self.endtime     = data[6]
                 self.buystg_name = data[7]
-                self.buystg      = data[8]
-                self.sellstg     = data[9]
-                self.dict_cn     = data[10]
-                self.back_count  = data[11]
-                self.day_count   = data[12]
-                self.blacklist   = data[13]
-                self.schedul     = data[14]
-                self.df_kp       = data[15]
-                self.df_kd       = data[16]
-                self.back_club   = data[17]
+                self.sellstg_name = data[8]
+                self.buystg      = data[9]
+                self.sellstg     = data[10]
+                self.dict_cn     = data[11]
+                self.back_count  = data[12]
+                self.day_count   = data[13]
+                self.blacklist   = data[14]
+                self.schedul     = data[15]
+                self.df_kp       = data[16]
+                self.df_kd       = data[17]
+                self.back_club   = data[18]
+                if len(data) > 19:
+                    self.progress_logs = data[19]
+                if len(data) > 20:
+                    self.progress_start_time = data[20]
 
             elif data == '백테중지':
                 self.mq.put('백테중지')
@@ -110,6 +122,20 @@ class Total:
 
         time.sleep(1)
         sys.exit()
+
+    def _append_progress_log(self, message: str):
+        if self.progress_logs is None:
+            self.progress_logs = []
+        self.progress_logs.append(_format_progress_log(message))
+
+    def _extend_progress_log_lines(self, text):
+        if not text:
+            return
+        if self.progress_logs is None:
+            self.progress_logs = []
+        for line in str(text).split('\n'):
+            if line.strip():
+                self.progress_logs.append(line)
 
     def InsertBlacklist(self):
         name_list = list(set(self.df_tsg['종목명'].to_list()))
@@ -165,6 +191,11 @@ class Total:
                      f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '\
                      f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{bet_unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], '백테스팅 결과\n' + label_text))
+        self._append_progress_log('백테스팅 결과')
+        self._extend_progress_log_lines(label_text)
+        if self.progress_start_time:
+            self._append_progress_log(f'{self.backname} 소요시간 {now() - self.progress_start_time}')
+        self._append_progress_log(f'{self.backname} 완료')
 
         if self.dict_set['스톰라이브']:
             backlive_text = f'back;{startday}~{endday};{starttime}~{endtime};{self.day_count};{self.avgtime};{int(self.betting)};'\
@@ -209,11 +240,17 @@ class Total:
                     sell_vars = f'{sell_vars}, {text}'
 
             PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
-                    self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False, buy_vars=buy_vars, sell_vars=sell_vars)
+                    self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, False,
+                    buy_vars=buy_vars, sell_vars=sell_vars, buystg=self.buystg, sellstg=self.sellstg,
+                    buystg_name=self.buystg_name, sellstg_name=getattr(self, 'sellstg_name', None),
+                    progress_logs=self.progress_logs)
         else:
             if not self.dict_set['그래프저장하지않기']:
                 PltShow('백테스트', self.teleQ, self.df_tsg, self.df_bct, self.dict_cn, seed, mdd, self.startday, self.endday, self.starttime, self.endtime,
-                        self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'])
+                        self.df_kp, self.df_kd, None, self.backname, back_text, label_text, save_file_name, self.schedul, self.dict_set['그래프띄우지않기'],
+                        buystg=self.buystg, sellstg=self.sellstg,
+                        buystg_name=self.buystg_name, sellstg_name=getattr(self, 'sellstg_name', None),
+                        progress_logs=self.progress_logs)
 
         self.mq.put(f'{self.backname} 완료')
 
@@ -237,6 +274,11 @@ class BackTest:
     def Start(self):
         self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         start_time = now()
+        progress_start_time = start_time
+        progress_logs = []
+        def append_progress(message: str):
+            progress_logs.append(_format_progress_log(message))
+
         data = self.bq.get()
         if self.ui_gubun != 'CF':
             betting = float(data[0]) * 1000000
@@ -273,6 +315,7 @@ class BackTest:
         df_mt['일자'] = df_mt['index'].apply(lambda x: int(str(x)[:8]))
         day_count = len(list(set(df_mt['일자'].to_list())))
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 기간 추출 완료'))
+        append_progress(f'{self.backname} 기간 추출 완료')
 
         arry_bct = np.zeros((len(df_mt), 3), dtype='float64')
         arry_bct[:, 0] = df_mt['index'].values
@@ -280,6 +323,7 @@ class BackTest:
         for q in self.bstq_list:
             q.put(data)
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 보유종목수 어레이 생성 완료'))
+        append_progress(f'{self.backname} 보유종목수 어레이 생성 완료')
 
         con = sqlite3.connect(DB_STRATEGY)
         dfb = pd.read_sql(f'SELECT * FROM {self.gubun}buy', con).set_index('index')
@@ -289,6 +333,7 @@ class BackTest:
         sellstg = dfs['전략코드'][sellstg_name]
 
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 매도수전략 설정 완료'))
+        append_progress(f'{self.backname} 매도수전략 설정 완료')
 
         mq = Queue()
         Process(
@@ -296,8 +341,10 @@ class BackTest:
             args=(self.wq, self.sq, self.tq, self.teleQ, mq, self.lq, self.bstq_list, self.backname, self.ui_gubun, self.gubun)
         ).start()
         self.wq.put((ui_num[f'{self.ui_gubun}백테스트'], f'{self.backname} 집계용 프로세스 생성 완료'))
-        self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, buystg, sellstg,
-                     dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club))
+        append_progress(f'{self.backname} 집계용 프로세스 생성 완료')
+        self.tq.put(('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg_name, sellstg_name,
+                     buystg, sellstg, dict_cn, back_count, day_count, bl, schedul, df_kp, df_kq, back_club,
+                     progress_logs, progress_start_time))
 
         time.sleep(1)
         data = ('백테정보', betting, avgtime, startday, endday, starttime, endtime, buystg, sellstg)
