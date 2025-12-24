@@ -2737,6 +2737,16 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                             if err:
                                 msg += f"\n- 오류: {err}"
                             teleQ.put(msg)
+                    else:
+                        msg_lines = ["세그먼트 필터 미리보기: 전역 조합(global_best) 없음"]
+                        if not isinstance(df_enh, pd.DataFrame) or df_enh.empty:
+                            msg_lines.append("- 강화 분석 데이터가 없거나 비어있어 미리보기를 건너뜀")
+                        else:
+                            msg_lines.append("- 전역 조합 생성 실패로 세그먼트 필터 적용 미리보기 생략")
+                            msg_lines.append("- 가능한 원인: 세그먼트별 유효 필터/조합 부족, 제외율/최소거래수 제약")
+                            msg_lines.append("- 확인 파일: *_segment_filters.csv, *_segment_local_combos.csv, *_segment_summary.csv")
+                            msg_lines.append("- 조정 후보: min_trades/max_exclusion, max_filters_per_segment/beam_width")
+                        teleQ.put("\n".join(msg_lines))
             except Exception:
                 print_exc()
         except Exception as e:
