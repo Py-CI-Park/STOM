@@ -32,7 +32,8 @@ STOM 시스템은 **고성능 실시간 데이터 처리**를 위한 다층 데�
 OPENAPI_PATH       = 'C:/OpenAPI'
 ICON_PATH          = './icon'
 LOGIN_PATH         = './stock/login_kiwoom'
-GRAPH_PATH         = './backtester/graph'
+GRAPH_PATH         = './backtester/graph'  # legacy output path
+BACKTEST_OUTPUT_PATH = './backtester/backtesting_output'
 BACK_TEMP          = './backtester/temp'
 DB_PATH            = './_database'
 DB_SETTING         = './_database/setting.db'

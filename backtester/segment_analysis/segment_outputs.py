@@ -14,6 +14,15 @@ import numpy as np
 import pandas as pd
 
 
+def resolve_segment_output_dir(detail_path: Path, output_dir: Optional[str]) -> str:
+    if output_dir:
+        return str(output_dir)
+    try:
+        return str(Path(detail_path).expanduser().resolve().parent)
+    except Exception:
+        return 'backtester/segment_outputs'
+
+
 def build_segment_summary(
     segments: Dict[str, pd.DataFrame],
     out_of_range: Optional[pd.DataFrame] = None,

@@ -6,9 +6,11 @@
 **관련 커밋**: `48932dcd371e38b95ec1cac5be3c6ec00268db54` (STOM_V1 머지), `1fef8950f4fcb035699a7c6379fe074ab70d7206` (v2.3 ML 모델 실행별 저장/재현)
 **대상 브랜치**: `main` (기능 개발: `STOM_V1` / `feature/backtesting_result_update`)
 **관련 파일**:
-- `backtester/back_static.py` - 메인 분석 호출
-- `backtester/back_analysis_enhanced.py` - 강화된 분석 모듈 (NEW)
-- `utility/setting.py` - `GRAPH_PATH` (차트/CSV 저장 경로)
+- `backtester/back_static.py` - ?? ?? ???????
+- `backtester/analysis/plotting.py` - PltShow/PltAnalysisCharts/PltBuySellComparison
+- `backtester/analysis/exports.py` - ExportBacktestCSV
+- `backtester/back_analysis_enhanced.py` - ?? ?? ??
+- `utility/setting.py` - `BACKTEST_OUTPUT_PATH` (?? ?? ??, legacy: `GRAPH_PATH`)
 
 ---
 
@@ -134,7 +136,7 @@ backtester/models/
    - `자동 생성 필터 코드(요약)` 섹션 추가(필터 수/총 개선/단계별 적용 순서/조합 코드)
 4. **학습용 산출물 `*_condition_study.md` 추가**
    - 최근 백테스팅 조건식(요약) + 자동 생성 필터 코드 + 컬럼(거래 항목) 목록 + 필터 템플릿을 한 파일로 묶어 생성
-   - 생성 위치: `backtester/graph/{save_file_name}_condition_study.md`
+   - 생성 위치: `backtester/backtesting_output/{save_file_name}/{save_file_name}_condition_study.md`
 
 ### 1.5 시스템 아키텍처
 
@@ -193,6 +195,8 @@ backtester/models/
 │  • CSV 최대 8개: (기본 3개 + 강화 5개)                               │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+??: `PltShow()` ? ?? ??? `backtester/analysis/plotting.py`? ??????, `backtester/back_static.py`? ?? ??????? ??? ?????.
 
 ---
 
@@ -795,7 +799,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
 ### 9.2 출력 파일
 
 ```
-파일: backtester/graph/{전략명}_enhanced.png
+파일: backtester/backtesting_output/{전략명}/{전략명}_enhanced.png
 크기: 20x38 인치 (2400x4560 픽셀)
 해상도: 120 DPI
 ```
@@ -806,7 +810,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
 
 ### 10.1 공통 사항 (저장 경로/인코딩/규칙)
 
-- **저장 경로**: `utility/setting.py`의 `GRAPH_PATH` (기본값: `./backtester/graph`)
+- **저장 경로**: `utility/setting.py`의 `BACKTEST_OUTPUT_PATH` (기본값: `./backtester/backtesting_output/<save_file_name>/`, legacy: `./backtester/graph`)
 - **파일명 규칙**: `{save_file_name}_{suffix}.csv`
   - `{save_file_name}`는 백테스터에서 전달되는 저장 베이스명(전략명/기간/옵션 포함)
   - `{suffix}`는 아래 표의 `_detail`, `_summary`, `_filter`, `_optimal_thresholds` 등
@@ -819,7 +823,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
 
 ### 10.2 기본 CSV (RunFullAnalysis / ExportBacktestCSV)
 
-기본 분석은 `backtester/back_static.py`의 `RunFullAnalysis()` → `ExportBacktestCSV()` 경로에서 생성됩니다.
+?? ??? `backtester/back_static.py`? `RunFullAnalysis()` ? `backtester/analysis/exports.py`? `ExportBacktestCSV()` ???? ?????.
 
 | 파일명 | 생성 함수 | 내용 | 비고 |
 |--------|----------|------|------|
@@ -993,7 +997,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
 백테스팅 실행 1회에 대해, 생성된 CSV/PNG 목록과 조건식/요약 정보를 **단일 텍스트 파일로 함께 저장**합니다.
 
 - **파일명**: `{전략명}_report.txt`
-- **저장 위치**: `backtester/graph/`
+- **저장 위치**: `backtester/backtesting_output/<save_file_name>/` (legacy: `backtester/graph/`)
 - **인코딩**: `utf-8-sig`
 
 리포트에 포함되는 대표 항목:
@@ -1036,8 +1040,8 @@ detail.csv는 저장 시 `backtester/detail_schema.py`의 `reorder_detail_column
 12. **이미지**: `{전략명}_filtered_.png` (필터 적용 분포/단계 요약) (NEW)
 13. **이미지**: `{전략명}_filtered.png` (필터 적용 수익곡선 요약) (NEW)
 
-※ CSV/PNG 생성 목록은 `{전략명}_report.txt`로 `backtester/graph`에 저장되며, 기본 설정에서는 텔레그램으로 전송하지 않습니다.
-※ 학습용 산출물 `{전략명}_condition_study.md`도 `backtester/graph`에 생성되며, 텔레그램으로 전송하지 않습니다.
+※ CSV/PNG 생성 목록은 `{전략명}_report.txt`로 `backtester/backtesting_output/<save_file_name>/`에 저장되며, 기본 설정에서는 텔레그램으로 전송하지 않습니다.
+※ 학습용 산출물 `{전략명}_condition_study.md`도 `backtester/backtesting_output/<save_file_name>/`에 생성되며, 텔레그램으로 전송하지 않습니다.
 
 ### 11.2 메시지 예시 (v2.2)
 
@@ -1124,7 +1128,7 @@ detail.csv는 저장 시 `backtester/detail_schema.py`의 `reorder_detail_column
 
 | 파일 | 함수/클래스 | 역할 |
 |------|------------|------|
-| `back_static.py` | `PltShow()` | 메인 차트 생성 + 강화 분석 호출 |
+| `backtester/analysis/plotting.py` | `PltShow()` | ?? ?? ?? + ?? ?? ??
 | `back_analysis_enhanced.py` | `CalculateEnhancedDerivedMetrics()` | 27개 파생 지표 계산 |
 | `back_analysis_enhanced.py` | `CalculateStatisticalSignificance()` | t-test, Cohen's d |
 | `back_analysis_enhanced.py` | `AnalyzeFilterEffectsEnhanced()` | 통계 포함 필터 분석 |

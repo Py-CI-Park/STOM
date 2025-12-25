@@ -3,7 +3,18 @@ import pandas as pd
 from PIL import Image
 from PyQt5.QtWidgets import QMessageBox
 from ui.set_style import style_bc_dk
-from utility.setting import DB_BACKTEST, ui_num, GRAPH_PATH
+from utility.setting import DB_BACKTEST, ui_num
+from backtester.output_paths import get_backtesting_output_dir, get_legacy_graph_dir
+
+
+def _resolve_backtest_image_paths(file_name: str):
+    output_dir = get_backtesting_output_dir(file_name)
+    primary = output_dir / f"{file_name}.png"
+    secondary = output_dir / f"{file_name}_.png"
+    if primary.exists() and secondary.exists():
+        return primary, secondary
+    legacy_dir = get_legacy_graph_dir()
+    return legacy_dir / f"{file_name}.png", legacy_dir / f"{file_name}_.png"
 
 
 def ssbutton_clicked_01(ui):
@@ -72,8 +83,9 @@ def ssbutton_clicked_04(ui):
     file_name = comboBox.currentText()
 
     try:
-        image1 = Image.open(f"{GRAPH_PATH}/{file_name}.png")
-        image2 = Image.open(f"{GRAPH_PATH}/{file_name}_.png")
+        image1_path, image2_path = _resolve_backtest_image_paths(file_name)
+        image1 = Image.open(image1_path)
+        image2 = Image.open(image2_path)
         image1.show()
         image2.show()
     except:
@@ -185,8 +197,9 @@ def csbutton_clicked_04(ui):
     file_name = comboBox.currentText()
 
     try:
-        image1 = Image.open(f"{GRAPH_PATH}/{file_name}.png")
-        image2 = Image.open(f"{GRAPH_PATH}/{file_name}_.png")
+        image1_path, image2_path = _resolve_backtest_image_paths(file_name)
+        image1 = Image.open(image1_path)
+        image2 = Image.open(image2_path)
         image1.show()
         image2.show()
     except:

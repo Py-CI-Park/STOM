@@ -6,7 +6,7 @@
 - **버전**: 2.8 (의사결정 리포트 자동화 반영)
 - **목적**: 시가총액/시간 구간 분할 기반 필터 조합 최적화 알고리즘 연구
 - **관련 파일**:
-  - 데이터: `backtester/graph/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
+  - 데이터: `backtester/backtesting_output/stock_bt_C_T_900_920_U2_B_FS_20251220102053/stock_bt_C_T_900_920_U2_B_FS_20251220102053*`
   - 조건식: `docs/Condition/Tick/2_Under_review/Condition_Tick_900_920_Enhanced_FilterStudy.md`
 - **참고**: 본 문서의 데이터/세그먼트(시가총액·시간 구간)는 연구용 사례이며, 조건식과 시장환경에 따라 변경될 수 있음.
 
@@ -542,7 +542,7 @@ backtester/
 │   ├── segment_mode_comparator.py   # 분할 모드 비교 리포트 실행
 │   ├── advanced_search_runner.py    # Optuna/NSGA-II 고급 탐색 실행
 │   ├── decision_report_runner.py    # 의사결정 리포트 자동 생성
-└── segment_outputs/                  # 세그먼트 분석 산출물
+└── backtesting_output/<save_file_name>/  # 그래프/세그먼트 산출물 통합
 ```
 
 ### 4.2 핵심 클래스 설계
@@ -894,7 +894,7 @@ OVERFITTING_PREVENTION = {
 
 **Phase 4-1 진행 결과**
 - `RunEnhancedAnalysis()`에서 Phase2/Phase3 실행 옵션 지원(기본: `phase2+3`)
-- 세그먼트 산출물은 `backtester/segment_outputs/`에 저장
+- 세그먼트 산출물은 `backtester/backtesting_output/<save_file_name>/`에 통합 저장 (legacy: `backtester/segment_outputs/`)
 - 텔레그램에 세그먼트 요약/전역 조합 개선 요약 및 차트 자동 전송
 
 ### Phase 5: 적용 및 검증(1주)

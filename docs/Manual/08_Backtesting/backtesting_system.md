@@ -1106,11 +1106,11 @@ if not is_safe:
 
 ## 텔레그램/차트 기반 강화 분석 (v2.5)
 
-백테스팅 완료 시 `backtester/back_static.py`가 기본 그래프를 생성한 뒤, `backtester/back_analysis_enhanced.py`의 `RunEnhancedAnalysis()`를 호출해 **강화 분석(통계/필터/ML)** 을 수행합니다.
+???? ?? ? `backtester/back_static.py`? `backtester/analysis/plotting.py`? ?? ?? ??? ????, `backtester/back_analysis_enhanced.py`? `RunEnhancedAnalysis()`? **?? ??(??/??/ML)** ? ?????.
 
 ### 생성되는 산출물(요약)
 
-- **그래프** (`backtester/graph/`)
+- **그래프/CSV** (`backtester/backtesting_output/<save_file_name>/`, legacy: `backtester/graph/`)
   - `{save_file_name}.png` / `{save_file_name}_.png` : 기본 2종(수익곡선/부가정보)
   - `{save_file_name}_analysis.png` / `{save_file_name}_comparison.png` : 분석 2종
   - `{save_file_name}_enhanced.png` : 강화 분석 차트(18개, Chart 18 포함)

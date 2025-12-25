@@ -82,3 +82,7 @@ STOM V1 venv.lnk
 # Segment analysis outputs
 /backtester/segment_outputs/*
 !/backtester/segment_outputs/.gitkeep
+
+# Unified backtesting outputs
+/backtester/backtesting_output/*
+!/backtester/backtesting_output/.gitkeep

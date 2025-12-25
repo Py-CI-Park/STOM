@@ -15,12 +15,12 @@ from typing import Optional
 import json
 import pandas as pd
 
-from .segment_outputs import save_decision_report
+from .segment_outputs import resolve_segment_output_dir, save_decision_report
 
 
 @dataclass
 class DecisionReportConfig:
-    output_dir: str = 'backtester/segment_outputs'
+    output_dir: Optional[str] = None
     prefix: Optional[str] = None
     min_remaining_ratio: float = 0.2
     max_mdd_increase_pp: float = 20.0
@@ -32,7 +32,7 @@ def run_decision_report(detail_path: str, config: Optional[DecisionReportConfig]
     config = config or DecisionReportConfig()
     detail_path = Path(detail_path).expanduser().resolve()
     output_prefix = config.prefix or _build_prefix(detail_path.name)
-    output_dir = Path(config.output_dir)
+    output_dir = Path(resolve_segment_output_dir(detail_path, config.output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     sources = _resolve_sources(output_dir, output_prefix)

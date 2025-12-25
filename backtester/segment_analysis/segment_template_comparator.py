@@ -19,7 +19,8 @@ from .segmentation import SegmentConfig
 from .filter_evaluator import FilterEvaluatorConfig
 from .combination_optimizer import CombinationOptimizerConfig
 from .phase2_runner import run_phase2, Phase2RunnerConfig
-from .segment_outputs import save_segment_template_comparison
+from .segment_outputs import resolve_segment_output_dir, save_segment_template_comparison
+from backtester.output_paths import get_legacy_graph_dir
 
 
 @dataclass
@@ -66,7 +67,7 @@ class SegmentTemplateScoreConfig:
 
 @dataclass
 class SegmentTemplateComparisonConfig:
-    output_dir: str = 'backtester/segment_outputs'
+    output_dir: Optional[str] = None
     prefix: Optional[str] = None
     max_templates: int = 8
     enable_optuna: bool = False
@@ -86,6 +87,7 @@ def run_segment_template_comparison(
 ) -> dict:
     runner_config = runner_config or SegmentTemplateComparisonConfig()
     detail_path = Path(detail_path).expanduser().resolve()
+    output_dir = resolve_segment_output_dir(detail_path, runner_config.output_dir)
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
     base_cfg = seg_config or SegmentConfig()
 
@@ -100,6 +102,7 @@ def run_segment_template_comparison(
         result = _run_template_phase2(
             detail_path,
             output_prefix,
+            output_dir,
             tmpl,
             base_cfg,
             filter_config,
@@ -130,7 +133,7 @@ def run_segment_template_comparison(
         )
 
     comparison_path = save_segment_template_comparison(
-        df, runner_config.output_dir, output_prefix
+        df, output_dir, output_prefix
     )
 
     return {
@@ -213,6 +216,7 @@ def build_default_templates() -> List[SegmentTemplate]:
 def _run_template_phase2(
     detail_path: Path,
     output_prefix: str,
+    output_dir: str,
     template: SegmentTemplate,
     base_cfg: SegmentConfig,
     filter_config: Optional[FilterEvaluatorConfig],
@@ -237,7 +241,7 @@ def _run_template_phase2(
         filter_config=filter_config,
         combo_config=combo_config,
         runner_config=Phase2RunnerConfig(
-            output_dir=runner_config.output_dir,
+            output_dir=output_dir,
             prefix=prefix,
             enable_optuna=runner_config.enable_optuna,
         ),
@@ -357,6 +361,7 @@ def _expand_dynamic_variants(
             result = _run_template_phase2(
                 detail_path,
                 output_prefix,
+                output_dir,
                 tmpl,
                 base_cfg,
                 filter_config,
@@ -403,7 +408,7 @@ def _find_global_report_path(detail_path: Path, prefix: str) -> Optional[Path]:
     candidate = detail_path.with_name(f"{prefix}_report.txt")
     if candidate.exists():
         return candidate
-    fallback = Path('backtester/graph') / f"{prefix}_report.txt"
+    fallback = get_legacy_graph_dir() / f"{prefix}_report.txt"
     if fallback.exists():
         return fallback
     return None
