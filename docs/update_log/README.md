@@ -1,5 +1,10 @@
 # 백테스팅 차트 분석 강화 - 간단 요약
 
+## 업데이트 목록
+- `2025-12-25_백테스팅_출력_통합_리팩토링.md` - 출력 경로 통합 + back_static 모듈 분리
+- `2025-12-13_백테스팅_차트_분석_강화.md` - 차트 분석 강화 v2.0
+
+
 **업데이트 날짜**: 2025년 12월 13일
 **커밋 해시**: f931ca8d149fdf58baa29742e33e0e3a973b5252
 
@@ -99,7 +104,7 @@
 
 ### 생성되는 파일
 ```
-backtester/graph/
+backtester/backtesting_output/<save_file_name>/  (legacy: backtester/graph/)
 └── {name}_enhanced.png  ← 16개 차트 포함
 ```
 

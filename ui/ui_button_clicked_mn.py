@@ -1,4 +1,6 @@
 import os
+import shutil
+from pathlib import Path
 import sqlite3
 import pandas as pd
 from PyQt5.QtWidgets import QMessageBox
@@ -17,7 +19,8 @@ from coin.upbit_receiver_tick import UpbitReceiverTick
 from coin.upbit_strategy_tick import UpbitStrategyTick
 from coin.upbit_receiver_client import UpbitReceiverClient
 from ui.set_style import style_bc_bt, style_bc_bb
-from utility.setting import GRAPH_PATH, DB_BACKTEST, columns_tdf, columns_jgf, ui_num
+from utility.setting import BACKTEST_OUTPUT_PATH, DB_BACKTEST, columns_tdf, columns_jgf, ui_num
+from backtester.output_paths import get_legacy_graph_dir
 from utility.static import qtest_qwait
 
 
@@ -156,9 +159,24 @@ def mnbutton_c_clicked_05(ui):
         QMessageBox.Yes | QMessageBox.No, QMessageBox.No
     )
     if buttonReply == QMessageBox.Yes:
-        file_list = os.listdir(GRAPH_PATH)
-        for file_name in file_list:
-            os.remove(f'{GRAPH_PATH}/{file_name}')
+        output_root = Path(BACKTEST_OUTPUT_PATH)
+        if output_root.exists():
+            for child in output_root.iterdir():
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                elif child.is_file():
+                    try:
+                        child.unlink()
+                    except FileNotFoundError:
+                        pass
+        legacy_dir = get_legacy_graph_dir()
+        if legacy_dir.exists():
+            for file_path in legacy_dir.iterdir():
+                if file_path.is_file():
+                    try:
+                        file_path.unlink()
+                    except FileNotFoundError:
+                        pass
         if ui.proc_query.is_alive():
             con = sqlite3.connect(DB_BACKTEST)
             df = pd.read_sql("SELECT name FROM sqlite_master WHERE TYPE = 'table'", con)

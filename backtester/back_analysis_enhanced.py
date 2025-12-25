@@ -34,7 +34,7 @@ from itertools import combinations
 from traceback import print_exc
 from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
-from utility.setting import GRAPH_PATH
+from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.detail_schema import reorder_detail_columns
 
 
@@ -3839,7 +3839,8 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         # tight_layout은 colorbar/그리드와 함께 경고가 자주 발생하여(subplot 배치가 깨질 수 있음),
         # 고정 margins로 레이아웃을 안정화합니다.
         fig.subplots_adjust(left=0.05, right=0.98, bottom=0.04, top=0.94, hspace=0.55, wspace=0.3)
-        analysis_path = f"{GRAPH_PATH}/{save_file_name}_enhanced.png"
+        output_dir = ensure_backtesting_output_dir(save_file_name)
+        analysis_path = str(output_dir / f"{save_file_name}_enhanced.png")
         plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
@@ -3865,7 +3866,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         buystg_name=None, sellstg_name=None, backname=None,
                         ml_train_mode: str = 'train', send_condition_summary: bool = True,
                         segment_analysis_mode: str = 'off',
-                        segment_output_dir: str = 'backtester/segment_outputs',
+                        segment_output_dir: str | None = None,
                         segment_optuna: bool = False,
                         segment_template_compare: bool = False):
     """
@@ -3962,7 +3963,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 8. CSV 파일 저장
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
         # - 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML 컬럼이 포함되어 비교 가능
-        detail_path = f"{GRAPH_PATH}/{save_file_name}_detail.csv"
+        output_dir = ensure_backtesting_output_dir(save_file_name)
+        detail_path = str(output_dir / f"{save_file_name}_detail.csv")
         df_enhanced_out = reorder_detail_columns(df_enhanced)
         df_enhanced_out.to_csv(detail_path, encoding='utf-8-sig', index=True)
         result['csv_files'].append(detail_path)
@@ -3970,25 +3972,25 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 필터 분석 결과
         if filter_results:
             # 강화 분석 사용 시: filter.csv로 통합하여 중복 생성 방지
-            filter_path = f"{GRAPH_PATH}/{save_file_name}_filter.csv"
+            filter_path = str(output_dir / f"{save_file_name}_filter.csv")
             pd.DataFrame(filter_results).to_csv(filter_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(filter_path)
 
         # (진단용) 룩어헤드 포함 필터 분석 결과
         if filter_results_lookahead:
-            lookahead_path = f"{GRAPH_PATH}/{save_file_name}_filter_lookahead.csv"
+            lookahead_path = str(output_dir / f"{save_file_name}_filter_lookahead.csv")
             pd.DataFrame(filter_results_lookahead).to_csv(lookahead_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(lookahead_path)
 
         # 최적 임계값
         if optimal_thresholds:
-            threshold_path = f"{GRAPH_PATH}/{save_file_name}_optimal_thresholds.csv"
+            threshold_path = str(output_dir / f"{save_file_name}_optimal_thresholds.csv")
             pd.DataFrame(optimal_thresholds).to_csv(threshold_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(threshold_path)
 
         # 필터 조합
         if filter_combinations:
-            combo_path = f"{GRAPH_PATH}/{save_file_name}_filter_combinations.csv"
+            combo_path = str(output_dir / f"{save_file_name}_filter_combinations.csv")
             df_combo = pd.DataFrame(filter_combinations)
             if '조합개선' in df_combo.columns:
                 sort_cols = ['조합개선']
@@ -4015,7 +4017,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
 
         # 필터 안정성
         if filter_stability:
-            stability_path = f"{GRAPH_PATH}/{save_file_name}_filter_stability.csv"
+            stability_path = str(output_dir / f"{save_file_name}_filter_stability.csv")
             pd.DataFrame(filter_stability).to_csv(stability_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(stability_path)
 
@@ -4050,7 +4052,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 )
 
                 mode = str(segment_analysis_mode).lower()
-                output_dir = segment_output_dir or 'backtester/segment_outputs'
+                segment_output_base = segment_output_dir or str(output_dir)
                 filter_config = FilterEvaluatorConfig(allow_ml_filters=allow_ml_filters)
                 segment_outputs = {}
                 segment_timing = {}
@@ -4062,7 +4064,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         detail_path,
                         filter_config=filter_config,
                         runner_config=Phase2RunnerConfig(
-                            output_dir=output_dir,
+                            output_dir=segment_output_base,
                             prefix=save_file_name,
                             enable_optuna=segment_optuna
                         )
@@ -4075,7 +4077,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         detail_path,
                         filter_config=filter_config,
                         runner_config=Phase3RunnerConfig(
-                            output_dir=output_dir,
+                            output_dir=segment_output_base,
                             prefix=save_file_name
                         )
                     )
@@ -4087,7 +4089,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         detail_path,
                         filter_config=filter_config,
                         runner_config=SegmentTemplateComparisonConfig(
-                            output_dir=output_dir,
+                            output_dir=segment_output_base,
                             prefix=save_file_name,
                             max_templates=4,
                             top_n_dynamic=1,
@@ -4104,7 +4106,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     from backtester.segment_analysis.segment_summary_report import write_segment_summary_report
 
                     summary_path = write_segment_summary_report(
-                        output_dir,
+                        segment_output_base,
                         save_file_name,
                         segment_outputs,
                     )

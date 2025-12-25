@@ -18,6 +18,7 @@ from .filter_evaluator import FilterEvaluator, FilterEvaluatorConfig
 from .validation import StabilityValidationConfig, validate_filter_stability
 from .segment_outputs import (
     build_segment_summary,
+    resolve_segment_output_dir,
     save_segment_summary,
     save_segment_filters,
     save_segment_validation,
@@ -28,7 +29,7 @@ from .segment_visualizer import plot_segment_heatmap, plot_filter_efficiency
 
 @dataclass
 class Phase3RunnerConfig:
-    output_dir: str = 'backtester/segment_outputs'
+    output_dir: Optional[str] = None
     prefix: Optional[str] = None
 
 
@@ -42,22 +43,23 @@ def run_phase3(
     runner_config = runner_config or Phase3RunnerConfig()
     detail_path = Path(detail_path).expanduser().resolve()
     df_detail = pd.read_csv(detail_path, encoding='utf-8-sig')
+    output_dir = resolve_segment_output_dir(detail_path, runner_config.output_dir)
 
     builder = SegmentBuilder(seg_config)
     segments = builder.build_segments(df_detail)
 
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
-    output_dir = Path(runner_config.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir_path = Path(output_dir)
+    output_dir_path.mkdir(parents=True, exist_ok=True)
 
     summary_df = build_segment_summary(segments, builder.out_of_range)
-    summary_path = save_segment_summary(summary_df, runner_config.output_dir, output_prefix)
+    summary_path = save_segment_summary(summary_df, output_dir, output_prefix)
     ranges_df = builder.get_range_summary_df()
-    ranges_path = save_segment_ranges(ranges_df, runner_config.output_dir, output_prefix)
+    ranges_path = save_segment_ranges(ranges_df, output_dir, output_prefix)
 
     evaluator = FilterEvaluator(filter_config)
     filters_df = evaluator.evaluate_all_segments(segments)
-    filters_path = save_segment_filters(filters_df, runner_config.output_dir, output_prefix)
+    filters_path = save_segment_filters(filters_df, output_dir, output_prefix)
 
     candidates_by_segment = {seg_id: [] for seg_id in segments.keys()}
     if filters_df is not None and not filters_df.empty:
@@ -68,13 +70,13 @@ def run_phase3(
 
     validation_config = validation_config or StabilityValidationConfig()
     validation_df = validate_filter_stability(segments, candidates_by_segment, validation_config)
-    validation_path = save_segment_validation(validation_df, runner_config.output_dir, output_prefix)
+    validation_path = save_segment_validation(validation_df, output_dir, output_prefix)
 
     heatmap_path = plot_segment_heatmap(
-        summary_df, str(output_dir / f"{output_prefix}_segment_heatmap.png")
+        summary_df, str(output_dir_path / f"{output_prefix}_segment_heatmap.png")
     )
     efficiency_path = plot_filter_efficiency(
-        filters_df, str(output_dir / f"{output_prefix}_filter_efficiency.png")
+        filters_df, str(output_dir_path / f"{output_prefix}_filter_efficiency.png")
     )
 
     return {

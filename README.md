@@ -857,13 +857,20 @@ python utility/db_update_back.py
 
 ```
 backtester/
-├── back_static.py              # 기존 분석 + 강화 분석 통합
-└── back_analysis_enhanced.py   # 강화된 분석 모듈 (NEW)
+├── back_static.py              # 기존 API 유지 + 분석 오케스트레이션
+├── analysis/                   # 분석 모듈 분리(지표/메트릭/플로팅/CSV)
+│   ├── plotting.py             # PltShow/PltAnalysisCharts/PltBuySellComparison
+│   ├── metrics.py              # CalculateDerivedMetrics/AnalyzeFilterEffects
+│   ├── exports.py              # ExportBacktestCSV
+│   ├── results.py              # GetResultDataframe/AddMdd/GetBackResult
+│   ├── indicators.py           # AddAvgData/GetIndicator
+│   └── optuna_server.py        # RunOptunaServer
+└── back_analysis_enhanced.py   # 강화 분석 모듈
 ```
 
 ### 새로운 출력 파일
 
-백테스팅 완료 시 다음 파일들이 `backtester/graph/` 폴더(`GRAPH_PATH`)에 자동 생성됩니다:
+백테스팅 완료 시 결과가 `backtester/backtesting_output/<save_file_name>/` 폴더(`BACKTEST_OUTPUT_PATH`)에 자동 생성됩니다:
 
 | 파일명 패턴 | 내용 |
 |-------------|------|
@@ -877,6 +884,8 @@ backtester/
 | `{전략명}_filtered.png` | (NEW) 자동 생성 필터 적용 미리보기(수익곡선 요약) |
 | `{전략명}_report.txt` | 실행 산출물 리포트(파일/시간/조건/요약) |
 | `{전략명}_condition_study.md` | (NEW) 조건식/필터 스터디 노트(자동 생성) |
+
+- legacy output: `backtester/graph/`, `backtester/segment_outputs/` (previous runs)
 
 ### ML 모델 저장/재현 (v2.3+)
 

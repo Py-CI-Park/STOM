@@ -18,12 +18,13 @@ from .segmentation import SegmentConfig
 from .filter_evaluator import FilterEvaluatorConfig
 from .combination_optimizer import CombinationOptimizerConfig
 from .phase2_runner import run_phase2, Phase2RunnerConfig
-from .segment_outputs import save_segment_mode_comparison
+from .segment_outputs import resolve_segment_output_dir, save_segment_mode_comparison
+from backtester.output_paths import get_legacy_graph_dir
 
 
 @dataclass
 class SegmentModeComparisonConfig:
-    output_dir: str = 'backtester/segment_outputs'
+    output_dir: Optional[str] = None
     prefix: Optional[str] = None
     modes: Iterable[str] = ('fixed', 'semi', 'dynamic', 'time_only')
     enable_optuna: bool = False
@@ -38,6 +39,7 @@ def run_segment_mode_comparison(
 ) -> dict:
     runner_config = runner_config or SegmentModeComparisonConfig()
     detail_path = Path(detail_path).expanduser().resolve()
+    output_dir = resolve_segment_output_dir(detail_path, runner_config.output_dir)
 
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
     global_stats = _load_global_filter_stats(detail_path, output_prefix)
@@ -55,7 +57,7 @@ def run_segment_mode_comparison(
             filter_config=filter_config,
             combo_config=combo_config,
             runner_config=Phase2RunnerConfig(
-                output_dir=runner_config.output_dir,
+                output_dir=output_dir,
                 prefix=f"{output_prefix}_{mode_name}",
                 enable_optuna=runner_config.enable_optuna,
             ),
@@ -67,7 +69,7 @@ def run_segment_mode_comparison(
 
     df_comp = pd.DataFrame(rows)
     comparison_path = save_segment_mode_comparison(
-        df_comp, runner_config.output_dir, output_prefix
+        df_comp, output_dir, output_prefix
     )
 
     return {
@@ -144,7 +146,7 @@ def _find_global_report_path(detail_path: Path, prefix: str) -> Optional[Path]:
     candidate = detail_path.with_name(f"{prefix}_report.txt")
     if candidate.exists():
         return candidate
-    fallback = Path('backtester/graph') / f"{prefix}_report.txt"
+    fallback = get_legacy_graph_dir() / f"{prefix}_report.txt"
     if fallback.exists():
         return fallback
     return None

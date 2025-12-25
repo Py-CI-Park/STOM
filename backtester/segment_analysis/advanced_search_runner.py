@@ -22,6 +22,7 @@ from .combination_optimizer import (
 )
 from .multi_objective import MultiObjectiveConfig, evaluate_candidates, build_pareto_front
 from .segment_outputs import (
+    resolve_segment_output_dir,
     save_pareto_front,
     save_advanced_optuna_result,
     save_nsga2_front,
@@ -32,7 +33,7 @@ from .segment_visualizer import plot_pareto_front
 
 @dataclass
 class AdvancedSearchRunnerConfig:
-    output_dir: str = 'backtester/segment_outputs'
+    output_dir: Optional[str] = None
     prefix: Optional[str] = None
     enable_optuna: bool = True
     enable_nsga2: bool = True
@@ -51,6 +52,7 @@ def run_advanced_search(
     runner_config = runner_config or AdvancedSearchRunnerConfig()
     detail_path = Path(detail_path).expanduser().resolve()
     df_detail = pd.read_csv(detail_path, encoding='utf-8-sig')
+    output_dir = resolve_segment_output_dir(detail_path, runner_config.output_dir)
 
     builder = SegmentBuilder(seg_config)
     segments = builder.build_segments(df_detail)
@@ -82,25 +84,25 @@ def run_advanced_search(
     pareto_df = build_pareto_front(candidates_df)
 
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
-    save_segment_ranges(ranges_df, runner_config.output_dir, output_prefix)
+    save_segment_ranges(ranges_df, output_dir, output_prefix)
 
-    pareto_path = save_pareto_front(pareto_df, runner_config.output_dir, output_prefix)
+    pareto_path = save_pareto_front(pareto_df, output_dir, output_prefix)
     pareto_plot_path = plot_pareto_front(
-        pareto_df, str(Path(runner_config.output_dir) / f"{output_prefix}_pareto_front.png")
+        pareto_df, str(Path(output_dir) / f"{output_prefix}_pareto_front.png")
     )
 
     optuna_path = None
     if runner_config.enable_optuna:
         optuna_path = _run_optuna_weight_search(
             candidates_df,
-            runner_config.output_dir,
+            output_dir,
             output_prefix,
             runner_config.optuna_trials,
         )
 
     nsga2_path = None
     if runner_config.enable_nsga2:
-        nsga2_path = _run_nsga2_search(candidates_df, runner_config.output_dir, output_prefix)
+        nsga2_path = _run_nsga2_search(candidates_df, output_dir, output_prefix)
 
     return {
         'pareto_path': pareto_path,

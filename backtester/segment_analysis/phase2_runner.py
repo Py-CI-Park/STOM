@@ -24,6 +24,7 @@ from .threshold_optimizer import ThresholdOptimizerConfig, optimize_thresholds
 from .code_generator import build_segment_filter_code, save_segment_code
 from .segment_outputs import (
     build_segment_summary,
+    resolve_segment_output_dir,
     save_segment_summary,
     save_segment_filters,
     build_local_combos_df,
@@ -38,7 +39,7 @@ from .risk_metrics import summarize_risk
 
 @dataclass
 class Phase2RunnerConfig:
-    output_dir: str = 'backtester/segment_outputs'
+    output_dir: Optional[str] = None
     prefix: Optional[str] = None
     enable_optuna: bool = False
 
@@ -54,6 +55,7 @@ def run_phase2(
     runner_config = runner_config or Phase2RunnerConfig()
     detail_path = Path(detail_path).expanduser().resolve()
     df_detail = pd.read_csv(detail_path, encoding='utf-8-sig')
+    output_dir = resolve_segment_output_dir(detail_path, runner_config.output_dir)
 
     builder = SegmentBuilder(seg_config)
     segments = builder.build_segments(df_detail)
@@ -62,13 +64,13 @@ def run_phase2(
     output_prefix = runner_config.prefix or _build_prefix(detail_path.name)
 
     summary_df = build_segment_summary(segments, builder.out_of_range)
-    summary_path = save_segment_summary(summary_df, runner_config.output_dir, output_prefix)
+    summary_path = save_segment_summary(summary_df, output_dir, output_prefix)
     ranges_df = builder.get_range_summary_df()
-    ranges_path = save_segment_ranges(ranges_df, runner_config.output_dir, output_prefix)
+    ranges_path = save_segment_ranges(ranges_df, output_dir, output_prefix)
 
     evaluator = FilterEvaluator(filter_config)
     filters_df = evaluator.evaluate_all_segments(segments)
-    filters_path = save_segment_filters(filters_df, runner_config.output_dir, output_prefix)
+    filters_path = save_segment_filters(filters_df, output_dir, output_prefix)
 
     candidates_by_segment = {seg_id: [] for seg_id in segments.keys()}
     if filters_df is not None and not filters_df.empty:
@@ -84,20 +86,20 @@ def run_phase2(
         segment_combos[seg_id] = generate_local_combinations(seg_df, candidates, combo_config)
 
     local_combo_df = build_local_combos_df(segment_combos)
-    local_combo_path = save_segment_local_combos(local_combo_df, runner_config.output_dir, output_prefix)
+    local_combo_path = save_segment_local_combos(local_combo_df, output_dir, output_prefix)
 
     global_best = optimize_global_combination(segment_combos, total_trades, combo_config)
     filtered_df = _apply_global_combination(segments, global_best)
     risk_metrics = summarize_risk(filtered_df)
     global_combo_df = build_global_combo_df(global_best, total_trades, risk_metrics=risk_metrics)
-    global_combo_path = save_segment_combos(global_combo_df, runner_config.output_dir, output_prefix)
+    global_combo_path = save_segment_combos(global_combo_df, output_dir, output_prefix)
 
     segment_code_path = None
     segment_code_summary = None
     if global_best:
         code_lines, code_summary = build_segment_filter_code(global_best, seg_config)
         segment_code_summary = code_summary
-        segment_code_path = save_segment_code(code_lines, runner_config.output_dir, output_prefix)
+        segment_code_path = save_segment_code(code_lines, output_dir, output_prefix)
 
     thresholds_path = None
     if runner_config.enable_optuna:
@@ -121,7 +123,7 @@ def run_phase2(
         if threshold_rows:
             thresholds_df = pd.DataFrame(threshold_rows)
             thresholds_path = save_segment_thresholds(
-                thresholds_df, runner_config.output_dir, output_prefix
+                thresholds_df, output_dir, output_prefix
             )
 
     return {
