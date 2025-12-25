@@ -857,15 +857,15 @@ python utility/db_update_back.py
 
 ```
 backtester/
-??? back_static.py              # ?? API ?? + ?? ???????
-??? analysis/                   # ?? ?? ??(??/???/???/CSV)
-?   ??? plotting.py             # PltShow/PltAnalysisCharts/PltBuySellComparison
-?   ??? metrics.py              # CalculateDerivedMetrics/AnalyzeFilterEffects
-?   ??? exports.py              # ExportBacktestCSV
-?   ??? results.py              # GetResultDataframe/AddMdd/GetBackResult
-?   ??? indicators.py           # AddAvgData/GetIndicator
-?   ??? optuna_server.py        # RunOptunaServer
-??? back_analysis_enhanced.py   # ?? ?? ??
+├── back_static.py              # 기존 API 유지 + 분석 오케스트레이션
+├── analysis/                   # 분석 모듈 분리(지표/메트릭/플로팅/CSV)
+│   ├── plotting.py             # PltShow/PltAnalysisCharts/PltBuySellComparison
+│   ├── metrics.py              # CalculateDerivedMetrics/AnalyzeFilterEffects
+│   ├── exports.py              # ExportBacktestCSV
+│   ├── results.py              # GetResultDataframe/AddMdd/GetBackResult
+│   ├── indicators.py           # AddAvgData/GetIndicator
+│   └── optuna_server.py        # RunOptunaServer
+└── back_analysis_enhanced.py   # 강화 분석 모듈
 ```
 
 ### 새로운 출력 파일

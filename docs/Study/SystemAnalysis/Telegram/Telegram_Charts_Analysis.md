@@ -6,11 +6,11 @@
 **관련 커밋**: `48932dcd371e38b95ec1cac5be3c6ec00268db54` (STOM_V1 머지), `1fef8950f4fcb035699a7c6379fe074ab70d7206` (v2.3 ML 모델 실행별 저장/재현)
 **대상 브랜치**: `main` (기능 개발: `STOM_V1` / `feature/backtesting_result_update`)
 **관련 파일**:
-- `backtester/back_static.py` - ?? ?? ???????
+- `backtester/back_static.py` - 메인 분석 오케스트레이션
 - `backtester/analysis/plotting.py` - PltShow/PltAnalysisCharts/PltBuySellComparison
 - `backtester/analysis/exports.py` - ExportBacktestCSV
-- `backtester/back_analysis_enhanced.py` - ?? ?? ??
-- `utility/setting.py` - `BACKTEST_OUTPUT_PATH` (?? ?? ??, legacy: `GRAPH_PATH`)
+- `backtester/back_analysis_enhanced.py` - 강화 분석 모듈
+- `utility/setting.py` - `BACKTEST_OUTPUT_PATH` (통합 출력 경로, legacy: `GRAPH_PATH`)
 
 ---
 
@@ -196,7 +196,7 @@ backtester/models/
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-??: `PltShow()` ? ?? ??? `backtester/analysis/plotting.py`? ??????, `backtester/back_static.py`? ?? ??????? ??? ?????.
+참고: `PltShow()` 등 차트 함수는 `backtester/analysis/plotting.py`로 분리되었으며, `backtester/back_static.py`는 실행 오케스트레이션 역할을 유지합니다.
 
 ---
 
@@ -823,7 +823,7 @@ def GenerateFilterCode(filter_results, df_tsg=None, top_n=5):
 
 ### 10.2 기본 CSV (RunFullAnalysis / ExportBacktestCSV)
 
-?? ??? `backtester/back_static.py`? `RunFullAnalysis()` ? `backtester/analysis/exports.py`? `ExportBacktestCSV()` ???? ?????.
+기본 분석은 `backtester/back_static.py`의 `RunFullAnalysis()` → `backtester/analysis/exports.py`의 `ExportBacktestCSV()` 경로에서 생성됩니다.
 
 | 파일명 | 생성 함수 | 내용 | 비고 |
 |--------|----------|------|------|
@@ -1128,7 +1128,7 @@ detail.csv는 저장 시 `backtester/detail_schema.py`의 `reorder_detail_column
 
 | 파일 | 함수/클래스 | 역할 |
 |------|------------|------|
-| `backtester/analysis/plotting.py` | `PltShow()` | ?? ?? ?? + ?? ?? ??
+| `backtester/analysis/plotting.py` | `PltShow()` | 메인 차트 생성 + 강화 분석 호출
 | `back_analysis_enhanced.py` | `CalculateEnhancedDerivedMetrics()` | 27개 파생 지표 계산 |
 | `back_analysis_enhanced.py` | `CalculateStatisticalSignificance()` | t-test, Cohen's d |
 | `back_analysis_enhanced.py` | `AnalyzeFilterEffectsEnhanced()` | 통계 포함 필터 분석 |

@@ -26,7 +26,7 @@
 | `utility/setting.py:402-403` | `columns_bt`, `columns_btf` 정의 | 컬럼 정의 |
 | `backtester/backengine_kiwoom_tick.py:869` | 백테결과 데이터 생성 | 데이터 수집 |
 | `backtester/back_subtotal.py:83-100` | 데이터 집계 | 데이터 처리 |
-| `backtester/analysis/plotting.py` | ?? ?? (`PltShow`) | ??? |
+| `backtester/analysis/plotting.py` | 차트 생성 (`PltShow`) | 시각화 |
 | `ui/ui_update_tablewidget.py:100-105` | 테이블 업데이트 | UI 표시 |
 | `utility/telegram_msg.py:97-105` | 텔레그램 이미지 전송 | 알림 |
 
@@ -255,14 +255,14 @@ def CalculationEyun(self, vturn, vkey):
 
 #### 4.1.4 `backtester/back_static.py`
 ```python
-# ??: backtester/analysis/results.py (GetResultDataframe ??)
+# 위치: backtester/analysis/results.py (GetResultDataframe 함수)
 # 변경 내용: 컬럼 매핑 확장
 
 # 기존 columns_bt/columns_btf에 맞춰 DataFrame 컬럼 매핑 확장
 ```
 
 ```python
-# ??: backtester/analysis/plotting.py (PltShow ??)
+# 위치: backtester/analysis/plotting.py (PltShow 함수)
 # 추가 내용: 분석 차트 생성 함수
 
 def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
@@ -346,7 +346,7 @@ number_columns = ['수익률', '수익금', '수익금합계',
 |------|----------|------|---------------|
 | 3.1 | 분석 차트 생성 함수 구현 | `backtester/back_static.py` | 150줄 |
 | 3.2 | 상관관계 차트 생성 함수 | `backtester/back_static.py` | 80줄 |
-| `backtester/analysis/plotting.py` | ?? ?? (`PltShow`) | ??? |
+| `backtester/analysis/plotting.py` | 차트 생성 (`PltShow`) | 시각화 |
 | 3.4 | 텔레그램 전송에 분석 차트 추가 | `backtester/back_static.py` | 5줄 |
 
 ### Phase 4: 암호화폐 백테스터 확장
@@ -373,7 +373,7 @@ number_columns = ['수익률', '수익금', '수익금합계',
 - 이전 결과 조회 시 누락된 컬럼은 `NaN` 또는 기본값 처리
 
 ```python
-# backtester/analysis/results.py GetResultDataframe ???? ??
+# backtester/analysis/results.py GetResultDataframe 함수에서 처리
 def GetResultDataframe(df, gubun):
     # 컬럼 존재 여부 확인 후 없으면 기본값으로 채움
     for col in columns_bt_extended:
@@ -489,7 +489,7 @@ git revert <commit-hash>
 data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey)
 ```
 
-**PltShow ???? ??** (`backtester/analysis/plotting.py`):
+**PltShow 텔레그램 전송** (`backtester/analysis/plotting.py`):
 ```python
 teleQ.put(f'{backname} {save_file_name.split("_")[1]} 완료.')
 teleQ.put(f"{BACKTEST_OUTPUT_PATH}/{save_file_name}/{save_file_name}_.png")

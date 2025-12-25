@@ -1106,7 +1106,7 @@ if not is_safe:
 
 ## 텔레그램/차트 기반 강화 분석 (v2.5)
 
-???? ?? ? `backtester/back_static.py`? `backtester/analysis/plotting.py`? ?? ?? ??? ????, `backtester/back_analysis_enhanced.py`? `RunEnhancedAnalysis()`? **?? ??(??/??/ML)** ? ?????.
+백테스팅 완료 후 `backtester/back_static.py`가 `backtester/analysis/plotting.py`의 차트 생성 로직을 호출하고, `backtester/back_analysis_enhanced.py`의 `RunEnhancedAnalysis()`로 **강화 분석(통계/필터/ML)** 을 수행합니다.
 
 ### 생성되는 산출물(요약)
 
