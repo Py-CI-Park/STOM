@@ -699,6 +699,12 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
 
     # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
     # - 강화 분석을 사용할 경우: detail/filter CSV는 강화 분석 결과로 통합(중복 생성 방지)
+    # NOTE: avoid circular import by resolving RunFullAnalysis lazily.
+    try:
+        from backtester.back_static import RunFullAnalysis
+    except Exception as e:
+        raise ImportError(f"RunFullAnalysis import failed: {e}")
+
     full_result = RunFullAnalysis(
         df_tsg,
         save_file_name,
