@@ -712,14 +712,33 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         export_detail=not ENHANCED_ANALYSIS_AVAILABLE,
         export_summary=True,
         export_filter=not ENHANCED_ANALYSIS_AVAILABLE,
-        include_filter_recommendations=not ENHANCED_ANALYSIS_AVAILABLE
+        include_filter_recommendations=True
     )
 
     # [2025-12-10] 강화된 분석 실행 (14개 ML/통계 분석 차트)
     enhanced_result = None
     enhanced_error = None
-    if ENHANCED_ANALYSIS_AVAILABLE:
+    enhanced_available = ENHANCED_ANALYSIS_AVAILABLE
+    if enhanced_available:
         try:
+            from backtester.back_analysis_enhanced import RunEnhancedAnalysis
+        except Exception as e:
+            enhanced_error = e
+            enhanced_available = False
+
+    if enhanced_available:
+        try:
+            try:
+                from backtester.back_static import (
+                    SEGMENT_ANALYSIS_MODE,
+                    SEGMENT_ANALYSIS_OPTUNA,
+                    SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
+                )
+            except Exception:
+                SEGMENT_ANALYSIS_MODE = 'phase2+3'
+                SEGMENT_ANALYSIS_OPTUNA = False
+                SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
+
             enhanced_result = RunEnhancedAnalysis(
                 df_tsg,
                 save_file_name,
@@ -737,13 +756,27 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 segment_template_compare=SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
             )
 
+            try:
+                from backtester.back_static import (
+                    _build_filter_mask_from_generated_code,
+                    _build_segment_mask_from_global_best,
+                )
+            except Exception:
+                _build_filter_mask_from_generated_code = None
+                _build_segment_mask_from_global_best = None
+
             # [2025-12-19] 자동 생성 필터 조합 적용 미리보기 차트(2개) 생성/전송
             try:
                 if teleQ is not None and enhanced_result:
                     gen = enhanced_result.get('generated_code')
                     df_enh = enhanced_result.get('enhanced_df')
                     if isinstance(gen, dict) and isinstance(df_enh, pd.DataFrame) and not df_enh.empty:
-                        mask_info = _build_filter_mask_from_generated_code(df_enh, gen)
+                        if _build_filter_mask_from_generated_code is None:
+                            if teleQ is not None:
+                                teleQ.put("Filter preview skipped: helper load failed")
+                            mask_info = {'mask': None, 'error': 'helper_missing'}
+                        else:
+                            mask_info = _build_filter_mask_from_generated_code(df_enh, gen)
                         if mask_info and mask_info.get('mask') is not None:
                             df_filt = df_enh[mask_info['mask']].copy()
 
@@ -794,7 +827,12 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                     global_best = phase2.get('global_best')
                     df_enh = enhanced_result.get('enhanced_df')
                     if isinstance(global_best, dict) and isinstance(df_enh, pd.DataFrame) and not df_enh.empty:
-                        seg_mask_info = _build_segment_mask_from_global_best(df_enh, global_best)
+                        if _build_segment_mask_from_global_best is None:
+                            if teleQ is not None:
+                                teleQ.put("Segment preview skipped: helper load failed")
+                            seg_mask_info = {'mask': None, 'error': 'helper_missing'}
+                        else:
+                            seg_mask_info = _build_segment_mask_from_global_best(df_enh, global_best)
                         if seg_mask_info and seg_mask_info.get('mask') is not None:
                             df_seg_filt = df_enh[seg_mask_info['mask']].copy()
                             try:
@@ -883,6 +921,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             print_exc()
             # 강화 분석 실패 시: 기본 detail/filter CSV를 생성해 결과 보존
             try:
+                from backtester.analysis.exports import ExportBacktestCSV
+                from backtester.analysis.metrics import CalculateDerivedMetrics, AnalyzeFilterEffects
                 ExportBacktestCSV(
                     df_tsg,
                     save_file_name,
@@ -892,19 +932,26 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                     write_filter=True
                 )
                 if teleQ is not None:
-                    df_fallback = CalculateDerivedMetrics(df_tsg)
-                    filter_results = AnalyzeFilterEffects(df_fallback)
-                    top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
-                    recs = [
-                        f"[{f['분류']}] {f['필터명']}: 수익개선 {f['수익개선금액']:,}원 예상"
-                        for f in top_filters[:5]
-                    ]
-                    if recs:
-                        teleQ.put("📊 필터 추천:\n" + "\n".join(recs))
+                    already_sent = bool(full_result and full_result.get('recommendations'))
+                    if not already_sent:
+                        df_fallback = CalculateDerivedMetrics(df_tsg)
+                        filter_results = AnalyzeFilterEffects(df_fallback)
+                        top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
+                        recs = [
+                            f"[{f['분류']}] {f['필터명']}: 수익개선 {f['수익개선금액']:,}원 예상"
+                            for f in top_filters[:5]
+                        ]
+                        if recs:
+                            teleQ.put("📊 필터 추천:\n" + "\n".join(recs))
             except:
                 print_exc()
 
     # [2025-12-14] 산출물 메타 리포트(txt) 저장
+    try:
+        from backtester.back_static import WriteGraphOutputReport
+    except Exception as e:
+        raise ImportError(f"WriteGraphOutputReport import failed: {e}")
+
     WriteGraphOutputReport(
         save_file_name=save_file_name,
         df_tsg=df_tsg,
@@ -1989,5 +2036,3 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
             plt.close('all')
         except:
             pass
-
-
