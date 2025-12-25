@@ -47,7 +47,7 @@ def backengine_show(ui, gubun):
             ui.be_comboBoxxxxx_02.addItem(name)
     if gubun == '주식':
         ui.be_lineEdittttt_01.setText('90000' if ui.dict_set['주식타임프레임'] else '900')
-        ui.be_lineEdittttt_02.setText('93000' if ui.dict_set['주식타임프레임'] else '1519')
+        ui.be_lineEdittttt_02.setText('93000' if ui.dict_set['주식타임프레임'] else '1520')
     else:
         ui.be_lineEdittttt_01.setText('0')
         ui.be_lineEdittttt_02.setText('235959' if ui.dict_set['코인타임프레임'] else '2359')

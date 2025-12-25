@@ -180,7 +180,7 @@ class SetDialogBack:
             if self.ui.dict_set['주식타임프레임']:
                 starttime, endtime = '90000', '93000'
             else:
-                starttime, endtime = '900', '1519'
+                starttime, endtime = '900', '1520'
         else:
             if self.ui.dict_set['코인타임프레임']:
                 starttime, endtime = '0', '235959'

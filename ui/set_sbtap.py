@@ -120,7 +120,7 @@ class SetStockBack:
             self.ui.svjb_dateEditt_01 = self.wc.setDateEdit(self.ui.ss_tab, addday=-int(self.ui.dict_set['백테날짜']))
         self.ui.svjb_dateEditt_02 = self.wc.setDateEdit(self.ui.ss_tab)
         self.ui.svjb_lineEditt_02 = self.wc.setLineedit(self.ui.ss_tab, ltext='90000' if self.ui.dict_set['주식타임프레임'] else '900', style=style_bc_dk)
-        self.ui.svjb_lineEditt_03 = self.wc.setLineedit(self.ui.ss_tab, ltext='93000' if self.ui.dict_set['주식타임프레임'] else '1519', style=style_bc_dk)
+        self.ui.svjb_lineEditt_03 = self.wc.setLineedit(self.ui.ss_tab, ltext='93000' if self.ui.dict_set['주식타임프레임'] else '1520', style=style_bc_dk)
         self.ui.svjb_lineEditt_04 = self.wc.setLineedit(self.ui.ss_tab, ltext='20',    style=style_bc_dk)
         self.ui.svjb_lineEditt_05 = self.wc.setLineedit(self.ui.ss_tab, ltext='30',    style=style_bc_dk)
 
