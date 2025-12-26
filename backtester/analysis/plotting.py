@@ -164,6 +164,52 @@ def _annotate_profit_extremes(ax, x_values, profits, unit):
         )
 
 
+def _annotate_holdings_extremes(ax, x_values, holdings, unit):
+    if holdings is None:
+        return
+    try:
+        arr = np.asarray(holdings, dtype=np.float64)
+    except Exception:
+        return
+    if arr.size == 0:
+        return
+    x_vals = np.asarray(list(x_values)) if isinstance(x_values, range) else np.asarray(x_values)
+    if x_vals.size != arr.size:
+        x_vals = np.arange(arr.size)
+
+    max_val = float(np.nanmax(arr))
+    min_val = float(np.nanmin(arr))
+    if max_val > 0:
+        idx = int(np.nanargmax(arr))
+        x = x_vals[idx]
+        ax.scatter([x], [max_val], color='green', zorder=5)
+        ax.annotate(
+            f'최대 보유 {int(max_val):,}{unit}',
+            xy=(x, max_val),
+            xytext=(0, 12),
+            textcoords='offset points',
+            ha='center',
+            fontsize=8,
+            color='green',
+            arrowprops=dict(arrowstyle='->', color='green', lw=0.8),
+        )
+
+    if min_val >= 0 and min_val != max_val:
+        idx = int(np.nanargmin(arr))
+        x = x_vals[idx]
+        ax.scatter([x], [min_val], color='blue', zorder=5)
+        ax.annotate(
+            f'최소 보유 {int(min_val):,}{unit}',
+            xy=(x, min_val),
+            xytext=(0, -12),
+            textcoords='offset points',
+            ha='center',
+            fontsize=8,
+            color='blue',
+            arrowprops=dict(arrowstyle='->', color='blue', lw=0.8),
+        )
+
+
 def _collect_trade_events(df):
     if df is None or df.empty or '매수금액' not in df.columns:
         return []
@@ -298,42 +344,6 @@ def _estimate_max_daily_trades(df):
     return 0
 
 
-def _format_timestamp_label(value):
-    try:
-        text = str(int(value))
-    except Exception:
-        return str(value)
-    if len(text) >= 14:
-        return f"{text[:8]} {text[8:10]}:{text[10:12]}:{text[12:14]}"
-    if len(text) == 12:
-        return f"{text[:8]} {text[8:10]}:{text[10:12]}"
-    if len(text) == 10:
-        return f"{text[:8]} {text[8:10]}"
-    if len(text) == 8:
-        return text
-    if len(text) == 6:
-        return f"{text[:2]}:{text[2:4]}:{text[4:6]}"
-    if len(text) == 4:
-        return f"{text[:2]}:{text[2:4]}"
-    return text
-
-
-def _apply_time_ticks(ax, timestamps, max_ticks: int = 10):
-    if timestamps is None:
-        return
-    try:
-        times = np.asarray(timestamps, dtype=np.int64)
-    except Exception:
-        return
-    if times.size == 0:
-        return
-    tick_step = max(1, int(times.size / max_ticks))
-    ticks = list(times[::tick_step])
-    labels = [_format_timestamp_label(t) for t in ticks]
-    ax.set_xticks(ticks)
-    ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=8)
-
-
 def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed):
     lines = []
     if back_text:
@@ -424,36 +434,6 @@ def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed)
     )
     lines.append(label)
     return lines
-
-def _parse_number(text):
-    if not text:
-        return None
-    try:
-        return int(str(text).replace(',', '').strip())
-    except Exception:
-        return None
-
-
-def _extract_int(pattern, text):
-    if not text:
-        return None
-    match = re.search(pattern, text)
-    if not match:
-        return None
-    return _parse_number(match.group(1))
-
-
-def _extract_unit(label_text):
-    if not label_text:
-        return None
-    match = re.search(r'종목당 배팅금액\s*[0-9,]+([A-Za-z가-힣]+)', label_text)
-    if match:
-        return match.group(1).strip()
-    match = re.search(r'필요자금\s*[0-9,]+([A-Za-z가-힣]+)', label_text)
-    if match:
-        return match.group(1).strip()
-    return None
-
 
 def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
                                     save_file_name: str, backname: str, seed: int,
@@ -548,8 +528,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         avg_return_all = float(pd.to_numeric(df_all['수익률'], errors='coerce').fillna(0).mean())
         avg_return_filt = float(pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0).mean())
 
-    holdings_all = _build_holdings_timeseries(df_all)
-    holdings_filt = _build_holdings_timeseries(df_filtered)
+    unit_label = _extract_unit(label_text or '') or '원'
 
     # ===== 1) filtered.png (수익곡선 요약) =====
     path_main = str(output_dir / f"{save_file_name}{tag}_filtered.png")
@@ -562,8 +541,8 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     filt_cum = None
 
     ax0 = fig.add_subplot(gs[0])
-    daily_all = _build_daily_holdings_summary(df_all, amount_mode='sum')
-    daily_filt = _build_daily_holdings_summary(df_filtered, amount_mode='sum')
+    daily_all = _build_daily_holdings_summary(df_all, amount_mode='max')
+    daily_filt = _build_daily_holdings_summary(df_filtered, amount_mode='max')
     has_holdings = (daily_all is not None and not daily_all.empty) or (daily_filt is not None and not daily_filt.empty)
 
     if has_holdings:
@@ -591,13 +570,15 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         if any(filt_vals):
             ax0.plot(x, filt_vals, linewidth=2.2, label=filt_label, color='green')
 
-        ax0.set_title('보유금액(원) - 일자 합산')
+        ax0.set_title('보유금액(원) - 일별 최대')
         ax0.set_ylabel('보유금액(원)')
         tick_step = max(1, int(len(dates) / 10))
         ax0.set_xticks(list(range(0, len(dates), tick_step)))
         ax0.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
         ax0.legend(loc='best')
         ax0.grid()
+        if any(filt_vals):
+            _annotate_holdings_extremes(ax0, x, filt_vals, unit_label)
     else:
         if is_segment:
             ax0.text(0.5, 0.5, '보유금액 데이터 없음', ha='center', va='center', transform=ax0.transAxes)
@@ -658,7 +639,6 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
             filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
 
     ax1 = fig.add_subplot(gs[1])
-    unit_label = _extract_unit(label_text or '') or '원'
     if not use_dates:
         profits = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
         x = range(len(profits))

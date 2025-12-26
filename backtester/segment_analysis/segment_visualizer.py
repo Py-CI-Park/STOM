@@ -49,6 +49,7 @@ def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional
 
     col_count = max(1, len(profits.columns))
     row_count = max(1, len(profits.index))
+    cell_count = col_count * row_count
     fig_width = max(7.5, min(18.0, 0.6 * col_count))
     fig_height = max(4.5, min(10.0, 0.35 * row_count))
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
@@ -71,12 +72,22 @@ def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional
     ax.set_title('Segment Heatmap (Profit color / Trades text)')
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label='Profit')
 
+    text_font = 7
+    if col_count >= 14 or row_count >= 10:
+        text_font = 6
+    if col_count >= 18 or row_count >= 14:
+        text_font = 5
+    compact_text = cell_count >= 120 or col_count >= 12
+
     for i, cap in enumerate(profits.index):
         for j, label in enumerate(profits.columns):
             trade_val = int(trades.loc[cap, label]) if label in trades.columns else 0
             profit_val = float(profits.loc[cap, label]) if label in profits.columns else 0.0
-            text = f"T:{trade_val:,}\nP:{_fmt_profit(profit_val)}"
-            ax.text(j, i, text, ha='center', va='center', fontsize=7)
+            if compact_text:
+                text = f"{trade_val:,}/{_fmt_profit(profit_val)}"
+            else:
+                text = f"T:{trade_val:,}\nP:{_fmt_profit(profit_val)}"
+            ax.text(j, i, text, ha='center', va='center', fontsize=text_font)
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
