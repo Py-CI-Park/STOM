@@ -18,11 +18,13 @@ except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
 
 def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
-                                  save_file_name: str, backname: str, seed: int,
-                                  generated_code: dict = None,
-                                  buystg: str = None, sellstg: str = None,
-                                  file_tag: str = '',
-                                  segment_combo_map: dict = None):
+                                    save_file_name: str, backname: str, seed: int,
+                                    generated_code: dict = None,
+                                    buystg: str = None, sellstg: str = None,
+                                    file_tag: str = '',
+                                    segment_combo_map: dict = None,
+                                    back_text: str = None,
+                                    label_text: str = None):
     """
     자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
     - {전략명}{_tag}_filtered.png
@@ -385,6 +387,10 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.axis('off')
 
     fig.suptitle(f'{backname} 필터 적용 분포/단계 요약 - {save_file_name}', fontsize=14, fontweight='bold')
+    info_lines = [text for text in (back_text, label_text) if text]
+    if info_lines:
+        fig.text(0.01, 0.01, "\n".join(info_lines), fontsize=9, family='monospace',
+                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     plt.savefig(path_sub, dpi=120, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
@@ -801,7 +807,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 seed=seed,
                                 generated_code=gen,
                                 buystg=buystg,
-                                sellstg=sellstg
+                                sellstg=sellstg,
+                                back_text=back_text,
+                                label_text=label_text,
                             )
                             if p_sub:
                                 teleQ.put(p_sub)
@@ -892,7 +900,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 buystg=buystg,
                                 sellstg=sellstg,
                                 file_tag='segment',
-                                segment_combo_map=combo_map
+                                segment_combo_map=combo_map,
+                                back_text=back_text,
+                                label_text=label_text,
                             )
                             if p_sub:
                                 teleQ.put(p_sub)
