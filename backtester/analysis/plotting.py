@@ -17,6 +17,132 @@ try:
 except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
 
+
+def _parse_number(text):
+    if not text:
+        return None
+    try:
+        return int(str(text).replace(',', '').strip())
+    except Exception:
+        return None
+
+
+def _extract_int(pattern, text):
+    if not text:
+        return None
+    match = re.search(pattern, text)
+    if not match:
+        return None
+    return _parse_number(match.group(1))
+
+
+def _extract_unit(label_text):
+    if not label_text:
+        return None
+    match = re.search(r'종목당 배팅금액\s*[0-9,]+([A-Za-z가-힣]+)', label_text)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r'필요자금\s*[0-9,]+([A-Za-z가-힣]+)', label_text)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _infer_day_count(df):
+    if df is None or df.empty:
+        return None
+    if '매수일자' in df.columns:
+        try:
+            return int(pd.to_numeric(df['매수일자'], errors='coerce').dropna().nunique())
+        except Exception:
+            return None
+    return None
+
+
+def _calc_mdd(profits, seed):
+    if profits is None or profits.empty:
+        return 0.0
+    try:
+        cum = profits.cumsum().to_numpy(dtype=np.float64)
+        if len(cum) == 0:
+            return 0.0
+        peak = np.maximum.accumulate(cum)
+        drawdown = peak - cum
+        lower = int(np.argmax(drawdown))
+        if lower <= 0:
+            return 0.0
+        upper = int(np.argmax(cum[:lower + 1]))
+        denom = float(cum[upper]) + float(seed)
+        if denom == 0:
+            return 0.0
+        return round(abs(cum[upper] - cum[lower]) / denom * 100, 2)
+    except Exception:
+        return 0.0
+
+
+def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed):
+    lines = []
+    if back_text:
+        lines.append(back_text)
+
+    if df_filtered is None or df_filtered.empty:
+        if label_text:
+            lines.append(label_text)
+        return lines
+
+    day_count = _extract_int(r'거래일수\s*:\s*([0-9]+)', back_text or '')
+    if day_count is None:
+        day_count = _infer_day_count(df_all) or 0
+
+    betting = _extract_int(r'종목당 배팅금액\s*([0-9,]+)', label_text or '') or 0
+    mhct = _extract_int(r'적정최대보유종목수\s*([0-9]+)', label_text or '') or 0
+    seed_from_label = _extract_int(r'필요자금\s*([0-9,]+)', label_text or '')
+    seed_value = _parse_number(seed) if seed is not None else None
+    if seed_value is None or seed_value <= 0:
+        seed_value = seed_from_label if seed_from_label is not None else betting
+
+    unit = _extract_unit(label_text or '') or '원'
+    year_days = 365 if unit.upper() == 'USDT' else 250
+
+    if '수익금' in df_filtered.columns:
+        profit = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+    else:
+        profit = pd.Series(0, index=df_filtered.index, dtype='float64')
+    if '수익률' in df_filtered.columns:
+        returns = pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0)
+    else:
+        returns = pd.Series(0, index=df_filtered.index, dtype='float64')
+    if '보유시간' in df_filtered.columns:
+        holding = pd.to_numeric(df_filtered['보유시간'], errors='coerce').fillna(0)
+    else:
+        holding = pd.Series(0, index=df_filtered.index, dtype='float64')
+
+    tc = int(len(df_filtered))
+    atc = round(tc / day_count, 1) if day_count else 0
+    pc = int((profit >= 0).sum())
+    mc = int((profit < 0).sum())
+    wr = round((pc / tc) * 100, 2) if tc else 0.0
+    ah = round(float(holding.sum()) / tc, 2) if tc else 0.0
+    app = round(float(returns.sum()) / tc, 2) if tc else 0.0
+    tsg = int(profit.sum())
+    appp = float(returns[profit >= 0].mean()) if pc else 0.0
+    ampp = abs(float(returns[profit < 0].mean())) if mc else 0.0
+    tpi = round(wr / 100 * (1 + appp / ampp), 2) if ampp != 0 else 1.0
+
+    capital = float(seed_value) if seed_value else float(betting or 1)
+    tpp = round(tsg / capital * 100, 2) if capital else 0.0
+    cagr = round(tpp / day_count * year_days, 2) if day_count else 0.0
+    mdd = _calc_mdd(profit, capital)
+
+    label = (
+        f'종목당 배팅금액 {int(betting):,}{unit}, 필요자금 {float(seed_value):,.0f}{unit}, '
+        f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n'
+        f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '
+        f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
+    )
+    lines.append(label)
+    return lines
+
 def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
                                     save_file_name: str, backname: str, seed: int,
                                     generated_code: dict = None,
@@ -149,6 +275,9 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax0.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
     ax0.legend(loc='best')
     ax0.grid()
+    info_lines = _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed)
+    if info_lines:
+        ax0.set_xlabel("\n" + "\n".join(info_lines), fontsize=9)
 
     ax1 = fig.add_subplot(gs[1])
     if not use_dates:
@@ -387,10 +516,6 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.axis('off')
 
     fig.suptitle(f'{backname} 필터 적용 분포/단계 요약 - {save_file_name}', fontsize=14, fontweight='bold')
-    info_lines = [text for text in (back_text, label_text) if text]
-    if info_lines:
-        fig.text(0.01, 0.01, "\n".join(info_lines), fontsize=9, family='monospace',
-                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
     plt.savefig(path_sub, dpi=120, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
