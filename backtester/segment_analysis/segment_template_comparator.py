@@ -44,6 +44,9 @@ class SegmentTemplate:
         return SegmentConfig(
             market_cap_ranges=dict(self.market_cap_ranges),
             time_ranges=dict(self.time_ranges),
+            time_segment_target_minutes=cfg.time_segment_target_minutes,
+            time_segment_min_count=cfg.time_segment_min_count,
+            time_segment_max_count=cfg.time_segment_max_count,
             min_trades=dict(cfg.min_trades),
             max_exclusion=dict(cfg.max_exclusion),
             validation=dict(cfg.validation),

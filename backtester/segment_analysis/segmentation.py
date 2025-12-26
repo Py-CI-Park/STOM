@@ -44,6 +44,9 @@ class SegmentConfig:
         'T3_091000_091500': (91000, 91500),  # 09:10:00 ~ 09:15:00
         'T4_091500_092000': (91500, 92000),  # 09:15:00 ~ 09:20:00
     })
+    time_segment_target_minutes: int = 30
+    time_segment_min_count: int = 4
+    time_segment_max_count: int = 12
 
     # 최소 거래수 제약
     min_trades: Dict[str, Any] = field(default_factory=lambda: {
@@ -489,12 +492,20 @@ class SegmentBuilder:
         time_bounds = self._get_time_bounds(time_series)
         is_min_timeframe = self._is_min_timeframe(time_series)
         expand_time = bool(time_bounds) and is_min_timeframe and self._needs_time_range_expansion(*time_bounds)
+        time_segment_count = None
+        if time_bounds and is_min_timeframe:
+            time_segment_count = self._resolve_time_segment_count(
+                time_bounds[0],
+                time_bounds[1],
+                align_to_minute=is_min_timeframe,
+            )
 
         if dynamic_time:
             ranges = self._build_dynamic_time_ranges(
                 df,
                 time_bounds=time_bounds if expand_time else None,
                 align_to_minute=is_min_timeframe,
+                segment_count=time_segment_count,
             )
             if ranges:
                 self.runtime_time_ranges = ranges
@@ -504,6 +515,7 @@ class SegmentBuilder:
                 time_bounds[0],
                 time_bounds[1],
                 align_to_minute=is_min_timeframe,
+                segment_count=time_segment_count,
             )
             if ranges:
                 self.runtime_time_ranges = ranges
@@ -538,6 +550,7 @@ class SegmentBuilder:
         df: pd.DataFrame,
         time_bounds: Optional[Tuple[int, int]] = None,
         align_to_minute: bool = False,
+        segment_count: Optional[int] = None,
     ) -> Optional[Dict[str, Tuple[int, int]]]:
         series = pd.to_numeric(df.get('시분초'), errors='coerce').dropna()
         if series.size < self.config.dynamic_min_samples:
@@ -553,9 +566,16 @@ class SegmentBuilder:
         if series.size < self.config.dynamic_min_samples:
             return None
 
-        qs = list(self.config.dynamic_time_quantiles)
-        if len(qs) != 3:
+        if segment_count:
+            seg_count = int(segment_count)
+        else:
+            seg_count = len(self.config.time_ranges)
+        if seg_count < 2:
             return None
+
+        qs = list(self.config.dynamic_time_quantiles)
+        if len(qs) != seg_count - 1:
+            qs = [idx / seg_count for idx in range(1, seg_count)]
 
         try:
             series_sec = self._hhmmss_series_to_seconds(series)
@@ -566,18 +586,20 @@ class SegmentBuilder:
             return None
 
         boundaries_sec = [int(base_min_sec)] + q_values + [int(base_max_sec)]
-        if len(set(boundaries_sec)) < 5:
+        if len(set(boundaries_sec)) < seg_count + 1:
             return None
         if not all(boundaries_sec[i] < boundaries_sec[i + 1] for i in range(len(boundaries_sec) - 1)):
             return None
 
-        labels = []
-        for label in self.config.time_ranges.keys():
-            prefix = str(label).split('_')[0]
-            labels.append(prefix)
-
-        if len(labels) != 4:
-            labels = ['T1', 'T2', 'T3', 'T4']
+        if segment_count and segment_count != len(self.config.time_ranges):
+            labels = [f"T{i + 1}" for i in range(seg_count)]
+        else:
+            labels = []
+            for label in self.config.time_ranges.keys():
+                prefix = str(label).split('_')[0]
+                labels.append(prefix)
+            if len(labels) != seg_count:
+                labels = [f"T{i + 1}" for i in range(seg_count)]
 
         min_step = 60 if align_to_minute else 1
         if align_to_minute:
@@ -591,7 +613,8 @@ class SegmentBuilder:
             return None
 
         ranges: Dict[str, Tuple[int, int]] = {}
-        for idx, prefix in enumerate(labels):
+        for idx in range(seg_count):
+            prefix = labels[idx]
             start = self._seconds_to_hhmmss(boundaries_sec[idx])
             end = self._seconds_to_hhmmss(boundaries_sec[idx + 1])
             name = f"{prefix}_{start:06d}_{end:06d}"
@@ -619,17 +642,44 @@ class SegmentBuilder:
         base_max = max(r[1] for r in self.config.time_ranges.values())
         return data_min < base_min or data_max > base_max
 
+    def _resolve_time_segment_count(
+        self,
+        data_min: int,
+        data_max: int,
+        align_to_minute: bool = False,
+    ) -> int:
+        base_count = len(self.config.time_ranges)
+        if not align_to_minute or base_count == 0:
+            return base_count
+
+        data_min_sec = self._hhmmss_to_seconds(data_min)
+        data_max_sec = self._hhmmss_to_seconds(data_max)
+        data_span_sec = data_max_sec - data_min_sec
+        if data_span_sec <= 0:
+            return base_count
+
+        target_minutes = max(1, int(self.config.time_segment_target_minutes))
+        raw_count = int(round((data_span_sec / 60.0) / target_minutes))
+        count = max(self.config.time_segment_min_count, raw_count)
+        count = min(self.config.time_segment_max_count, count)
+        count = max(base_count, count)
+        return count
+
     def _build_scaled_time_ranges(
         self,
         data_min: int,
         data_max: int,
         align_to_minute: bool = False,
+        segment_count: Optional[int] = None,
     ) -> Optional[Dict[str, Tuple[int, int]]]:
         base_ranges = list(self.config.time_ranges.items())
         if not base_ranges:
             return None
 
         ordered = sorted(base_ranges, key=lambda item: item[1][0])
+        target_count = int(segment_count) if segment_count else len(ordered)
+        if target_count < 1:
+            return None
         base_min = min(r[0] for _, r in ordered)
         base_max = max(r[1] for _, r in ordered)
         base_min_sec = self._hhmmss_to_seconds(base_min)
@@ -642,30 +692,48 @@ class SegmentBuilder:
             return None
 
         min_step = 60 if align_to_minute else 1
-        if data_span_sec < min_step * len(ordered):
+        if data_span_sec < min_step * target_count:
             return None
 
-        base_bounds = [rng[0] for _, rng in ordered]
-        base_bounds.append(ordered[-1][1][1])
-        base_bounds_sec = [self._hhmmss_to_seconds(v) for v in base_bounds]
+        if target_count == len(ordered):
+            base_bounds = [rng[0] for _, rng in ordered]
+            base_bounds.append(ordered[-1][1][1])
+            base_bounds_sec = [self._hhmmss_to_seconds(v) for v in base_bounds]
 
-        scaled_bounds_sec = [data_min_sec]
-        for base_bound_sec in base_bounds_sec[1:-1]:
-            ratio = (base_bound_sec - base_min_sec) / base_span_sec
-            scaled = data_min_sec + int(round(ratio * data_span_sec))
-            if align_to_minute:
-                scaled = int(round(scaled / 60.0) * 60)
-            if scaled <= scaled_bounds_sec[-1]:
-                scaled = scaled_bounds_sec[-1] + min_step
-            scaled_bounds_sec.append(scaled)
+            scaled_bounds_sec = [data_min_sec]
+            for base_bound_sec in base_bounds_sec[1:-1]:
+                ratio = (base_bound_sec - base_min_sec) / base_span_sec
+                scaled = data_min_sec + int(round(ratio * data_span_sec))
+                if align_to_minute:
+                    scaled = int(round(scaled / 60.0) * 60)
+                if scaled <= scaled_bounds_sec[-1]:
+                    scaled = scaled_bounds_sec[-1] + min_step
+                scaled_bounds_sec.append(scaled)
 
-        if data_max_sec <= scaled_bounds_sec[-1]:
-            return None
-        scaled_bounds_sec.append(data_max_sec)
+            if data_max_sec <= scaled_bounds_sec[-1]:
+                return None
+            scaled_bounds_sec.append(data_max_sec)
+            labels = [str(label).split('_')[0] for label, _ in ordered]
+        else:
+            scaled_bounds_sec = []
+            step = data_span_sec / float(target_count)
+            for idx in range(target_count + 1):
+                scaled = data_min_sec + int(round(step * idx))
+                if align_to_minute:
+                    scaled = int(round(scaled / 60.0) * 60)
+                scaled_bounds_sec.append(scaled)
+            scaled_bounds_sec[0] = data_min_sec
+            scaled_bounds_sec[-1] = data_max_sec
+            for idx in range(1, len(scaled_bounds_sec) - 1):
+                if scaled_bounds_sec[idx] <= scaled_bounds_sec[idx - 1]:
+                    scaled_bounds_sec[idx] = scaled_bounds_sec[idx - 1] + min_step
+            if scaled_bounds_sec[-1] <= scaled_bounds_sec[-2]:
+                return None
+            labels = [f"T{i + 1}" for i in range(target_count)]
 
         ranges: Dict[str, Tuple[int, int]] = {}
-        for idx, (label, _) in enumerate(ordered):
-            prefix = str(label).split('_')[0]
+        for idx in range(target_count):
+            prefix = labels[idx]
             start = self._seconds_to_hhmmss(scaled_bounds_sec[idx])
             end = self._seconds_to_hhmmss(scaled_bounds_sec[idx + 1])
             name = f"{prefix}_{start:06d}_{end:06d}"

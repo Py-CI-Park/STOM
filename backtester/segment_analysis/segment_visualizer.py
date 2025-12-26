@@ -47,10 +47,25 @@ def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional
     if vmax == 0:
         vmax = 1.0
 
-    fig, ax = plt.subplots(figsize=(7.5, 4.5))
+    col_count = max(1, len(profits.columns))
+    row_count = max(1, len(profits.index))
+    fig_width = max(7.5, min(18.0, 0.6 * col_count))
+    fig_height = max(4.5, min(10.0, 0.35 * row_count))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
     im = ax.imshow(profits.values, cmap='RdYlGn', aspect='auto', vmin=-vmax, vmax=vmax)
     ax.set_xticks(range(len(profits.columns)))
-    ax.set_xticklabels(profits.columns, rotation=0, fontsize=8)
+    rotation = 0
+    ha = 'center'
+    font_size = 8
+    if col_count >= 14:
+        rotation = 90
+        ha = 'center'
+        font_size = 7
+    elif col_count >= 9:
+        rotation = 45
+        ha = 'right'
+        font_size = 7
+    ax.set_xticklabels(profits.columns, rotation=rotation, ha=ha, fontsize=font_size)
     ax.set_yticks(range(len(profits.index)))
     ax.set_yticklabels(profits.index, fontsize=9)
     ax.set_title('Segment Heatmap (Profit color / Trades text)')

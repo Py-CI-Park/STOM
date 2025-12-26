@@ -164,20 +164,24 @@ def _annotate_profit_extremes(ax, x_values, profits, unit):
         )
 
 
-def _estimate_capital_stats(df):
+def _collect_trade_events(df):
     if df is None or df.empty or '매수금액' not in df.columns:
-        return None, None
+        return []
 
+    has_sell_time = '매도시간' in df.columns
     events = []
     for _, row in df.iterrows():
         buy_time = _get_trade_timestamp(row, '매수시간')
-        sell_time = _get_trade_timestamp(row, '매도시간') if '매도시간' in row else None
+        sell_time = _get_trade_timestamp(row, '매도시간') if has_sell_time else None
         if buy_time is None:
             continue
         if sell_time is None or sell_time < buy_time:
             sell_time = buy_time
 
-        amount = pd.to_numeric(row.get('매수금액'), errors='coerce')
+        amount_raw = row.get('매수금액')
+        if isinstance(amount_raw, str):
+            amount_raw = amount_raw.replace(',', '')
+        amount = pd.to_numeric(amount_raw, errors='coerce')
         try:
             amount = float(amount)
         except Exception:
@@ -188,6 +192,11 @@ def _estimate_capital_stats(df):
         events.append((buy_time, 0, amount, 1))
         events.append((sell_time, 1, -amount, -1))
 
+    return events
+
+
+def _estimate_capital_stats(df):
+    events = _collect_trade_events(df)
     if not events:
         return None, None
 
@@ -204,6 +213,125 @@ def _estimate_capital_stats(df):
         if current_count > max_count:
             max_count = current_count
     return max_amount, max_count
+
+
+def _build_holdings_timeseries(df):
+    events = _collect_trade_events(df)
+    if not events:
+        return None
+
+    events.sort(key=lambda x: (x[0], x[1]))
+    timestamps = []
+    amounts = []
+    counts = []
+    current_amount = 0.0
+    current_count = 0
+    for timestamp, _, delta_amount, delta_count in events:
+        current_amount += delta_amount
+        current_count += delta_count
+        timestamps.append(timestamp)
+        amounts.append(current_amount)
+        counts.append(current_count)
+
+    series = pd.DataFrame({
+        'timestamp': timestamps,
+        'holding_amount': amounts,
+        'holding_count': counts,
+    })
+    if series.empty:
+        return None
+    return series.groupby('timestamp', sort=True).last().reset_index()
+
+
+def _build_daily_holdings_summary(df, amount_mode: str = 'sum'):
+    holdings = _build_holdings_timeseries(df)
+    if holdings is None or holdings.empty:
+        return None
+
+    timestamps = pd.to_numeric(holdings['timestamp'], errors='coerce')
+    timestamps = timestamps.dropna().astype(int)
+    if timestamps.empty:
+        return None
+
+    date_str = timestamps.astype(str).str.slice(0, 8)
+    if date_str.str.len().min() < 8:
+        return None
+
+    summary = holdings.loc[timestamps.index].copy()
+    summary['date'] = date_str.values
+    summary['holding_amount'] = pd.to_numeric(summary['holding_amount'], errors='coerce').fillna(0)
+    summary['holding_count'] = pd.to_numeric(summary['holding_count'], errors='coerce').fillna(0)
+
+    if amount_mode not in ('sum', 'max'):
+        amount_mode = 'sum'
+    amount_agg = 'sum' if amount_mode == 'sum' else 'max'
+    daily = summary.groupby('date', sort=True).agg({
+        'holding_amount': amount_agg,
+        'holding_count': 'max',
+    })
+    return daily.reset_index()
+
+
+def _estimate_max_daily_trades(df):
+    if df is None or df.empty:
+        return 0
+
+    daily = _build_daily_holdings_summary(df, amount_mode='max')
+    if daily is not None and not daily.empty:
+        max_count = pd.to_numeric(daily['holding_count'], errors='coerce').dropna()
+        if not max_count.empty:
+            return int(max_count.max())
+
+    if '매수일자' in df.columns:
+        dates = pd.to_numeric(df['매수일자'], errors='coerce').dropna()
+        if not dates.empty:
+            return int(dates.value_counts().max())
+
+    if '매수시간' in df.columns:
+        digits = pd.to_numeric(df['매수시간'], errors='coerce').dropna().astype(int)
+        if not digits.empty:
+            date_str = digits.astype(str).str.slice(0, 8)
+            counts = date_str.value_counts()
+            if not counts.empty:
+                return int(counts.max())
+
+    return 0
+
+
+def _format_timestamp_label(value):
+    try:
+        text = str(int(value))
+    except Exception:
+        return str(value)
+    if len(text) >= 14:
+        return f"{text[:8]} {text[8:10]}:{text[10:12]}:{text[12:14]}"
+    if len(text) == 12:
+        return f"{text[:8]} {text[8:10]}:{text[10:12]}"
+    if len(text) == 10:
+        return f"{text[:8]} {text[8:10]}"
+    if len(text) == 8:
+        return text
+    if len(text) == 6:
+        return f"{text[:2]}:{text[2:4]}:{text[4:6]}"
+    if len(text) == 4:
+        return f"{text[:2]}:{text[2:4]}"
+    return text
+
+
+def _apply_time_ticks(ax, timestamps, max_ticks: int = 10):
+    if timestamps is None:
+        return
+    try:
+        times = np.asarray(timestamps, dtype=np.int64)
+    except Exception:
+        return
+    if times.size == 0:
+        return
+    tick_step = max(1, int(times.size / max_ticks))
+    ticks = list(times[::tick_step])
+    labels = [_format_timestamp_label(t) for t in ticks]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=8)
 
 
 def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed):
@@ -226,9 +354,31 @@ def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed)
     unit = _extract_unit(label_text or '') or '원'
     year_days = 365 if unit.upper() == 'USDT' else 250
 
+    daily_summary = _build_daily_holdings_summary(df_filtered, amount_mode='max')
+    max_daily_holdings = 0
+    daily_amount_max = 0.0
+    if daily_summary is not None and not daily_summary.empty:
+        max_daily_holdings = int(
+            pd.to_numeric(daily_summary['holding_count'], errors='coerce').fillna(0).max()
+        )
+        daily_amount_max = float(
+            pd.to_numeric(daily_summary['holding_amount'], errors='coerce').fillna(0).max()
+        )
+    if max_daily_holdings <= 0:
+        max_daily_holdings = _estimate_max_daily_trades(df_filtered)
+
+    daily_capital = float(betting) * float(max_daily_holdings) if betting and max_daily_holdings else 0.0
+
     capital, max_holdings = _estimate_capital_stats(df_filtered)
     if capital is None or capital <= 0:
-        capital = float(seed_value) if seed_value else float(betting or 1)
+        if daily_amount_max > 0:
+            capital = daily_amount_max
+        elif daily_capital > 0:
+            capital = daily_capital
+        else:
+            capital = float(seed_value) if seed_value else float(betting or 1)
+    if daily_capital > 0:
+        capital = daily_capital
     if max_holdings is None:
         max_holdings = _extract_int(r'적정최대보유종목수\s*([0-9]+)', label_text or '') or 0
 
@@ -261,9 +411,14 @@ def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed)
     cagr = round(tpp / day_count * year_days, 2) if day_count else 0.0
     mdd = _calc_mdd(profit, capital)
 
+    daily_capital_text = (
+        f", 일최대거래종목수 기준 필요자금 {daily_capital:,.0f}{unit}" if daily_capital > 0 else ""
+    )
+
     label = (
-        f'종목당 배팅금액 {int(betting):,}{unit}, 필요자금 {float(capital):,.0f}{unit}, '
-        f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {max_holdings}개, 평균보유기간 {ah:.2f}초\n'
+        f'종목당 배팅금액 {int(betting):,}{unit}, 필요자금 {float(capital):,.0f}{unit}'
+        f'{daily_capital_text}\n'
+        f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 일최대거래종목수 {max_daily_holdings}개, 적정최대보유종목수 {max_holdings}개, 평균보유기간 {ah:.2f}초\n'
         f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '
         f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
     )
@@ -299,101 +454,6 @@ def _extract_unit(label_text):
         return match.group(1).strip()
     return None
 
-
-def _infer_day_count(df):
-    if df is None or df.empty:
-        return None
-    if '매수일자' in df.columns:
-        try:
-            return int(pd.to_numeric(df['매수일자'], errors='coerce').dropna().nunique())
-        except Exception:
-            return None
-    return None
-
-
-def _calc_mdd(profits, seed):
-    if profits is None or profits.empty:
-        return 0.0
-    try:
-        cum = profits.cumsum().to_numpy(dtype=np.float64)
-        if len(cum) == 0:
-            return 0.0
-        peak = np.maximum.accumulate(cum)
-        drawdown = peak - cum
-        lower = int(np.argmax(drawdown))
-        if lower <= 0:
-            return 0.0
-        upper = int(np.argmax(cum[:lower + 1]))
-        denom = float(cum[upper]) + float(seed)
-        if denom == 0:
-            return 0.0
-        return round(abs(cum[upper] - cum[lower]) / denom * 100, 2)
-    except Exception:
-        return 0.0
-
-
-def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed):
-    lines = []
-    if back_text:
-        lines.append(back_text)
-
-    if df_filtered is None or df_filtered.empty:
-        if label_text:
-            lines.append(label_text)
-        return lines
-
-    day_count = _extract_int(r'거래일수\s*:\s*([0-9]+)', back_text or '')
-    if day_count is None:
-        day_count = _infer_day_count(df_all) or 0
-
-    betting = _extract_int(r'종목당 배팅금액\s*([0-9,]+)', label_text or '') or 0
-    mhct = _extract_int(r'적정최대보유종목수\s*([0-9]+)', label_text or '') or 0
-    seed_from_label = _extract_int(r'필요자금\s*([0-9,]+)', label_text or '')
-    seed_value = _parse_number(seed) if seed is not None else None
-    if seed_value is None or seed_value <= 0:
-        seed_value = seed_from_label if seed_from_label is not None else betting
-
-    unit = _extract_unit(label_text or '') or '원'
-    year_days = 365 if unit.upper() == 'USDT' else 250
-
-    if '수익금' in df_filtered.columns:
-        profit = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
-    else:
-        profit = pd.Series(0, index=df_filtered.index, dtype='float64')
-    if '수익률' in df_filtered.columns:
-        returns = pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0)
-    else:
-        returns = pd.Series(0, index=df_filtered.index, dtype='float64')
-    if '보유시간' in df_filtered.columns:
-        holding = pd.to_numeric(df_filtered['보유시간'], errors='coerce').fillna(0)
-    else:
-        holding = pd.Series(0, index=df_filtered.index, dtype='float64')
-
-    tc = int(len(df_filtered))
-    atc = round(tc / day_count, 1) if day_count else 0
-    pc = int((profit >= 0).sum())
-    mc = int((profit < 0).sum())
-    wr = round((pc / tc) * 100, 2) if tc else 0.0
-    ah = round(float(holding.sum()) / tc, 2) if tc else 0.0
-    app = round(float(returns.sum()) / tc, 2) if tc else 0.0
-    tsg = int(profit.sum())
-    appp = float(returns[profit >= 0].mean()) if pc else 0.0
-    ampp = abs(float(returns[profit < 0].mean())) if mc else 0.0
-    tpi = round(wr / 100 * (1 + appp / ampp), 2) if ampp != 0 else 1.0
-
-    capital = float(seed_value) if seed_value else float(betting or 1)
-    tpp = round(tsg / capital * 100, 2) if capital else 0.0
-    cagr = round(tpp / day_count * year_days, 2) if day_count else 0.0
-    mdd = _calc_mdd(profit, capital)
-
-    label = (
-        f'종목당 배팅금액 {int(betting):,}{unit}, 필요자금 {float(seed_value):,.0f}{unit}, '
-        f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {mhct}개, 평균보유기간 {ah:.2f}초\n'
-        f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '
-        f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
-    )
-    lines.append(label)
-    return lines
 
 def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFrame,
                                     save_file_name: str, backname: str, seed: int,
@@ -488,48 +548,114 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         avg_return_all = float(pd.to_numeric(df_all['수익률'], errors='coerce').fillna(0).mean())
         avg_return_filt = float(pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0).mean())
 
+    holdings_all = _build_holdings_timeseries(df_all)
+    holdings_filt = _build_holdings_timeseries(df_filtered)
+
     # ===== 1) filtered.png (수익곡선 요약) =====
     path_main = str(output_dir / f"{save_file_name}{tag}_filtered.png")
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 3])
 
-    ax0 = fig.add_subplot(gs[0])
     use_dates = False
     dates = None
     base_cum = None
     filt_cum = None
-    try:
-        if '매수일자' in df_all.columns and '매수일자' in df_filtered.columns:
-            base_profit_daily = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).groupby(df_all['매수일자']).sum()
-            filt_profit_daily = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).groupby(df_filtered['매수일자']).sum()
-            dates = sorted(set(base_profit_daily.index.tolist()) | set(filt_profit_daily.index.tolist()))
-            base_profit_daily = base_profit_daily.reindex(dates, fill_value=0)
-            filt_profit_daily = filt_profit_daily.reindex(dates, fill_value=0)
-            base_cum = base_profit_daily.cumsum()
-            filt_cum = filt_profit_daily.cumsum()
-            use_dates = True
-    except Exception:
-        use_dates = False
 
-    if not use_dates:
-        base_cum = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).cumsum()
-        filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
-        ax0.plot(range(len(base_cum)), base_cum, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
-        ax0.plot(range(len(filt_cum)), filt_cum, linewidth=2.2, label='필터 적용', color='orange')
-        ax0.set_title('누적 수익금(원)')
-    else:
-        x = np.arange(len(dates))
-        ax0.plot(x, base_cum.values, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
-        ax0.plot(x, filt_cum.values, linewidth=2.2, label='필터 적용', color='orange')
-        ax0.set_title('누적 수익금(원) - 일자 기준')
+    ax0 = fig.add_subplot(gs[0])
+    daily_all = _build_daily_holdings_summary(df_all, amount_mode='sum')
+    daily_filt = _build_daily_holdings_summary(df_filtered, amount_mode='sum')
+    has_holdings = (daily_all is not None and not daily_all.empty) or (daily_filt is not None and not daily_filt.empty)
+
+    if has_holdings:
+        date_set = set()
+        if daily_all is not None and not daily_all.empty:
+            date_set.update(daily_all['date'].astype(str).tolist())
+        if daily_filt is not None and not daily_filt.empty:
+            date_set.update(daily_filt['date'].astype(str).tolist())
+        dates = sorted(date_set)
+
+        base_map = {}
+        if daily_all is not None and not daily_all.empty:
+            base_map = dict(zip(daily_all['date'].astype(str), daily_all['holding_amount']))
+        filt_map = {}
+        if daily_filt is not None and not daily_filt.empty:
+            filt_map = dict(zip(daily_filt['date'].astype(str), daily_filt['holding_amount']))
+
+        x = list(range(len(dates)))
+        base_vals = [float(base_map.get(d, 0) or 0) for d in dates]
+        filt_vals = [float(filt_map.get(d, 0) or 0) for d in dates]
+
+        filt_label = '세그먼트 필터 보유금액' if is_segment else '필터 보유금액'
+        if any(base_vals):
+            ax0.plot(x, base_vals, linewidth=1.2, label='기준 보유금액', color='gray', alpha=0.7)
+        if any(filt_vals):
+            ax0.plot(x, filt_vals, linewidth=2.2, label=filt_label, color='green')
+
+        ax0.set_title('보유금액(원) - 일자 합산')
+        ax0.set_ylabel('보유금액(원)')
         tick_step = max(1, int(len(dates) / 10))
-        ax0.set_xticks(list(x[::tick_step]))
+        ax0.set_xticks(list(range(0, len(dates), tick_step)))
         ax0.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
-    ax0.legend(loc='best')
-    ax0.grid()
+        ax0.legend(loc='best')
+        ax0.grid()
+    else:
+        if is_segment:
+            ax0.text(0.5, 0.5, '보유금액 데이터 없음', ha='center', va='center', transform=ax0.transAxes)
+            ax0.axis('off')
+        else:
+            try:
+                if '매수일자' in df_all.columns and '매수일자' in df_filtered.columns:
+                    base_profit_daily = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).groupby(df_all['매수일자']).sum()
+                    filt_profit_daily = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).groupby(df_filtered['매수일자']).sum()
+                    dates = sorted(set(base_profit_daily.index.tolist()) | set(filt_profit_daily.index.tolist()))
+                    base_profit_daily = base_profit_daily.reindex(dates, fill_value=0)
+                    filt_profit_daily = filt_profit_daily.reindex(dates, fill_value=0)
+                    base_cum = base_profit_daily.cumsum()
+                    filt_cum = filt_profit_daily.cumsum()
+                    use_dates = True
+            except Exception:
+                use_dates = False
+
+            if not use_dates:
+                base_cum = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0).cumsum()
+                filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
+                ax0.plot(range(len(base_cum)), base_cum, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
+                ax0.plot(range(len(filt_cum)), filt_cum, linewidth=2.2, label='필터 적용', color='orange')
+                ax0.set_title('누적 수익금(원)')
+            else:
+                x = np.arange(len(dates))
+                ax0.plot(x, base_cum.values, linewidth=1.2, label='기준(전체)', color='gray', alpha=0.8)
+                ax0.plot(x, filt_cum.values, linewidth=2.2, label='필터 적용', color='orange')
+                ax0.set_title('누적 수익금(원) - 일자 기준')
+                tick_step = max(1, int(len(dates) / 10))
+                ax0.set_xticks(list(x[::tick_step]))
+                ax0.set_xticklabels([str(d) for d in dates][::tick_step], rotation=45, ha='right', fontsize=8)
+            ax0.legend(loc='best')
+            ax0.grid()
+
     info_lines = _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed)
     if info_lines:
         ax0.set_xlabel("\n" + "\n".join(info_lines), fontsize=9)
+
+    if filt_cum is None:
+        use_dates = False
+        dates = None
+        try:
+            if '매수일자' in df_filtered.columns:
+                filt_profit_daily = (
+                    pd.to_numeric(df_filtered['수익금'], errors='coerce')
+                    .fillna(0)
+                    .groupby(df_filtered['매수일자'])
+                    .sum()
+                )
+                dates = sorted(filt_profit_daily.index.tolist())
+                filt_cum = filt_profit_daily.cumsum()
+                use_dates = True
+        except Exception:
+            use_dates = False
+
+        if not use_dates:
+            filt_cum = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).cumsum()
 
     ax1 = fig.add_subplot(gs[1])
     unit_label = _extract_unit(label_text or '') or '원'
@@ -555,8 +681,6 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     ax1.set_ylabel('수익금(원)')
     ax1.legend(loc='upper left')
     ax1.grid()
-
-    # 조건식/필터 요약 텍스트
     summary_lines = [
         "=== 세그먼트 필터 적용 요약 ===" if is_segment else "=== 필터 적용 요약 ===",
         f"- 거래수: {len(df_all):,} → {len(df_filtered):,} (제외 {excluded_ratio:.1f}%)",
@@ -675,7 +799,6 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     ax.legend(loc='best')
     ax.grid()
 
-    # (2) 단계별 누적개선/제외비율
     ax = fig.add_subplot(gs[0, 1])
     ax2 = ax.twinx()
     steps = (generated_code or {}).get('combine_steps') or []
@@ -1195,6 +1318,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 teleQ.put(p_sub)
                             if p_main:
                                 teleQ.put(p_main)
+                            if not p_main and not p_sub:
+                                teleQ.put("필터 적용 미리보기: 이미지 생성 실패(경로 없음)")
                         else:
                             err = mask_info.get('error') if isinstance(mask_info, dict) else 'N/A'
                             failed_expr = mask_info.get('failed_expr') if isinstance(mask_info, dict) else None
@@ -1204,7 +1329,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                             if failed_expr:
                                 msg += f"\n- 실패 조건식: {failed_expr}"
                             teleQ.put(msg)
-            except Exception:
+            except Exception as e:
+                if teleQ is not None:
+                    teleQ.put(f"필터 적용 미리보기: 생성 오류 - {e}")
                 print_exc()
 
             # [2025-12-20] 세그먼트 필터 조합 적용 미리보기 차트(2개) 생성/전송
@@ -1288,6 +1415,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 teleQ.put(p_sub)
                             if p_main:
                                 teleQ.put(p_main)
+                            if not p_main and not p_sub:
+                                teleQ.put("세그먼트 필터 미리보기: 이미지 생성 실패(경로 없음)")
                         else:
                             err = seg_mask_info.get('error') if isinstance(seg_mask_info, dict) else 'N/A'
                             msg = "세그먼트 필터 미리보기: 마스크 생성 실패"
@@ -1304,7 +1433,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                             msg_lines.append("- 확인 파일: *_segment_filters.csv, *_segment_local_combos.csv, *_segment_summary.csv")
                             msg_lines.append("- 조정 후보: min_trades/max_exclusion, max_filters_per_segment/beam_width")
                         teleQ.put("\n".join(msg_lines))
-            except Exception:
+            except Exception as e:
+                if teleQ is not None:
+                    teleQ.put(f"세그먼트 필터 미리보기: 생성 오류 - {e}")
                 print_exc()
         except Exception as e:
             enhanced_error = e
