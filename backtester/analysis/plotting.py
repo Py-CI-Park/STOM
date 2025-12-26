@@ -19,6 +19,212 @@ except ImportError:
 
 
 def _parse_number(text):
+    if text is None:
+        return None
+    try:
+        return int(str(text).replace(',', '').strip())
+    except Exception:
+        return None
+
+
+def _extract_int(pattern, text):
+    if not text:
+        return None
+    match = re.search(pattern, text)
+    if not match:
+        return None
+    return _parse_number(match.group(1))
+
+
+def _extract_unit(label_text):
+    if not label_text:
+        return None
+    match = re.search(r'종목당 배팅금액\s*[0-9,]+([A-Za-z가-힣]+)', label_text)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r'필요자금\s*[0-9,]+([A-Za-z가-힣]+)', label_text)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _normalize_time_value(value):
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return None, None
+    if isinstance(value, (pd.Timestamp, datetime)):
+        digits = value.strftime('%Y%m%d%H%M%S')
+        return int(digits), len(digits)
+    text = str(value).strip()
+    if not text:
+        return None, None
+    digits = re.sub(r'\D', '', text)
+    if not digits:
+        return None, None
+    return int(digits), len(digits)
+
+
+def _get_trade_timestamp(row, time_col):
+    val_int, val_len = _normalize_time_value(row.get(time_col) if time_col in row else None)
+    if val_int is None:
+        return None
+
+    if val_len is not None and val_len <= 6:
+        date_val, date_len = _normalize_time_value(row.get('매수일자') if '매수일자' in row else None)
+        if date_val is not None and date_len is not None and date_len >= 8:
+            time_str = str(val_int).zfill(6)
+            return int(f"{date_val}{time_str}")
+    return val_int
+
+
+def _infer_day_count(df, fallback_text=None):
+    if df is not None and not df.empty:
+        if '매수일자' in df.columns:
+            try:
+                return int(pd.to_numeric(df['매수일자'], errors='coerce').dropna().nunique())
+            except Exception:
+                pass
+        if '매수시간' in df.columns:
+            try:
+                digits = pd.to_numeric(df['매수시간'], errors='coerce').dropna().astype(int)
+                if not digits.empty:
+                    dates = digits.astype(str).str.slice(0, 8)
+                    return int(dates.nunique())
+            except Exception:
+                pass
+
+    if fallback_text:
+        return _extract_int(r'거래일수\s*:\s*([0-9]+)', fallback_text)
+    return None
+
+
+def _calc_mdd(profits, seed):
+    if profits is None or profits.empty:
+        return 0.0
+    try:
+        cum = profits.cumsum().to_numpy(dtype=np.float64)
+        if len(cum) == 0:
+            return 0.0
+        peak = np.maximum.accumulate(cum)
+        drawdown = peak - cum
+        lower = int(np.argmax(drawdown))
+        if lower <= 0:
+            return 0.0
+        upper = int(np.argmax(cum[:lower + 1]))
+        denom = float(cum[upper]) + float(seed)
+        if denom == 0:
+            return 0.0
+        return round(abs(cum[upper] - cum[lower]) / denom * 100, 2)
+    except Exception:
+        return 0.0
+
+
+def _estimate_capital_stats(df):
+    if df is None or df.empty or '매수금액' not in df.columns:
+        return None, None
+
+    events = []
+    for _, row in df.iterrows():
+        buy_time = _get_trade_timestamp(row, '매수시간')
+        sell_time = _get_trade_timestamp(row, '매도시간') if '매도시간' in row else None
+        if buy_time is None:
+            continue
+        if sell_time is None or sell_time < buy_time:
+            sell_time = buy_time
+
+        amount = pd.to_numeric(row.get('매수금액'), errors='coerce')
+        try:
+            amount = float(amount)
+        except Exception:
+            amount = 0.0
+        if amount <= 0:
+            continue
+
+        events.append((buy_time, 0, amount, 1))
+        events.append((sell_time, 1, -amount, -1))
+
+    if not events:
+        return None, None
+
+    events.sort(key=lambda x: (x[0], x[1]))
+    current_amount = 0.0
+    current_count = 0
+    max_amount = 0.0
+    max_count = 0
+    for _, _, delta_amount, delta_count in events:
+        current_amount += delta_amount
+        current_count += delta_count
+        if current_amount > max_amount:
+            max_amount = current_amount
+        if current_count > max_count:
+            max_count = current_count
+    return max_amount, max_count
+
+
+def _build_filtered_info_lines(df_all, df_filtered, back_text, label_text, seed):
+    lines = []
+    if back_text:
+        lines.append(back_text)
+
+    if df_filtered is None or df_filtered.empty:
+        if label_text:
+            lines.append(label_text)
+        return lines
+
+    day_count = _infer_day_count(df_filtered, fallback_text=back_text) or _infer_day_count(df_all) or 0
+    betting = _extract_int(r'종목당 배팅금액\s*([0-9,]+)', label_text or '') or 0
+    seed_from_label = _extract_int(r'필요자금\s*([0-9,]+)', label_text or '')
+    seed_value = _parse_number(seed) if seed is not None else None
+    if seed_value is None or seed_value <= 0:
+        seed_value = seed_from_label if seed_from_label is not None else betting
+
+    unit = _extract_unit(label_text or '') or '원'
+    year_days = 365 if unit.upper() == 'USDT' else 250
+
+    capital, max_holdings = _estimate_capital_stats(df_filtered)
+    if capital is None or capital <= 0:
+        capital = float(seed_value) if seed_value else float(betting or 1)
+    if max_holdings is None:
+        max_holdings = _extract_int(r'적정최대보유종목수\s*([0-9]+)', label_text or '') or 0
+
+    if '수익금' in df_filtered.columns:
+        profit = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+    else:
+        profit = pd.Series(0, index=df_filtered.index, dtype='float64')
+    if '수익률' in df_filtered.columns:
+        returns = pd.to_numeric(df_filtered['수익률'], errors='coerce').fillna(0)
+    else:
+        returns = pd.Series(0, index=df_filtered.index, dtype='float64')
+    if '보유시간' in df_filtered.columns:
+        holding = pd.to_numeric(df_filtered['보유시간'], errors='coerce').fillna(0)
+    else:
+        holding = pd.Series(0, index=df_filtered.index, dtype='float64')
+
+    tc = int(len(df_filtered))
+    atc = round(tc / day_count, 1) if day_count else 0
+    pc = int((profit >= 0).sum())
+    mc = int((profit < 0).sum())
+    wr = round((pc / tc) * 100, 2) if tc else 0.0
+    ah = round(float(holding.sum()) / tc, 2) if tc else 0.0
+    app = round(float(returns.sum()) / tc, 2) if tc else 0.0
+    tsg = int(profit.sum())
+    appp = float(returns[profit >= 0].mean()) if pc else 0.0
+    ampp = abs(float(returns[profit < 0].mean())) if mc else 0.0
+    tpi = round(wr / 100 * (1 + appp / ampp), 2) if ampp != 0 else 1.0
+
+    tpp = round(tsg / capital * 100, 2) if capital else 0.0
+    cagr = round(tpp / day_count * year_days, 2) if day_count else 0.0
+    mdd = _calc_mdd(profit, capital)
+
+    label = (
+        f'종목당 배팅금액 {int(betting):,}{unit}, 필요자금 {float(capital):,.0f}{unit}, '
+        f'거래횟수 {tc}회, 일평균거래횟수 {atc}회, 적정최대보유종목수 {max_holdings}개, 평균보유기간 {ah:.2f}초\n'
+        f'익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, 평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '
+        f'최대낙폭률 {mdd:.2f}%, 수익금합계 {tsg:,}{unit}, 매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%'
+    )
+    lines.append(label)
+    return lines
+
+def _parse_number(text):
     if not text:
         return None
     try:
