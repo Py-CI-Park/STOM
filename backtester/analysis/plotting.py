@@ -735,7 +735,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
     fig.suptitle(f'{backname} 필터 적용 결과 - {save_file_name}', fontsize=14, fontweight='bold')
     fig.text(0.01, 0.01, "\n".join(summary_lines), fontsize=9, family='monospace',
-             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+             bbox=dict(boxstyle='round', facecolor='white', alpha=0.5))
 
     plt.tight_layout(rect=(0, 0.05, 1, 0.96))
     plt.savefig(path_main, dpi=120, bbox_inches='tight', facecolor='white')
