@@ -109,7 +109,7 @@ class SegmentBuilder:
         self.runtime_market_cap_ranges: Dict[str, Tuple[float, float]] = {}
         self.runtime_time_ranges: Dict[str, Tuple[int, int]] = {}
         self.range_summary: pd.DataFrame = pd.DataFrame()
-        self.dynamic_flags = {'market_cap': False, 'time': False}
+        self.dynamic_flags = {'market_cap': False, 'time': False, 'time_scaled': False}
 
     def build_segments(self, df_detail: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
@@ -473,7 +473,7 @@ class SegmentBuilder:
         """
         self.runtime_market_cap_ranges = dict(self.config.market_cap_ranges)
         self.runtime_time_ranges = dict(self.config.time_ranges)
-        self.dynamic_flags = {'market_cap': False, 'time': False}
+        self.dynamic_flags = {'market_cap': False, 'time': False, 'time_scaled': False}
 
         mode = str(self.config.dynamic_mode or 'fixed').lower()
         dynamic_cap = mode in ('semi', 'semi_dynamic', 'semi-dynamic', 'dynamic', 'all', 'market')
@@ -485,11 +485,29 @@ class SegmentBuilder:
                 self.runtime_market_cap_ranges = ranges
                 self.dynamic_flags['market_cap'] = True
 
+        time_series = pd.to_numeric(df.get('시분초'), errors='coerce').dropna()
+        time_bounds = self._get_time_bounds(time_series)
+        is_min_timeframe = self._is_min_timeframe(time_series)
+        expand_time = bool(time_bounds) and is_min_timeframe and self._needs_time_range_expansion(*time_bounds)
+
         if dynamic_time:
-            ranges = self._build_dynamic_time_ranges(df)
+            ranges = self._build_dynamic_time_ranges(
+                df,
+                time_bounds=time_bounds if expand_time else None,
+                align_to_minute=is_min_timeframe,
+            )
             if ranges:
                 self.runtime_time_ranges = ranges
                 self.dynamic_flags['time'] = True
+        elif expand_time:
+            ranges = self._build_scaled_time_ranges(
+                time_bounds[0],
+                time_bounds[1],
+                align_to_minute=is_min_timeframe,
+            )
+            if ranges:
+                self.runtime_time_ranges = ranges
+                self.dynamic_flags['time_scaled'] = True
 
         self.range_summary = self._build_range_summary()
 
@@ -515,13 +533,22 @@ class SegmentBuilder:
             '대형주': (v2, float('inf')),
         }
 
-    def _build_dynamic_time_ranges(self, df: pd.DataFrame) -> Optional[Dict[str, Tuple[int, int]]]:
+    def _build_dynamic_time_ranges(
+        self,
+        df: pd.DataFrame,
+        time_bounds: Optional[Tuple[int, int]] = None,
+        align_to_minute: bool = False,
+    ) -> Optional[Dict[str, Tuple[int, int]]]:
         series = pd.to_numeric(df.get('시분초'), errors='coerce').dropna()
         if series.size < self.config.dynamic_min_samples:
             return None
 
-        base_min = min(r[0] for r in self.config.time_ranges.values())
-        base_max = max(r[1] for r in self.config.time_ranges.values())
+        if time_bounds:
+            base_min, base_max = time_bounds
+        else:
+            base_min = min(r[0] for r in self.config.time_ranges.values())
+            base_max = max(r[1] for r in self.config.time_ranges.values())
+
         series = series[(series >= base_min) & (series < base_max)]
         if series.size < self.config.dynamic_min_samples:
             return None
@@ -531,14 +558,17 @@ class SegmentBuilder:
             return None
 
         try:
-            q_values = [int(series.quantile(q)) for q in qs]
+            series_sec = self._hhmmss_series_to_seconds(series)
+            base_min_sec = self._hhmmss_to_seconds(base_min)
+            base_max_sec = self._hhmmss_to_seconds(base_max)
+            q_values = [int(series_sec.quantile(q)) for q in qs]
         except Exception:
             return None
 
-        boundaries = [int(base_min)] + q_values + [int(base_max)]
-        if len(set(boundaries)) < 5:
+        boundaries_sec = [int(base_min_sec)] + q_values + [int(base_max_sec)]
+        if len(set(boundaries_sec)) < 5:
             return None
-        if not all(boundaries[i] < boundaries[i + 1] for i in range(len(boundaries) - 1)):
+        if not all(boundaries_sec[i] < boundaries_sec[i + 1] for i in range(len(boundaries_sec) - 1)):
             return None
 
         labels = []
@@ -549,18 +579,126 @@ class SegmentBuilder:
         if len(labels) != 4:
             labels = ['T1', 'T2', 'T3', 'T4']
 
+        min_step = 60 if align_to_minute else 1
+        if align_to_minute:
+            boundaries_sec = [int(round(b / 60.0) * 60) for b in boundaries_sec]
+        boundaries_sec[0] = base_min_sec
+        boundaries_sec[-1] = base_max_sec
+        for idx in range(1, len(boundaries_sec) - 1):
+            if boundaries_sec[idx] <= boundaries_sec[idx - 1]:
+                boundaries_sec[idx] = boundaries_sec[idx - 1] + min_step
+        if boundaries_sec[-1] <= boundaries_sec[-2]:
+            return None
+
         ranges: Dict[str, Tuple[int, int]] = {}
         for idx, prefix in enumerate(labels):
-            start = boundaries[idx]
-            end = boundaries[idx + 1]
+            start = self._seconds_to_hhmmss(boundaries_sec[idx])
+            end = self._seconds_to_hhmmss(boundaries_sec[idx + 1])
             name = f"{prefix}_{start:06d}_{end:06d}"
             ranges[name] = (start, end)
         return ranges
 
+    def _get_time_bounds(self, series: pd.Series) -> Optional[Tuple[int, int]]:
+        if series is None or series.empty:
+            return None
+        try:
+            return int(series.min()), int(series.max())
+        except Exception:
+            return None
+
+    def _is_min_timeframe(self, series: pd.Series) -> bool:
+        if series is None or series.empty:
+            return False
+        seconds = (pd.to_numeric(series, errors='coerce') % 100).dropna()
+        if seconds.empty:
+            return False
+        return float((seconds == 0).mean()) >= 0.95
+
+    def _needs_time_range_expansion(self, data_min: int, data_max: int) -> bool:
+        base_min = min(r[0] for r in self.config.time_ranges.values())
+        base_max = max(r[1] for r in self.config.time_ranges.values())
+        return data_min < base_min or data_max > base_max
+
+    def _build_scaled_time_ranges(
+        self,
+        data_min: int,
+        data_max: int,
+        align_to_minute: bool = False,
+    ) -> Optional[Dict[str, Tuple[int, int]]]:
+        base_ranges = list(self.config.time_ranges.items())
+        if not base_ranges:
+            return None
+
+        ordered = sorted(base_ranges, key=lambda item: item[1][0])
+        base_min = min(r[0] for _, r in ordered)
+        base_max = max(r[1] for _, r in ordered)
+        base_min_sec = self._hhmmss_to_seconds(base_min)
+        base_max_sec = self._hhmmss_to_seconds(base_max)
+        data_min_sec = self._hhmmss_to_seconds(data_min)
+        data_max_sec = self._hhmmss_to_seconds(data_max)
+        base_span_sec = base_max_sec - base_min_sec
+        data_span_sec = data_max_sec - data_min_sec
+        if base_span_sec <= 0 or data_span_sec <= 0:
+            return None
+
+        min_step = 60 if align_to_minute else 1
+        if data_span_sec < min_step * len(ordered):
+            return None
+
+        base_bounds = [rng[0] for _, rng in ordered]
+        base_bounds.append(ordered[-1][1][1])
+        base_bounds_sec = [self._hhmmss_to_seconds(v) for v in base_bounds]
+
+        scaled_bounds_sec = [data_min_sec]
+        for base_bound_sec in base_bounds_sec[1:-1]:
+            ratio = (base_bound_sec - base_min_sec) / base_span_sec
+            scaled = data_min_sec + int(round(ratio * data_span_sec))
+            if align_to_minute:
+                scaled = int(round(scaled / 60.0) * 60)
+            if scaled <= scaled_bounds_sec[-1]:
+                scaled = scaled_bounds_sec[-1] + min_step
+            scaled_bounds_sec.append(scaled)
+
+        if data_max_sec <= scaled_bounds_sec[-1]:
+            return None
+        scaled_bounds_sec.append(data_max_sec)
+
+        ranges: Dict[str, Tuple[int, int]] = {}
+        for idx, (label, _) in enumerate(ordered):
+            prefix = str(label).split('_')[0]
+            start = self._seconds_to_hhmmss(scaled_bounds_sec[idx])
+            end = self._seconds_to_hhmmss(scaled_bounds_sec[idx + 1])
+            name = f"{prefix}_{start:06d}_{end:06d}"
+            ranges[name] = (start, end)
+        return ranges
+
+    @staticmethod
+    def _hhmmss_to_seconds(value: int) -> int:
+        hh = int(value) // 10000
+        mm = (int(value) // 100) % 100
+        ss = int(value) % 100
+        return hh * 3600 + mm * 60 + ss
+
+    @staticmethod
+    def _seconds_to_hhmmss(value: int) -> int:
+        seconds = int(value)
+        hh = seconds // 3600
+        mm = (seconds % 3600) // 60
+        ss = seconds % 60
+        return hh * 10000 + mm * 100 + ss
+
+    @staticmethod
+    def _hhmmss_series_to_seconds(series: pd.Series) -> pd.Series:
+        series_num = pd.to_numeric(series, errors='coerce').fillna(0).astype(int)
+        hh = series_num // 10000
+        mm = (series_num // 100) % 100
+        ss = series_num % 100
+        return hh * 3600 + mm * 60 + ss
+
     def _build_range_summary(self) -> pd.DataFrame:
         rows = []
         cap_source = 'dynamic' if self.dynamic_flags.get('market_cap') else 'fixed'
-        time_source = 'dynamic' if self.dynamic_flags.get('time') else 'fixed'
+        time_source = 'dynamic' if self.dynamic_flags.get('time') else 'scaled' if self.dynamic_flags.get('time_scaled') else 'fixed'
 
         for label, (min_v, max_v) in self.runtime_market_cap_ranges.items():
             rows.append({
