@@ -97,7 +97,12 @@ def run_phase2(
     segment_code_path = None
     segment_code_summary = None
     if global_best:
-        code_lines, code_summary = build_segment_filter_code(global_best, seg_config)
+        code_lines, code_summary = build_segment_filter_code(
+            global_best,
+            seg_config,
+            runtime_market_cap_ranges=builder.runtime_market_cap_ranges,
+            runtime_time_ranges=builder.runtime_time_ranges,
+        )
         segment_code_summary = code_summary
         segment_code_path = save_segment_code(code_lines, output_dir, output_prefix)
 

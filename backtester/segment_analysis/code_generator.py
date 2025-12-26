@@ -16,6 +16,8 @@ from .segmentation import SegmentConfig
 def build_segment_filter_code(
     global_best: Optional[dict],
     seg_config: Optional[SegmentConfig] = None,
+    runtime_market_cap_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
+    runtime_time_ranges: Optional[Dict[str, Tuple[int, int]]] = None,
 ) -> Tuple[List[str], Dict[str, int]]:
     if not isinstance(global_best, dict):
         return [], {}
@@ -25,6 +27,8 @@ def build_segment_filter_code(
         return [], {}
 
     seg_config = seg_config or SegmentConfig()
+    cap_ranges = runtime_market_cap_ranges or seg_config.market_cap_ranges
+    time_ranges = runtime_time_ranges or seg_config.time_ranges
 
     lines: List[str] = []
     lines.append("# 세그먼트 필터 조건식 (자동 생성)")
@@ -42,7 +46,7 @@ def build_segment_filter_code(
         total_segments += 1
         total_filters += len(filters)
 
-        seg_condition = _build_segment_condition(seg_id, seg_config)
+        seg_condition = _build_segment_condition(seg_id, cap_ranges, time_ranges)
         lines.append(f"# [{seg_id}]")
         if seg_condition:
             lines.append(f"if {seg_condition}:")
@@ -88,13 +92,17 @@ def save_segment_code(code_lines: List[str], output_dir: str, prefix: str) -> Op
     return str(code_path)
 
 
-def _build_segment_condition(seg_id: str, config: SegmentConfig) -> Optional[str]:
+def _build_segment_condition(
+    seg_id: str,
+    cap_ranges: Dict[str, Tuple[float, float]],
+    time_ranges: Dict[str, Tuple[int, int]],
+) -> Optional[str]:
     if not seg_id or seg_id == 'Out_of_Range':
         return None
 
     cap_label, time_label = _split_segment_id(seg_id)
-    cap_range = config.market_cap_ranges.get(cap_label)
-    time_range = config.time_ranges.get(time_label)
+    cap_range = cap_ranges.get(cap_label)
+    time_range = time_ranges.get(time_label)
     if not cap_range or not time_range:
         return None
 
