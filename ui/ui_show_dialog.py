@@ -160,7 +160,7 @@ def show_dialog_chart(ui, real, coin, code, tickcount, searchdate, starttime, en
                 ui.ct_lineEdittttt_02.setText('93000')
             else:
                 ui.ct_lineEdittttt_01.setText('900')
-                ui.ct_lineEdittttt_02.setText('1520')
+                ui.ct_lineEdittttt_02.setText('1519')
         ui.dialog_chart.show()
     if ui.dialog_chart.isVisible() and ui.proc_chart.is_alive():
         if real:
@@ -206,7 +206,7 @@ def show_chart(ui):
                 ui.ct_lineEdittttt_02.setText('93000')
             else:
                 ui.ct_lineEdittttt_01.setText('900')
-                ui.ct_lineEdittttt_02.setText('1520')
+                ui.ct_lineEdittttt_02.setText('1519')
         ui.dialog_chart.show()
     else:
         ui.dialog_chart.close()
