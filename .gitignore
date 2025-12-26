@@ -86,3 +86,6 @@ STOM V1 venv.lnk
 # Unified backtesting outputs
 /backtester/backtesting_output/*
 !/backtester/backtesting_output/.gitkeep
+
+# Backtester analysis artifacts (local)
+/backtester/analysis_enhanced/models/
