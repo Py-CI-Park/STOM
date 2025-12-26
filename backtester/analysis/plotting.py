@@ -118,6 +118,52 @@ def _calc_mdd(profits, seed):
         return 0.0
 
 
+def _annotate_profit_extremes(ax, x_values, profits, unit):
+    if profits is None:
+        return
+    try:
+        arr = np.asarray(profits, dtype=np.float64)
+    except Exception:
+        return
+    if arr.size == 0:
+        return
+    x_vals = np.asarray(list(x_values)) if isinstance(x_values, range) else np.asarray(x_values)
+    if x_vals.size != arr.size:
+        x_vals = np.arange(arr.size)
+
+    max_profit = float(np.nanmax(arr))
+    if max_profit > 0:
+        idx = int(np.nanargmax(arr))
+        x = x_vals[idx]
+        ax.scatter([x], [max_profit], color='red', zorder=5)
+        ax.annotate(
+            f'최대 이익 {int(max_profit):,}{unit}',
+            xy=(x, max_profit),
+            xytext=(0, 12),
+            textcoords='offset points',
+            ha='center',
+            fontsize=8,
+            color='red',
+            arrowprops=dict(arrowstyle='->', color='red', lw=0.8),
+        )
+
+    min_profit = float(np.nanmin(arr))
+    if min_profit < 0:
+        idx = int(np.nanargmin(arr))
+        x = x_vals[idx]
+        ax.scatter([x], [min_profit], color='blue', zorder=5)
+        ax.annotate(
+            f'최대 손실 {int(abs(min_profit)):,}{unit}',
+            xy=(x, min_profit),
+            xytext=(0, -14),
+            textcoords='offset points',
+            ha='center',
+            fontsize=8,
+            color='blue',
+            arrowprops=dict(arrowstyle='->', color='blue', lw=0.8),
+        )
+
+
 def _estimate_capital_stats(df):
     if df is None or df.empty or '매수금액' not in df.columns:
         return None, None
@@ -486,12 +532,14 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax0.set_xlabel("\n" + "\n".join(info_lines), fontsize=9)
 
     ax1 = fig.add_subplot(gs[1])
+    unit_label = _extract_unit(label_text or '') or '원'
     if not use_dates:
         profits = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
         x = range(len(profits))
         ax1.bar(x, profits.clip(lower=0), label='이익금액', color='r', alpha=0.7)
         ax1.bar(x, profits.clip(upper=0), label='손실금액', color='b', alpha=0.7)
         ax1.plot(range(len(filt_cum)), filt_cum, linewidth=2.0, label='누적(필터)', color='orange')
+        _annotate_profit_extremes(ax1, x, profits, unit_label)
         ax1.set_xlabel('거래 순번(필터 적용 후)')
     else:
         profits = filt_cum.diff().fillna(filt_cum.iloc[0])
@@ -499,6 +547,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax1.bar(x, profits.clip(lower=0).values, label='이익금액', color='r', alpha=0.7)
         ax1.bar(x, profits.clip(upper=0).values, label='손실금액', color='b', alpha=0.7)
         ax1.plot(x, filt_cum.values, linewidth=2.0, label='누적(필터)', color='orange')
+        _annotate_profit_extremes(ax1, x, profits, unit_label)
         ax1.set_xlabel('매수일자')
         tick_step = max(1, int(len(dates) / 10))
         ax1.set_xticks(list(x[::tick_step]))
