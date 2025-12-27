@@ -362,7 +362,7 @@ def _build_daily_holdings_summary(df, amount_mode: str = 'sum'):
         return None
 
     timestamps = pd.to_numeric(holdings['timestamp'], errors='coerce')
-    timestamps = timestamps.dropna().astype(int)
+    timestamps = timestamps.dropna().astype('int64')
     if timestamps.empty:
         return None
 
