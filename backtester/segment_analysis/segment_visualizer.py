@@ -123,6 +123,18 @@ def plot_segment_heatmap(
                     text = f"T:{trade_val:,}\nP:{_fmt_profit(profit_val)}"
                 ax.text(j, i, text, ha='center', va='center', fontsize=text_font, rotation=text_rotation)
 
+        total_profit = float(profits.to_numpy(dtype=float).sum())
+        ax.text(
+            0.02,
+            0.98,
+            f"Profit 합계: {_fmt_profit(total_profit)}",
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=8,
+            bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='gray', alpha=0.85),
+        )
+
         return im
 
     col_count = max(1, len(profits_base.columns))

@@ -165,7 +165,19 @@ def _annotate_profit_extremes(ax, x_values, profits, unit):
         )
 
 
-def _annotate_bar_values(ax, x_values, values, rotation=90, fontsize=7):
+def _format_profit_in_man(value):
+    try:
+        value = float(value)
+    except Exception:
+        return None
+    if np.isnan(value):
+        return None
+    sign = '+' if value >= 0 else '-'
+    man_value = int(abs(value) / 10000.0)
+    return f"{sign}{man_value:,}만"
+
+
+def _annotate_bar_values(ax, x_values, values, rotation=90, fontsize=7, unit='raw'):
     for x, val in zip(x_values, values):
         try:
             value = float(val)
@@ -173,7 +185,12 @@ def _annotate_bar_values(ax, x_values, values, rotation=90, fontsize=7):
             continue
         if np.isnan(value):
             continue
-        label = f"{value:+,.0f}"
+        if unit == 'man':
+            label = _format_profit_in_man(value)
+            if label is None:
+                continue
+        else:
+            label = f"{value:+,.0f}"
         offset = 3 if value >= 0 else -3
         va = 'bottom' if value >= 0 else 'top'
         ax.annotate(
@@ -904,8 +921,8 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.bar(x - 0.2, base_vals, width=0.4, label='기준', color='gray', alpha=0.6)
         ax.bar(x + 0.2, filt_vals, width=0.4, label='필터', color='orange', alpha=0.8)
         label_size = 7 if len(hours) <= 12 else 6 if len(hours) <= 20 else 5
-        _annotate_bar_values(ax, x - 0.2, base_vals, rotation=45, fontsize=label_size)
-        _annotate_bar_values(ax, x + 0.2, filt_vals, rotation=45, fontsize=label_size)
+        _annotate_bar_values(ax, x - 0.2, base_vals, rotation=45, fontsize=label_size, unit='man')
+        _annotate_bar_values(ax, x + 0.2, filt_vals, rotation=45, fontsize=label_size, unit='man')
         ax.set_xticks(x)
         ax.set_xticklabels([str(h) for h in hours], rotation=0, fontsize=8)
         ax.set_title('시간대별 수익금(매수시 기준)')
@@ -939,8 +956,8 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.bar(x - 0.2, base_vals, width=0.4, label='기준', color='gray', alpha=0.6)
         ax.bar(x + 0.2, filt_vals, width=0.4, label='필터', color='orange', alpha=0.8)
         label_size = 8 if len(wds) <= 7 else 7
-        _annotate_bar_values(ax, x - 0.2, base_vals, rotation=45, fontsize=label_size)
-        _annotate_bar_values(ax, x + 0.2, filt_vals, rotation=45, fontsize=label_size)
+        _annotate_bar_values(ax, x - 0.2, base_vals, rotation=45, fontsize=label_size, unit='man')
+        _annotate_bar_values(ax, x + 0.2, filt_vals, rotation=45, fontsize=label_size, unit='man')
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
         ax.set_title('요일별 수익금(매수일자 기준)')
