@@ -39,6 +39,7 @@ def run_phase3(
     filter_config: Optional[FilterEvaluatorConfig] = None,
     validation_config: Optional[StabilityValidationConfig] = None,
     runner_config: Optional[Phase3RunnerConfig] = None,
+    global_best: Optional[dict] = None,
 ) -> dict:
     runner_config = runner_config or Phase3RunnerConfig()
     detail_path = Path(detail_path).expanduser().resolve()
@@ -72,8 +73,12 @@ def run_phase3(
     validation_df = validate_filter_stability(segments, candidates_by_segment, validation_config)
     validation_path = save_segment_validation(validation_df, output_dir, output_prefix)
 
+    filtered_summary_df = _build_filtered_segment_summary(segments, filters_df, global_best)
+
     heatmap_path = plot_segment_heatmap(
-        summary_df, str(output_dir_path / f"{output_prefix}_segment_heatmap.png")
+        summary_df,
+        str(output_dir_path / f"{output_prefix}_segment_heatmap.png"),
+        filtered_summary_df=filtered_summary_df,
     )
     efficiency_path = plot_filter_efficiency(
         filters_df, str(output_dir_path / f"{output_prefix}_filter_efficiency.png")
@@ -87,6 +92,75 @@ def run_phase3(
         'heatmap_path': heatmap_path,
         'efficiency_path': efficiency_path,
     }
+
+
+def _build_filtered_segment_summary(
+    segments: dict,
+    filters_df: pd.DataFrame,
+    global_best: Optional[dict] = None,
+) -> pd.DataFrame:
+    if not isinstance(segments, dict) or not segments:
+        return pd.DataFrame()
+    if isinstance(global_best, dict):
+        combo_map = global_best.get('combination')
+        if isinstance(combo_map, dict) and combo_map:
+            filtered_segments = {}
+            for seg_id, seg_df in segments.items():
+                combo = combo_map.get(seg_id)
+                if combo is None or combo.get('exclude_segment'):
+                    filtered_segments[seg_id] = seg_df.iloc[0:0].copy()
+                    continue
+                filters = combo.get('filters') or []
+                filtered_segments[seg_id] = _apply_filters(seg_df, filters)
+            return build_segment_summary(filtered_segments)
+
+    if filters_df is None or filters_df.empty:
+        return build_segment_summary(segments)
+
+    df = filters_df.copy()
+    if 'segment_id' not in df.columns:
+        return build_segment_summary(segments)
+
+    df['efficiency'] = pd.to_numeric(df.get('efficiency'), errors='coerce').fillna(0)
+    df['improvement'] = pd.to_numeric(df.get('improvement'), errors='coerce').fillna(0)
+    df = df.sort_values(['segment_id', 'efficiency', 'improvement'], ascending=[True, False, False])
+
+    best_filters = {}
+    for seg_id, seg_rows in df.groupby('segment_id', sort=False):
+        row = seg_rows.iloc[0].to_dict()
+        best_filters[seg_id] = row
+
+    filtered_segments = {}
+    for seg_id, seg_df in segments.items():
+        if seg_df is None or seg_df.empty:
+            filtered_segments[seg_id] = seg_df
+            continue
+        best = best_filters.get(seg_id)
+        if best:
+            filtered_segments[seg_id] = _apply_filters(seg_df, [best])
+        else:
+            filtered_segments[seg_id] = seg_df.copy()
+
+    return build_segment_summary(filtered_segments)
+
+
+def _apply_filters(seg_df: pd.DataFrame, filters: list) -> pd.DataFrame:
+    if not filters:
+        return seg_df.copy()
+    mask = pd.Series(True, index=seg_df.index)
+    for flt in filters:
+        column = flt.get('column')
+        threshold = flt.get('threshold')
+        direction = flt.get('direction')
+        if column is None or column not in seg_df.columns:
+            continue
+        values = pd.to_numeric(seg_df[column], errors='coerce')
+        if direction == 'less':
+            cond = values >= threshold
+        else:
+            cond = values < threshold
+        mask &= cond.fillna(False)
+    return seg_df.loc[mask].copy()
 
 
 def _build_prefix(filename: str) -> str:

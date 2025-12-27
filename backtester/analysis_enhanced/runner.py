@@ -235,13 +235,16 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
 
                 if mode in ('phase3', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
                     t0 = time.perf_counter()
+                    phase2_result = segment_outputs.get('phase2') if isinstance(segment_outputs, dict) else None
+                    global_best = phase2_result.get('global_best') if isinstance(phase2_result, dict) else None
                     segment_outputs['phase3'] = run_phase3(
                         detail_path,
                         filter_config=filter_config,
                         runner_config=Phase3RunnerConfig(
                             output_dir=segment_output_base,
                             prefix=save_file_name
-                        )
+                        ),
+                        global_best=global_best,
                     )
                     segment_timing['phase3_s'] = round(time.perf_counter() - t0, 4)
 

@@ -8,6 +8,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time
+from utility.mpl_setup import ensure_mpl_font
 from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.analysis.text_utils import _format_progress_logs, _extract_strategy_block_lines
 
@@ -164,6 +165,29 @@ def _annotate_profit_extremes(ax, x_values, profits, unit):
         )
 
 
+def _annotate_bar_values(ax, x_values, values, rotation=90, fontsize=7):
+    for x, val in zip(x_values, values):
+        try:
+            value = float(val)
+        except Exception:
+            continue
+        if np.isnan(value):
+            continue
+        label = f"{value:+,.0f}"
+        offset = 3 if value >= 0 else -3
+        va = 'bottom' if value >= 0 else 'top'
+        ax.annotate(
+            label,
+            xy=(x, value),
+            xytext=(0, offset),
+            textcoords='offset points',
+            ha='center',
+            va=va,
+            fontsize=fontsize,
+            rotation=rotation,
+        )
+
+
 def _annotate_holdings_extremes(ax, x_values, holdings, unit):
     if holdings is None:
         return
@@ -208,6 +232,32 @@ def _annotate_holdings_extremes(ax, x_values, holdings, unit):
             color='blue',
             arrowprops=dict(arrowstyle='->', color='blue', lw=0.8),
         )
+
+
+def _apply_symlog_if_asymmetric(ax, values, ratio_threshold: float = 3.0) -> bool:
+    try:
+        arr = np.asarray(values, dtype=np.float64)
+    except Exception:
+        return False
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return False
+    vmin = float(np.min(arr))
+    vmax = float(np.max(arr))
+    if not (vmin < 0 < vmax):
+        return False
+
+    neg_abs = abs(vmin)
+    pos_abs = abs(vmax)
+    if neg_abs <= 0 or pos_abs <= 0:
+        return False
+    if max(neg_abs, pos_abs) < min(neg_abs, pos_abs) * ratio_threshold:
+        return False
+
+    linthresh = max(1.0, min(neg_abs, pos_abs) * 0.7)
+    ax.set_yscale('symlog', linthresh=linthresh, linscale=1.0)
+    ax.axhline(0, color='black', linewidth=0.8, linestyle='--', alpha=0.6)
+    return True
 
 
 def _collect_trade_events(df):
@@ -459,6 +509,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
     tag = f"_{file_tag}" if file_tag else ""
     output_dir = ensure_backtesting_output_dir(save_file_name)
+    ensure_mpl_font()
 
     # 2025-12-20: 필터 적용 후 거래 0~1건인 경우 경고 차트 생성
     if df_filtered is None or len(df_filtered) < 2 or '수익금' not in df_filtered.columns:
@@ -666,10 +717,25 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         f"- 거래수: {len(df_all):,} → {len(df_filtered):,} (제외 {excluded_ratio:.1f}%)",
         f"- 수익금: {int(total_profit):,}원 → {int(filtered_profit):,}원 (개선 {int(improvement):+,}원)",
     ]
+    remaining_ratio = 100.0 - excluded_ratio
+    if remaining_ratio >= 0:
+        summary_lines.append(f"- 잔여비율: {remaining_ratio:.1f}%")
+    if total_profit != 0:
+        improve_pct = improvement / abs(total_profit) * 100.0
+        summary_lines.append(f"- 개선률: {improve_pct:+.2f}% (기준 대비)")
     if avg_return_all is not None and avg_return_filt is not None:
         summary_lines.append(
             f"- 평균 수익률: {avg_return_all:.4f}% → {avg_return_filt:.4f}% ({avg_return_filt - avg_return_all:+.4f}%)"
         )
+    try:
+        base_profit_series = pd.to_numeric(df_all['수익금'], errors='coerce').fillna(0)
+        filt_profit_series = pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0)
+        if len(base_profit_series) > 0 and len(filt_profit_series) > 0:
+            base_wr = (base_profit_series > 0).mean() * 100.0
+            filt_wr = (filt_profit_series > 0).mean() * 100.0
+            summary_lines.append(f"- 승률: {base_wr:.2f}% → {filt_wr:.2f}%")
+    except Exception:
+        pass
     if isinstance(generated_code, dict) and generated_code.get('summary'):
         s = generated_code.get('summary') or {}
         try:
@@ -758,17 +824,22 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         base_daily = base_profit_daily.cumsum()
         filt_daily = filt_profit_daily.cumsum()
         x = np.arange(len(dates))
+        title = '일자별 누적 성과(필터 적용 비교)'
         if seed:
             base_daily_pct = (base_daily + float(seed)) / float(seed) * 100 - 100
             filt_daily_pct = (filt_daily + float(seed)) / float(seed) * 100 - 100
             ax.plot(x, base_daily_pct.values, label='기준(%)', color='gray', linewidth=1.2)
             ax.plot(x, filt_daily_pct.values, label='필터(%)', color='orange', linewidth=2.0)
             ax.set_ylabel('누적 수익률(%)')
+            scale_vals = np.concatenate([base_daily_pct.values, filt_daily_pct.values])
         else:
             ax.plot(x, base_daily.values, label='기준(원)', color='gray', linewidth=1.2)
             ax.plot(x, filt_daily.values, label='필터(원)', color='orange', linewidth=2.0)
             ax.set_ylabel('누적 수익금(원)')
-        ax.set_title('일자별 누적 성과(필터 적용 비교)')
+            scale_vals = np.concatenate([base_daily.values, filt_daily.values])
+        if _apply_symlog_if_asymmetric(ax, scale_vals):
+            title = f"{title} (y축 로그압축)"
+        ax.set_title(title)
         ax.set_xlabel('매수일자')
         tick_step = max(1, int(len(dates) / 10))
         ax.set_xticks(list(x[::tick_step]))
@@ -832,12 +903,16 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         x = np.arange(len(hours))
         ax.bar(x - 0.2, base_vals, width=0.4, label='기준', color='gray', alpha=0.6)
         ax.bar(x + 0.2, filt_vals, width=0.4, label='필터', color='orange', alpha=0.8)
+        label_size = 7 if len(hours) <= 12 else 6 if len(hours) <= 20 else 5
+        _annotate_bar_values(ax, x - 0.2, base_vals, rotation=45, fontsize=label_size)
+        _annotate_bar_values(ax, x + 0.2, filt_vals, rotation=45, fontsize=label_size)
         ax.set_xticks(x)
         ax.set_xticklabels([str(h) for h in hours], rotation=0, fontsize=8)
         ax.set_title('시간대별 수익금(매수시 기준)')
         ax.axhline(y=0, color='black', linewidth=0.8)
         ax.legend(loc='best')
         ax.grid(axis='y')
+        ax.margins(y=0.18)
     else:
         ax.text(0.5, 0.5, '매수시 컬럼 없음', ha='center', va='center', transform=ax.transAxes)
         ax.axis('off')
@@ -863,12 +938,16 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         filt_vals = [float(filt_wd.get(w, 0) or 0) for w in wds]
         ax.bar(x - 0.2, base_vals, width=0.4, label='기준', color='gray', alpha=0.6)
         ax.bar(x + 0.2, filt_vals, width=0.4, label='필터', color='orange', alpha=0.8)
+        label_size = 8 if len(wds) <= 7 else 7
+        _annotate_bar_values(ax, x - 0.2, base_vals, rotation=45, fontsize=label_size)
+        _annotate_bar_values(ax, x + 0.2, filt_vals, rotation=45, fontsize=label_size)
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
         ax.set_title('요일별 수익금(매수일자 기준)')
         ax.axhline(y=0, color='black', linewidth=0.8)
         ax.legend(loc='best')
         ax.grid(axis='y')
+        ax.margins(y=0.18)
     else:
         ax.text(0.5, 0.5, '매수일자 컬럼 없음', ha='center', va='center', transform=ax.transAxes)
         ax.axis('off')
@@ -884,6 +963,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             backname, back_text, label_text, save_file_name, schedul, plotgraph, buy_vars=None, sell_vars=None,
             buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train', progress_logs=None):
     output_dir = ensure_backtesting_output_dir(save_file_name)
+    ensure_mpl_font()
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
     df_tsg['수익금합계120'] = df_tsg['수익금합계'].rolling(window=120).mean().round(2)
