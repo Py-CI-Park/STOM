@@ -274,6 +274,20 @@ def _apply_symlog_if_asymmetric(ax, values, ratio_threshold: float = 3.0) -> boo
     linthresh = max(1.0, min(neg_abs, pos_abs) * 0.7)
     ax.set_yscale('symlog', linthresh=linthresh, linscale=1.0)
     ax.axhline(0, color='black', linewidth=0.8, linestyle='--', alpha=0.6)
+
+    # Force ASCII minus to avoid missing glyph warnings on symlog tick labels.
+    try:
+        from matplotlib.ticker import FuncFormatter
+
+        def _ascii_minus(value, pos):
+            if value == 0:
+                return "0"
+            text = f"{value:g}"
+            return text.replace('\u2212', '-')
+
+        ax.yaxis.set_major_formatter(FuncFormatter(_ascii_minus))
+    except Exception:
+        pass
     return True
 
 
