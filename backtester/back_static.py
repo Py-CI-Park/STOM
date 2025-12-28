@@ -536,6 +536,25 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     'unit': '배율',
                     'formula': ["매도초당거래대금/매수초당거래대금 if 매수초당거래대금>0 else 1.0"],
                 },
+                # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표
+                '당일거래대금_전틱분봉_비율': {
+                    'desc': '직전 거래 대비 당일거래대금 변화율',
+                    'unit': '배율',
+                    'formula': ["현재_당일거래대금 / 직전거래_당일거래대금 if >0 else 1.0"],
+                    'note': '첫 거래는 1.0, 거래대금 증감 트렌드 파악용'
+                },
+                '당일거래대금_매수매도_비율': {
+                    'desc': '매수→매도 간 당일거래대금 변화율',
+                    'unit': '배율',
+                    'formula': ["매도당일거래대금 / 매수당일거래대금 if >0 else 1.0"],
+                    'note': '보유 기간 동안 시장 유동성 변화'
+                },
+                '당일거래대금_5틱분봉평균_비율': {
+                    'desc': '최근 5틱/분봉 평균 대비 당일거래대금 비율',
+                    'unit': '배율',
+                    'formula': ["현재_당일거래대금 / rolling_mean(5) if >0 else 1.0"],
+                    'note': '단기 평균 대비 유동성 수준, 노이즈 감소용'
+                },
             }
 
             def _default_doc(col: str):
