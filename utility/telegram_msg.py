@@ -1,16 +1,14 @@
 import os
 import time
-from queue import Empty
+from queue import Empty, Queue
+from threading import Event, Thread
 
 import telegram
 import pandas as pd
+
+from backtester.analysis.output_config import get_backtesting_output_config
 from utility.setting import DICT_SET
 from telegram.ext import Updater, MessageHandler, Filters
-
-
-PHOTO_BATCH_MAX = 10
-PHOTO_FLUSH_INTERVAL = 1.0
-PHOTO_POLL_TIMEOUT = 0.2
 
 
 class TelegramMsg:
@@ -30,13 +28,18 @@ class TelegramMsg:
         self.bot      = None
         self.photo_queue = []
         self.last_photo_time = 0.0
+        self.photo_send_queue = Queue()
+        self.photo_sender_stop = Event()
+        self.photo_sender_thread = None
+        self._load_output_config()
         self.UpdateBot()
+        self._start_photo_sender()
         self.Start()
 
     def Start(self):
         while True:
             try:
-                data = self.teleQ.get(timeout=PHOTO_POLL_TIMEOUT)
+                data = self.teleQ.get(timeout=self.photo_poll_timeout)
             except Empty:
                 self.FlushPhotoQueue()
                 continue
@@ -58,8 +61,14 @@ class TelegramMsg:
                 self.dict_set = data[1]
                 self.gubun = int(self.dict_set['증권사'][4:])
                 self.UpdateBot()
+                self._load_output_config()
+                if self.enable_telegram_async:
+                    self._start_photo_sender()
+                else:
+                    self._stop_photo_sender()
 
     def __del__(self):
+        self._stop_photo_sender()
         if self.updater is not None:
             self.updater.stop()
 
@@ -175,8 +184,8 @@ class TelegramMsg:
                 self.SendPhoto(path)
             return
 
-        for i in range(0, len(paths), PHOTO_BATCH_MAX):
-            chunk = paths[i:i + PHOTO_BATCH_MAX]
+        for i in range(0, len(paths), self.photo_batch_max):
+            chunk = paths[i:i + self.photo_batch_max]
             if len(chunk) == 1:
                 self.SendPhoto(chunk[0])
                 continue
@@ -208,18 +217,57 @@ class TelegramMsg:
             return
         self.photo_queue.append(path)
         self.last_photo_time = time.time()
-        if len(self.photo_queue) >= PHOTO_BATCH_MAX:
+        if len(self.photo_queue) >= self.photo_batch_max:
             self.FlushPhotoQueue(force=True)
 
     def FlushPhotoQueue(self, force: bool = False):
         if not self.photo_queue:
             return
-        if not force and (time.time() - self.last_photo_time) < PHOTO_FLUSH_INTERVAL:
+        if not force and (time.time() - self.last_photo_time) < self.photo_flush_interval:
             return
         paths = self.photo_queue
         self.photo_queue = []
         self.last_photo_time = 0.0
-        self.SendMediaGroup(paths)
+        if self.enable_telegram_async:
+            self.photo_send_queue.put(paths)
+        else:
+            self.SendMediaGroup(paths)
+
+    def _load_output_config(self):
+        cfg = get_backtesting_output_config()
+        self.enable_telegram_async = bool(cfg.get('enable_telegram_async', False))
+        self.photo_batch_max = int(cfg.get('telegram_batch_size', 10))
+        self.photo_flush_interval = float(cfg.get('telegram_batch_interval_s', 1.0))
+        self.photo_poll_timeout = float(cfg.get('telegram_queue_timeout_s', 0.2))
+
+    def _start_photo_sender(self):
+        if not self.enable_telegram_async:
+            return
+        if self.photo_sender_thread is not None:
+            return
+        self.photo_sender_thread = Thread(target=self._photo_sender_loop, daemon=True)
+        self.photo_sender_thread.start()
+
+    def _stop_photo_sender(self):
+        if self.photo_sender_thread is None:
+            return
+        self.photo_sender_stop.set()
+        self.photo_send_queue.put(None)
+        try:
+            self.photo_sender_thread.join(timeout=1.0)
+        except Exception:
+            pass
+        self.photo_sender_thread = None
+
+    def _photo_sender_loop(self):
+        while not self.photo_sender_stop.is_set():
+            try:
+                batch = self.photo_send_queue.get(timeout=0.5)
+            except Empty:
+                continue
+            if batch is None:
+                break
+            self.SendMediaGroup(batch)
 
     def UpdateDataframe(self, df):
         total_rows = len(df)
