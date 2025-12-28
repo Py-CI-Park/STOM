@@ -555,6 +555,17 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     'formula': ["현재_당일거래대금 / rolling_mean(5) if >0 else 1.0"],
                     'note': '단기 평균 대비 유동성 수준, 노이즈 감소용'
                 },
+                # [NEW 2025-12-28] ML 예측 지표: 당일거래대금_매수매도_비율 예측값
+                '당일거래대금_매수매도_비율_ML': {
+                    'desc': '매수시점 변수만으로 예측한 당일거래대금_매수매도_비율',
+                    'unit': '배율',
+                    'formula': [
+                        "ML 회귀 모델 (RandomForest or MLP)",
+                        "features: 당일거래대금_전틱분봉_비율, 당일거래대금_5틱분봉평균_비율 등 매수시점 변수",
+                        "target: 당일거래대금_매수매도_비율 (매도당일거래대금/매수당일거래대금)"
+                    ],
+                    'note': 'LOOKAHEAD 있는 실제값 대신 매수시점에서 사용 가능한 예측값. 필터로 안전하게 사용 가능.'
+                },
             }
 
             def _default_doc(col: str):
