@@ -19,6 +19,10 @@ try:
 except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
 
+CHART_DPI = 80
+MDD_SIMULATION_COUNT = 5
+MOVING_AVG_WINDOWS = (20, 60, 120)
+
 
 def _parse_number(text):
     if text is None:
@@ -595,7 +599,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
         path_main = str(output_dir / f"{save_file_name}{tag}_filtered.png")
         add_memo_box(fig, memo_text)
-        plt.savefig(path_main, dpi=100, bbox_inches='tight', facecolor='white')
+        plt.savefig(path_main, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
         return path_main, None
@@ -849,7 +853,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
     plt.tight_layout(rect=(0, 0.05, 1, 0.96))
     add_memo_box(fig, memo_text)
-    plt.savefig(path_main, dpi=120, bbox_inches='tight', facecolor='white')
+    plt.savefig(path_main, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
     # ===== 2) filtered_.png (분포/단계 요약) =====
@@ -999,7 +1003,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
 
     fig.suptitle(f'{backname} 필터 적용 분포/단계 요약 - {save_file_name}', fontsize=14, fontweight='bold')
     add_memo_box(fig, memo_text)
-    plt.savefig(path_sub, dpi=120, bbox_inches='tight', facecolor='white')
+    plt.savefig(path_sub, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
     return path_main, path_sub
@@ -1019,11 +1023,8 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         starttime=starttime,
         endtime=endtime,
     )
-    df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
-    df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
-    df_tsg['수익금합계120'] = df_tsg['수익금합계'].rolling(window=120).mean().round(2)
-    df_tsg['수익금합계240'] = df_tsg['수익금합계'].rolling(window=240).mean().round(2)
-    df_tsg['수익금합계480'] = df_tsg['수익금합계'].rolling(window=480).mean().round(2)
+    for window in MOVING_AVG_WINDOWS:
+        df_tsg[f'수익금합계{window:03d}'] = df_tsg['수익금합계'].rolling(window=window).mean().round(2)
 
     profit_values = df_tsg['수익금'].to_numpy(dtype=np.float64)
     df_tsg['이익금액'] = np.where(profit_values >= 0, profit_values, 0)
@@ -1085,7 +1086,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             pass
     sig_list = df_tsg['수익금'].to_list()
     mdd_list = []
-    for i in range(30):
+    for i in range(MDD_SIMULATION_COUNT):
         random.shuffle(sig_list)
         df_tsg[f'수익금{i}'] = sig_list
         df_tsg[f'수익금합계{i}'] = df_tsg[f'수익금{i}'].cumsum()
@@ -1206,7 +1207,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     gs = gridspec.GridSpec(nrows=2, ncols=2, height_ratios=[1, 1])
     # noinspection PyTypeChecker
     plt.subplot(gs[0])
-    for i in range(30):
+    for i in range(MDD_SIMULATION_COUNT):
         plt.plot(df_tsg.index, df_tsg[f'수익금합계{i}'], linewidth=0.5, label=f'MDD {mdd_list[i]}%')
     plt.plot(df_tsg.index, df_tsg['수익금합계'], linewidth=2, label=f'MDD {mdd}%', color='orange')
     max_mdd = max(mdd_list)
@@ -1247,7 +1248,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.grid()
     plt.tight_layout()
     add_memo_box(fig, memo_text)
-    plt.savefig(str(output_dir / f"{save_file_name}_.png"))
+    plt.savefig(str(output_dir / f"{save_file_name}_.png"), dpi=CHART_DPI)
 
     if buy_vars is None:
         fig = plt.figure(f'{backname} 결과', figsize=(12, 10))
@@ -1284,8 +1285,6 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         def _sample(col: str):
             return df_tsg[col].to_numpy(dtype=np.float64)[end_idx]
 
-        plt.plot(x, _sample('수익금합계480'), linewidth=0.5, label='수익금합계480', color='k')
-        plt.plot(x, _sample('수익금합계240'), linewidth=0.5, label='수익금합계240', color='gray')
         plt.plot(x, _sample('수익금합계120'), linewidth=0.5, label='수익금합계120', color='b')
         plt.plot(x, _sample('수익금합계060'), linewidth=0.5, label='수익금합계60', color='g')
         plt.plot(x, _sample('수익금합계020'), linewidth=0.5, label='수익금합계20', color='r')
@@ -1313,8 +1312,6 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     else:
         plt.bar(df_tsg.index, df_tsg['이익금액'], label='이익금액', color='r')
         plt.bar(df_tsg.index, df_tsg['손실금액'], label='손실금액', color='b')
-        plt.plot(df_tsg.index, df_tsg['수익금합계480'], linewidth=0.5, label='수익금합계480', color='k')
-        plt.plot(df_tsg.index, df_tsg['수익금합계240'], linewidth=0.5, label='수익금합계240', color='gray')
         plt.plot(df_tsg.index, df_tsg['수익금합계120'], linewidth=0.5, label='수익금합계120', color='b')
         plt.plot(df_tsg.index, df_tsg['수익금합계060'], linewidth=0.5, label='수익금합계60', color='g')
         plt.plot(df_tsg.index, df_tsg['수익금합계020'], linewidth=0.5, label='수익금합계20', color='r')
@@ -1329,7 +1326,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.grid()
     plt.tight_layout()
     add_memo_box(fig, memo_text)
-    plt.savefig(str(output_dir / f"{save_file_name}.png"))
+    plt.savefig(str(output_dir / f"{save_file_name}.png"), dpi=CHART_DPI)
 
     teleQ.put(str(output_dir / f"{save_file_name}_.png"))
     teleQ.put(str(output_dir / f"{save_file_name}.png"))
@@ -1603,18 +1600,19 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             try:
                 from backtester.analysis.exports import ExportBacktestCSV
                 from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
+                df_fallback = CalculateDerivedMetrics(df_tsg)
                 ExportBacktestCSV(
                     df_tsg,
                     save_file_name,
                     teleQ,
                     write_detail=True,
                     write_summary=False,
-                    write_filter=True
+                    write_filter=True,
+                    df_analysis=df_fallback
                 )
                 if teleQ is not None:
                     already_sent = bool(full_result and full_result.get('recommendations'))
                     if not already_sent:
-                        df_fallback = CalculateDerivedMetrics(df_tsg)
                         filter_results = AnalyzeFilterEffects(df_fallback)
                         top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
                         recs = [
@@ -2049,7 +2047,7 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             add_memo_box(fig, memo_text)
-            plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+            plt.savefig(analysis_path, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
         # 텔레그램 전송
@@ -2339,7 +2337,7 @@ def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None,
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             add_memo_box(fig, memo_text)
-            plt.savefig(comparison_path, dpi=120, bbox_inches='tight', facecolor='white')
+            plt.savefig(comparison_path, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
         if teleQ is not None:
@@ -2743,7 +2741,7 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None,
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             add_memo_box(fig, memo_text)
-            plt.savefig(comparison_path, dpi=120, bbox_inches='tight', facecolor='white')
+            plt.savefig(comparison_path, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
         if teleQ is not None:

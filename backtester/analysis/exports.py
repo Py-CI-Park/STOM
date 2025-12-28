@@ -4,7 +4,8 @@ from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFil
 from backtester.detail_schema import reorder_detail_columns
 from backtester.output_paths import ensure_backtesting_output_dir
 
-def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, write_summary=True, write_filter=True):
+def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, write_summary=True, write_filter=True,
+                      df_analysis=None, chunk_size: int | None = 200000):
     """
     백테스팅 결과를 CSV 파일로 내보냅니다.
 
@@ -15,13 +16,16 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, wri
         write_detail: detail.csv 생성 여부
         write_summary: summary.csv 생성 여부
         write_filter: filter.csv 생성 여부
+        df_analysis: 파생 지표 계산 결과 (재사용 시 중복 계산 방지)
+        chunk_size: detail.csv 저장 시 chunksize (None이면 기본 단일 저장)
 
     Returns:
         tuple: (detail_path, summary_path, filter_path)
     """
     try:
-        # 파생 지표 계산
-        df_analysis = CalculateDerivedMetrics(df_tsg)
+        # 파생 지표 계산 (필요 시 재사용)
+        if df_analysis is None:
+            df_analysis = CalculateDerivedMetrics(df_tsg)
         df_analysis = reorder_detail_columns(df_analysis)
 
         detail_path, summary_path, filter_path = None, None, None
@@ -30,7 +34,10 @@ def ExportBacktestCSV(df_tsg, save_file_name, teleQ=None, write_detail=True, wri
         # === 1. 상세 거래 기록 CSV ===
         if write_detail:
             detail_path = str(output_dir / f"{save_file_name}_detail.csv")
-            df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True)
+            if chunk_size:
+                df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True, chunksize=chunk_size)
+            else:
+                df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True)
 
         # === 2. 조건별 요약 통계 CSV ===
         summary_data = []

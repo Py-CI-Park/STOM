@@ -1845,7 +1845,8 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
             teleQ,
             write_detail=export_detail,
             write_summary=export_summary,
-            write_filter=export_filter
+            write_filter=export_filter,
+            df_analysis=df_analysis
         )
         result['csv_files'] = csv_paths
 

@@ -15,6 +15,8 @@ from .utils import (
     _extract_strategy_block_lines,
 )
 
+CHART_DPI = 80
+
 def CreateSynergyHeatmapData(filter_combinations, top_n=10):
     """
     필터 조합 분석 결과를 히트맵용 데이터로 변환합니다.
@@ -792,7 +794,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         output_dir = ensure_backtesting_output_dir(save_file_name)
         analysis_path = str(output_dir / f"{save_file_name}_enhanced.png")
         add_memo_box(fig, memo_text)
-        plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+        plt.savefig(analysis_path, dpi=CHART_DPI, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
         if teleQ is not None:

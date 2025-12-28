@@ -1,9 +1,16 @@
 import os
+import time
+from queue import Empty
+
 import telegram
 import pandas as pd
-import time
 from utility.setting import DICT_SET
 from telegram.ext import Updater, MessageHandler, Filters
+
+
+PHOTO_BATCH_MAX = 10
+PHOTO_FLUSH_INTERVAL = 1.0
+PHOTO_POLL_TIMEOUT = 0.2
 
 
 class TelegramMsg:
@@ -21,20 +28,30 @@ class TelegramMsg:
         self.gubun    = self.dict_set['증권사'][4:]
         self.updater  = None
         self.bot      = None
+        self.photo_queue = []
+        self.last_photo_time = 0.0
         self.UpdateBot()
         self.Start()
 
     def Start(self):
         while True:
-            data = self.teleQ.get()
+            try:
+                data = self.teleQ.get(timeout=PHOTO_POLL_TIMEOUT)
+            except Empty:
+                self.FlushPhotoQueue()
+                continue
+
             if type(data) == str:
                 if '.png' in data and os.path.exists(data):
-                    self.SendPhoto(data)
+                    self.QueuePhoto(data)
                 else:
+                    self.FlushPhotoQueue(force=True)
                     self.SendMsg(data)
             elif type(data) == pd.DataFrame:
+                self.FlushPhotoQueue(force=True)
                 self.UpdateDataframe(data)
-            elif data[0] == '설정변경':
+            elif isinstance(data, (list, tuple)) and data and data[0] == '설정변경':
+                self.FlushPhotoQueue(force=True)
                 if self.updater is not None:
                     self.updater.stop()
                     self.updater = None
@@ -149,6 +166,60 @@ class TelegramMsg:
                 print(f'텔레그램 명령 오류 알림 - send_photo {e}')
         else:
             print('텔레그램 설정 오류 알림 - 텔레그램 봇이 설정되지 않아 스크린샷를 보낼 수 없습니다.')
+
+    def SendMediaGroup(self, paths):
+        if not paths:
+            return
+        if self.bot is None:
+            for path in paths:
+                self.SendPhoto(path)
+            return
+
+        for i in range(0, len(paths), PHOTO_BATCH_MAX):
+            chunk = paths[i:i + PHOTO_BATCH_MAX]
+            if len(chunk) == 1:
+                self.SendPhoto(chunk[0])
+                continue
+
+            opened_files = []
+            try:
+                media_group = []
+                for path in chunk:
+                    f = open(path, 'rb')
+                    opened_files.append(f)
+                    media_group.append(telegram.InputMediaPhoto(media=f))
+                self.bot.send_media_group(
+                    chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'],
+                    media=media_group
+                )
+            except Exception as e:
+                print(f'텔레그램 명령 오류 알림 - send_media_group {e}')
+                for path in chunk:
+                    self.SendPhoto(path)
+            finally:
+                for f in opened_files:
+                    try:
+                        f.close()
+                    except Exception:
+                        pass
+
+    def QueuePhoto(self, path):
+        if not path:
+            return
+        self.photo_queue.append(path)
+        self.last_photo_time = time.time()
+        if len(self.photo_queue) >= PHOTO_BATCH_MAX:
+            self.FlushPhotoQueue(force=True)
+
+    def FlushPhotoQueue(self, force: bool = False):
+        if not self.photo_queue:
+            return
+        if not force and (time.time() - self.last_photo_time) < PHOTO_FLUSH_INTERVAL:
+            return
+        paths = self.photo_queue
+        self.photo_queue = []
+        self.last_photo_time = 0.0
+        self.SendMediaGroup(paths)
 
     def UpdateDataframe(self, df):
         total_rows = len(df)
