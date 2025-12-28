@@ -14,7 +14,7 @@
 
 import numpy as np
 import pandas as pd
-from analysis_enhanced.metrics import CalculateEnhancedDerivedMetrics
+from backtester.analysis_enhanced.metrics_enhanced import CalculateEnhancedDerivedMetrics
 
 def test_new_trade_money_ratio_metrics():
     """

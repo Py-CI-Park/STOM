@@ -6,8 +6,8 @@
 - **작성자**: Antigravity (AI 어시스턴트)
 - **목적**: STOM 시스템의 위험도 점수(`Risk Score`) 산출 로직을 분석하고, 1분봉(Min) 및 틱(Tick) 데이터 환경에서의 계산 일관성 및 호환성을 검증합니다.
 - **관련 파일**:
-  - `backtester/analysis/metrics.py`
-  - `backtester/analysis_enhanced/metrics.py`
+  - `backtester/analysis/metrics_base.py`
+  - `backtester/analysis_enhanced/metrics_enhanced.py`
   - `docs/condition/min/2_under_review/Condition_Min_Study_Segment_Filter_251225.md`
 
 ---
@@ -18,7 +18,7 @@
 
 STOM의 위험도 점수는 매수 시점에서 알 수 있는 시장 상태 정보를 바탕으로 0점에서 100점 사이로 산출됩니다. 이는 진입 시점의 리스크를 계량화하여 필터링 조건으로 활용하기 위함입니다.
 
-#### 분석 엔진(`metrics.py`)의 산출 로직
+#### 분석 엔진(`metrics_base.py`/`metrics_enhanced.py`)의 산출 로직
 
 1. **과열 위험 (등락율)**: 현재 등락율이 20% 이상일 경우 가중치 부여 (최대 +40점)
 2. **수급 위축/과열 (체결강도)**: 체결강도가 80 미만(약세)이거나 150 이상(과열)일 때 가중치 부여 (최대 +55점)
@@ -43,10 +43,10 @@ STOM의 위험도 점수는 매수 시점에서 알 수 있는 시장 상태 정
 
 ### 3.1 파이썬 코드 정합성 확인
 
-분석 엔진(`metrics.py`) 내부의 위험도 계산 코드는 입력 데이터(`df_tsg`)가 분봉인지 틱인지 구분하는 로직이 없으며, 오직 컬럼명에 매칭되는 데이터 값에만 의존합니다.
+분석 엔진(`metrics_base.py`/`metrics_enhanced.py`) 내부의 위험도 계산 코드는 입력 데이터(`df_tsg`)가 분봉인지 틱인지 구분하는 로직이 없으며, 오직 컬럼명에 매칭되는 데이터 값에만 의존합니다.
 
 ```python
-# metrics.py 예시 (타임프레임 중립적 설계)
+# metrics_base.py 예시 (타임프레임 중립적 설계)
 if '매수당일거래대금' in df.columns:
     trade_money_eok = trade_money_raw / 100.0  # 누적 백만 단위를 억 단위로 환산
     df.loc[trade_money_eok < 50, '위험도점수'] += 15 # 누적치는 분/틱 공통
@@ -57,7 +57,7 @@ if '매수당일거래대금' in df.columns:
 분석 결과에 따라 `Condition_Min_Study_Segment_Filter_251225.md` 문서 내의 지표 계산식을 다음과 같이 보강하였습니다:
 
 - **호환성 변수 정의**: 분봉 엔진에서 제공하지 않는 "초당" 변수(분당/60)를 동적으로 정의하여 계산 오류 방지.
-- **로직 동기화**: 분석 엔진(`metrics.py v2.0`)에 추가된 '체결강도 200/250 가중치', '회전율 가중치' 등을 반영하여 백테스트 결과와 실제 계산 값의 오차를 제거.
+- **로직 동기화**: 분석 엔진(`metrics_base.py`/`metrics_enhanced.py v2.0`)에 추가된 '체결강도 200/250 가중치', '회전율 가중치' 등을 반영하여 백테스트 결과와 실제 계산 값의 오차를 제거.
 
 ---
 
@@ -71,12 +71,12 @@ if '매수당일거래대금' in df.columns:
 ### 4.2 권장사항
 
 1. **변수명 표준화**: 조건식 내에서 `분당/초당` 변수가 혼용될 경우, `/60` 또는 `*60` 연산을 통해 안전 장치를 마련할 것.
-2. **엔진 동기화**: `metrics.py`의 계산 로직이 변경될 경우, 반드시 공통 조건식 문서의 `Common Indicators` 섹션도 함께 업데이트할 것.
+2. **엔진 동기화**: `metrics_base.py`/`metrics_enhanced.py`의 계산 로직이 변경될 경우, 반드시 공통 조건식 문서의 `Common Indicators` 섹션도 함께 업데이트할 것.
 
 ---
 
 ## 5. 참고자료
 
-- `backtester/analysis_enhanced/metrics.py`: 최신 강화 분석 지표 정의
+- `backtester/analysis_enhanced/metrics_enhanced.py`: 최신 강화 분석 지표 정의
 - `docs/Guideline/Condition_Document_Template_Guideline.md`: 표준 문서 양식
 - `docs/study/SystemAnalysis/Optistd_System_Analysis.md`: 기존 시스템 분석 보고서

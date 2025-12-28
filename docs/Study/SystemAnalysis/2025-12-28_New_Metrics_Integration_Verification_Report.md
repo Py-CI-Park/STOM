@@ -42,7 +42,7 @@
 
 | 검증 항목 | 상태 | 비고 |
 |----------|------|------|
-| 지표 계산 로직 구현 | ✅ 완료 | `metrics.py` 383-428 라인 |
+| 지표 계산 로직 구현 | ✅ 완료 | `metrics_enhanced.py` 383-428 라인 |
 | detail.csv 저장 | ✅ 자동 | `runner.py` 70, 129-131 라인 |
 | report.txt 문서화 | ✅ 완료 | `back_static.py` 539-557 라인 추가 |
 | 필터 분석 호환성 | ✅ 완료 | `filter_evaluator.py` 57-58 라인 추가 |
@@ -65,7 +65,7 @@
 
 ### 2.2 구현 위치
 
-**파일**: `backtester/analysis_enhanced/metrics.py`
+**파일**: `backtester/analysis_enhanced/metrics_enhanced.py`
 **섹션**: Section 15 - 당일거래대금 시계열 비율 (NEW 2025-12-28)
 **라인**: 383-428
 
@@ -322,7 +322,7 @@ elif col.startswith('매수') and col not in feature_columns:
 
 | 파일 경로 | 수정 내용 | 라인 |
 |----------|----------|------|
-| `backtester/analysis_enhanced/metrics.py` | 신규 지표 3종 구현 (Section 15) | 383-428 |
+| `backtester/analysis_enhanced/metrics_enhanced.py` | 신규 지표 3종 구현 (Section 15) | 383-428 |
 | `backtester/back_static.py` | report.txt 문서화 추가 (`derived_docs`) | 539-557 |
 | `backtester/segment_analysis/filter_evaluator.py` | 필터 평가용 `explicit_buy_columns` 업데이트 | 57-58 |
 | `backtester/analysis_enhanced/ml.py` | ML feature용 `explicit_buy_columns` 업데이트 | 407-408 |
@@ -331,7 +331,7 @@ elif col.startswith('매수') and col not in feature_columns:
 
 | 컴포넌트 | 수정 전 문제 | 수정 후 효과 |
 |----------|-------------|-------------|
-| `metrics.py` | 당일거래대금 비율 지표 없음 | 시계열 비율 지표 3종 추가 |
+| `metrics_enhanced.py` | 당일거래대금 비율 지표 없음 | 시계열 비율 지표 3종 추가 |
 | `back_static.py` | report.txt에 공식 미문서화 | 자동 문서화로 가독성 향상 |
 | `filter_evaluator.py` | 신규 지표가 필터 후보에서 제외됨 | 필터 분석/세그먼트 분석 사용 가능 |
 | `ml.py` | 신규 지표가 ML feature에서 제외됨 | ML 모델 학습 및 예측에 사용 가능 |
@@ -555,7 +555,7 @@ python backtester/backtest.py --segment-analysis all
 
 | 파일 | 라인 | 설명 |
 |------|------|------|
-| `backtester/analysis_enhanced/metrics.py` | 383-428 | 신규 지표 계산 로직 |
+| `backtester/analysis_enhanced/metrics_enhanced.py` | 383-428 | 신규 지표 계산 로직 |
 | `backtester/analysis_enhanced/runner.py` | 70, 98, 114, 129-131, 226 | 백테스팅 실행 흐름 |
 | `backtester/back_static.py` | 268, 539-557 | report.txt 문서화 |
 | `backtester/segment_analysis/filter_evaluator.py` | 57-58, 191-208 | 필터 평가 로직 |
@@ -575,7 +575,7 @@ python backtester/backtest.py --segment-analysis all
 
 ### ✅ 통합 완료 항목
 
-1. ✅ **지표 계산**: `metrics.py` Section 15에 구현 완료
+1. ✅ **지표 계산**: `metrics_enhanced.py` Section 15에 구현 완료
 2. ✅ **detail.csv**: 자동 저장 (runner.py 129-131)
 3. ✅ **report.txt**: 공식 문서화 추가 (back_static.py 539-557)
 4. ✅ **필터 분석**: explicit_buy_columns 업데이트 (filter_evaluator.py 57-58)

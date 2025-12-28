@@ -7,7 +7,7 @@ import pandas as pd
 
 from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.detail_schema import reorder_detail_columns
-from .metrics import CalculateEnhancedDerivedMetrics
+from .metrics_enhanced import CalculateEnhancedDerivedMetrics
 from .ml import (
     AssessMlReliability,
     AnalyzeFeatureImportance,

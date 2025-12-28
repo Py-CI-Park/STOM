@@ -8,7 +8,7 @@ from matplotlib import gridspec
 
 from backtester.output_paths import ensure_backtesting_output_dir
 from utility.mpl_setup import ensure_mpl_font
-from .metrics import DetectTimeframe
+from .metrics_enhanced import DetectTimeframe
 from .utils import (
     ComputeStrategyKey,
     _extract_strategy_block_lines,

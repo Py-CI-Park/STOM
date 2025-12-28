@@ -39,7 +39,7 @@
 
 신규 지표는 다음 6개 시스템에 통합되어야 합니다:
 
-1. **지표 계산 엔진** (`metrics.py`)
+1. **지표 계산 엔진** (`metrics_enhanced.py`)
 2. **detail.csv 저장** (`runner.py`)
 3. **report.txt 문서화** (`back_static.py`)
 4. **필터 분석** (`filter_evaluator.py`)
@@ -168,7 +168,7 @@ ratio = current / previous
 
 ### 4.1 파일 위치
 
-**구현 파일**: `backtester/analysis_enhanced/metrics.py`
+**구현 파일**: `backtester/analysis_enhanced/metrics_enhanced.py`
 
 ### 4.2 코드 작성 패턴
 
@@ -484,7 +484,7 @@ def AnalyzeFeatureImportance(df_tsg):
 
 import numpy as np
 import pandas as pd
-from analysis_enhanced.metrics import CalculateEnhancedDerivedMetrics
+from analysis_enhanced.metrics_enhanced import CalculateEnhancedDerivedMetrics
 
 def test_new_metrics():
     print("=" * 80)
@@ -666,7 +666,7 @@ print(df_filter[df_filter['column'].str.contains('지표')]['column'].unique())
 
 | 검증 항목 | 상태 | 비고 |
 |----------|------|------|
-| 지표 계산 로직 구현 | ✅ 완료 | `metrics.py` [라인] |
+| 지표 계산 로직 구현 | ✅ 완료 | `metrics_enhanced.py` [라인] |
 | detail.csv 저장 | ✅ 자동 | `runner.py` [라인] |
 | report.txt 문서화 | ✅ 완료 | `back_static.py` [라인] |
 | 필터 분석 호환성 | ✅ 완료 | `filter_evaluator.py` [라인] |
@@ -746,7 +746,7 @@ git status
 
 **예상 출력**:
 ```
-M backtester/analysis_enhanced/metrics.py
+M backtester/analysis_enhanced/metrics_enhanced.py
 M backtester/back_static.py
 M backtester/segment_analysis/filter_evaluator.py
 M backtester/analysis_enhanced/ml.py
@@ -760,7 +760,7 @@ M docs/Study/README.md
 
 ```bash
 # 신규 지표 구현
-git add backtester/analysis_enhanced/metrics.py
+git add backtester/analysis_enhanced/metrics_enhanced.py
 
 # 문서화 및 통합
 git add backtester/back_static.py
@@ -788,7 +788,7 @@ feat: [지표명] N종 추가 및 백테스팅 시스템 완전 통합
 - LOOKAHEAD-FREE 검증 완료
 
 [통합 작업]
-1. metrics.py: Section [N] 추가 (Line [XXX-YYY])
+1. metrics_enhanced.py: Section [N] 추가 (Line [XXX-YYY])
 2. back_static.py: derived_docs 문서화 ([N]개 지표)
 3. filter_evaluator.py: explicit_buy_columns 업데이트
 4. ml.py: ML feature 리스트 업데이트
@@ -799,7 +799,7 @@ feat: [지표명] N종 추가 및 백테스팅 시스템 완전 통합
 - 문서화: 통합 검증 보고서 작성 ([크기]KB)
 
 [파일 변경]
-- 수정: 4개 (metrics.py, back_static.py, filter_evaluator.py, ml.py)
+- 수정: 4개 (metrics_enhanced.py, back_static.py, filter_evaluator.py, ml.py)
 - 신규: 3개 (검증 스크립트, 통합 보고서, 프로세스 가이드)
 
 [영향 범위]
@@ -825,7 +825,7 @@ feat: 당일거래대금 비율 지표 3종 추가 및 백테스팅 시스템 �
 3. 당일거래대금_5틱분봉평균_비율: 단기 평균 대비 비율 (노이즈 감소)
 
 통합 작업:
-1. metrics.py: Section 15 추가 (Line 383-428)
+1. metrics_enhanced.py: Section 15 추가 (Line 383-428)
 2. back_static.py: derived_docs 문서화 (3개 지표, Line 539-557)
 3. filter_evaluator.py: explicit_buy_columns 업데이트 (Line 57-58)
 4. ml.py: ML feature 리스트 업데이트 (Line 407-408)
@@ -836,7 +836,7 @@ feat: 당일거래대금 비율 지표 3종 추가 및 백테스팅 시스템 �
 - 문서화: 통합 검증 보고서 작성 (48KB)
 
 파일 변경:
-- 수정: 4개 (metrics.py, back_static.py, filter_evaluator.py, ml.py)
+- 수정: 4개 (metrics_enhanced.py, back_static.py, filter_evaluator.py, ml.py)
 - 신규: 3개 (검증 스크립트, 통합 보고서, 프로세스 가이드)
 
 영향 범위:
@@ -884,7 +884,7 @@ git merge feat/add-[지표명]
   - [ ] 공식 및 단위 정의
 
 - [ ] **코드 작성**
-  - [ ] metrics.py에 지표 구현
+  - [ ] metrics_enhanced.py에 지표 구현
   - [ ] Zero Division 처리
   - [ ] NaN 처리
   - [ ] 주석 작성
@@ -941,7 +941,7 @@ git merge feat/add-[지표명]
 
 **구현**:
 - 3개 지표 추가 (전틱분봉 비율, 매수매도 비율, 5틱분봉평균 비율)
-- 4개 파일 수정 (metrics.py, back_static.py, filter_evaluator.py, ml.py)
+- 4개 파일 수정 (metrics_enhanced.py, back_static.py, filter_evaluator.py, ml.py)
 - 3개 파일 신규 (테스트 스크립트, 통합 보고서, 프로세스 가이드)
 
 **결과**:
@@ -965,7 +965,7 @@ git merge feat/add-[지표명]
 ```
 1. 지표 설계 및 검증
    ↓
-2. metrics.py 구현
+2. metrics_enhanced.py 구현
    ↓
 3. back_static.py 문서화
    ↓

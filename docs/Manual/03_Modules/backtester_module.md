@@ -19,7 +19,7 @@ backtester/
 ├── back_static.py                   # 백테스트 정적 API + 분석 오케스트레이션
 ├── analysis/                        # 분석 모듈 분리
 │   ├── plotting.py                  # 시각화/차트
-│   ├── metrics.py                   # 파생 지표/필터 분석
+│   ├── metrics_base.py              # 파생 지표/필터 분석
 │   ├── exports.py                   # CSV 출력
 │   ├── results.py                   # 결과 집계/통계
 │   ├── indicators.py                # 기술 지표/부가 컬럼

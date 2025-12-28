@@ -1548,7 +1548,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             # 강화 분석 실패 시: 기본 detail/filter CSV를 생성해 결과 보존
             try:
                 from backtester.analysis.exports import ExportBacktestCSV
-                from backtester.analysis.metrics import CalculateDerivedMetrics, AnalyzeFilterEffects
+                from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
                 ExportBacktestCSV(
                     df_tsg,
                     save_file_name,

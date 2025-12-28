@@ -49,7 +49,7 @@ backtesting_output/
 | 파일 유형 | 확장자 | 용도 | 생성 위치 |
 |----------|--------|------|----------|
 | **종합 리포트** | .txt | 전체 분석 요약, 컬럼 설명/공식 | `runner.py` |
-| **거래 상세** | _detail.csv | 93개 컬럼 거래 기록 | `backengine_*.py` → `metrics.py` |
+| **거래 상세** | _detail.csv | 93개 컬럼 거래 기록 | `backengine_*.py` → `metrics_enhanced.py` |
 | **필터 분석** | _filter.csv | 필터 효과 분석 결과 | `filters.py` |
 | **임계값 최적화** | _optimal_thresholds.csv | 임계값 탐색 결과 | `thresholds.py` |
 | **세그먼트 분석** | _segment_*.csv | 시가총액/시간 분할 분석 | `segment_*.py` |
@@ -147,7 +147,7 @@ detail.csv, filter.csv, segment_*.csv, *.png 목록
 
 ### 3.1 계산 위치
 
-**주요 모듈**: `backtester/analysis_enhanced/metrics.py`
+**주요 모듈**: `backtester/analysis_enhanced/metrics_enhanced.py`
 
 **핵심 함수**: `CalculateEnhancedDerivedMetrics(df_tsg)` (라인 61-383)
 
@@ -157,7 +157,7 @@ backtester/backengine_*.py (원본 데이터 수집)
     ↓
 backtester/runner.py (백테스팅 실행)
     ↓
-analysis_enhanced/metrics.py::CalculateEnhancedDerivedMetrics()
+analysis_enhanced/metrics_enhanced.py::CalculateEnhancedDerivedMetrics()
     ↓
 detail.csv (93개 컬럼 저장)
     ↓
@@ -170,22 +170,22 @@ detail.csv (93개 컬럼 저장)
 
 | 지표명 | 공식 | 코드 위치 |
 |--------|------|----------|
-| `등락율변화` | 매도등락율 - 매수등락율 | metrics.py:86 |
-| `체결강도변화` | 매도체결강도 - 매수체결강도 | metrics.py:87 |
-| `전일비변화` | 매도전일비 - 매수전일비 | metrics.py:88 |
-| `회전율변화` | 매도회전율 - 매수회전율 | metrics.py:89 |
-| `호가잔량비변화` | 매도호가잔량비 - 매수호가잔량비 | metrics.py:90 |
-| `초당매수수량변화` | 매도초당매수수량 - 매수초당매수수량 | metrics.py:370 |
-| `초당매도수량변화` | 매도초당매도수량 - 매수초당매도수량 | metrics.py:373 |
-| `초당거래대금변화` | 매도초당거래대금 - 매수초당거래대금 | metrics.py:376 |
+| `등락율변화` | 매도등락율 - 매수등락율 | metrics_enhanced.py:86 |
+| `체결강도변화` | 매도체결강도 - 매수체결강도 | metrics_enhanced.py:87 |
+| `전일비변화` | 매도전일비 - 매수전일비 | metrics_enhanced.py:88 |
+| `회전율변화` | 매도회전율 - 매수회전율 | metrics_enhanced.py:89 |
+| `호가잔량비변화` | 매도호가잔량비 - 매수호가잔량비 | metrics_enhanced.py:90 |
+| `초당매수수량변화` | 매도초당매수수량 - 매수초당매수수량 | metrics_enhanced.py:370 |
+| `초당매도수량변화` | 매도초당매도수량 - 매수초당매도수량 | metrics_enhanced.py:373 |
+| `초당거래대금변화` | 매도초당거래대금 - 매수초당거래대금 | metrics_enhanced.py:376 |
 
 #### 3.2.2 변화율 지표 (매도 / 매수)
 
 | 지표명 | 공식 | 코드 위치 |
 |--------|------|----------|
-| `거래대금변화율` | 매도당일거래대금 / 매수당일거래대금 | metrics.py:93-97 |
-| `체결강도변화율` | 매도체결강도 / 매수체결강도 | metrics.py:98-102 |
-| `초당거래대금변화율` | 매도초당거래대금 / 매수초당거래대금 | metrics.py:377-381 |
+| `거래대금변화율` | 매도당일거래대금 / 매수당일거래대금 | metrics_enhanced.py:93-97 |
+| `체결강도변화율` | 매도체결강도 / 매수체결강도 | metrics_enhanced.py:98-102 |
+| `초당거래대금변화율` | 매도초당거래대금 / 매수초당거래대금 | metrics_enhanced.py:377-381 |
 
 **코드 스니펫**:
 ```python
@@ -203,7 +203,7 @@ df['거래대금변화율'] = np.where(
 - **범위**: 0-100점
 - **특징**: 매수 시점에서만 알 수 있는 정보 사용 (룩어헤드 없음)
 - **용도**: 필터 분석, 진입 회피 조건
-- **코드**: metrics.py:153-215
+- **코드**: metrics_enhanced.py:153-215
 
 **점수 구성**:
 ```python
@@ -270,7 +270,7 @@ df['위험도점수'] = df['위험도점수'].clip(0, 100)
 - **범위**: 0-100점
 - **특징**: 매도 시점 정보 포함 (룩어헤드 있음)
 - **용도**: 사후 진단, 비교 차트용 (필터로 사용 시 룩어헤드)
-- **코드**: metrics.py:114-127
+- **코드**: metrics_enhanced.py:114-127
 
 **점수 구성**:
 ```python
@@ -289,7 +289,7 @@ df['매수매도위험도점수'] = df['매수매도위험도점수'].clip(0, 10
 
 #### 3.2.4 모멘텀 및 품질 지표
 
-**모멘텀점수** (metrics.py:129-134):
+**모멘텀점수** (metrics_enhanced.py:129-134):
 ```python
 # 등락율과 체결강도를 정규화하여 모멘텀 점수 계산
 등락율_norm = (df['매수등락율'] - df['매수등락율'].mean()) / (df['매수등락율'].std() + 0.001)
@@ -297,7 +297,7 @@ df['매수매도위험도점수'] = df['매수매도위험도점수'].clip(0, 10
 df['모멘텀점수'] = round((등락율_norm * 0.4 + 체결강도_norm * 0.6) * 10, 2)
 ```
 
-**거래품질점수** (metrics.py:257-279):
+**거래품질점수** (metrics_enhanced.py:257-279):
 ```python
 df['거래품질점수'] = 50  # 기본값
 
@@ -323,7 +323,7 @@ if '매수스프레드' in df.columns:
 df['거래품질점수'] = df['거래품질점수'].clip(0, 100)
 ```
 
-**리스크조정수익률** (metrics.py:242-248):
+**리스크조정수익률** (metrics_enhanced.py:242-248):
 ```python
 # 수익률 / (위험 요소들의 가중 합)
 risk_factor = (df['매수등락율'].abs() / 10 +
@@ -334,7 +334,7 @@ df['리스크조정수익률'] = round(df['수익률'] / risk_factor, 4)
 
 #### 3.2.5 비율 조합 지표 (NEW 2025-12-14)
 
-**매수 시점 비율** (metrics.py:281-356):
+**매수 시점 비율** (metrics_enhanced.py:281-356):
 
 | 지표명 | 공식 | 의미 | 코드 위치 |
 |--------|------|------|----------|
@@ -349,7 +349,7 @@ df['리스크조정수익률'] = round(df['수익률'] / risk_factor, 4)
 | `초당순매수금액` | 초당순매수수량 × 매수가 / 1,000,000 | 순매수 금액 (백만원) | 343-346 |
 | `초당순매수비율` | (매수초당매수수량 / 총거래량) × 100 | 순매수 비율 (0-100%) | 348-355 |
 
-**매도 시점 비율** (metrics.py:357-382):
+**매도 시점 비율** (metrics_enhanced.py:357-382):
 
 | 지표명 | 공식 | 의미 | 코드 위치 |
 |--------|------|------|----------|
@@ -361,7 +361,7 @@ df['리스크조정수익률'] = round(df['수익률'] / risk_factor, 4)
 
 #### 3.2.6 연속 패턴 지표
 
-**연속이익/손실** (metrics.py:225-240):
+**연속이익/손실** (metrics_enhanced.py:225-240):
 ```python
 df['이익여부'] = (df['수익금'] > 0).astype(int)
 df['연속이익'] = 0
@@ -398,7 +398,7 @@ for i in range(len(df)):
 
 ### 4.1 타임프레임 자동 감지
 
-**함수**: `DetectTimeframe(df_tsg, save_file_name='')` (metrics.py:5-59)
+**함수**: `DetectTimeframe(df_tsg, save_file_name='')` (metrics_enhanced.py:5-59)
 
 **감지 방법**:
 1. **파일명 기반**:
@@ -593,7 +593,7 @@ filters = [
 
 ✅ **존재함**: `매도잔량_매수잔량_비율`
 
-**코드 위치**: `metrics.py:292-298`
+**코드 위치**: `metrics_enhanced.py:292-298`
 
 **공식**:
 ```python
@@ -611,13 +611,13 @@ if '매수매도총잔량' in df.columns and '매수매수총잔량' in df.colum
 - 비율 < 1: 매수 우위 (매수총잔량이 더 많음)
 - 비율 = 1: 균형
 
-**역방향 비율도 존재**: `매수잔량_매도잔량_비율` (metrics.py:300-306)
+**역방향 비율도 존재**: `매수잔량_매도잔량_비율` (metrics_enhanced.py:300-306)
 
 #### 5.1.2 현재가 / (고가 - (고가 - 저가))
 
 ✅ **유사 지표 존재**: `현재가_고저범위_위치`
 
-**코드 위치**: `metrics.py:324-332`
+**코드 위치**: `metrics_enhanced.py:324-332`
 
 **공식**:
 ```python
@@ -673,7 +673,7 @@ if '매수가' in df.columns and '매수고가' in df.columns and '매수저가'
 - **차트 시각화**: detail.csv에 저장 필요 ❌ (현재 미지원)
 
 **추가 구현 필요 여부**:
-- **필터 분석에서 활용하고 싶다면**: `metrics.py`에 추가 구현 필요
+- **필터 분석에서 활용하고 싶다면**: `metrics_enhanced.py`에 추가 구현 필요
 - **전략 조건 코드에서만 사용한다면**: 현재 상태로도 충분
 
 ---
@@ -695,7 +695,7 @@ if '매수가' in df.columns and '매수고가' in df.columns and '매수저가'
 - 비율 < 1: 거래대금 감소 (매수/매도 둔화)
 - 비율 ≈ 1: 거래대금 유지
 
-**구현 위치**: `metrics.py` 내 `CalculateEnhancedDerivedMetrics()` 함수
+**구현 위치**: `metrics_enhanced.py` 내 `CalculateEnhancedDerivedMetrics()` 함수
 
 **구현 방법**:
 ```python
@@ -714,7 +714,7 @@ if '매수당일거래대금' in df.columns:
 
 **참고사항**:
 - 백테스팅 엔진의 `당일거래대금N(1)` 함수는 **전략 실행 시점**의 1틱/분봉 전 값
-- `metrics.py`에서는 **detail.csv 생성 후** 계산하므로 `shift(1)` 사용
+- `metrics_enhanced.py`에서는 **detail.csv 생성 후** 계산하므로 `shift(1)` 사용
 - 둘은 **같은 값이 아닐 수 있음** (백테 중 틱/분봉 순서 vs. 최종 거래 순서)
 
 #### 6.1.2 추가 고려사항
@@ -790,7 +790,7 @@ if '매수당일거래대금' in df.columns:
    - ✅ 필터 분석, ML 모델, 세그먼트 분석 결과 포함
 
 2. **파생 지표 계산 시스템**:
-   - ✅ `backtester/analysis_enhanced/metrics.py`에서 중앙 집중식 관리
+   - ✅ `backtester/analysis_enhanced/metrics_enhanced.py`에서 중앙 집중식 관리
    - ✅ 93개 컬럼 자동 생성 (원본 + 파생)
    - ✅ 변화량, 변화율, 위험도, 모멘텀, 품질, 비율 조합 등 7가지 카테고리
 
@@ -810,7 +810,7 @@ if '매수당일거래대금' in df.columns:
 
 **당일거래대금_전틱분봉_비율 추가**:
 - **목적**: 필터 분석 및 세그먼트 분석에서 거래대금 증감 트렌드 활용
-- **구현 위치**: `metrics.py:383` 이후 (새 섹션 15 추가)
+- **구현 위치**: `metrics_enhanced.py:383` 이후 (새 섹션 15 추가)
 - **예상 효과**: 거래 활성화/둔화 시점 식별 → 진입/청산 타이밍 개선
 - **난이도**: 낮음 (5-10분 소요)
 
@@ -818,7 +818,7 @@ if '매수당일거래대금' in df.columns:
 
 **당일거래대금_매수매도_비율 추가**:
 - **목적**: 매수→매도 간 거래대금 변화 분석
-- **구현 위치**: `metrics.py:383` 이후
+- **구현 위치**: `metrics_enhanced.py:383` 이후
 - **예상 효과**: 보유 시간 동안 시장 유동성 변화 파악
 - **난이도**: 낮음
 
@@ -826,7 +826,7 @@ if '매수당일거래대금' in df.columns:
 
 **롤링 평균 기반 거래대금 비율**:
 - **목적**: 단기 변동성 완화, 장기 트렌드 파악
-- **구현 위치**: `metrics.py:383` 이후
+- **구현 위치**: `metrics_enhanced.py:383` 이후
 - **예상 효과**: 노이즈 감소, 안정적인 필터 조건
 - **난이도**: 중간
 
@@ -877,7 +877,7 @@ if '매수당일거래대금' in df.columns:
 ### 관련 파일
 
 **핵심 모듈**:
-- `backtester/analysis_enhanced/metrics.py` - 파생 지표 계산
+- `backtester/analysis_enhanced/metrics_enhanced.py` - 파생 지표 계산
 - `backtester/analysis_enhanced/runner.py` - 리포트 생성
 - `backtester/backengine_kiwoom_min.py` - 분봉 백테스팅 엔진
 - `backtester/backengine_kiwoom_tick.py` - 틱 백테스팅 엔진

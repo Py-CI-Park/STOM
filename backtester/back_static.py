@@ -13,7 +13,7 @@ from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.detail_schema import reorder_detail_columns
 from backtester.analysis.exports import ExportBacktestCSV
 from backtester.analysis.indicators import AddAvgData, GetIndicator
-from backtester.analysis.metrics import CalculateDerivedMetrics, AnalyzeFilterEffects
+from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
 from backtester.analysis.optuna_server import RunOptunaServer
 from backtester.analysis.plotting import (
     PltAnalysisCharts,

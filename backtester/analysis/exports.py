@@ -1,6 +1,6 @@
 from traceback import print_exc
 import pandas as pd
-from backtester.analysis.metrics import CalculateDerivedMetrics, AnalyzeFilterEffects
+from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
 from backtester.detail_schema import reorder_detail_columns
 from backtester.output_paths import ensure_backtesting_output_dir
 
