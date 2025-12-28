@@ -9,6 +9,7 @@ from matplotlib import gridspec
 from backtester.output_paths import ensure_backtesting_output_dir
 from utility.mpl_setup import ensure_mpl_font
 from .metrics_enhanced import DetectTimeframe
+from backtester.analysis.memo_utils import build_strategy_memo_text, add_memo_box
 from .utils import (
     ComputeStrategyKey,
     _extract_strategy_block_lines,
@@ -132,7 +133,9 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                               feature_importance=None,
                               optimal_thresholds=None, filter_combinations=None,
                               filter_stability=None, generated_code=None,
-                              buystg: str = None, sellstg: str = None):
+                              buystg: str = None, sellstg: str = None,
+                              buystg_name: str = None, sellstg_name: str = None,
+                              startday=None, endday=None, starttime=None, endtime=None):
     """
     강화된 분석 차트를 생성합니다.
 
@@ -158,6 +161,16 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
 
         # 타임프레임 감지
         tf_info = DetectTimeframe(df_tsg, save_file_name)
+
+        memo_text = build_strategy_memo_text(
+            buystg_name,
+            sellstg_name,
+            save_file_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
 
         fig = plt.figure(figsize=(20, 38))
         fig.suptitle(f'백테스팅 필터 분석 차트 - {save_file_name} ({tf_info["label"]})',
@@ -778,6 +791,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         fig.subplots_adjust(left=0.05, right=0.98, bottom=0.04, top=0.94, hspace=0.55, wspace=0.3)
         output_dir = ensure_backtesting_output_dir(save_file_name)
         analysis_path = str(output_dir / f"{save_file_name}_enhanced.png")
+        add_memo_box(fig, memo_text)
         plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 

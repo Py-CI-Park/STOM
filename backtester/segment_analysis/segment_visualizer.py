@@ -12,6 +12,7 @@ from typing import Optional
 import pandas as pd
 
 from utility.mpl_setup import ensure_mpl_font
+from backtester.analysis.memo_utils import build_strategy_memo_text, add_memo_box
 
 try:
     import matplotlib.pyplot as plt
@@ -32,6 +33,9 @@ def plot_segment_heatmap(
     output_path: str,
     filtered_summary_df: Optional[pd.DataFrame] = None,
     ranges_df: Optional[pd.DataFrame] = None,
+    buystg_name: Optional[str] = None,
+    sellstg_name: Optional[str] = None,
+    save_file_name: Optional[str] = None,
 ) -> Optional[str]:
     if plt is None or summary_df is None or summary_df.empty:
         return None
@@ -186,6 +190,12 @@ def plot_segment_heatmap(
     nrows = 2 if profits_filt is not None and trades_filt is not None else 1
     fig_height = base_height * nrows
 
+    memo_text = build_strategy_memo_text(
+        buystg_name,
+        sellstg_name,
+        save_file_name or output_path,
+    )
+
     fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=(fig_width, fig_height))
     if nrows == 1:
         axes = [axes]
@@ -197,13 +207,17 @@ def plot_segment_heatmap(
         im2 = _draw_heatmap(axes[1], profits_filt, trades_filt, 'Segment Heatmap (필터 적용)')
         fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04, label='Profit')
 
+    add_memo_box(fig, memo_text)
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
     plt.close(fig)
     return output_path
 
 
-def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: int = 20) -> Optional[str]:
+def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: int = 20,
+                           buystg_name: Optional[str] = None,
+                           sellstg_name: Optional[str] = None,
+                           save_file_name: Optional[str] = None) -> Optional[str]:
     if plt is None or filters_df is None or filters_df.empty:
         return None
 
@@ -220,6 +234,12 @@ def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: in
     labels = df['filter_name'].astype(str).tolist()
     values = df['efficiency'].astype(float).tolist()
 
+    memo_text = build_strategy_memo_text(
+        buystg_name,
+        sellstg_name,
+        save_file_name or output_path,
+    )
+
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.barh(range(len(labels)), values, color='#2E8B57')
     ax.set_yticks(range(len(labels)))
@@ -228,6 +248,7 @@ def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: in
     ax.set_xlabel('Efficiency')
     ax.set_title('Top Filter Efficiency')
 
+    add_memo_box(fig, memo_text)
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
     plt.close(fig)

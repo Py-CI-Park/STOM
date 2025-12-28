@@ -40,6 +40,9 @@ def run_phase3(
     validation_config: Optional[StabilityValidationConfig] = None,
     runner_config: Optional[Phase3RunnerConfig] = None,
     global_best: Optional[dict] = None,
+    buystg_name: Optional[str] = None,
+    sellstg_name: Optional[str] = None,
+    save_file_name: Optional[str] = None,
 ) -> dict:
     runner_config = runner_config or Phase3RunnerConfig()
     detail_path = Path(detail_path).expanduser().resolve()
@@ -75,14 +78,22 @@ def run_phase3(
 
     filtered_summary_df = _build_filtered_segment_summary(segments, filters_df, global_best)
 
+    memo_name = save_file_name or output_prefix
     heatmap_path = plot_segment_heatmap(
         summary_df,
         str(output_dir_path / f"{output_prefix}_segment_heatmap.png"),
         filtered_summary_df=filtered_summary_df,
         ranges_df=ranges_df,
+        buystg_name=buystg_name,
+        sellstg_name=sellstg_name,
+        save_file_name=memo_name,
     )
     efficiency_path = plot_filter_efficiency(
-        filters_df, str(output_dir_path / f"{output_prefix}_filter_efficiency.png")
+        filters_df,
+        str(output_dir_path / f"{output_prefix}_filter_efficiency.png"),
+        buystg_name=buystg_name,
+        sellstg_name=sellstg_name,
+        save_file_name=memo_name,
     )
 
     return {

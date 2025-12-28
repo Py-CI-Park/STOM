@@ -196,7 +196,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             filter_stability=filter_stability,
             generated_code=generated_code,
             buystg=buystg,
-            sellstg=sellstg
+            sellstg=sellstg,
+            buystg_name=buystg_name,
+            sellstg_name=sellstg_name,
         )
         if chart_path:
             result['charts'].append(chart_path)
@@ -245,6 +247,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             prefix=save_file_name
                         ),
                         global_best=global_best,
+                        buystg_name=buystg_name,
+                        sellstg_name=sellstg_name,
+                        save_file_name=save_file_name,
                     )
                     segment_timing['phase3_s'] = round(time.perf_counter() - t0, 4)
 

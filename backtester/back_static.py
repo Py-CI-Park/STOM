@@ -1810,7 +1810,9 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 
 def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
                     export_detail=True, export_summary=True, export_filter=True,
-                    include_filter_recommendations=True):
+                    include_filter_recommendations=True,
+                    buystg_name: str = None, sellstg_name: str = None,
+                    startday=None, endday=None, starttime=None, endtime=None):
     """
     전체 분석을 실행합니다 (CSV 출력 + 시각화).
 
@@ -1848,7 +1850,17 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
         result['csv_files'] = csv_paths
 
         # 3. 매수/매도 비교 차트 생성
-        PltBuySellComparison(df_analysis, save_file_name, teleQ)
+        PltBuySellComparison(
+            df_analysis,
+            save_file_name,
+            teleQ,
+            buystg_name=buystg_name,
+            sellstg_name=sellstg_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
         output_dir = ensure_backtesting_output_dir(save_file_name)
         result['charts'].append(str(output_dir / f"{save_file_name}_comparison.png"))
 
