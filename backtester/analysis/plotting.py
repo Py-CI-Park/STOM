@@ -1014,6 +1014,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train', progress_logs=None):
     output_dir = ensure_backtesting_output_dir(save_file_name)
     ensure_mpl_font()
+    cfg = get_backtesting_output_config()
     memo_text = build_strategy_memo_text(
         buystg_name,
         sellstg_name,
