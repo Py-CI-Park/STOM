@@ -1,6 +1,6 @@
 import os
 import time
-from queue import Empty, Queue
+import queue
 from threading import Event, Thread
 
 import telegram
@@ -28,7 +28,7 @@ class TelegramMsg:
         self.bot      = None
         self.photo_queue = []
         self.last_photo_time = 0.0
-        self.photo_send_queue = Queue()
+        self.photo_send_queue = queue.Queue()
         self.photo_sender_stop = Event()
         self.photo_sender_thread = None
         self._load_output_config()
@@ -40,7 +40,7 @@ class TelegramMsg:
         while True:
             try:
                 data = self.teleQ.get(timeout=self.photo_poll_timeout)
-            except Empty:
+            except queue.Empty:
                 self.FlushPhotoQueue()
                 continue
 
@@ -263,7 +263,7 @@ class TelegramMsg:
         while not self.photo_sender_stop.is_set():
             try:
                 batch = self.photo_send_queue.get(timeout=0.5)
-            except Empty:
+            except queue.Empty:
                 continue
             if batch is None:
                 break
