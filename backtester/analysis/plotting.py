@@ -1006,9 +1006,25 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     df_tsg['손실금액'] = np.where(profit_values < 0, profit_values, 0)
 
     # 거래가 매우 많으면(예: 60,000건) 차트 렌더링/강화분석 시간이 길어 텔레그램 알림이 늦어질 수 있어,
-    # 우선 "진행 중" 메시지를 먼저 전송합니다.
+    # 우선 완료/진행/예정 안내 메시지를 먼저 전송합니다.
     if teleQ is not None:
         try:
+            run_label = save_file_name.split("_")[1] if "_" in save_file_name else save_file_name
+            teleQ.put(f'{backname} {run_label} 완료.')
+            teleQ.put(f'{backname} {run_label} 분석/차트 생성 중... (거래 {len(df_tsg):,}회)')
+            notice_lines = [
+                "이후 전송/생성 단계(요약):",
+                "1) 매수/매도 조건식 요약(있는 경우)",
+                "2) 백테스트 진행 로그(있는 경우)",
+                "3) 기본 결과 차트 2종 전송",
+                "4) 기본 분석 차트 8종 전송",
+                "5) 상세/요약/필터 CSV 생성 및 안내",
+                "6) 강화 분석 차트 14종 전송(옵션)",
+                "7) 세그먼트 분석 결과/리포트 전송(옵션)",
+                "8) 세그먼트 필터 적용 미리보기(옵션)",
+            ]
+            teleQ.put("\n".join(notice_lines))
+
             lines = []
             has_condition = bool(buystg_name or sellstg_name or buystg or sellstg)
             if has_condition:
@@ -1041,7 +1057,6 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
 
             if lines:
                 teleQ.put("\n".join(lines))
-            teleQ.put(f'{backname} {save_file_name.split("_")[1]} 분석/차트 생성 중... (거래 {len(df_tsg):,}회)')
         except:
             pass
     sig_list = df_tsg['수익금'].to_list()
@@ -1290,7 +1305,6 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.tight_layout()
     plt.savefig(str(output_dir / f"{save_file_name}.png"))
 
-    teleQ.put(f'{backname} {save_file_name.split("_")[1]} 완료.')
     teleQ.put(str(output_dir / f"{save_file_name}_.png"))
     teleQ.put(str(output_dir / f"{save_file_name}.png"))
 

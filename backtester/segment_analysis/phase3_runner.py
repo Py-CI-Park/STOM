@@ -79,6 +79,7 @@ def run_phase3(
         summary_df,
         str(output_dir_path / f"{output_prefix}_segment_heatmap.png"),
         filtered_summary_df=filtered_summary_df,
+        ranges_df=ranges_df,
     )
     efficiency_path = plot_filter_efficiency(
         filters_df, str(output_dir_path / f"{output_prefix}_filter_efficiency.png")

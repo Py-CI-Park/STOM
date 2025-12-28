@@ -31,6 +31,7 @@ def plot_segment_heatmap(
     summary_df: pd.DataFrame,
     output_path: str,
     filtered_summary_df: Optional[pd.DataFrame] = None,
+    ranges_df: Optional[pd.DataFrame] = None,
 ) -> Optional[str]:
     if plt is None or summary_df is None or summary_df.empty:
         return None
@@ -76,6 +77,37 @@ def plot_segment_heatmap(
             filtered_summary_df, row_order=row_order, col_order=col_order
         )
 
+    def _format_cap_range(min_v, max_v) -> Optional[str]:
+        try:
+            min_val = float(min_v) if min_v is not None else None
+        except Exception:
+            min_val = None
+        try:
+            max_val = float(max_v) if max_v is not None else None
+        except Exception:
+            max_val = None
+
+        if min_val is None and max_val is None:
+            return None
+        if max_val is None or pd.isna(max_val):
+            return f"{int(round(min_val)):,}억 이상"
+        if min_val is None or pd.isna(min_val):
+            return f"{int(round(max_val)):,}억 이하"
+        return f"{int(round(min_val)):,}~{int(round(max_val)):,}억"
+
+    cap_range_map = {}
+    if ranges_df is not None and not ranges_df.empty:
+        try:
+            df_ranges = ranges_df.copy()
+            df_ranges = df_ranges[df_ranges['range_type'] == 'market_cap']
+            for _, row in df_ranges.iterrows():
+                label = str(row.get('label', '')).strip()
+                if not label:
+                    continue
+                cap_range_map[label] = _format_cap_range(row.get('min'), row.get('max'))
+        except Exception:
+            cap_range_map = {}
+
     def _draw_heatmap(ax, profits, trades, title: str):
         vmax = max(abs(profits.max().max()), abs(profits.min().min()))
         if vmax == 0:
@@ -100,7 +132,17 @@ def plot_segment_heatmap(
             font_size = 7
         ax.set_xticklabels(profits.columns, rotation=rotation, ha=ha, fontsize=font_size)
         ax.set_yticks(range(len(profits.index)))
-        ax.set_yticklabels(profits.index, fontsize=9)
+        if cap_range_map:
+            display_labels = []
+            for cap_label in profits.index:
+                range_text = cap_range_map.get(str(cap_label))
+                if range_text:
+                    display_labels.append(f"{cap_label}\n({range_text})")
+                else:
+                    display_labels.append(str(cap_label))
+            ax.set_yticklabels(display_labels, fontsize=8)
+        else:
+            ax.set_yticklabels(profits.index, fontsize=9)
         ax.set_title(title)
 
         text_font = 7
