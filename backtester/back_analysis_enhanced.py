@@ -40,7 +40,7 @@ from backtester.analysis_enhanced.stats import (
     CalculateStatisticalSignificance,
     CalculateEffectSizeInterpretation,
 )
-from backtester.analysis_enhanced.metrics import (
+from backtester.analysis_enhanced.metrics_enhanced import (
     DetectTimeframe,
     CalculateEnhancedDerivedMetrics,
 )

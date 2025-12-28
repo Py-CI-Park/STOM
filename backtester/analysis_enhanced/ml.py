@@ -281,6 +281,20 @@ def _apply_ml_bundle(df: pd.DataFrame, bundle: dict):
             if '예측매수매도위험도점수_ML' not in df.columns:
                 df['예측매수매도위험도점수_ML'] = np.nan
 
+        # (옵션) 당일거래대금_매수매도_비율 회귀 예측
+        tmr = bundle.get('trade_money_regression') if isinstance(bundle.get('trade_money_regression'), dict) else None
+        if tmr and tmr.get('model') is not None and tmr.get('scaler') is not None:
+            try:
+                Xtm_all = _prepare_feature_matrix(df, tmr.get('features') or features)
+                Xtm_all_s = tmr['scaler'].transform(Xtm_all)
+                pred_all_tm = tmr['model'].predict(Xtm_all_s)
+                df['당일거래대금_매수매도_비율_ML'] = np.clip(pred_all_tm, 0, None)
+            except Exception:
+                df['당일거래대금_매수매도_비율_ML'] = np.nan
+        else:
+            if '당일거래대금_매수매도_비율_ML' not in df.columns:
+                df['당일거래대금_매수매도_비율_ML'] = np.nan
+
         info['used_saved_model'] = True
         return df, info
     except Exception:
@@ -404,6 +418,9 @@ def AnalyzeFeatureImportance(df_tsg):
         '매수잔량_매도잔량_비율', '초당매도_매수_비율', '초당매수_매도_비율',
         '현재가_고저범위_위치', '초당거래대금_당일비중',
         '초당순매수수량', '초당순매수금액', '초당순매수비율',
+        # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표 (LOOKAHEAD-FREE)
+        # 주의: 당일거래대금_매수매도_비율은 매도시점 데이터 사용으로 LOOKAHEAD 문제 있어 제외
+        '당일거래대금_전틱분봉_비율', '당일거래대금_5틱분봉평균_비율',
     ]
     
     # 동적으로 사용 가능한 컬럼 선택
@@ -703,6 +720,8 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         '현재가_고저범위_위치', '초당거래대금_당일비중',
         '초당순매수수량', '초당순매수금액', '초당순매수비율',
         '위험도점수',  # 규칙 기반 위험도 (매수 시점 정보만 사용)
+        # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표 (LOOKAHEAD-FREE)
+        '당일거래대금_전틱분봉_비율', '당일거래대금_5틱분봉평균_비율',
     ]
     
     feature_columns = []
@@ -1038,6 +1057,120 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         timing['risk_regression_s'] = round(time.perf_counter() - t0, 4)
 
     # ================================================================
+    # (추가 2025-12-28) 매수 시점 변수로 "당일거래대금_매수매도_비율"을 예측(회귀)
+    # - 목적: LOOKAHEAD 있는 당일거래대금_매수매도_비율을 매수시점 정보만으로 예측
+    # - 특징: 당일거래대금_전틱분봉_비율, 당일거래대금_5틱분봉평균_비율 등 사용
+    # ================================================================
+    trade_money_regression_stats = None
+    trade_money_reg_model = None
+    trade_money_reg_scaler = None
+    trade_money_reg_model_name = None
+    df['당일거래대금_매수매도_비율_ML'] = np.nan
+    if '당일거래대금_매수매도_비율' in df.columns:
+        t0 = time.perf_counter()
+        try:
+            df_tm = df[available_features + ['당일거래대금_매수매도_비율']].copy()
+            df_tm['당일거래대금_매수매도_비율'] = pd.to_numeric(df_tm['당일거래대금_매수매도_비율'], errors='coerce')
+            df_tm = df_tm.dropna(subset=['당일거래대금_매수매도_비율'])
+
+            if len(df_tm) >= 50:
+                for col in available_features:
+                    if df_tm[col].isna().sum() > 0:
+                        df_tm[col] = df_tm[col].fillna(df_tm[col].median())
+
+                Xtm = df_tm[available_features].values
+                ytm = df_tm['당일거래대금_매수매도_비율'].values
+
+                try:
+                    Xtm_train, Xtm_test, ytm_train, ytm_test = train_test_split(
+                        Xtm, ytm, test_size=0.25, random_state=42
+                    )
+                except Exception:
+                    Xtm_train, Xtm_test, ytm_train, ytm_test = Xtm, Xtm, ytm, ytm
+
+                scaler_tm = StandardScaler()
+                Xtm_train_s = scaler_tm.fit_transform(Xtm_train)
+                Xtm_test_s = scaler_tm.transform(Xtm_test)
+
+                rf_reg_tm = RandomForestRegressor(
+                    n_estimators=150,
+                    max_depth=10,
+                    min_samples_leaf=5,
+                    random_state=42,
+                    n_jobs=-1
+                )
+                rf_reg_tm.fit(Xtm_train_s, ytm_train)
+                pred_rf_tm = rf_reg_tm.predict(Xtm_test_s)
+                mae_rf_tm = float(mean_absolute_error(ytm_test, pred_rf_tm))
+
+                max_mlp_samples = 25000
+                if len(ytm_train) > max_mlp_samples:
+                    rng = np.random.RandomState(42)
+                    idx = rng.choice(len(ytm_train), max_mlp_samples, replace=False)
+                    X_mlp_tm, y_mlp_tm = Xtm_train_s[idx], ytm_train[idx]
+                else:
+                    X_mlp_tm, y_mlp_tm = Xtm_train_s, ytm_train
+
+                mlp_reg_tm = MLPRegressor(
+                    hidden_layer_sizes=(64, 32),
+                    max_iter=200,
+                    early_stopping=True,
+                    random_state=42
+                )
+                mlp_reg_tm.fit(X_mlp_tm, y_mlp_tm)
+                pred_mlp_tm = mlp_reg_tm.predict(Xtm_test_s)
+                mae_mlp_tm = float(mean_absolute_error(ytm_test, pred_mlp_tm))
+
+                if mae_mlp_tm <= mae_rf_tm:
+                    best_name_tm = 'MLPRegressor'
+                    best_model_tm = mlp_reg_tm
+                    best_pred_test_tm = pred_mlp_tm
+                    best_mae_tm = mae_mlp_tm
+                else:
+                    best_name_tm = 'RandomForestRegressor'
+                    best_model_tm = rf_reg_tm
+                    best_pred_test_tm = pred_rf_tm
+                    best_mae_tm = mae_rf_tm
+
+                rmse_tm = float(np.sqrt(mean_squared_error(ytm_test, best_pred_test_tm)))
+                r2_tm = float(r2_score(ytm_test, best_pred_test_tm))
+                try:
+                    corr_tm = float(np.corrcoef(ytm_test, best_pred_test_tm)[0, 1])
+                except Exception:
+                    corr_tm = float('nan')
+
+                # 전체 데이터 예측
+                Xtm_all = df[available_features].copy()
+                for col in available_features:
+                    if Xtm_all[col].isna().sum() > 0:
+                        Xtm_all[col] = Xtm_all[col].fillna(Xtm_all[col].median())
+                Xtm_all_s = scaler_tm.transform(Xtm_all.values)
+                pred_all_tm = best_model_tm.predict(Xtm_all_s)
+                # 당일거래대금 비율은 양수 값이므로 0 이상으로 클리핑
+                df['당일거래대금_매수매도_비율_ML'] = np.clip(pred_all_tm, 0, None)
+
+                # NaN 채우기 (중앙값)
+                med_pred_tm = float(np.nanmedian(df['당일거래대금_매수매도_비율_ML'].values))
+                df['당일거래대금_매수매도_비율_ML'] = df['당일거래대금_매수매도_비율_ML'].fillna(med_pred_tm)
+
+                trade_money_regression_stats = {
+                    'target': '당일거래대금_매수매도_비율',
+                    'best_model': best_name_tm,
+                    'test_mae': round(best_mae_tm, 4),
+                    'test_rmse': round(rmse_tm, 4),
+                    'test_r2': round(r2_tm, 3),
+                    'test_corr': round(corr_tm * 100, 1) if np.isfinite(corr_tm) else None,
+                    'mae_rf': round(mae_rf_tm, 4),
+                    'mae_mlp': round(mae_mlp_tm, 4),
+                }
+                trade_money_reg_model = best_model_tm
+                trade_money_reg_scaler = scaler_tm
+                trade_money_reg_model_name = best_name_tm
+        except Exception:
+            pass
+        timing['trade_money_regression_s'] = round(time.perf_counter() - t0, 4)
+
+    # ================================================================
     # 실제 매수매도위험도점수와 비교 (상관관계)
     # ================================================================
     correlation_actual = None
@@ -1080,6 +1213,8 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         'correlation_with_rule_risk': correlation_rule,
         'risk_regression': risk_regression_stats,
         'risk_regression_model': risk_reg_model_name,
+        'trade_money_regression': trade_money_regression_stats,
+        'trade_money_regression_model': trade_money_reg_model_name,
         'explain_rules': explain_rules,
         'loss_rate': round(y.mean() * 100, 1),
     }
@@ -1110,6 +1245,13 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                     'best_model_name': risk_reg_model_name,
                     'stats': risk_regression_stats,
                 } if (risk_reg_model is not None and risk_reg_scaler is not None) else None,
+                'trade_money_regression': {
+                    'features': list(available_features),
+                    'scaler': trade_money_reg_scaler,
+                    'model': trade_money_reg_model,
+                    'best_model_name': trade_money_reg_model_name,
+                    'stats': trade_money_regression_stats,
+                } if (trade_money_reg_model is not None and trade_money_reg_scaler is not None) else None,
                 'explain_tree': explain_tree,
                 'explain_rules': explain_rules,
                 'train_stats': {

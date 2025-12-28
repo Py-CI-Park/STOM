@@ -43,8 +43,9 @@ def main():
     if '시가총액' in df_detail.columns:
         print(f"\n시가총액 범위: {df_detail['시가총액'].min():.0f} ~ {df_detail['시가총액'].max():.0f}")
         print(f"시가총액 분포:")
-        print(f"  소형주(<3000): {(df_detail['시가총액'] < 3000).sum():,}건")
-        print(f"  중형주(3000-10000): {((df_detail['시가총액'] >= 3000) & (df_detail['시가총액'] < 10000)).sum():,}건")
+        print(f"  초소형주(<2500): {(df_detail['시가총액'] < 2500).sum():,}건")
+        print(f"  소형주(2500-5000): {((df_detail['시가총액'] >= 2500) & (df_detail['시가총액'] < 5000)).sum():,}건")
+        print(f"  중형주(5000-10000): {((df_detail['시가총액'] >= 5000) & (df_detail['시가총액'] < 10000)).sum():,}건")
         print(f"  대형주(>=10000): {(df_detail['시가총액'] >= 10000).sum():,}건")
 
     # 세그먼트 분할

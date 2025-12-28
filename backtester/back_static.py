@@ -13,7 +13,7 @@ from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.detail_schema import reorder_detail_columns
 from backtester.analysis.exports import ExportBacktestCSV
 from backtester.analysis.indicators import AddAvgData, GetIndicator
-from backtester.analysis.metrics import CalculateDerivedMetrics, AnalyzeFilterEffects
+from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
 from backtester.analysis.optuna_server import RunOptunaServer
 from backtester.analysis.plotting import (
     PltAnalysisCharts,
@@ -535,6 +535,36 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                     'desc': '초당거래대금 변화율(매도/매수)',
                     'unit': '배율',
                     'formula': ["매도초당거래대금/매수초당거래대금 if 매수초당거래대금>0 else 1.0"],
+                },
+                # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표
+                '당일거래대금_전틱분봉_비율': {
+                    'desc': '직전 거래 대비 당일거래대금 변화율',
+                    'unit': '배율',
+                    'formula': ["현재_당일거래대금 / 직전거래_당일거래대금 if >0 else 1.0"],
+                    'note': '첫 거래는 1.0, 거래대금 증감 트렌드 파악용'
+                },
+                '당일거래대금_매수매도_비율': {
+                    'desc': '매수→매도 간 당일거래대금 변화율',
+                    'unit': '배율',
+                    'formula': ["매도당일거래대금 / 매수당일거래대금 if >0 else 1.0"],
+                    'note': '보유 기간 동안 시장 유동성 변화'
+                },
+                '당일거래대금_5틱분봉평균_비율': {
+                    'desc': '최근 5틱/분봉 평균 대비 당일거래대금 비율',
+                    'unit': '배율',
+                    'formula': ["현재_당일거래대금 / rolling_mean(5) if >0 else 1.0"],
+                    'note': '단기 평균 대비 유동성 수준, 노이즈 감소용'
+                },
+                # [NEW 2025-12-28] ML 예측 지표: 당일거래대금_매수매도_비율 예측값
+                '당일거래대금_매수매도_비율_ML': {
+                    'desc': '매수시점 변수만으로 예측한 당일거래대금_매수매도_비율',
+                    'unit': '배율',
+                    'formula': [
+                        "ML 회귀 모델 (RandomForest or MLP)",
+                        "features: 당일거래대금_전틱분봉_비율, 당일거래대금_5틱분봉평균_비율 등 매수시점 변수",
+                        "target: 당일거래대금_매수매도_비율 (매도당일거래대금/매수당일거래대금)"
+                    ],
+                    'note': 'LOOKAHEAD 있는 실제값 대신 매수시점에서 사용 가능한 예측값. 필터로 안전하게 사용 가능.'
                 },
             }
 
@@ -1780,7 +1810,9 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 
 def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
                     export_detail=True, export_summary=True, export_filter=True,
-                    include_filter_recommendations=True):
+                    include_filter_recommendations=True,
+                    buystg_name: str = None, sellstg_name: str = None,
+                    startday=None, endday=None, starttime=None, endtime=None):
     """
     전체 분석을 실행합니다 (CSV 출력 + 시각화).
 
@@ -1818,7 +1850,17 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
         result['csv_files'] = csv_paths
 
         # 3. 매수/매도 비교 차트 생성
-        PltBuySellComparison(df_analysis, save_file_name, teleQ)
+        PltBuySellComparison(
+            df_analysis,
+            save_file_name,
+            teleQ,
+            buystg_name=buystg_name,
+            sellstg_name=sellstg_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
         output_dir = ensure_backtesting_output_dir(save_file_name)
         result['charts'].append(str(output_dir / f"{save_file_name}_comparison.png"))
 

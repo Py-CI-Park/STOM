@@ -14,20 +14,23 @@ Study/
 │   ├── Research_Report_Automated_Condition_Finding.md
 │   ├── AI_Driven_Condition_Automation_Circular_Research_System.md
 │   └── 2025-12-20_Segmented_Filter_Optimization_Research.md
-├── SystemAnalysis/           # 시스템 분석 및 개선사항 (4개)
+├── SystemAnalysis/           # 시스템 분석 및 개선사항 (6개)
 │   ├── Optistd_System_Analysis.md
 │   ├── STOM_Optimization_System_Improvements.md
 │   ├── 2025-12-13_Git_Branch_Structure_Analysis.md
+│   ├── 2025-12-28_Backtesting_Output_System_Analysis.md
+│   ├── 2025-12-28_New_Metrics_Integration_Verification_Report.md
 │   └── Telegram/
 │       └── Telegram_Charts_Analysis.md
 ├── ConditionStudies/         # 트레이딩 조건 심층 분석 (2개)
 │   ├── Condition_902_905_Update_2_Deep_Analysis.md
 │   └── Condition_Tick_902_905_update_2_Study.md
-└── Guides/                   # 가이드 및 참고자료 (1개)
-    └── Condition_Optimization_and_Analysis_Guide.md
+└── Guides/                   # 가이드 및 참고자료 (2개)
+    ├── Condition_Optimization_and_Analysis_Guide.md
+    └── New_Metrics_Development_Process_Guide.md
 ```
 
-**총 문서 수**: 12개 | **총 용량**: ~400KB
+**총 문서 수**: 16개 | **총 용량**: ~600KB
 
 ---
 
@@ -49,6 +52,10 @@ Study/
 | 10 | **AI Condition Automation Circular System** | 연구 보고서 | 2025-12-01 | 80KB | AI 기반 조건식 자동화 순환 연구 | • 133개 조건 분석 (826/752 변수)<br>• 4단계 순환 프로세스 설계<br>• LLM/GP/Feature Importance 통합 | LLM, DEAP, XGBoost, SHAP, SQLite | ✅ |
 | 11 | **Telegram Charts Analysis** | 시스템 분석 | 2025-12-14 | 40KB | 텔레그램 차트/CSV 기반 백테스팅 강화 분석 | • 기본/강화 CSV 산출물(최대 8종) 정의<br>• 필터 효과(통계)·시너지·안정성·임계값 분석 정리<br>• 텔레그램 전송 플로우 문서화 | pandas, SciPy, scikit-learn, Telegram | ✅ |
 | 12 | **Segmented Filter Optimization Research** | 연구 보고서 | 2025-12-20 | 45KB | 시가총액/시간 구간 분할 기반 필터 조합 최적화 연구 (v2.0) | • 12개 세그먼트(3시총×4시간) 분할 설계<br>• 2단계 계층적 최적화(Greedy+Beam Search) 알고리즘<br>• NSGA-II 다목적 최적화/Optuna 임계값 탐색<br>• Walk-Forward 검증 및 과적합 방지 전략<br>• 코드 자동 생성 아키텍처 설계 | Optimization, Segmentation, NSGA-II, Optuna, Walk-Forward | ✅ |
+| 13 | **Risk Score Calculation Analysis** | 시스템 분석 | 2025-12-28 | 5KB | 위험도 점수 산출 및 타임프레임 호환성 분석 | • 분봉/틱 데이터 간 위험도 점수 일관성 검증<br>• 상태값(Snapshot) 및 누적값(Daily) 기반 중립성 분석<br>• 분석 엔진(metrics_base.py/metrics_enhanced.py)과 조건식 문서 간 로직 동기화 | Statistics, Python, Documentation | ✅ |
+| 14 | **Backtesting Output System Analysis** | 시스템 분석 | 2025-12-28 | 95KB | 백테스팅 출력 시스템 상세 분석 | • 93개 컬럼 파생 지표 계산 로직 분석<br>• 1분봉/1초봉 변수 차이 및 처리 검증<br>• 비율 조합 지표 구현 현황 확인<br>• 당일거래대금 비율 지표 추가 구현 권장 | Python, NumPy, Pandas, Analysis | ✅ |
+| 15 | **New Metrics Integration Verification Report** | 시스템 분석 | 2025-12-28 | 48KB | 당일거래대금 비율 지표 통합 검증 | • 신규 지표 3종 백테스팅 시스템 통합<br>• detail.csv/report.txt 자동 문서화<br>• 필터/세그먼트/ML feature 호환성 검증<br>• 4개 파일 수정으로 완전 통합 완료 | Python, Integration Testing | ✅ |
+| 16 | **New Metrics Development Process Guide** | 가이드 | 2025-12-28 | 52KB | 신규 지표 개발 및 통합 체계적 프로세스 | • 10단계 개발 프로세스 정립<br>• LOOKAHEAD-FREE 검증 가이드<br>• 6개 시스템 통합 체크리스트<br>• 코드 템플릿 및 실전 사례 포함 | Documentation, Process | ✅ |
 
 ### 📊 스터디 주제별 분류
 
@@ -58,20 +65,21 @@ Study/
 - **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning, DEAP, NSGA-II, Optuna
 - **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간), 완전 자동화된 순환 개선 프로세스, 세그먼트별 필터 최적화
 
-#### ⚙️ 시스템 최적화 및 관리 (4개)
-- **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조, 텔레그램 차트/CSV 기반 분석 시스템
-- **문제 식별**: 극단값 증폭, TRAIN×VALID 곱셈 문제, Git 히스토리 정리 필요
-- **개선안**: 조화평균 사용, 15가지 구체적 개선 방안, 커밋 스쿼싱 및 브랜치 정리
+#### ⚙️ 시스템 최적화 및 관리 (7개)
+- **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조, 텔레그램 분석 시스템, 위험도 점수 산출 로직, 백테스팅 출력 시스템
+- **문제 식별**: 극단값 증폭, TRAIN×VALID 곱셈 문제 (수정 완료), 분봉/틱 간 변수 호환성 이슈 해결, 당일거래대금 비율 지표 미구현 (해결 완료)
+- **개선안**: 조화평균 사용, 15가지 구체적 개선 방안, 위험도 점수 로직 표준화 및 동기화, 당일거래대금 비율 지표 3종 추가 및 완전 통합
 
 #### 📈 조건 전략 연구 (2개)
 - **대상 조건**: Condition_Tick_902_905_update_2 (장 시작 5분)
 - **문제점**: 17개 조건 과적합, 표본 부족, 조건 충돌
 - **해결책**: 2단계 최적화, 조건 완화, 조합 전략
 
-#### 📚 문서화 & 가이드 (2개)
+#### 📚 문서화 & 가이드 (3개)
 - **문서 품질**: 106개 문서, 품질 4.5/5, 300개 이상 코드 스니펫
 - **변수 사전**: 826개 틱 변수, 752개 분봉 변수, 7가지 카테고리
 - **실무 가이드**: 무력화 설정, 최적화 방법론, 베스트 프랙티스
+- **개발 가이드**: 신규 지표 개발 프로세스 (10단계, 체크리스트 포함)
 
 ---
 
@@ -123,6 +131,7 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | [STOM_Optimization_System_Improvements.md](./SystemAnalysis/STOM_Optimization_System_Improvements.md) | 2025-11-29 | ✅ 완료 | STOM 최적화 시스템 개선방안 |
 | [2025-12-13_Git_Branch_Structure_Analysis.md](./SystemAnalysis/2025-12-13_Git_Branch_Structure_Analysis.md) | 2025-12-13 | ✅ 완료 | Git 브랜치 구조 분석 및 정리 보고서 (38KB) |
 | [Telegram_Charts_Analysis.md](./SystemAnalysis/Telegram/Telegram_Charts_Analysis.md) | 2025-12-14 | ✅ 완료 | 텔레그램 추가 차트/CSV 기반 강화 분석 시스템 문서 (v2.0) |
+| [2025-12-28_Backtesting_Output_System_Analysis.md](./SystemAnalysis/2025-12-28_Backtesting_Output_System_Analysis.md) | 2025-12-28 | ✅ 완료 | 백테스팅 출력 시스템 상세 분석 (95KB) |
 
 **주요 내용:**
 - 최적화 시스템 아키텍처 분석
@@ -172,10 +181,10 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 |----------|---------|------|---------|------|
 | Documentation Reviews | 1 | 1 | 0 | 0 |
 | Research Reports | 4 | 4 | 0 | 0 |
-| System Analysis | 4 | 4 | 0 | 0 |
+| System Analysis | 5 | 5 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
 | Guides | 1 | 1 | 0 | 0 |
-| **전체** | **12** | **12** | **0** | **0** |
+| **전체** | **13** | **13** | **0** | **0** |
 
 ## 🎯 문서 상태 범례
 
@@ -300,6 +309,6 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 
 ---
 
-**최종 업데이트**: 2025-12-20
+**최종 업데이트**: 2025-12-28
 **문서 관리자**: STOM Development Team
-**문서 버전**: 2.2
+**문서 버전**: 2.3

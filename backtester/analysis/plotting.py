@@ -11,6 +11,7 @@ from utility.static import strp_time, strf_time
 from utility.mpl_setup import ensure_mpl_font
 from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.analysis.text_utils import _format_progress_logs, _extract_strategy_block_lines
+from backtester.analysis.memo_utils import build_strategy_memo_text, add_memo_box
 
 try:
     from backtester.back_analysis_enhanced import ComputeStrategyKey
@@ -520,10 +521,12 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
                                     save_file_name: str, backname: str, seed: int,
                                     generated_code: dict = None,
                                     buystg: str = None, sellstg: str = None,
+                                    buystg_name: str = None, sellstg_name: str = None,
                                     file_tag: str = '',
                                     segment_combo_map: dict = None,
                                     back_text: str = None,
-                                    label_text: str = None):
+                                    label_text: str = None,
+                                    startday=None, endday=None, starttime=None, endtime=None):
     """
     자동 생성 필터(generated_code)를 적용한 결과를 2개의 png로 저장합니다.
     - {전략명}{_tag}_filtered.png
@@ -541,6 +544,15 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     tag = f"_{file_tag}" if file_tag else ""
     output_dir = ensure_backtesting_output_dir(save_file_name)
     ensure_mpl_font()
+    memo_text = build_strategy_memo_text(
+        buystg_name,
+        sellstg_name,
+        save_file_name,
+        startday=startday,
+        endday=endday,
+        starttime=starttime,
+        endtime=endtime,
+    )
 
     # 2025-12-20: 필터 적용 후 거래 0~1건인 경우 경고 차트 생성
     if df_filtered is None or len(df_filtered) < 2 or '수익금' not in df_filtered.columns:
@@ -582,6 +594,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.axis('off')
 
         path_main = str(output_dir / f"{save_file_name}{tag}_filtered.png")
+        add_memo_box(fig, memo_text)
         plt.savefig(path_main, dpi=100, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
@@ -835,6 +848,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
              bbox=dict(boxstyle='round', facecolor='white', alpha=0.5))
 
     plt.tight_layout(rect=(0, 0.05, 1, 0.96))
+    add_memo_box(fig, memo_text)
     plt.savefig(path_main, dpi=120, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
@@ -984,6 +998,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.axis('off')
 
     fig.suptitle(f'{backname} 필터 적용 분포/단계 요약 - {save_file_name}', fontsize=14, fontweight='bold')
+    add_memo_box(fig, memo_text)
     plt.savefig(path_sub, dpi=120, bbox_inches='tight', facecolor='white')
     plt.close(fig)
 
@@ -995,6 +1010,15 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train', progress_logs=None):
     output_dir = ensure_backtesting_output_dir(save_file_name)
     ensure_mpl_font()
+    memo_text = build_strategy_memo_text(
+        buystg_name,
+        sellstg_name,
+        save_file_name,
+        startday=startday,
+        endday=endday,
+        starttime=starttime,
+        endtime=endtime,
+    )
     df_tsg['수익금합계020'] = df_tsg['수익금합계'].rolling(window=20).mean().round(2)
     df_tsg['수익금합계060'] = df_tsg['수익금합계'].rolling(window=60).mean().round(2)
     df_tsg['수익금합계120'] = df_tsg['수익금합계'].rolling(window=120).mean().round(2)
@@ -1178,7 +1202,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.rcParams['font.family'] = font_family
     plt.rcParams['axes.unicode_minus'] = False
 
-    plt.figure(f'{backname} 부가정보', figsize=(12, 10))
+    fig = plt.figure(f'{backname} 부가정보', figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=2, height_ratios=[1, 1])
     # noinspection PyTypeChecker
     plt.subplot(gs[0])
@@ -1222,12 +1246,13 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.legend(loc='best')
     plt.grid()
     plt.tight_layout()
+    add_memo_box(fig, memo_text)
     plt.savefig(str(output_dir / f"{save_file_name}_.png"))
 
     if buy_vars is None:
-        plt.figure(f'{backname} 결과', figsize=(12, 10))
+        fig = plt.figure(f'{backname} 결과', figsize=(12, 10))
     else:
-        plt.figure(f'{backname} 결과', figsize=(12, 12))
+        fig = plt.figure(f'{backname} 결과', figsize=(12, 12))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 4])
     # noinspection PyTypeChecker
     plt.subplot(gs[0])
@@ -1303,13 +1328,24 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.legend(loc='upper left')
     plt.grid()
     plt.tight_layout()
+    add_memo_box(fig, memo_text)
     plt.savefig(str(output_dir / f"{save_file_name}.png"))
 
     teleQ.put(str(output_dir / f"{save_file_name}_.png"))
     teleQ.put(str(output_dir / f"{save_file_name}.png"))
 
     # [2025-12-08] 분석 차트 생성 및 텔레그램 전송 (8개 기본 분석 차트)
-    PltAnalysisCharts(df_tsg, save_file_name, teleQ)
+    PltAnalysisCharts(
+        df_tsg,
+        save_file_name,
+        teleQ,
+        buystg_name=buystg_name,
+        sellstg_name=sellstg_name,
+        startday=startday,
+        endday=endday,
+        starttime=starttime,
+        endtime=endtime,
+    )
 
     # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
     # - 강화 분석을 사용할 경우: detail/filter CSV는 강화 분석 결과로 통합(중복 생성 방지)
@@ -1326,7 +1362,13 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         export_detail=not ENHANCED_ANALYSIS_AVAILABLE,
         export_summary=True,
         export_filter=not ENHANCED_ANALYSIS_AVAILABLE,
-        include_filter_recommendations=True
+        include_filter_recommendations=True,
+        buystg_name=buystg_name,
+        sellstg_name=sellstg_name,
+        startday=startday,
+        endday=endday,
+        starttime=starttime,
+        endtime=endtime,
     )
 
     # [2025-12-10] 강화된 분석 실행 (14개 ML/통계 분석 차트)
@@ -1416,8 +1458,14 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 generated_code=gen,
                                 buystg=buystg,
                                 sellstg=sellstg,
+                                buystg_name=buystg_name,
+                                sellstg_name=sellstg_name,
                                 back_text=back_text,
                                 label_text=label_text,
+                                startday=startday,
+                                endday=endday,
+                                starttime=starttime,
+                                endtime=endtime,
                             )
                             if p_sub:
                                 teleQ.put(p_sub)
@@ -1511,10 +1559,16 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 generated_code=None,
                                 buystg=buystg,
                                 sellstg=sellstg,
+                                buystg_name=buystg_name,
+                                sellstg_name=sellstg_name,
                                 file_tag='segment',
                                 segment_combo_map=combo_map,
                                 back_text=back_text,
                                 label_text=label_text,
+                                startday=startday,
+                                endday=endday,
+                                starttime=starttime,
+                                endtime=endtime,
                             )
                             if p_sub:
                                 teleQ.put(p_sub)
@@ -1548,7 +1602,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             # 강화 분석 실패 시: 기본 detail/filter CSV를 생성해 결과 보존
             try:
                 from backtester.analysis.exports import ExportBacktestCSV
-                from backtester.analysis.metrics import CalculateDerivedMetrics, AnalyzeFilterEffects
+                from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
                 ExportBacktestCSV(
                     df_tsg,
                     save_file_name,
@@ -1601,7 +1655,9 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         plt.show()
 
 
-def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
+def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
+                      buystg_name: str = None, sellstg_name: str = None,
+                      startday=None, endday=None, starttime=None, endtime=None):
     """
     확장된 상세기록 데이터를 기반으로 분석 차트를 생성하고 텔레그램으로 전송
 
@@ -1645,6 +1701,16 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
             plt.rcParams['font.family'] = 'Malgun Gothic'
             plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
+
+        memo_text = build_strategy_memo_text(
+            buystg_name,
+            sellstg_name,
+            save_file_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
 
         # x축 라벨/히트맵 글자 겹침 방지를 위해 세로 여백을 늘립니다.
         fig = plt.figure(figsize=(16, 22))
@@ -1982,6 +2048,7 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
         analysis_path = str(output_dir / f"{save_file_name}_analysis.png")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            add_memo_box(fig, memo_text)
             plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
@@ -2001,7 +2068,9 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ):
 # [2025-12-09] 백테스팅 데이터 분석 및 필터링을 위한 함수들
 # ============================================================================
 
-def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None):
+def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None,
+                                buystg_name: str = None, sellstg_name: str = None,
+                                startday=None, endday=None, starttime=None, endtime=None):
     """
     매수/매도 시점 비교 분석 차트를 생성합니다.
 
@@ -2045,6 +2114,16 @@ def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None):
             plt.rcParams['font.family'] = 'Malgun Gothic'
             plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
+
+        memo_text = build_strategy_memo_text(
+            buystg_name,
+            sellstg_name,
+            save_file_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
 
         fig = plt.figure(figsize=(20, 16))
         fig.suptitle(f'매수/매도 시점 비교 분석 - {save_file_name}', fontsize=14, fontweight='bold')
@@ -2259,6 +2338,7 @@ def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None):
         comparison_path = str(output_dir / f"{save_file_name}_comparison.png")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            add_memo_box(fig, memo_text)
             plt.savefig(comparison_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
@@ -2273,7 +2353,9 @@ def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None):
             pass
 
 
-def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
+def PltBuySellComparison(df_tsg, save_file_name, teleQ=None,
+                         buystg_name: str = None, sellstg_name: str = None,
+                         startday=None, endday=None, starttime=None, endtime=None):
     """
     매수/매도 시점 비교 분석 차트를 생성합니다.
 
@@ -2319,6 +2401,16 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
             plt.rcParams['font.family'] = 'Malgun Gothic'
         plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
+
+        memo_text = build_strategy_memo_text(
+            buystg_name,
+            sellstg_name,
+            save_file_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
 
         fig = plt.figure(figsize=(22, 26))
         fig.suptitle(f'매수/매도 시점 비교 분석 - {save_file_name}', fontsize=14, fontweight='bold')
@@ -2650,6 +2742,7 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None):
         comparison_path = str(output_dir / f"{save_file_name}_comparison.png")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            add_memo_box(fig, memo_text)
             plt.savefig(comparison_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)
 
