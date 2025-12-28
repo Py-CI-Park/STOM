@@ -3,9 +3,9 @@
 Segmentation Module - 세그먼트 분할 모듈
 
 시가총액/시간 구간 기반 데이터 세그먼트 분할:
-- 시가총액: 소형주(<3000억), 중형주(3000-10000억), 대형주(≥10000억)
+- 시가총액: 초소형주(<2500억), 소형주(2500-5000억), 중형주(5000-10000억), 대형주(≥10000억)
 - 시간: T1(09:00-05), T2(09:05-10), T3(09:10-15), T4(09:15-20)
-- 총 12개 세그먼트 생성 (3 × 4)
+- 총 16개 세그먼트 생성 (4 × 4)
 
 Research: docs/Study/ResearchReports/2025-12-20_Segmented_Filter_Optimization_Research.md
 Author: Claude Code
@@ -32,8 +32,9 @@ class SegmentConfig:
 
     # 시가총액 구간 (억원 단위)
     market_cap_ranges: Dict[str, Tuple[float, float]] = field(default_factory=lambda: {
-        '소형주': (0, 3000),          # < 3000억
-        '중형주': (3000, 10000),      # 3000~10000억
+        '초소형주': (0, 2500),           # < 2500억
+        '소형주': (2500, 5000),          # 2500~5000억
+        '중형주': (5000, 10000),         # 5000~10000억
         '대형주': (10000, float('inf'))  # >= 10000억
     })
 
@@ -72,7 +73,7 @@ class SegmentConfig:
 
     # 반-동적 분할 옵션
     dynamic_mode: str = 'fixed'  # fixed | semi | dynamic | time_only
-    dynamic_market_cap_quantiles: Tuple[float, float] = (0.33, 0.66)
+    dynamic_market_cap_quantiles: Tuple[float, float, float] = (0.25, 0.5, 0.75)
     dynamic_time_quantiles: Tuple[float, float, float] = (0.25, 0.5, 0.75)
     dynamic_min_samples: int = 200
 
@@ -97,7 +98,7 @@ class SegmentBuilder:
     """
     세그먼트 분할 실행 클래스
 
-    detail.csv 데이터를 시가총액/시간 기준으로 12개 세그먼트로 분할
+    detail.csv 데이터를 시가총액/시간 기준으로 16개 세그먼트로 분할
     """
 
     def __init__(self, config: Optional[SegmentConfig] = None):
@@ -116,7 +117,7 @@ class SegmentBuilder:
 
     def build_segments(self, df_detail: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
-        detail 데이터를 12개 세그먼트로 분할
+        detail 데이터를 16개 세그먼트로 분할
 
         Args:
             df_detail: 백테스팅 detail.csv 데이터프레임
@@ -528,21 +529,24 @@ class SegmentBuilder:
         if series.size < self.config.dynamic_min_samples:
             return None
 
-        q1, q2 = self.config.dynamic_market_cap_quantiles
+        qs = list(self.config.dynamic_market_cap_quantiles or ())
+        if len(qs) != 3:
+            qs = [0.25, 0.5, 0.75]
+        qs = sorted(qs)
         try:
-            v1 = float(series.quantile(q1))
-            v2 = float(series.quantile(q2))
+            v1, v2, v3 = [float(series.quantile(q)) for q in qs]
         except Exception:
             return None
 
         base_min = min(r[0] for r in self.config.market_cap_ranges.values())
-        if not (v1 > base_min and v2 > v1):
+        if not (v1 > base_min and v2 > v1 and v3 > v2):
             return None
 
         return {
-            '소형주': (base_min, v1),
-            '중형주': (v1, v2),
-            '대형주': (v2, float('inf')),
+            '초소형주': (base_min, v1),
+            '소형주': (v1, v2),
+            '중형주': (v2, v3),
+            '대형주': (v3, float('inf')),
         }
 
     def _build_dynamic_time_ranges(
