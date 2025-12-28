@@ -100,5 +100,5 @@ def reorder_detail_columns(df: pd.DataFrame) -> pd.DataFrame:
 
     out.extend([c for c in chart_helpers if c not in out])
 
-    return df[out]
+    return df[out].copy()
 
