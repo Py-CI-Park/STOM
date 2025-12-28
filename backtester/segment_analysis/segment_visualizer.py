@@ -11,6 +11,8 @@ from typing import Optional
 
 import pandas as pd
 
+from utility.mpl_setup import ensure_mpl_font
+
 try:
     import matplotlib.pyplot as plt
 except Exception:  # pragma: no cover - optional dependency
@@ -19,49 +21,181 @@ except Exception:  # pragma: no cover - optional dependency
 from .segmentation import create_segment_matrix_view
 
 
-def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional[str]:
+def _ensure_korean_font():
+    if plt is None:
+        return
+    ensure_mpl_font()
+
+
+def plot_segment_heatmap(
+    summary_df: pd.DataFrame,
+    output_path: str,
+    filtered_summary_df: Optional[pd.DataFrame] = None,
+    ranges_df: Optional[pd.DataFrame] = None,
+) -> Optional[str]:
     if plt is None or summary_df is None or summary_df.empty:
         return None
 
-    df = summary_df.copy()
-    df = df[df['segment_id'] != 'Out_of_Range']
-    if df.empty:
+    _ensure_korean_font()
+
+    def _prepare_heatmap(df: pd.DataFrame,
+                         row_order: Optional[list] = None,
+                         col_order: Optional[list] = None):
+        data = df.copy()
+        data = data[data['segment_id'] != 'Out_of_Range']
+        if data.empty:
+            return None, None, row_order, col_order
+
+        data['cap'] = data['segment_id'].astype(str).str.split('_', n=1).str[0]
+        data['time_label'] = data['segment_id'].astype(str).str.split('_', n=1).str[1]
+
+        trades = data.pivot_table(index='cap', columns='time_label', values='trades', fill_value=0)
+        profits = data.pivot_table(index='cap', columns='time_label', values='profit', fill_value=0)
+
+        if row_order is None:
+            row_order = _sort_cap_labels(trades.index.tolist())
+        if row_order:
+            trades = trades.reindex(index=row_order)
+            profits = profits.reindex(index=row_order)
+
+        if col_order is None:
+            col_order = _sort_time_labels(trades.columns.tolist())
+        if col_order:
+            trades = trades.reindex(columns=col_order)
+            profits = profits.reindex(columns=col_order)
+
+        return trades, profits, row_order, col_order
+
+    trades_base, profits_base, row_order, col_order = _prepare_heatmap(summary_df)
+    if profits_base is None or trades_base is None:
         return None
 
-    df['cap'] = df['segment_id'].astype(str).str.split('_', n=1).str[0]
-    df['time_label'] = df['segment_id'].astype(str).str.split('_', n=1).str[1]
+    trades_filt = None
+    profits_filt = None
+    if filtered_summary_df is not None and not filtered_summary_df.empty:
+        trades_filt, profits_filt, _, _ = _prepare_heatmap(
+            filtered_summary_df, row_order=row_order, col_order=col_order
+        )
 
-    trades = df.pivot_table(index='cap', columns='time_label', values='trades', fill_value=0)
-    profits = df.pivot_table(index='cap', columns='time_label', values='profit', fill_value=0)
+    def _format_cap_range(min_v, max_v) -> Optional[str]:
+        try:
+            min_val = float(min_v) if min_v is not None else None
+        except Exception:
+            min_val = None
+        try:
+            max_val = float(max_v) if max_v is not None else None
+        except Exception:
+            max_val = None
 
-    row_order = _sort_cap_labels(trades.index.tolist())
-    if row_order:
-        trades = trades.reindex(index=row_order)
-        profits = profits.reindex(index=row_order)
+        if min_val is None and max_val is None:
+            return None
+        if max_val is None or pd.isna(max_val):
+            return f"{int(round(min_val)):,}억 이상"
+        if min_val is None or pd.isna(min_val):
+            return f"{int(round(max_val)):,}억 이하"
+        return f"{int(round(min_val)):,}~{int(round(max_val)):,}억"
 
-    col_order = _sort_time_labels(trades.columns.tolist())
-    trades = trades.reindex(columns=col_order)
-    profits = profits.reindex(columns=col_order)
+    cap_range_map = {}
+    if ranges_df is not None and not ranges_df.empty:
+        try:
+            df_ranges = ranges_df.copy()
+            df_ranges = df_ranges[df_ranges['range_type'] == 'market_cap']
+            for _, row in df_ranges.iterrows():
+                label = str(row.get('label', '')).strip()
+                if not label:
+                    continue
+                cap_range_map[label] = _format_cap_range(row.get('min'), row.get('max'))
+        except Exception:
+            cap_range_map = {}
 
-    vmax = max(abs(profits.max().max()), abs(profits.min().min()))
-    if vmax == 0:
-        vmax = 1.0
+    def _draw_heatmap(ax, profits, trades, title: str):
+        vmax = max(abs(profits.max().max()), abs(profits.min().min()))
+        if vmax == 0:
+            vmax = 1.0
 
-    fig, ax = plt.subplots(figsize=(7.5, 4.5))
-    im = ax.imshow(profits.values, cmap='RdYlGn', aspect='auto', vmin=-vmax, vmax=vmax)
-    ax.set_xticks(range(len(profits.columns)))
-    ax.set_xticklabels(profits.columns, rotation=0, fontsize=8)
-    ax.set_yticks(range(len(profits.index)))
-    ax.set_yticklabels(profits.index, fontsize=9)
-    ax.set_title('Segment Heatmap (Profit color / Trades text)')
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label='Profit')
+        col_count = max(1, len(profits.columns))
+        row_count = max(1, len(profits.index))
+        cell_count = col_count * row_count
 
-    for i, cap in enumerate(profits.index):
-        for j, label in enumerate(profits.columns):
-            trade_val = int(trades.loc[cap, label]) if label in trades.columns else 0
-            profit_val = float(profits.loc[cap, label]) if label in profits.columns else 0.0
-            text = f"T:{trade_val:,}\nP:{_fmt_profit(profit_val)}"
-            ax.text(j, i, text, ha='center', va='center', fontsize=7)
+        im = ax.imshow(profits.values, cmap='RdYlGn', aspect='auto', vmin=-vmax, vmax=vmax)
+        ax.set_xticks(range(len(profits.columns)))
+        rotation = 0
+        ha = 'center'
+        font_size = 8
+        if col_count >= 14:
+            rotation = 90
+            ha = 'center'
+            font_size = 7
+        elif col_count >= 9:
+            rotation = 45
+            ha = 'right'
+            font_size = 7
+        ax.set_xticklabels(profits.columns, rotation=rotation, ha=ha, fontsize=font_size)
+        ax.set_yticks(range(len(profits.index)))
+        if cap_range_map:
+            display_labels = []
+            for cap_label in profits.index:
+                range_text = cap_range_map.get(str(cap_label))
+                if range_text:
+                    display_labels.append(f"{cap_label}\n({range_text})")
+                else:
+                    display_labels.append(str(cap_label))
+            ax.set_yticklabels(display_labels, fontsize=8)
+        else:
+            ax.set_yticklabels(profits.index, fontsize=9)
+        ax.set_title(title)
+
+        text_font = 7
+        if col_count >= 12 or row_count >= 8:
+            text_font = 6
+        if col_count >= 16 or row_count >= 12:
+            text_font = 5
+        compact_text = cell_count >= 80 or col_count >= 10 or row_count >= 8
+        text_rotation = 0
+        if compact_text:
+            text_rotation = 45 if col_count < 16 else 90
+
+        for i, cap in enumerate(profits.index):
+            for j, label in enumerate(profits.columns):
+                trade_val = int(trades.loc[cap, label]) if label in trades.columns else 0
+                profit_val = float(profits.loc[cap, label]) if label in profits.columns else 0.0
+                if compact_text:
+                    text = f"{trade_val:,}\n{_fmt_profit(profit_val)}"
+                else:
+                    text = f"T:{trade_val:,}\nP:{_fmt_profit(profit_val)}"
+                ax.text(j, i, text, ha='center', va='center', fontsize=text_font, rotation=text_rotation)
+
+        total_profit = float(profits.to_numpy(dtype=float).sum())
+        ax.text(
+            0.02,
+            0.98,
+            f"Profit 합계: {_fmt_profit(total_profit)}",
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=8,
+            bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor='gray', alpha=0.85),
+        )
+
+        return im
+
+    col_count = max(1, len(profits_base.columns))
+    row_count = max(1, len(profits_base.index))
+    fig_width = max(7.5, min(18.0, 0.6 * col_count))
+    base_height = max(4.5, min(10.0, 0.35 * row_count))
+    nrows = 2 if profits_filt is not None and trades_filt is not None else 1
+    fig_height = base_height * nrows
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=(fig_width, fig_height))
+    if nrows == 1:
+        axes = [axes]
+
+    im = _draw_heatmap(axes[0], profits_base, trades_base, 'Segment Heatmap (기준)')
+    fig.colorbar(im, ax=axes[0], fraction=0.046, pad=0.04, label='Profit')
+
+    if nrows == 2 and profits_filt is not None and trades_filt is not None:
+        im2 = _draw_heatmap(axes[1], profits_filt, trades_filt, 'Segment Heatmap (필터 적용)')
+        fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04, label='Profit')
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
@@ -72,6 +206,8 @@ def plot_segment_heatmap(summary_df: pd.DataFrame, output_path: str) -> Optional
 def plot_filter_efficiency(filters_df: pd.DataFrame, output_path: str, top_n: int = 20) -> Optional[str]:
     if plt is None or filters_df is None or filters_df.empty:
         return None
+
+    _ensure_korean_font()
 
     df = filters_df.copy()
     if 'efficiency' not in df.columns:
@@ -122,10 +258,13 @@ def _fmt_profit(value: float) -> str:
         v = float(value)
     except Exception:
         return "0"
-    sign = "+" if v >= 0 else ""
-    if abs(v) >= 100000000:
-        return f"{sign}{v/100000000:.1f}억"
-    return f"{sign}{v:,.0f}"
+    sign = "+" if v >= 0 else "-"
+    abs_v = abs(v)
+    if abs_v >= 100000000:
+        return f"{sign}{abs_v/100000000:.1f}억"
+    if abs_v >= 10000:
+        return f"{sign}{abs_v/10000:.1f}만"
+    return f"{sign}{abs_v:,.0f}"
 
 
 def plot_pareto_front(pareto_df: pd.DataFrame, output_path: str) -> Optional[str]:
@@ -134,6 +273,8 @@ def plot_pareto_front(pareto_df: pd.DataFrame, output_path: str) -> Optional[str
 
     if 'remaining_ratio' not in pareto_df.columns or 'total_improvement' not in pareto_df.columns:
         return None
+
+    _ensure_korean_font()
 
     x = pareto_df['remaining_ratio'].astype(float).to_numpy()
     y = pareto_df['total_improvement'].astype(float).to_numpy()

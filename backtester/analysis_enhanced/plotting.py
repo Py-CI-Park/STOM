@@ -4,9 +4,10 @@ from traceback import print_exc
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from matplotlib import font_manager, gridspec
+from matplotlib import gridspec
 
 from backtester.output_paths import ensure_backtesting_output_dir
+from utility.mpl_setup import ensure_mpl_font
 from .metrics import DetectTimeframe
 from .utils import (
     ComputeStrategyKey,
@@ -153,21 +154,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         # 한글 폰트 설정
         # - 요약 텍스트 등에서 기본 monospace(DejaVu Sans Mono)로 fallback 되면 한글이 깨질 수 있어,
         #   family/monospace 모두에 한글 폰트를 우선 지정합니다.
-        font_path = 'C:/Windows/Fonts/malgun.ttf'
-        try:
-            font_family = font_manager.FontProperties(fname=font_path).get_name()
-            plt.rcParams['font.family'] = font_family
-            plt.rcParams['font.sans-serif'] = [font_family]
-            plt.rcParams['font.monospace'] = [font_family, 'Consolas', 'monospace']
-            try:
-                font_manager.fontManager.addfont(font_path)
-            except:
-                pass
-        except:
-            plt.rcParams['font.family'] = 'Malgun Gothic'
-            plt.rcParams['font.sans-serif'] = ['Malgun Gothic', 'DejaVu Sans']
-            plt.rcParams['font.monospace'] = ['Malgun Gothic', 'Consolas', 'monospace']
-        plt.rcParams['axes.unicode_minus'] = False
+        ensure_mpl_font(set_monospace=True)
 
         # 타임프레임 감지
         tf_info = DetectTimeframe(df_tsg, save_file_name)

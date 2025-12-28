@@ -90,6 +90,9 @@ def _clone_segment_config(seg_config: Optional[SegmentConfig]) -> SegmentConfig:
     return SegmentConfig(
         market_cap_ranges=dict(base.market_cap_ranges),
         time_ranges=dict(base.time_ranges),
+        time_segment_target_minutes=base.time_segment_target_minutes,
+        time_segment_min_count=base.time_segment_min_count,
+        time_segment_max_count=base.time_segment_max_count,
         min_trades=dict(base.min_trades),
         max_exclusion=dict(base.max_exclusion),
         validation=dict(base.validation),
