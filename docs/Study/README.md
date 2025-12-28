@@ -49,6 +49,7 @@ Study/
 | 10 | **AI Condition Automation Circular System** | 연구 보고서 | 2025-12-01 | 80KB | AI 기반 조건식 자동화 순환 연구 | • 133개 조건 분석 (826/752 변수)<br>• 4단계 순환 프로세스 설계<br>• LLM/GP/Feature Importance 통합 | LLM, DEAP, XGBoost, SHAP, SQLite | ✅ |
 | 11 | **Telegram Charts Analysis** | 시스템 분석 | 2025-12-14 | 40KB | 텔레그램 차트/CSV 기반 백테스팅 강화 분석 | • 기본/강화 CSV 산출물(최대 8종) 정의<br>• 필터 효과(통계)·시너지·안정성·임계값 분석 정리<br>• 텔레그램 전송 플로우 문서화 | pandas, SciPy, scikit-learn, Telegram | ✅ |
 | 12 | **Segmented Filter Optimization Research** | 연구 보고서 | 2025-12-20 | 45KB | 시가총액/시간 구간 분할 기반 필터 조합 최적화 연구 (v2.0) | • 12개 세그먼트(3시총×4시간) 분할 설계<br>• 2단계 계층적 최적화(Greedy+Beam Search) 알고리즘<br>• NSGA-II 다목적 최적화/Optuna 임계값 탐색<br>• Walk-Forward 검증 및 과적합 방지 전략<br>• 코드 자동 생성 아키텍처 설계 | Optimization, Segmentation, NSGA-II, Optuna, Walk-Forward | ✅ |
+| 13 | **Risk Score Calculation Analysis** | 시스템 분석 | 2025-12-28 | 5KB | 위험도 점수 산출 및 타임프레임 호환성 분석 | • 분봉/틱 데이터 간 위험도 점수 일관성 검증<br>• 상태값(Snapshot) 및 누적값(Daily) 기반 중립성 분석<br>• 분석 엔진(metrics.py)과 조건식 문서 간 로직 동기화 | Statistics, Python, Documentation | ✅ |
 
 ### 📊 스터디 주제별 분류
 
@@ -58,10 +59,10 @@ Study/
 - **핵심 기술**: XGBoost, SHAP, Genetic Programming, LLM, Reinforcement Learning, DEAP, NSGA-II, Optuna
 - **목표**: 826개 변수 중 최적 조합 자동 발견, 최적화 시간 단축 (587년→수시간), 완전 자동화된 순환 개선 프로세스, 세그먼트별 필터 최적화
 
-#### ⚙️ 시스템 최적화 및 관리 (4개)
-- **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조, 텔레그램 차트/CSV 기반 분석 시스템
-- **문제 식별**: 극단값 증폭, TRAIN×VALID 곱셈 문제, Git 히스토리 정리 필요
-- **개선안**: 조화평균 사용, 15가지 구체적 개선 방안, 커밋 스쿼싱 및 브랜치 정리
+#### ⚙️ 시스템 최적화 및 관리 (5개)
+- **분석 대상**: OPTISTD 14가지 계산식, 교차검증 MERGE, Grid/Optuna/GA, Git 브랜치 구조, 텔레그램 분석 시스템, 위험도 점수 산출 로직
+- **문제 식별**: 극단값 증폭, TRAIN×VALID 곱셈 문제 (수정 완료), 분봉/틱 간 변수 호환성 이슈 해결
+- **개선안**: 조화평균 사용, 15가지 구체적 개선 방안, 위험도 점수 로직 표준화 및 동기화
 
 #### 📈 조건 전략 연구 (2개)
 - **대상 조건**: Condition_Tick_902_905_update_2 (장 시작 5분)

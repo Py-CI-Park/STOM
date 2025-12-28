@@ -433,6 +433,11 @@ STOM 프로젝트는 **98.3% 문서화 준수율**을 자랑하며, 모든 전�
    - 성능 최적화 분석
    - 멀티코어 데이터 로딩
 
+5. **[Study](./docs/study/)** - 연구 및 분석 보고서 (신규)
+   - [위험도 점수 산출 및 타임프레임 호환성 분석 (2025-12-28)](./docs/study/SystemAnalysis/2025-12-28_Risk_Score_Calculation_and_Cross_Timeframe_Compatibility_Analysis.md)
+   - [세그먼트 필터 조합 최적화 연구 (v2.0)](./docs/study/ResearchReports/2025-12-20_Segmented_Filter_Optimization_Research.md)
+   - [AI/ML 기반 전략 자동화 및 조건식 자동 발굴 시스템](./docs/study/ResearchReports/AI_ML_Trading_Strategy_Automation_Research.md)
+
 #### 문서 활용
 
 **신규 사용자**:
