@@ -1,6 +1,34 @@
 import numpy as np
 import pandas as pd
 
+try:
+    from numba import njit
+    NUMBA_AVAILABLE = True
+except Exception:
+    NUMBA_AVAILABLE = False
+
+    def njit(*_args, **_kwargs):
+        def _wrap(func):
+            return func
+        return _wrap
+
+
+@njit(cache=True)
+def calculate_mdd_from_cumsum(cumsum: np.ndarray, seed: float) -> float:
+    if cumsum.size == 0:
+        return 0.0
+    peak = cumsum[0]
+    max_drawdown = 0.0
+    for i in range(1, cumsum.size):
+        if cumsum[i] > peak:
+            peak = cumsum[i]
+        drawdown = peak - cumsum[i]
+        if drawdown > max_drawdown:
+            max_drawdown = drawdown
+    if peak + seed <= 0:
+        return 0.0
+    return abs(max_drawdown) / (peak + seed) * 100.0
+
 def CalculateDerivedMetrics(df_tsg):
     """
     매수/매도 시점 간 파생 지표를 계산합니다.

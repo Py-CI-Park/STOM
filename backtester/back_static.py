@@ -11,7 +11,9 @@ from utility.static import strp_time, strf_time
 from utility.setting import ui_num, DB_SETTING
 from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.detail_schema import reorder_detail_columns
-from backtester.analysis.exports import ExportBacktestCSV
+from backtester.analysis.exports import ExportBacktestCSV, ExportBacktestCSVParallel
+from backtester.analysis.output_config import get_backtesting_output_config
+from backtester.analysis.cache import load_cached_df, save_cached_df, build_df_signature
 from backtester.analysis.indicators import AddAvgData, GetIndicator
 from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
 from backtester.analysis.optuna_server import RunOptunaServer
@@ -1811,6 +1813,7 @@ def GetOptiStdText(optistd, std_list, betting, result, pre_text):
 def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
                     export_detail=True, export_summary=True, export_filter=True,
                     include_filter_recommendations=True,
+                    run_comparison_charts: bool = True,
                     buystg_name: str = None, sellstg_name: str = None,
                     startday=None, endday=None, starttime=None, endtime=None):
     """
@@ -1835,32 +1838,54 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
     }
 
     try:
-        # 1. 파생 지표 계산
-        df_analysis = CalculateDerivedMetrics(df_tsg)
+        # 1. 파생 지표 계산 (캐시 재사용)
+        cfg = get_backtesting_output_config()
+        use_cache = bool(cfg.get('enable_cache', False))
+        df_signature = build_df_signature(df_tsg)
+        df_analysis = None
+        if use_cache:
+            df_analysis = load_cached_df(save_file_name, 'derived_metrics', signature=df_signature)
+        if df_analysis is None:
+            df_analysis = CalculateDerivedMetrics(df_tsg)
+            if use_cache:
+                save_cached_df(save_file_name, 'derived_metrics', df_analysis, signature=df_signature)
 
         # 2. CSV 파일 출력
-        csv_paths = ExportBacktestCSV(
-            df_analysis,
-            save_file_name,
-            teleQ,
-            write_detail=export_detail,
-            write_summary=export_summary,
-            write_filter=export_filter
-        )
+        if cfg.get('enable_csv_parallel', False):
+            csv_paths = ExportBacktestCSVParallel(
+                df_analysis,
+                save_file_name,
+                teleQ,
+                write_detail=export_detail,
+                write_summary=export_summary,
+                write_filter=export_filter,
+                df_analysis=df_analysis
+            )
+        else:
+            csv_paths = ExportBacktestCSV(
+                df_analysis,
+                save_file_name,
+                teleQ,
+                write_detail=export_detail,
+                write_summary=export_summary,
+                write_filter=export_filter,
+                df_analysis=df_analysis
+            )
         result['csv_files'] = csv_paths
 
         # 3. 매수/매도 비교 차트 생성
-        PltBuySellComparison(
-            df_analysis,
-            save_file_name,
-            teleQ,
-            buystg_name=buystg_name,
-            sellstg_name=sellstg_name,
-            startday=startday,
-            endday=endday,
-            starttime=starttime,
-            endtime=endtime,
-        )
+        if run_comparison_charts:
+            PltBuySellComparison(
+                df_analysis,
+                save_file_name,
+                teleQ,
+                buystg_name=buystg_name,
+                sellstg_name=sellstg_name,
+                startday=startday,
+                endday=endday,
+                starttime=starttime,
+                endtime=endtime,
+            )
         output_dir = ensure_backtesting_output_dir(save_file_name)
         result['charts'].append(str(output_dir / f"{save_file_name}_comparison.png"))
 

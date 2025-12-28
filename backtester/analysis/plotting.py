@@ -12,6 +12,9 @@ from utility.mpl_setup import ensure_mpl_font
 from backtester.output_paths import ensure_backtesting_output_dir
 from backtester.analysis.text_utils import _format_progress_logs, _extract_strategy_block_lines
 from backtester.analysis.memo_utils import build_strategy_memo_text, add_memo_box
+from backtester.analysis.output_config import get_backtesting_output_config
+from backtester.analysis.ipc_utils import save_dataframe_ipc, cleanup_ipc_path
+from backtester.analysis.metrics_base import calculate_mdd_from_cumsum, NUMBA_AVAILABLE
 
 try:
     from backtester.back_analysis_enhanced import ComputeStrategyKey
@@ -544,6 +547,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     tag = f"_{file_tag}" if file_tag else ""
     output_dir = ensure_backtesting_output_dir(save_file_name)
     ensure_mpl_font()
+    cfg = get_backtesting_output_config()
     memo_text = build_strategy_memo_text(
         buystg_name,
         sellstg_name,
@@ -1010,6 +1014,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             buystg=None, sellstg=None, buystg_name=None, sellstg_name=None, ml_train_mode='train', progress_logs=None):
     output_dir = ensure_backtesting_output_dir(save_file_name)
     ensure_mpl_font()
+    cfg = get_backtesting_output_config()
     memo_text = build_strategy_memo_text(
         buystg_name,
         sellstg_name,
@@ -1085,6 +1090,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             pass
     sig_list = df_tsg['수익금'].to_list()
     mdd_list = []
+    use_numba = NUMBA_AVAILABLE and bool(cfg.get('enable_numba'))
     for i in range(30):
         random.shuffle(sig_list)
         df_tsg[f'수익금{i}'] = sig_list
@@ -1092,9 +1098,12 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         df_tsg.drop(columns=[f'수익금{i}'], inplace=True)
         try:
             array = np.array(df_tsg[f'수익금합계{i}'], dtype=np.float64)
-            lower = np.argmax(np.maximum.accumulate(array) - array)
-            upper = np.argmax(array[:lower])
-            mdd_ = round(abs(array[upper] - array[lower]) / (array[upper] + seed) * 100, 2)
+            if use_numba:
+                mdd_ = round(float(calculate_mdd_from_cumsum(array, float(seed))), 2)
+            else:
+                lower = np.argmax(np.maximum.accumulate(array) - array)
+                upper = np.argmax(array[:lower])
+                mdd_ = round(abs(array[upper] - array[lower]) / (array[upper] + seed) * 100, 2)
         except:
             mdd_ = 0.
         mdd_list.append(mdd_)
@@ -1334,18 +1343,79 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     teleQ.put(str(output_dir / f"{save_file_name}_.png"))
     teleQ.put(str(output_dir / f"{save_file_name}.png"))
 
+    enable_parallel = bool(cfg.get('enable_parallel_charts'))
+    enable_ipc = bool(cfg.get('enable_ipc_transfer'))
+    parallel_timeout = int(cfg.get('parallel_chart_timeout_s', 600))
+    max_workers = int(cfg.get('parallel_chart_workers', 4))
+    start_method = str(cfg.get('parallel_start_method', 'spawn'))
+
+    parallel_results = []
+    job_status = {'analysis': False, 'comparison': False}
+    ipc_path = None
+
+    if enable_parallel:
+        try:
+            from backtester.analysis.plotting_parallel import run_parallel_chart_jobs
+
+            if enable_ipc:
+                ipc_path = save_dataframe_ipc(
+                    df_tsg,
+                    output_dir,
+                    f"{save_file_name}_tsg",
+                    prefer_format=str(cfg.get('ipc_format', 'parquet')),
+                )
+
+            job_common = {
+                'df_path': ipc_path,
+                'save_file_name': save_file_name,
+                'buystg_name': buystg_name,
+                'sellstg_name': sellstg_name,
+                'startday': startday,
+                'endday': endday,
+                'starttime': starttime,
+                'endtime': endtime,
+            }
+            if ipc_path is None:
+                job_common['df_tsg'] = df_tsg
+
+            jobs = [
+                dict(job_common, type='analysis'),
+                dict(job_common, type='comparison'),
+            ]
+            parallel_results = run_parallel_chart_jobs(
+                jobs,
+                max_workers=max_workers,
+                timeout_s=parallel_timeout,
+                start_method=start_method,
+            )
+        except Exception:
+            parallel_results = []
+
+    if enable_ipc and ipc_path and cfg.get('ipc_cleanup', True):
+        cleanup_ipc_path(ipc_path)
+
+    for result in parallel_results:
+        if result.get('success'):
+            job_type = result.get('type')
+            if job_type in job_status:
+                job_status[job_type] = True
+            for path in result.get('paths') or []:
+                if teleQ is not None and path:
+                    teleQ.put(path)
+
     # [2025-12-08] 분석 차트 생성 및 텔레그램 전송 (8개 기본 분석 차트)
-    PltAnalysisCharts(
-        df_tsg,
-        save_file_name,
-        teleQ,
-        buystg_name=buystg_name,
-        sellstg_name=sellstg_name,
-        startday=startday,
-        endday=endday,
-        starttime=starttime,
-        endtime=endtime,
-    )
+    if not job_status['analysis']:
+        PltAnalysisCharts(
+            df_tsg,
+            save_file_name,
+            teleQ,
+            buystg_name=buystg_name,
+            sellstg_name=sellstg_name,
+            startday=startday,
+            endday=endday,
+            starttime=starttime,
+            endtime=endtime,
+        )
 
     # [2025-12-09] 매수/매도 비교 분석 및 CSV 출력
     # - 강화 분석을 사용할 경우: detail/filter CSV는 강화 분석 결과로 통합(중복 생성 방지)
@@ -1363,6 +1433,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
         export_summary=True,
         export_filter=not ENHANCED_ANALYSIS_AVAILABLE,
         include_filter_recommendations=True,
+        run_comparison_charts=not job_status['comparison'],
         buystg_name=buystg_name,
         sellstg_name=sellstg_name,
         startday=startday,
@@ -1601,20 +1672,32 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             print_exc()
             # 강화 분석 실패 시: 기본 detail/filter CSV를 생성해 결과 보존
             try:
-                from backtester.analysis.exports import ExportBacktestCSV
+                from backtester.analysis.exports import ExportBacktestCSV, ExportBacktestCSVParallel
                 from backtester.analysis.metrics_base import CalculateDerivedMetrics, AnalyzeFilterEffects
-                ExportBacktestCSV(
-                    df_tsg,
-                    save_file_name,
-                    teleQ,
-                    write_detail=True,
-                    write_summary=False,
-                    write_filter=True
-                )
+                df_fallback = CalculateDerivedMetrics(df_tsg)
+                if cfg.get('enable_csv_parallel', False):
+                    ExportBacktestCSVParallel(
+                        df_tsg,
+                        save_file_name,
+                        teleQ,
+                        write_detail=True,
+                        write_summary=False,
+                        write_filter=True,
+                        df_analysis=df_fallback
+                    )
+                else:
+                    ExportBacktestCSV(
+                        df_tsg,
+                        save_file_name,
+                        teleQ,
+                        write_detail=True,
+                        write_summary=False,
+                        write_filter=True,
+                        df_analysis=df_fallback
+                    )
                 if teleQ is not None:
                     already_sent = bool(full_result and full_result.get('recommendations'))
                     if not already_sent:
-                        df_fallback = CalculateDerivedMetrics(df_tsg)
                         filter_results = AnalyzeFilterEffects(df_fallback)
                         top_filters = [f for f in filter_results if f.get('적용권장', '').count('★') >= 2]
                         recs = [
@@ -1690,6 +1773,14 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
         # 차트용 복사본 (원본 df_tsg에 임시 컬럼 추가되는 부작용 방지)
         df_tsg = df_tsg.copy()
         from matplotlib.ticker import MaxNLocator, AutoMinorLocator
+        agg_cache = {}
+
+        def _groupby_cache(key, group_col, agg_spec):
+            cached = agg_cache.get(key)
+            if cached is None:
+                cached = df_tsg.groupby(group_col, observed=True).agg(agg_spec).reset_index()
+                agg_cache[key] = cached
+            return cached
 
         # 한글 폰트 설정 (개선된 버전)
         font_path = 'C:/Windows/Fonts/malgun.ttf'
@@ -1781,9 +1872,11 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
         bins = [0, 5, 10, 15, 20, 30, 100]
         labels = ['0-5%', '5-10%', '10-15%', '15-20%', '20-30%', '30%+']
         df_tsg['등락율구간'] = pd.cut(df_tsg['매수등락율'], bins=bins, labels=labels, right=False)
-        df_rate = df_tsg.groupby('등락율구간', observed=True).agg({
-            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
-        }).reset_index()
+        df_rate = _groupby_cache(
+            'rate',
+            '등락율구간',
+            {'수익금': 'sum', '수익률': 'mean', '종목명': 'count'}
+        )
         df_rate.columns = ['등락율구간', '수익금', '평균수익률', '거래횟수']
 
         x = range(len(df_rate))
@@ -1807,9 +1900,11 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
         bins_ch = [0, 80, 100, 120, 150, 200, 500]
         labels_ch = ['~80', '80-100', '100-120', '120-150', '150-200', '200+']
         df_tsg['체결강도구간'] = pd.cut(df_tsg['매수체결강도'], bins=bins_ch, labels=labels_ch, right=False)
-        df_ch = df_tsg.groupby('체결강도구간', observed=True).agg({
-            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
-        }).reset_index()
+        df_ch = _groupby_cache(
+            'ch_strength',
+            '체결강도구간',
+            {'수익금': 'sum', '수익률': 'mean', '종목명': 'count'}
+        )
         df_ch.columns = ['체결강도구간', '수익금', '평균수익률', '거래횟수']
 
         x = range(len(df_ch))
@@ -1824,14 +1919,13 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
 
         # 승률 계산 및 표시
         ax3_twin = ax3.twinx()
-        win_rates = []
-        for grp in df_ch['체결강도구간']:
-            grp_data = df_tsg[df_tsg['체결강도구간'] == grp]
-            if len(grp_data) > 0:
-                wr = (grp_data['수익금'] > 0).sum() / len(grp_data) * 100
-                win_rates.append(wr)
-            else:
-                win_rates.append(0)
+        win_rate_by_group = (
+            (df_tsg['수익금'] > 0)
+            .groupby(df_tsg['체결강도구간'])
+            .mean()
+            .fillna(0) * 100
+        )
+        win_rates = [float(win_rate_by_group.get(grp, 0)) for grp in df_ch['체결강도구간']]
         ax3_twin.plot(x, win_rates, 's--', color='purple', linewidth=2, markersize=6, label='승률')
         ax3_twin.set_ylabel('승률 (%)', color='purple')
         ax3_twin.tick_params(axis='y', labelcolor='purple')
@@ -1885,9 +1979,11 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
                     labels.append(f"{_fmt_money_million(lo)}-{_fmt_money_million(hi)}")
 
             df_tsg['거래대금구간'] = pd.cut(df_tsg['매수당일거래대금'], bins=edges, labels=labels, right=False)
-        df_money = df_tsg.groupby('거래대금구간', observed=True).agg({
-            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
-        }).reset_index()
+        df_money = _groupby_cache(
+            'money',
+            '거래대금구간',
+            {'수익금': 'sum', '수익률': 'mean', '종목명': 'count'}
+        )
         df_money.columns = ['거래대금구간', '수익금', '평균수익률', '거래횟수']
 
         x = range(len(df_money))
@@ -1948,9 +2044,11 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
                 cap_labels.append(f"{_fmt_cap_eok(lo)}-{_fmt_cap_eok(hi)}")
 
         df_tsg['시총구간'] = pd.cut(df_tsg['시가총액'], bins=cap_edges, labels=cap_labels, right=False)
-        df_cap = df_tsg.groupby('시총구간', observed=True).agg({
-            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
-        }).reset_index()
+        df_cap = _groupby_cache(
+            'cap',
+            '시총구간',
+            {'수익금': 'sum', '수익률': 'mean', '종목명': 'count'}
+        )
         df_cap.columns = ['시총구간', '수익금', '평균수익률', '거래횟수']
 
         x = range(len(df_cap))
@@ -1970,9 +2068,11 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
         df_tsg['보유시간구간'] = pd.cut(df_tsg['보유시간'],
                                       bins=[0, 60, 180, 300, 600, 1800, float('inf')],
                                       labels=['~1분', '1-3분', '3-5분', '5-10분', '10-30분', '30분+'])
-        df_hold = df_tsg.groupby('보유시간구간', observed=True).agg({
-            '수익금': 'sum', '수익률': 'mean', '종목명': 'count'
-        }).reset_index()
+        df_hold = _groupby_cache(
+            'hold',
+            '보유시간구간',
+            {'수익금': 'sum', '수익률': 'mean', '종목명': 'count'}
+        )
         df_hold.columns = ['보유시간구간', '수익금', '평균수익률', '거래횟수']
 
         x = range(len(df_hold))

@@ -39,6 +39,8 @@ tasks/
 .cursor/
 .roo/
 scripts/
+!scripts/
+!scripts/measure_backtesting_performance.py
 .env.example
 .roomodes
 .taskmasterconfig
