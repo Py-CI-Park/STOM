@@ -286,12 +286,13 @@ for chart_type in [시간대별, 보유시간별, 등락율, 체결강도, 거�
 
 ### 3.1 주요 병목 지점 요약
 
-| 순위 | 병목 지점 | 소요 시간 | 비율 | 개선 가능성 |
-|------|----------|----------|------|------------|
-| 1 | 강화 분석 차트 14종 생성 | 60-120초 | 30-40% | ★★★★★ |
-| 2 | 기본 분석 차트 8종 생성 | 60-90초 | 25-30% | ★★★★★ |
-| 3 | CSV 파일 생성 3종 | 30-60초 | 15-20% | ★★★★☆ |
-| 4 | 기본 차트 2종 생성 | 30-60초 | 10-15% | ★★★☆☆ |
+| 우선순위 | 작업 항목 | 난이도 | 효과 | 비고 |
+|:---:|----------|:---:|:---:|------|
+| 1 | **텔레그램 MediaGroup 도입** | 하 | 최상 | 구현 쉽고 즉각적인 알림단축 체감 |
+| 2 | **멀티프로세싱 차트 생성** | 상 | 최상 | 가장 긴 시간(2~4분)을 단축 |
+| 3 | **결과/CSV 생성 최적화** | 중 | 중 | 데이터 프레임 로직 정리 필요 |
+| 4 | **비동기 텔레그램 (스레드)** | 중 | 중 | 앨범 전송과 결합 시 효과 극대화 |
+| 5 | **Numba JIT 적용** | 상 | 하 | 이미 일부 적용됨, 추가 이득 제한적 |
 | 5 | 필터 미리보기 4종 생성 | 20-40초 | 8-12% | ★★★★☆ |
 | 6 | 텔레그램 이미지 전송 | 10-20초 | 5-8% | ★★★☆☆ |
 | 7 | 데이터 전처리 | 5-10초 | 3-5% | ★★☆☆☆ |
@@ -355,6 +356,16 @@ Process4: 차트22-28 생성 → 저장
 - MDD 시뮬레이션 횟수 감소 또는 제거
 - 필요한 이동평균만 계산
 - Lazy evaluation 적용
+
+#### 3.2.5 네트워크 요청 효율성
+**문제점**:
+- 텔레그램 이미지 1장당 1회의 HTTP 요청 발생
+- 30장의 이미지를 보내면 30회의 요청 오버헤드 + 30회의 알림 발생
+
+**개선 방안**:
+- `sendMediaGroup` (앨범 전송) 기능 활용
+- 10장씩 묶어서 전송 (요청 수 1/10 감소, 알림 1/10 감소)
+- 사용자 경험 또한 개선됨
 
 ---
 
@@ -536,90 +547,74 @@ def PltShow(...):
 - **개선**: 28개 차트 ÷ 4 워커 × 5초 = 35초
 - **절감**: 105초 (75% 단축)
 
-### 4.2 비동기 텔레그램 전송
+- 절감: 105초 (75% 단축)
 
-**목표**: 텔레그램 전송 시간 60% 단축 (10-20초 → 4-8초)
+### 4.2 텔레그램 전송 최적화 (Album 활용 + 비동기)
 
-#### 4.2.1 구현 전략
+**목표**: 텔레그램 전송 시간 80% 단축 및 UX 개선
+
+#### 4.2.1 구현 전략: MediaGroup (앨범) 전송
+
+텔레그램 Bot API의 `sendMediaGroup`을 사용하면 한 번의 요청으로 최대 10장의 사진을 묶어서 보낼 수 있습니다.
 
 ```python
-# utility/telegram_msg.py 수정
+# utility/telegram_msg.py
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+def SendMediaGroup(self, paths, caption=None):
+    """
+    여러 이미지를 앨범으로 묶어 전송 (최대 10개)
+    """
+    if not self.bot: return
 
-class TelegramMsg:
-    def __init__(self, qlist):
-        # ... 기존 초기화 ...
-        self.send_executor = ThreadPoolExecutor(max_workers=3)
-        self.pending_sends = []
-
-    def SendPhotoAsync(self, path):
-        """비동기 이미지 전송"""
-        future = self.send_executor.submit(self._send_photo_worker, path)
-        self.pending_sends.append(future)
-        return future
-
-    def _send_photo_worker(self, path):
-        """실제 전송 작업 (별도 스레드)"""
-        if self.bot is not None:
-            try:
-                with open(path, 'rb') as image:
-                    self.bot.send_photo(
-                        chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'],
-                        photo=image
-                    )
-                return {'success': True, 'path': path}
-            except Exception as e:
-                return {'success': False, 'path': path, 'error': str(e)}
-        return {'success': False, 'path': path, 'error': 'Bot not configured'}
-
-    def WaitAllSends(self, timeout=60):
-        """모든 전송 완료 대기"""
-        from concurrent.futures import wait, FIRST_EXCEPTION
-
-        if not self.pending_sends:
-            return
-
-        done, not_done = wait(
-            self.pending_sends,
-            timeout=timeout,
-            return_when=FIRST_EXCEPTION
-        )
-
-        # 성공/실패 결과 처리
-        for future in done:
-            result = future.result()
-            if not result['success']:
-                print(f"텔레그램 전송 실패: {result['path']}, {result.get('error')}")
-
-        self.pending_sends = []
+    # 10개씩 청크 분할
+    for i in range(0, len(paths), 10):
+        chunk = paths[i:i+10]
+        media_group = []
+        opened_files = [] 
+        
+        try:
+            for j, p in enumerate(chunk):
+                f = open(p, 'rb')
+                opened_files.append(f)
+                # 첫 번째 이미지에만 캡션 달기 등 가능
+                media = telegram.InputMediaPhoto(media=f)
+                media_group.append(media)
+            
+            self.bot.send_media_group(
+                chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'],
+                media=media_group
+            )
+        except Exception as e:
+            print(f"앨범 전송 실패: {e}")
+        finally:
+            for f in opened_files:
+                f.close()
 ```
 
-#### 4.2.2 적용 예시
+#### 4.2.2 비동기 처리와 결합
 
 ```python
-# backtester/analysis/plotting.py
+# 기존 비동기 로직에 앨범 그룹화 로직 추가
 
-def PltShow(...):
-    # ... 차트 생성 ...
+class TelegramMsg:
+    def __init__(self, ...):
+        self.photo_queue = [] # 전송 대기 중인 사진 경로 모음
+        self.last_photo_time = 0
 
-    # 비동기 전송 시작
-    for result in chart_results:
-        if result['success']:
-            teleQ.put(('send_photo_async', result['path']))
-
-    # ... 추가 작업 수행 ...
-
-    # 마지막에 모든 전송 완료 대기
-    teleQ.put(('wait_all_sends',))
+    def Start(self):
+        while True:
+            # ...
+            # 주기적으로 모인 사진 묶어 보내기 로직 (예: 1초 대기 후 발송)
+            if self.photo_queue and time.time() - self.last_photo_time > 1.0:
+                 self.FlushPhotoQueue()
 ```
 
 #### 4.2.3 예상 효과
 
-- **현재**: 28개 이미지 × 0.5초 = 14초 (순차)
-- **개선**: 28개 이미지 ÷ 3 스레드 × 0.5초 = 5초 (병렬)
-- **절감**: 9초 (64% 단축)
+- **현재**: 이미지 30장 → 요청 30회, 알림 30회
+- **개선**: 이미지 30장 → 요청 3회(앨범 3개), 알림 3회
+- **시간**: 요청 횟수 감소로 인해 네트워크 오버헤드 대폭 감소 (약 10-20초 → 2-3초)
+
 
 ### 4.3 데이터 처리 최적화
 
@@ -960,6 +955,39 @@ def PltShow(...):
 - **첫 실행**: 캐시 미스 (정상 속도)
 - **재실행**: 캐시 히트 (80-90% 시간 단축)
 - **동일 전략 반복 테스트 시 매우 유용**
+
+---
+
+### 4.5 대용량 데이터 전송 최적화 (IPC)
+
+**문제**: 멀티프로세싱 도입 시 메인 프로세스에서 워커 프로세스로 대용량 DataFrame(`df_tsg`, 수만~수십만 행)을 전달할 때 Pickle 직렬화 오버헤드가 발생하여 성능 저하 가능성 있음.
+
+#### 4.5.1 솔루션: Parquet/Feather 임시 파일 활용
+Python의 `multiprocessing.Queue`는 데이터를 피클링하여 파이프를 통해 전송하므로 느릴 수 있습니다. 대신 데이터를 디스크(SSD)나 Shared Memory에 쓰고 경로만 전달하는 것이 빠릅니다.
+
+```python
+# backtest.py (메인)
+import uuid
+temp_path = output_dir / f"temp_data_{uuid.uuid4()}.parquet"
+df_tsg.to_parquet(temp_path)
+
+# 워커들에게 df 객체 대신 temp_path 문자열만 전달
+chart_specs.append({
+    # ...
+    'data_path': str(temp_path), # df_tsg 대신 경로 전달
+    # ...
+})
+
+# 워커 내부
+def _generate_chart_worker(spec):
+    if 'data_path' in spec:
+        df = pd.read_parquet(spec['data_path'])
+    # ...
+```
+
+#### 4.5.2 예상 효과
+- 메모리 사용량 감소 (Copy-on-Write 효과 미비 시 프로세스마다 복제되는 것 방지)
+- 프로세스 생성 및 통신 속도 향상
 
 ---
 
