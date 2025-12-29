@@ -142,6 +142,7 @@ def _resolve_detail_paths(best_row: Optional[pd.Series], phase2: dict, phase3: d
         'global_combo_path': None,
         'ranges_path': None,
         'segment_code_path': None,
+        'segment_code_final_path': None,
         'thresholds_path': None,
     }
 
@@ -158,6 +159,7 @@ def _resolve_detail_paths(best_row: Optional[pd.Series], phase2: dict, phase3: d
     paths['global_combo_path'] = paths['global_combo_path'] or phase2.get('global_combo_path')
     paths['ranges_path'] = paths['ranges_path'] or phase2.get('ranges_path') or phase3.get('ranges_path')
     paths['segment_code_path'] = phase2.get('segment_code_path')
+    paths['segment_code_final_path'] = phase2.get('segment_code_final_path')
     paths['thresholds_path'] = phase2.get('thresholds_path')
     return paths
 
@@ -170,6 +172,7 @@ def _describe_detail_paths(paths: dict) -> list[str]:
         'global_combo_path': '전역 조합 요약',
         'ranges_path': '세그먼트 구간 정의',
         'segment_code_path': '세그먼트 조건식 코드',
+        'segment_code_final_path': '세그먼트 최종 조건식 코드(매수조건 통합)',
         'thresholds_path': 'Optuna 임계값 결과',
     }
     lines = []

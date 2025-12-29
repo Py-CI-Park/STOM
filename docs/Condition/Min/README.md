@@ -34,7 +34,7 @@
   - 기본적인 문서 구조와 조건식 코드는 작성되어 있음
   - 백테스팅 결과 검증 및 최적화 필요
 
-- **2_Under_review/** (검토 중): 5개
+- **2_Under_review/** (검토 중): 6개
   - 현재 검토 및 개선 작업이 진행 중인 조건식
   - 백테스팅 실행 중이거나 결과 분석 단계
   - 조건 개선 연구 및 최적화 진행 중
@@ -142,7 +142,7 @@
 - **전체 조건식**: 50개 (메인) + 15개 (아이디어) = **65개**
 - **검토 프로세스**:
   - 검토 대기 (1_To_be_reviewed): 45개 (90%)
-  - 검토 중 (2_Under_review): 5개 (10%)
+  - 검토 중 (2_Under_review): 6개 (10%)
   - 검토 완료 (3_Review_finished): 0개 (0%)
 - **카테고리**: 10개 (기술적 지표별)
 - **주요 지표**: MACD, RSI, Bollinger Bands, Moving Average, Volume, Stochastic 등
@@ -166,7 +166,7 @@
 - Condition_MA_Alignment_Momentum.md - 이동평균 정배열 + 모멘텀
 - (외 40개)
 
-### 2️⃣ 검토 진행 중 (2_Under_review/) - 5개
+### 2️⃣ 검토 진행 중 (2_Under_review/) - 6개
 
 현재 검토 및 개선 작업이 진행 중인 조건식입니다. 백테스팅 실행 중이거나 결과 분석 단계에 있습니다.
 
@@ -178,6 +178,7 @@
 - Condition_Study_2_Min.md - 2차 개선 연구
 - Condition_Study_3_902_min.md - 09:02 분봉 집중 연구
 - Condition_Study_3_9010_min.md - 09:10 분봉 집중 연구
+- Condition_Min_Study_251227_Full_Segment.md - segment filter final condition
 
 ### 3️⃣ 검토 완료 (3_Review_finished/) - 0개
 

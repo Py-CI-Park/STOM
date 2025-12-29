@@ -7,7 +7,9 @@ Segment Code Generator
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
+import re
 from typing import Dict, List, Optional, Tuple
 
 from .segmentation import SegmentConfig
@@ -90,6 +92,249 @@ def save_segment_code(code_lines: List[str], output_dir: str, prefix: str) -> Op
     code_path = path / f"{prefix}_segment_code.txt"
     code_path.write_text("\n".join(code_lines), encoding='utf-8-sig')
     return str(code_path)
+
+
+def save_segment_code_final(code_lines: List[str], output_dir: str, prefix: str) -> Optional[str]:
+    if not code_lines:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    code_path = path / f"{prefix}_segment_code_final.txt"
+    code_path.write_text("\n".join(code_lines), encoding='utf-8-sig')
+    return str(code_path)
+
+
+def build_segment_final_code(
+    buystg_text: Optional[str],
+    sellstg_text: Optional[str],
+    segment_code_lines: List[str],
+    buystg_name: Optional[str] = None,
+    sellstg_name: Optional[str] = None,
+    segment_code_path: Optional[str] = None,
+    global_combo_path: Optional[str] = None,
+    code_summary: Optional[dict] = None,
+    save_file_name: Optional[str] = None,
+) -> Tuple[List[str], Dict[str, int]]:
+    """
+    매수 조건식 + 세그먼트 필터 조건식을 합쳐 바로 사용할 수 있는 최종 코드 블록 생성.
+    """
+    summary = {
+        'segments': int((code_summary or {}).get('segments', 0) or 0),
+        'filters': int((code_summary or {}).get('filters', 0) or 0),
+        'injected': 0,
+    }
+
+    header = []
+    header.append("# 최종 매수 조건식_filtered (세그먼트 필터 반영)")
+    header.append(f"# 생성 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if save_file_name:
+        header.append(f"# save_file_name: {save_file_name}")
+    if buystg_name:
+        header.append(f"# 매수 조건식: {buystg_name}")
+    if sellstg_name:
+        header.append(f"# 매도 조건식: {sellstg_name}")
+    if segment_code_path:
+        header.append(f"# 세그먼트 코드: {segment_code_path}")
+    if global_combo_path:
+        header.append(f"# 전역 조합: {global_combo_path}")
+    if summary['segments'] or summary['filters']:
+        header.append(f"# 세그먼트 수: {summary['segments']} / 필터 수: {summary['filters']}")
+    header.append("# runtime mapping: included (buy-time)")
+    header.append("")
+
+    buy_lines = _normalize_code_lines(buystg_text)
+    sell_lines = _normalize_code_lines(sellstg_text)
+
+    segment_runtime_lines = _inject_segment_runtime_preamble(segment_code_lines)
+    combined_buy, injected = _inject_segment_filter_into_buy_lines(
+        buy_lines,
+        segment_runtime_lines,
+    )
+    summary['injected'] = 1 if injected else 0
+
+    lines = []
+    lines.extend(header)
+    if combined_buy:
+        lines.append("# === 매수 조건식 (세그먼트 필터 반영) ===")
+        lines.extend(combined_buy)
+    else:
+        lines.append("# [경고] 원본 매수 조건식을 찾을 수 없습니다.")
+        lines.append("# 아래 세그먼트 필터 코드를 매수 조건식과 함께 사용하세요.")
+        lines.extend(segment_code_lines)
+
+    if sell_lines:
+        lines.append("")
+        lines.append("# === 매도 조건식 (원본 유지) ===")
+        lines.extend(sell_lines)
+
+    lines.append("")
+    lines.append("# 최종 작성 업데이트 된 조건식 파일입니다.")
+    return lines, summary
+
+
+def _normalize_code_lines(code_text: Optional[str]) -> List[str]:
+    if not code_text:
+        return []
+    if isinstance(code_text, str):
+        return code_text.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    return [str(code_text)]
+
+
+def _inject_segment_filter_into_buy_lines(
+    buy_lines: List[str],
+    segment_code_lines: List[str],
+) -> Tuple[List[str], bool]:
+    if not buy_lines:
+        return buy_lines, False
+
+    last_idx = None
+    for idx, line in enumerate(buy_lines):
+        if re.match(r'^\s*if\s+매수\s*:', line):
+            last_idx = idx
+
+    if last_idx is None:
+        fallback = list(buy_lines)
+        fallback.append("")
+        fallback.append("# === 세그먼트 필터 (자동 생성) ===")
+        fallback.extend(segment_code_lines)
+        fallback.append("")
+        fallback.append("# === 최종 매수 결합 예시 ===")
+        fallback.append("if 매수 and 필터통과:")
+        fallback.append("    self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이)")
+        return fallback, False
+
+    injected_block = ["", "# === 세그먼트 필터 (자동 생성) ==="]
+    injected_block.extend(segment_code_lines)
+    injected_block.append("")
+
+    target_line = buy_lines[last_idx]
+    replaced = re.sub(
+        r'(if\s+매수\s*):',
+        r'\1 and 필터통과:',
+        target_line,
+        count=1,
+    )
+
+    new_lines = []
+    new_lines.extend(buy_lines[:last_idx])
+    new_lines.extend(injected_block)
+    new_lines.append(replaced)
+    new_lines.extend(buy_lines[last_idx + 1:])
+    return new_lines, True
+
+
+def _inject_segment_runtime_preamble(segment_code_lines: List[str]) -> List[str]:
+    if not segment_code_lines:
+        return segment_code_lines
+    marker = "# === Segment filter runtime mapping"
+    if any(line.strip().startswith(marker) for line in segment_code_lines):
+        return segment_code_lines
+    lines: List[str] = []
+    lines.extend(_build_segment_runtime_preamble())
+    lines.append("")
+    lines.extend(segment_code_lines)
+    return lines
+
+
+def _build_segment_runtime_preamble() -> List[str]:
+    lines: List[str] = []
+    lines.append("# === Segment filter runtime mapping (buy-time) ===")
+    lines.append("# Derived metrics for segment filter evaluation")
+    lines.append("초당매수수량 = (분당매수수량 / 60) if '분당매수수량' in locals() else locals().get('초당매수수량', 0)")
+    lines.append("초당매도수량 = (분당매도수량 / 60) if '분당매도수량' in locals() else locals().get('초당매도수량', 0)")
+    lines.append("초당매도_매수_비율 = 초당매도수량 / (초당매수수량 + 1e-6)")
+    lines.append("초당매수_매도_비율 = 초당매수수량 / (초당매도수량 + 1e-6)")
+    lines.append("초당순매수수량 = 초당매수수량 - 초당매도수량")
+    lines.append("초당순매수금액 = 초당순매수수량 * 현재가 / 1_000_000")
+    lines.append("매수초당매수수량 = 초당매수수량")
+    lines.append("매수초당매도수량 = 초당매도수량")
+    lines.append("매수초당거래대금 = (분당거래대금 / 60) if '분당거래대금' in locals() else locals().get('초당거래대금', 0)")
+    lines.append("매수스프레드 = ((매도호가1 - 매수호가1) / 매수호가1) * 100 if 매수호가1 > 0 else 0")
+    lines.append("매수호가잔량비 = (매수총잔량 / (매도총잔량 + 1e-6)) * 100")
+    lines.append("매도호가잔량비 = (매도총잔량 / (매수총잔량 + 1e-6)) * 100")
+    lines.append("매수변동폭 = 고가 - 저가")
+    lines.append("매수변동폭비율 = ((고가 - 저가) / 저가) * 100 if 저가 > 0 else 0")
+    lines.append("현재가_고저범위_위치 = (현재가 - 저가) / (고가 - 저가 + 1e-6) * 100")
+    lines.append("초당매수수량_매도총잔량_비율 = (초당매수수량 / (매도총잔량 + 1e-6)) * 100")
+    lines.append("당일거래대금_전틱분봉_비율 = 당일거래대금 / (당일거래대금N(1) + 1e-6) if '당일거래대금N' in locals() else 1.0")
+    lines.append("if '당일거래대금N' in locals():")
+    lines.append("    _trade_avg = (당일거래대금 + 당일거래대금N(1) + 당일거래대금N(2) + 당일거래대금N(3) + 당일거래대금N(4)) / 5")
+    lines.append("    당일거래대금_5틱분봉평균_비율 = 당일거래대금 / (_trade_avg + 1e-6) if _trade_avg > 0 else 1.0")
+    lines.append("else:")
+    lines.append("    당일거래대금_5틱분봉평균_비율 = 1.0")
+    lines.append("")
+    lines.append("# Snapshot mappings for buy-time columns")
+    lines.append("매수매수호가1 = 매수호가1")
+    lines.append("매수매도호가1 = 매도호가1")
+    lines.append("매수매수총잔량 = 매수총잔량")
+    lines.append("매수매도총잔량 = 매도총잔량")
+    lines.append("매수전일비 = 전일비")
+    lines.append("매수전일동시간비 = 전일동시간비")
+    lines.append("매수체결강도 = 체결강도")
+    lines.append("매수등락율 = 등락율")
+    lines.append("매수시가등락율 = 시가등락율")
+    lines.append("매수회전율 = 회전율")
+    lines.append("매수당일거래대금 = 당일거래대금")
+    lines.append("매수초당거래대금_당일비중 = (매수초당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 if 매수당일거래대금 > 0 else 0")
+    lines.append("당일거래대금_매수매도_비율 = (매도당일거래대금 / 매수당일거래대금) if '매도당일거래대금' in locals() and 매수당일거래대금 > 0 else 1.0")
+    lines.append("매수가 = 현재가")
+    lines.append("매수금액 = 현재가 * 매수수량 if '매수수량' in locals() else 0")
+    lines.append("매수초당매수수량_매수매도총잔량_비율 = (매수초당매수수량 / (매수매도총잔량 + 1e-6)) * 100")
+    lines.append("매수매도총잔량_매수매수총잔량_비율 = (매수매도총잔량 / 매수매수총잔량) if 매수매수총잔량 > 0 else 0")
+    lines.append("매수매수총잔량_매수매도총잔량_비율 = (매수매수총잔량 / 매수매도총잔량) if 매수매도총잔량 > 0 else 0")
+    lines.append("if '시분초' in locals():")
+    lines.append("    매수시 = 시분초 // 10000")
+    lines.append("    매수분 = (시분초 // 100) % 100")
+    lines.append("    매수초 = 시분초 % 100")
+    lines.append("else:")
+    lines.append("    매수시 = 0")
+    lines.append("    매수분 = 0")
+    lines.append("    매수초 = 0")
+    lines.append("if 'self' in locals() and hasattr(self, 'dict_strg') and self.dict_strg.get('당일날짜'):")
+    lines.append("    _매수날짜 = self.dict_strg.get('당일날짜')")
+    lines.append("    try:")
+    lines.append("        매수일자 = int(_매수날짜)")
+    lines.append("    except Exception:")
+    lines.append("        매수일자 = _매수날짜")
+    lines.append("    try:")
+    lines.append("        매수시간 = int(str(_매수날짜) + str(시분초 // 100).zfill(4)) if '시분초' in locals() else 0")
+    lines.append("    except Exception:")
+    lines.append("        매수시간 = 시분초 if '시분초' in locals() else 0")
+    lines.append("else:")
+    lines.append("    매수일자 = 0")
+    lines.append("    매수시간 = 시분초 if '시분초' in locals() else 0")
+    lines.append("")
+    lines.append("# Risk score (approx, buy-time only)")
+    lines.append("위험도점수 = 0")
+    lines.append("if 등락율 >= 20: 위험도점수 += 20")
+    lines.append("if 등락율 >= 25: 위험도점수 += 10")
+    lines.append("if 등락율 >= 30: 위험도점수 += 10")
+    lines.append("if 체결강도 < 80: 위험도점수 += 15")
+    lines.append("if 체결강도 < 60: 위험도점수 += 10")
+    lines.append("if 체결강도 >= 150: 위험도점수 += 10")
+    lines.append("if 체결강도 >= 200: 위험도점수 += 10")
+    lines.append("if 체결강도 >= 250: 위험도점수 += 10")
+    lines.append("if 당일거래대금 / 100 < 50: 위험도점수 += 15")
+    lines.append("if 당일거래대금 / 100 < 100: 위험도점수 += 10")
+    lines.append("if 시가총액 < 1000: 위험도점수 += 15")
+    lines.append("if 시가총액 < 5000: 위험도점수 += 10")
+    lines.append("if 매수호가잔량비 < 90: 위험도점수 += 10")
+    lines.append("if 매수호가잔량비 < 70: 위험도점수 += 15")
+    lines.append("if 매수스프레드 >= 0.5: 위험도점수 += 10")
+    lines.append("if 매수스프레드 >= 1.0: 위험도점수 += 10")
+    lines.append("if 회전율 < 10: 위험도점수 += 5")
+    lines.append("if 회전율 < 5: 위험도점수 += 10")
+    lines.append("if 매수변동폭비율 >= 7.5: 위험도점수 += 10")
+    lines.append("if 매수변동폭비율 >= 10: 위험도점수 += 10")
+    lines.append("if 매수변동폭비율 >= 15: 위험도점수 += 10")
+    lines.append("위험도점수 = min(100, 위험도점수)")
+    lines.append("매수매도위험도점수 = 위험도점수")
+    lines.append("")
+    lines.append("# Momentum score (approx using fixed scales)")
+    lines.append("_등락율_norm = (매수등락율 / 10) if '매수등락율' in locals() else 0")
+    lines.append("_체결강도_norm = ((매수체결강도 - 100) / 50) if '매수체결강도' in locals() else 0")
+    lines.append("모멘텀점수 = round((_등락율_norm * 0.4 + _체결강도_norm * 0.6) * 10, 2)")
+    return lines
 
 
 def _build_segment_condition(
