@@ -15,10 +15,13 @@ Date: 2025-12-20
 from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, time
+import logging
 import re
 from typing import Any, Dict, List, Tuple, Optional
 import pandas as pd
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -114,7 +117,12 @@ class SegmentBuilder:
         self.runtime_market_cap_ranges: Dict[str, Tuple[float, float]] = {}
         self.runtime_time_ranges: Dict[str, Tuple[int, int]] = {}
         self.range_summary: pd.DataFrame = pd.DataFrame()
-        self.dynamic_flags = {'market_cap': False, 'time': False, 'time_scaled': False}
+        self.dynamic_flags = {
+            'market_cap': False,
+            'time': False,
+            'time_scaled': False,
+            'auto_dynamic_market_cap': False,
+        }
 
     def build_segments(self, df_detail: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
@@ -478,7 +486,12 @@ class SegmentBuilder:
         """
         self.runtime_market_cap_ranges = dict(self.config.market_cap_ranges)
         self.runtime_time_ranges = dict(self.config.time_ranges)
-        self.dynamic_flags = {'market_cap': False, 'time': False, 'time_scaled': False}
+        self.dynamic_flags = {
+            'market_cap': False,
+            'time': False,
+            'time_scaled': False,
+            'auto_dynamic_market_cap': False,
+        }
 
         mode = str(self.config.dynamic_mode or 'fixed').lower()
         dynamic_cap = mode in ('semi', 'semi_dynamic', 'semi-dynamic', 'dynamic', 'all', 'market')
@@ -492,6 +505,17 @@ class SegmentBuilder:
             if ranges:
                 self.runtime_market_cap_ranges = ranges
                 self.dynamic_flags['market_cap'] = True
+                if auto_dynamic_cap:
+                    self.dynamic_flags['auto_dynamic_market_cap'] = True
+                    logger.info(
+                        f"[Auto Dynamic] 동적 분할 성공 → 시가총액 구간 자동 조정 완료 "
+                        f"(구간 수: {len(ranges)})"
+                    )
+            elif auto_dynamic_cap:
+                logger.warning(
+                    "[Auto Dynamic] 동적 분할 시도 실패 → 고정 구간 유지 "
+                    "(샘플 수 부족 또는 분포 문제)"
+                )
 
         time_series = pd.to_numeric(df.get('시분초'), errors='coerce').dropna()
         time_bounds = self._get_time_bounds(time_series)
@@ -529,16 +553,32 @@ class SegmentBuilder:
         self.range_summary = self._build_range_summary()
 
     def _should_auto_dynamic_market_cap(self, df: pd.DataFrame) -> bool:
+        """
+        고정 구간 분포가 약할 때 자동 동적 분할 전환 여부 판단
+
+        Returns:
+            True: 동적 분할로 자동 전환 필요
+            False: 고정 구간 유지
+        """
         series = pd.to_numeric(df.get('시가총액'), errors='coerce').dropna()
         if series.empty:
             return False
         ranges = list(self.config.market_cap_ranges.values())
         if len(ranges) < 2:
             return False
+
         max_val = float(series.max())
         finite_max = [max_v for _, max_v in ranges if max_v not in (float('inf'), None)]
+
+        # 조건 1: 상단 구간 미충족
         if finite_max and max_val < max(finite_max):
+            logger.info(
+                f"[Auto Dynamic] 상단 구간 미충족 감지 → 동적 분할 전환 "
+                f"(실제 최대값: {max_val/1e8:.1f}억, 고정 구간 최대값: {max(finite_max)/1e8:.1f}억)"
+            )
             return True
+
+        # 조건 2, 3: 빈 구간 또는 최소 건수 미달
         counts = []
         for min_v, max_v in ranges:
             if max_v == float('inf') or max_v is None:
@@ -546,12 +586,25 @@ class SegmentBuilder:
             else:
                 cnt = int(((series >= min_v) & (series < max_v)).sum())
             counts.append(cnt)
+
         non_empty = sum(1 for c in counts if c > 0)
         if non_empty < len(ranges):
+            empty_segments = len(ranges) - non_empty
+            logger.info(
+                f"[Auto Dynamic] 빈 구간 감지 → 동적 분할 전환 "
+                f"({empty_segments}개 구간 데이터 없음, 분포: {counts})"
+            )
             return True
+
         min_required = int(self.config.min_trades.get('absolute_min', 0) or 0)
         if min_required and any(c < min_required for c in counts):
+            weak_segments = sum(1 for c in counts if c < min_required)
+            logger.info(
+                f"[Auto Dynamic] 최소 건수 미달 감지 → 동적 분할 전환 "
+                f"({weak_segments}개 구간 < {min_required}건, 분포: {counts})"
+            )
             return True
+
         return False
 
     def _build_dynamic_market_cap_ranges(self, df: pd.DataFrame) -> Optional[Dict[str, Tuple[float, float]]]:
@@ -798,9 +851,30 @@ class SegmentBuilder:
         return hh * 3600 + mm * 60 + ss
 
     def _build_range_summary(self) -> pd.DataFrame:
+        """
+        런타임 구간 범위 요약 생성
+
+        Returns:
+            range_type, label, min, max, source 컬럼을 포함한 DataFrame
+            source: 'fixed', 'dynamic', 'auto_dynamic', 'scaled'
+        """
         rows = []
-        cap_source = 'dynamic' if self.dynamic_flags.get('market_cap') else 'fixed'
-        time_source = 'dynamic' if self.dynamic_flags.get('time') else 'scaled' if self.dynamic_flags.get('time_scaled') else 'fixed'
+
+        # 시가총액 구간 source 결정
+        if self.dynamic_flags.get('auto_dynamic_market_cap'):
+            cap_source = 'auto_dynamic'
+        elif self.dynamic_flags.get('market_cap'):
+            cap_source = 'dynamic'
+        else:
+            cap_source = 'fixed'
+
+        # 시간 구간 source 결정
+        if self.dynamic_flags.get('time'):
+            time_source = 'dynamic'
+        elif self.dynamic_flags.get('time_scaled'):
+            time_source = 'scaled'
+        else:
+            time_source = 'fixed'
 
         for label, (min_v, max_v) in self.runtime_market_cap_ranges.items():
             rows.append({
