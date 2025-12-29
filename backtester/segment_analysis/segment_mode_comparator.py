@@ -97,6 +97,7 @@ def _clone_segment_config(seg_config: Optional[SegmentConfig]) -> SegmentConfig:
         max_exclusion=dict(base.max_exclusion),
         validation=dict(base.validation),
         dynamic_mode=base.dynamic_mode,
+        auto_dynamic_market_cap=base.auto_dynamic_market_cap,
         dynamic_market_cap_quantiles=tuple(base.dynamic_market_cap_quantiles),
         dynamic_time_quantiles=tuple(base.dynamic_time_quantiles),
         dynamic_min_samples=base.dynamic_min_samples,

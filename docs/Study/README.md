@@ -9,11 +9,12 @@ Study/
 ├── README.md (현재 문서)
 ├── DocumentationReviews/    # 문서 리뷰 및 검증 (1개)
 │   └── 2025-11-17_Documentation_Review_Report.md
-├── ResearchReports/          # 연구 보고서 (4개)
+├── ResearchReports/          # 연구 보고서 (5개)
 │   ├── AI_ML_Trading_Strategy_Automation_Research.md
 │   ├── Research_Report_Automated_Condition_Finding.md
 │   ├── AI_Driven_Condition_Automation_Circular_Research_System.md
-│   └── 2025-12-20_Segmented_Filter_Optimization_Research.md
+│   ├── 2025-12-20_Segmented_Filter_Optimization_Research.md
+│   └── 2025-12-29_Overfitting_Risk_Assessment_Filter_Segment_Analysis.md
 ├── SystemAnalysis/           # 시스템 분석 및 개선사항 (6개)
 │   ├── Optistd_System_Analysis.md
 │   ├── STOM_Optimization_System_Improvements.md
@@ -30,7 +31,7 @@ Study/
     └── New_Metrics_Development_Process_Guide.md
 ```
 
-**총 문서 수**: 16개 | **총 용량**: ~600KB
+**총 문서 수**: 17개 | **총 용량**: ~720KB
 
 ---
 
@@ -56,6 +57,7 @@ Study/
 | 14 | **Backtesting Output System Analysis** | 시스템 분석 | 2025-12-28 | 95KB | 백테스팅 출력 시스템 상세 분석 | • 93개 컬럼 파생 지표 계산 로직 분석<br>• 1분봉/1초봉 변수 차이 및 처리 검증<br>• 비율 조합 지표 구현 현황 확인<br>• 당일거래대금 비율 지표 추가 구현 권장 | Python, NumPy, Pandas, Analysis | ✅ |
 | 15 | **New Metrics Integration Verification Report** | 시스템 분석 | 2025-12-28 | 48KB | 당일거래대금 비율 지표 통합 검증 | • 신규 지표 3종 백테스팅 시스템 통합<br>• detail.csv/report.txt 자동 문서화<br>• 필터/세그먼트/ML feature 호환성 검증<br>• 4개 파일 수정으로 완전 통합 완료 | Python, Integration Testing | ✅ |
 | 16 | **New Metrics Development Process Guide** | 가이드 | 2025-12-28 | 52KB | 신규 지표 개발 및 통합 체계적 프로세스 | • 10단계 개발 프로세스 정립<br>• LOOKAHEAD-FREE 검증 가이드<br>• 6개 시스템 통합 체크리스트<br>• 코드 템플릿 및 실전 사례 포함 | Documentation, Process | ✅ |
+| 17 | **Overfitting Risk Assessment Filter/Segment Analysis** | 연구 보고서 | 2025-12-29 | 120KB | 백테스팅 필터/세그먼트 분석 오버피팅 위험 평가 | • 5가지 오버피팅 발생 메커니즘 분석<br>• 6가지 판단 지표 체계 제안<br>• Walk-Forward/Purged K-Fold 검증 방법<br>• 긴급/단기/중기 개선 로드맵<br>• 종합 오버피팅 점수 시스템 | Statistics, Cross-Validation, Overfitting Prevention | ✅ |
 
 ### 📊 스터디 주제별 분류
 
@@ -109,7 +111,8 @@ Study/
 | [AI_ML_Trading_Strategy_Automation_Research.md](./ResearchReports/AI_ML_Trading_Strategy_Automation_Research.md) | 2025-11-27 | ✅ 완료 | AI/ML 기반 트레이딩 전략 자동화 연구 (73KB) |
 | [Research_Report_Automated_Condition_Finding.md](./ResearchReports/Research_Report_Automated_Condition_Finding.md) | 2025-11-27 | ✅ 완료 | 조건식 자동 탐색 시스템 연구 |
 | [AI_Driven_Condition_Automation_Circular_Research_System.md](./ResearchReports/AI_Driven_Condition_Automation_Circular_Research_System.md) | 2025-12-01 | ✅ 완료 | AI 기반 조건식 자동화 순환 연구 시스템 (80KB) |
-| [2025-12-20_Segmented_Filter_Optimization_Research.md](./ResearchReports/2025-12-20_Segmented_Filter_Optimization_Research.md) | 2025-12-20 | ✅ 완료 | 시가총액/시간 구간 분할 기반 필터 조합 최적화 연구 (7KB) |
+| [2025-12-20_Segmented_Filter_Optimization_Research.md](./ResearchReports/2025-12-20_Segmented_Filter_Optimization_Research.md) | 2025-12-20 | ✅ 완료 | 시가총액/시간 구간 분할 기반 필터 조합 최적화 연구 (45KB) |
+| [2025-12-29_Overfitting_Risk_Assessment_Filter_Segment_Analysis.md](./ResearchReports/2025-12-29_Overfitting_Risk_Assessment_Filter_Segment_Analysis.md) | 2025-12-29 | ✅ 완료 | 백테스팅 필터/세그먼트 분석 오버피팅 위험 평가 연구 (120KB) |
 
 **주요 내용:**
 - AI/ML 트레이딩 전략 적용 방안
@@ -117,6 +120,9 @@ Study/
 - 머신러닝 기반 전략 생성 프로세스
 - 4단계 순환 개선 시스템 (생성→테스트→기록→개선)
 - LLM/GP/Feature Importance 통합 아키텍처
+- 세그먼트 분할 기반 필터 조합 최적화
+- 오버피팅 위험 평가 및 예방 방법
+- 교차 검증 및 통계적 검증 방법론
 - 실전 적용 가능성 검토
 
 ---
@@ -180,11 +186,11 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | 카테고리 | 문서 수 | 완료 | 진행 중 | 계획 |
 |----------|---------|------|---------|------|
 | Documentation Reviews | 1 | 1 | 0 | 0 |
-| Research Reports | 4 | 4 | 0 | 0 |
-| System Analysis | 5 | 5 | 0 | 0 |
+| Research Reports | 5 | 5 | 0 | 0 |
+| System Analysis | 6 | 6 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
-| Guides | 1 | 1 | 0 | 0 |
-| **전체** | **13** | **13** | **0** | **0** |
+| Guides | 2 | 2 | 0 | 0 |
+| **전체** | **17** | **17** | **0** | **0** |
 
 ## 🎯 문서 상태 범례
 
@@ -259,12 +265,23 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
    - 300개 이상의 실행 가능한 코드 스니펫
    - 826개 틱 변수 + 752개 분봉 변수 완전 문서화
 
+5. **오버피팅 위험 평가** (2025-12-29 추가)
+   - 현재 시스템의 오버피팅 위험도: **높음** 🔴
+   - 주요 원인: Train/Test 미분리, 다중 비교 보정 없음, Walk-Forward 미구현
+   - 6가지 판단 지표 체계 제안 (통계적 유의성, 샘플 크기, 제외율, WFA 저하율, 민감도, 일관성)
+   - 종합 오버피팅 점수 시스템 설계 (80점 이상 → 신뢰 가능)
+   - 긴급/단기/중기 개선 로드맵 제시
+   - 백테스트 → 실전 성능 저하율 예상: 40-70%
+
 ### 🎯 향후 연구 방향
 
 #### 단기 (1-3개월)
 - [ ] 조화평균 기반 MERGE 계산 구현 및 테스트
 - [ ] Condition 902/905 조건 완화 실험
 - [ ] XGBoost 기반 Feature Importance 분석 시스템 구축
+- [ ] **Train/Val/Test 데이터 분할 시스템 구현** (긴급) 🔴
+- [ ] **Bonferroni/FDR 다중 비교 보정 적용** (긴급) 🔴
+- [ ] **Walk-Forward Analysis 구현** (높음) 🟠
 
 #### 중기 (3-6개월)
 - [ ] Genetic Programming 조건식 자동 생성 시스템
@@ -309,6 +326,6 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 
 ---
 
-**최종 업데이트**: 2025-12-28
+**최종 업데이트**: 2025-12-29
 **문서 관리자**: STOM Development Team
-**문서 버전**: 2.3
+**문서 버전**: 2.4

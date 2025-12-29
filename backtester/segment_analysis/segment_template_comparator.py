@@ -51,6 +51,7 @@ class SegmentTemplate:
             max_exclusion=dict(cfg.max_exclusion),
             validation=dict(cfg.validation),
             dynamic_mode='fixed',
+            auto_dynamic_market_cap=cfg.auto_dynamic_market_cap,
             dynamic_market_cap_quantiles=tuple(cfg.dynamic_market_cap_quantiles),
             dynamic_time_quantiles=tuple(cfg.dynamic_time_quantiles),
             dynamic_min_samples=cfg.dynamic_min_samples,
