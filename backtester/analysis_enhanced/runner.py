@@ -272,6 +272,38 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 segment_timing['total_s'] = round(time.perf_counter() - segment_start, 4)
                 segment_outputs['timing'] = segment_timing
 
+                # 최종 매수 조건식(세그먼트 필터 반영) 생성
+                try:
+                    from backtester.segment_analysis.code_generator import (
+                        build_segment_final_code,
+                        save_segment_code_final,
+                    )
+
+                    phase2_result = segment_outputs.get('phase2') if isinstance(segment_outputs, dict) else None
+                    if isinstance(phase2_result, dict):
+                        segment_code_path = phase2_result.get('segment_code_path')
+                        if segment_code_path:
+                            seg_lines = Path(segment_code_path).read_text(encoding='utf-8-sig').splitlines()
+                            final_lines, final_summary = build_segment_final_code(
+                                buystg_text=buystg,
+                                sellstg_text=sellstg,
+                                segment_code_lines=seg_lines,
+                                buystg_name=buystg_name,
+                                sellstg_name=sellstg_name,
+                                segment_code_path=segment_code_path,
+                                global_combo_path=phase2_result.get('global_combo_path'),
+                                code_summary=phase2_result.get('segment_code_summary'),
+                                save_file_name=save_file_name,
+                            )
+                            final_path = save_segment_code_final(final_lines, segment_output_base, save_file_name)
+                            if final_path:
+                                phase2_result['segment_code_final_path'] = final_path
+                                phase2_result['segment_code_final_summary'] = final_summary
+                                if teleQ is not None:
+                                    teleQ.put(f"최종 작성 업데이트 된 조건식 파일: {final_path}")
+                except Exception:
+                    print_exc()
+
                 try:
                     from backtester.segment_analysis.segment_summary_report import write_segment_summary_report
 

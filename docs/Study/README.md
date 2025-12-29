@@ -31,7 +31,7 @@ Study/
     └── New_Metrics_Development_Process_Guide.md
 ```
 
-**총 문서 수**: 17개 | **총 용량**: ~720KB
+**총 문서 수**: 18개 | **총 용량**: ~720KB
 
 ---
 
@@ -58,6 +58,7 @@ Study/
 | 15 | **New Metrics Integration Verification Report** | 시스템 분석 | 2025-12-28 | 48KB | 당일거래대금 비율 지표 통합 검증 | • 신규 지표 3종 백테스팅 시스템 통합<br>• detail.csv/report.txt 자동 문서화<br>• 필터/세그먼트/ML feature 호환성 검증<br>• 4개 파일 수정으로 완전 통합 완료 | Python, Integration Testing | ✅ |
 | 16 | **New Metrics Development Process Guide** | 가이드 | 2025-12-28 | 52KB | 신규 지표 개발 및 통합 체계적 프로세스 | • 10단계 개발 프로세스 정립<br>• LOOKAHEAD-FREE 검증 가이드<br>• 6개 시스템 통합 체크리스트<br>• 코드 템플릿 및 실전 사례 포함 | Documentation, Process | ✅ |
 | 17 | **Overfitting Risk Assessment Filter/Segment Analysis** | 연구 보고서 | 2025-12-29 | 120KB | 백테스팅 필터/세그먼트 분석 오버피팅 위험 평가 | • 5가지 오버피팅 발생 메커니즘 분석<br>• 6가지 판단 지표 체계 제안<br>• Walk-Forward/Purged K-Fold 검증 방법<br>• 긴급/단기/중기 개선 로드맵<br>• 종합 오버피팅 점수 시스템 | Statistics, Cross-Validation, Overfitting Prevention | ✅ |
+| 18 | **Segment Filter Condition Integration Guide** | 가이드 | 2025-12-30 | 8KB | 세그먼트 필터 통합 프로세스 | • 최종 조건식 파일 생성 절차<br>• 텔레그램 안내 흐름 정리<br>• 전역 조합/코드/구간 기준 정리 | Markdown, Process | ✅ |
 
 ### 📊 스터디 주제별 분류
 
@@ -172,6 +173,8 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | 문서명 | 작성일 | 상태 | 설명 |
 |--------|--------|------|------|
 | [Condition_Optimization_and_Analysis_Guide.md](./Guides/Condition_Optimization_and_Analysis_Guide.md) | 2025-11-29 | ✅ 완료 | 조건 최적화 및 분석 가이드 |
+| [New_Metrics_Development_Process_Guide.md](./Guides/New_Metrics_Development_Process_Guide.md) | 2025-12-28 | ? ?? | ?? ?? ?? ???? ??? |
+| [Segment_Filter_Condition_Integration_Guide.md](./Guides/Segment_Filter_Condition_Integration_Guide.md) | 2025-12-30 | ? ?? | ???? ?? ??? ?? ??? |
 
 **주요 내용:**
 - 조건 최적화 프로세스
@@ -189,8 +192,8 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | Research Reports | 5 | 5 | 0 | 0 |
 | System Analysis | 6 | 6 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
-| Guides | 2 | 2 | 0 | 0 |
-| **전체** | **17** | **17** | **0** | **0** |
+| Guides | 3 | 3 | 0 | 0 |
+| **전체** | **18** | **18** | **0** | **0** |
 
 ## 🎯 문서 상태 범례
 
