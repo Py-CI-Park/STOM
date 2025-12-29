@@ -21,7 +21,8 @@ from typing import Any, Dict, List, Tuple, Optional
 import pandas as pd
 import numpy as np
 
-logger = logging.getLogger(__name__)
+# 'Backtester' 로거를 사용하여 BK_YYYYMMDD.txt에 로그 저장
+logger = logging.getLogger('Backtester')
 
 
 @dataclass
