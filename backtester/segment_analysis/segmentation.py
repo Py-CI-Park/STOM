@@ -73,6 +73,7 @@ class SegmentConfig:
 
     # 반-동적 분할 옵션
     dynamic_mode: str = 'fixed'  # fixed | semi | dynamic | time_only
+    auto_dynamic_market_cap: bool = True
     dynamic_market_cap_quantiles: Tuple[float, float, float] = (0.25, 0.5, 0.75)
     dynamic_time_quantiles: Tuple[float, float, float] = (0.25, 0.5, 0.75)
     dynamic_min_samples: int = 200
@@ -482,8 +483,11 @@ class SegmentBuilder:
         mode = str(self.config.dynamic_mode or 'fixed').lower()
         dynamic_cap = mode in ('semi', 'semi_dynamic', 'semi-dynamic', 'dynamic', 'all', 'market')
         dynamic_time = mode in ('dynamic', 'all', 'time', 'time_only', 'time_dynamic')
+        auto_dynamic_cap = False
+        if not dynamic_cap and self.config.auto_dynamic_market_cap:
+            auto_dynamic_cap = self._should_auto_dynamic_market_cap(df)
 
-        if dynamic_cap:
+        if dynamic_cap or auto_dynamic_cap:
             ranges = self._build_dynamic_market_cap_ranges(df)
             if ranges:
                 self.runtime_market_cap_ranges = ranges
@@ -523,6 +527,32 @@ class SegmentBuilder:
                 self.dynamic_flags['time_scaled'] = True
 
         self.range_summary = self._build_range_summary()
+
+    def _should_auto_dynamic_market_cap(self, df: pd.DataFrame) -> bool:
+        series = pd.to_numeric(df.get('시가총액'), errors='coerce').dropna()
+        if series.empty:
+            return False
+        ranges = list(self.config.market_cap_ranges.values())
+        if len(ranges) < 2:
+            return False
+        max_val = float(series.max())
+        finite_max = [max_v for _, max_v in ranges if max_v not in (float('inf'), None)]
+        if finite_max and max_val < max(finite_max):
+            return True
+        counts = []
+        for min_v, max_v in ranges:
+            if max_v == float('inf') or max_v is None:
+                cnt = int((series >= min_v).sum())
+            else:
+                cnt = int(((series >= min_v) & (series < max_v)).sum())
+            counts.append(cnt)
+        non_empty = sum(1 for c in counts if c > 0)
+        if non_empty < len(ranges):
+            return True
+        min_required = int(self.config.min_trades.get('absolute_min', 0) or 0)
+        if min_required and any(c < min_required for c in counts):
+            return True
+        return False
 
     def _build_dynamic_market_cap_ranges(self, df: pd.DataFrame) -> Optional[Dict[str, Tuple[float, float]]]:
         series = pd.to_numeric(df.get('시가총액'), errors='coerce').dropna()
