@@ -198,28 +198,27 @@ def _inject_segment_filter_into_buy_lines(
         fallback.append("# === 세그먼트 필터 (자동 생성) ===")
         fallback.extend(segment_code_lines)
         fallback.append("")
-        fallback.append("# === 최종 매수 결합 예시 ===")
-        fallback.append("if 매수 and 필터통과:")
-        fallback.append("    self.Buy(종목코드, 종목명, 매수수량, 현재가, 매도호가1, 매수호가1, 데이터길이)")
+        fallback.append("# === 세그먼트 필터 반영 ===")
+        fallback.append("if '매수' in locals():")
+        fallback.append("    매수 = 매수 and 필터통과")
+        fallback.append("else:")
+        fallback.append("    매수 = 필터통과")
         return fallback, False
 
     injected_block = ["", "# === 세그먼트 필터 (자동 생성) ==="]
     injected_block.extend(segment_code_lines)
     injected_block.append("")
-
-    target_line = buy_lines[last_idx]
-    replaced = re.sub(
-        r'(if\s+매수\s*):',
-        r'\1 and 필터통과:',
-        target_line,
-        count=1,
-    )
+    injected_block.append("# === 세그먼트 필터 반영 ===")
+    injected_block.append("if '매수' in locals():")
+    injected_block.append("    매수 = 매수 and 필터통과")
+    injected_block.append("else:")
+    injected_block.append("    매수 = 필터통과")
+    injected_block.append("")
 
     new_lines = []
     new_lines.extend(buy_lines[:last_idx])
     new_lines.extend(injected_block)
-    new_lines.append(replaced)
-    new_lines.extend(buy_lines[last_idx + 1:])
+    new_lines.extend(buy_lines[last_idx:])
     return new_lines, True
 
 
@@ -289,19 +288,12 @@ def _build_segment_runtime_preamble() -> List[str]:
     lines.append("    매수시 = 0")
     lines.append("    매수분 = 0")
     lines.append("    매수초 = 0")
-    lines.append("if 'self' in locals() and hasattr(self, 'dict_strg') and self.dict_strg.get('당일날짜'):")
-    lines.append("    _매수날짜 = self.dict_strg.get('당일날짜')")
-    lines.append("    try:")
-    lines.append("        매수일자 = int(_매수날짜)")
-    lines.append("    except Exception:")
-    lines.append("        매수일자 = _매수날짜")
-    lines.append("    try:")
-    lines.append("        매수시간 = int(str(_매수날짜) + str(시분초 // 100).zfill(4)) if '시분초' in locals() else 0")
-    lines.append("    except Exception:")
-    lines.append("        매수시간 = 시분초 if '시분초' in locals() else 0")
+    lines.append("if 'self' in locals() and hasattr(self, 'index'):")
+    lines.append("    _index_val = str(self.index)")
+    lines.append("    매수일자 = int(_index_val[:8]) if len(_index_val) >= 8 else 0")
     lines.append("else:")
     lines.append("    매수일자 = 0")
-    lines.append("    매수시간 = 시분초 if '시분초' in locals() else 0")
+    lines.append("매수시간 = 시분초 if '시분초' in locals() else 0")
     lines.append("")
     lines.append("# Risk score (approx, buy-time only)")
     lines.append("위험도점수 = 0")
