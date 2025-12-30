@@ -39,7 +39,7 @@ class FilterEvaluatorConfig:
     exclude_prefixes: Tuple[str, ...] = ('매도',)
     exclude_patterns: Tuple[str, ...] = (
         '수익금', '수익률', '손실', '이익', '보유시간', '매수일자',
-        '매수금액', '변화', '추세', '연속이익', '연속손실', '리스크조정수익률',
+        '매수시간', '매수금액', '변화', '추세', '연속이익', '연속손실', '리스크조정수익률',
         '합계', '누적', '매수매도위험도점수',
     )
     explicit_buy_columns: Tuple[str, ...] = (

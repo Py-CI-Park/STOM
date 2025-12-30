@@ -710,6 +710,7 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 'global_combo_path': '전역 조합 요약',
                 'thresholds_path': 'Optuna 임계값',
                 'segment_code_path': '세그먼트 조건식 코드',
+                'segment_code_final_path': '세그먼트 최종 조건식 코드(매수조건 통합)',
                 'validation_path': '안정성 검증',
                 'heatmap_path': '세그먼트 히트맵',
                 'efficiency_path': '필터 효율 차트',
