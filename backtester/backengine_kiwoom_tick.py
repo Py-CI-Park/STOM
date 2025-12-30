@@ -885,18 +885,27 @@ class BackEngineKiwoomTick:
         buy_전일동시간비 = round(float(self.arry_data[bi, 11]), 2)
         buy_고가 = int(self.arry_data[bi, 3])
         buy_저가 = int(self.arry_data[bi, 4])
-        buy_고저평균대비등락율 = round(float(self.arry_data[bi, 17]), 2)
-        buy_매도총잔량 = int(self.arry_data[bi, 18])
-        buy_매수총잔량 = int(self.arry_data[bi, 19])
+        is_tick_data = len(str(bt)) >= 14
+        if is_tick_data:
+            buy_고저평균대비등락율 = round(float(self.arry_data[bi, 20]), 2)
+            buy_매도총잔량 = int(self.arry_data[bi, 21])
+            buy_매수총잔량 = int(self.arry_data[bi, 22])
+            buy_매도호가1 = int(self.arry_data[bi, 27])
+            buy_매수호가1 = int(self.arry_data[bi, 28])
+            buy_초당매수수량 = int(self.arry_data[bi, 14])
+            buy_초당매도수량 = int(self.arry_data[bi, 15])
+            buy_초당거래대금 = round(float(self.arry_data[bi, 19]), 2)
+        else:
+            buy_고저평균대비등락율 = round(float(self.arry_data[bi, 23]), 2)
+            buy_매도총잔량 = int(self.arry_data[bi, 24])
+            buy_매수총잔량 = int(self.arry_data[bi, 25])
+            buy_매도호가1 = int(self.arry_data[bi, 30])
+            buy_매수호가1 = int(self.arry_data[bi, 31])
+            buy_초당매수수량 = round(float(self.arry_data[bi, 14]) / 60, 2)
+            buy_초당매도수량 = round(float(self.arry_data[bi, 15]) / 60, 2)
+            buy_초당거래대금 = round(float(self.arry_data[bi, 22]) / 60, 2)
         buy_호가잔량비 = round(buy_매수총잔량 / buy_매도총잔량 * 100, 2) if buy_매도총잔량 > 0 else 0.0
-        buy_매도호가1 = int(self.arry_data[bi, 24])
-        buy_매수호가1 = int(self.arry_data[bi, 25])
         buy_스프레드 = round((buy_매도호가1 - buy_매수호가1) / buy_매수호가1 * 100, 4) if buy_매수호가1 > 0 else 0.0
-
-        # [2025-12-14] 매수 시점 초당 데이터 수집 (지표 조합 분석용)
-        buy_초당매수수량 = int(self.arry_data[bi, 14])
-        buy_초당매도수량 = int(self.arry_data[bi, 15])
-        buy_초당거래대금 = round(float(self.arry_data[bi, 16]), 2)
 
         # [2025-12-08] 매도 시점 시장 데이터 수집
         si = self.indexn  # 매도 시점 인덱스
@@ -910,18 +919,26 @@ class BackEngineKiwoomTick:
         sell_전일동시간비 = round(float(self.arry_data[si, 11]), 2)
         sell_고가 = int(self.arry_data[si, 3])
         sell_저가 = int(self.arry_data[si, 4])
-        sell_고저평균대비등락율 = round(float(self.arry_data[si, 17]), 2)
-        sell_매도총잔량 = int(self.arry_data[si, 18])
-        sell_매수총잔량 = int(self.arry_data[si, 19])
+        if is_tick_data:
+            sell_고저평균대비등락율 = round(float(self.arry_data[si, 20]), 2)
+            sell_매도총잔량 = int(self.arry_data[si, 21])
+            sell_매수총잔량 = int(self.arry_data[si, 22])
+            sell_매도호가1 = int(self.arry_data[si, 27])
+            sell_매수호가1 = int(self.arry_data[si, 28])
+            sell_초당매수수량 = int(self.arry_data[si, 14])
+            sell_초당매도수량 = int(self.arry_data[si, 15])
+            sell_초당거래대금 = round(float(self.arry_data[si, 19]), 2)
+        else:
+            sell_고저평균대비등락율 = round(float(self.arry_data[si, 23]), 2)
+            sell_매도총잔량 = int(self.arry_data[si, 24])
+            sell_매수총잔량 = int(self.arry_data[si, 25])
+            sell_매도호가1 = int(self.arry_data[si, 30])
+            sell_매수호가1 = int(self.arry_data[si, 31])
+            sell_초당매수수량 = round(float(self.arry_data[si, 14]) / 60, 2)
+            sell_초당매도수량 = round(float(self.arry_data[si, 15]) / 60, 2)
+            sell_초당거래대금 = round(float(self.arry_data[si, 22]) / 60, 2)
         sell_호가잔량비 = round(sell_매수총잔량 / sell_매도총잔량 * 100, 2) if sell_매도총잔량 > 0 else 0.0
-        sell_매도호가1 = int(self.arry_data[si, 24])
-        sell_매수호가1 = int(self.arry_data[si, 25])
         sell_스프레드 = round((sell_매도호가1 - sell_매수호가1) / sell_매수호가1 * 100, 4) if sell_매수호가1 > 0 else 0.0
-
-        # [2025-12-14] 매도 시점 초당 데이터 수집 (지표 조합 분석용)
-        sell_초당매수수량 = int(self.arry_data[si, 14])
-        sell_초당매도수량 = int(self.arry_data[si, 15])
-        sell_초당거래대금 = round(float(self.arry_data[si, 16]), 2)
 
         data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey,
                 buy_date, buy_hour, buy_min, buy_sec,
