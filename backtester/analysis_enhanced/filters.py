@@ -271,6 +271,12 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
         allow_sellside_buytime_cols = {
             '매도잔량_매수잔량_비율',
         }
+        explicit_excludes = {
+            '당일거래대금_매수매도_비율',
+            '매수금액',
+        }
+        if col in explicit_excludes:
+            return False
         if col in ('수익금', '수익률', '보유시간', '매수시간', '매도시간', '매수일자', '추가매수시간', '매도조건'):
             return False
         if col.startswith('매도') and col not in allow_sellside_buytime_cols:

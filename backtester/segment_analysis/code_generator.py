@@ -276,7 +276,6 @@ def _build_segment_runtime_preamble() -> List[str]:
     lines.append("매수회전율 = 회전율")
     lines.append("매수당일거래대금 = 당일거래대금")
     lines.append("매수초당거래대금_당일비중 = (매수초당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 if 매수당일거래대금 > 0 else 0")
-    lines.append("당일거래대금_매수매도_비율 = (매도당일거래대금 / 매수당일거래대금) if '매도당일거래대금' in locals() and 매수당일거래대금 > 0 else 1.0")
     lines.append("매수가 = 현재가")
     lines.append("매수금액 = 현재가 * 매수수량 if '매수수량' in locals() else 0")
     lines.append("매수초당매수수량_매수매도총잔량_비율 = (매수초당매수수량 / (매수매도총잔량 + 1e-6)) * 100")
