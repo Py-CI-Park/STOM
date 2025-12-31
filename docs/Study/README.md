@@ -7,6 +7,9 @@ STOM 프로젝트의 연구, 분석, 검증 문서를 체계적으로 관리하�
 ```
 Study/
 ├── README.md (현재 문서)
+├── CodeReview/               # 코드 리뷰 보고서 (1개)
+│   ├── README.md
+│   └── 2025-12-31_Segment_Final_Reset_Branch_Review.md
 ├── DocumentationReviews/    # 문서 리뷰 및 검증 (1개)
 │   └── 2025-11-17_Documentation_Review_Report.md
 ├── ResearchReports/          # 연구 보고서 (5개)
@@ -26,12 +29,13 @@ Study/
 ├── ConditionStudies/         # 트레이딩 조건 심층 분석 (2개)
 │   ├── Condition_902_905_Update_2_Deep_Analysis.md
 │   └── Condition_Tick_902_905_update_2_Study.md
-└── Guides/                   # 가이드 및 참고자료 (2개)
+└── Guides/                   # 가이드 및 참고자료 (3개)
     ├── Condition_Optimization_and_Analysis_Guide.md
-    └── New_Metrics_Development_Process_Guide.md
+    ├── New_Metrics_Development_Process_Guide.md
+    └── Segment_Filter_Condition_Integration_Guide.md
 ```
 
-**총 문서 수**: 18개 | **총 용량**: ~720KB
+**총 문서 수**: 19개 | **총 용량**: ~730KB
 
 ---
 
@@ -59,6 +63,7 @@ Study/
 | 16 | **New Metrics Development Process Guide** | 가이드 | 2025-12-28 | 52KB | 신규 지표 개발 및 통합 체계적 프로세스 | • 10단계 개발 프로세스 정립<br>• LOOKAHEAD-FREE 검증 가이드<br>• 6개 시스템 통합 체크리스트<br>• 코드 템플릿 및 실전 사례 포함 | Documentation, Process | ✅ |
 | 17 | **Overfitting Risk Assessment Filter/Segment Analysis** | 연구 보고서 | 2025-12-29 | 120KB | 백테스팅 필터/세그먼트 분석 오버피팅 위험 평가 | • 5가지 오버피팅 발생 메커니즘 분석<br>• 6가지 판단 지표 체계 제안<br>• Walk-Forward/Purged K-Fold 검증 방법<br>• 긴급/단기/중기 개선 로드맵<br>• 종합 오버피팅 점수 시스템 | Statistics, Cross-Validation, Overfitting Prevention | ✅ |
 | 18 | **Segment Filter Condition Integration Guide** | 가이드 | 2025-12-30 | 8KB | 세그먼트 필터 통합 프로세스 | • 최종 조건식 파일 생성 절차<br>• 텔레그램 안내 흐름 정리<br>• 전역 조합/코드/구간 기준 정리 | Markdown, Process | ✅ |
+| 19 | **Segment Final Reset Branch Review** | 코드 리뷰 | 2025-12-31 | 9KB | segment-final-reset 브랜치 코드 리뷰 | • 5개 커밋 분석 및 평가<br>• 매수초당거래대금 매핑 버그 발견<br>• 품질 점수 7.3/10<br>• 머지 전 P0 버그 수정 필요 | Git, Code Review, Data Mapping | ⚠️ |
 
 ### 📊 스터디 주제별 분류
 
@@ -173,14 +178,30 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | 문서명 | 작성일 | 상태 | 설명 |
 |--------|--------|------|------|
 | [Condition_Optimization_and_Analysis_Guide.md](./Guides/Condition_Optimization_and_Analysis_Guide.md) | 2025-11-29 | ✅ 완료 | 조건 최적화 및 분석 가이드 |
-| [New_Metrics_Development_Process_Guide.md](./Guides/New_Metrics_Development_Process_Guide.md) | 2025-12-28 | ? ?? | ?? ?? ?? ???? ??? |
-| [Segment_Filter_Condition_Integration_Guide.md](./Guides/Segment_Filter_Condition_Integration_Guide.md) | 2025-12-30 | ? ?? | ???? ?? ??? ?? ??? |
+| [New_Metrics_Development_Process_Guide.md](./Guides/New_Metrics_Development_Process_Guide.md) | 2025-12-28 | ✅ 완료 | 신규 지표 개발 및 통합 프로세스 가이드 |
+| [Segment_Filter_Condition_Integration_Guide.md](./Guides/Segment_Filter_Condition_Integration_Guide.md) | 2025-12-30 | ✅ 완료 | 세그먼트 필터 통합 프로세스 가이드 |
 
 **주요 내용:**
 - 조건 최적화 프로세스
 - 분석 방법론
 - 베스트 프랙티스
 - 문제 해결 가이드
+
+---
+
+### 6. Code Reviews (코드 리뷰)
+
+브랜치 머지 전 코드 품질, 버그 탐지, 아키텍처 일관성 검증을 위한 코드 리뷰 보고서입니다.
+
+| 문서명 | 작성일 | 상태 | 설명 |
+|--------|--------|------|------|
+| [2025-12-31_Segment_Final_Reset_Branch_Review.md](./CodeReview/2025-12-31_Segment_Final_Reset_Branch_Review.md) | 2025-12-31 | ⚠️ 버그 발견 | segment-final-reset 브랜치 코드 리뷰 (9KB) |
+
+**주요 내용:**
+- 커밋 히스토리 분석 및 변경 범위 파악
+- 코드 품질 평가 (함수 분리, 타입 힌팅, 에러 핸들링)
+- 데이터 정합성 검증 (컬럼 매핑, 값 범위)
+- 버그 우선순위 분류 (P0/P1/P2) 및 수정 방향 제안
 
 ---
 
@@ -193,7 +214,8 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 | System Analysis | 6 | 6 | 0 | 0 |
 | Condition Studies | 2 | 2 | 0 | 0 |
 | Guides | 3 | 3 | 0 | 0 |
-| **전체** | **18** | **18** | **0** | **0** |
+| Code Reviews | 1 | 0 | 1 | 0 |
+| **전체** | **19** | **17** | **1** | **0** |
 
 ## 🎯 문서 상태 범례
 
@@ -329,6 +351,6 @@ STOM 시스템의 성능, 구조, 최적화, 버전 관리에 대한 심층 분�
 
 ---
 
-**최종 업데이트**: 2025-12-29
+**최종 업데이트**: 2025-12-31
 **문서 관리자**: STOM Development Team
-**문서 버전**: 2.4
+**문서 버전**: 2.5
