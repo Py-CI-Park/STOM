@@ -45,6 +45,7 @@ class BackEngineKiwoomTick:
         self.dict_cn      = None
         self.arry_data    = None
         self.indicator    = indicator
+        self.is_tick      = None  # [2025-12-31] 틱/분봉 데이터 타입 플래그 (DataLoad에서 설정)
 
         self.code_list    = []
         self.vars         = []
@@ -258,6 +259,7 @@ class BackEngineKiwoomTick:
         bk = 0
         divid_mode = data[-1]
         is_tick = self.dict_set['주식타임프레임']
+        self.is_tick = is_tick  # [2025-12-31] 데이터 로드 시점의 틱/분봉 타입 저장
         con = sqlite3.connect(DB_STOCK_BACK_TICK if is_tick else DB_STOCK_BACK_MIN)
 
         if divid_mode == '종목코드별 분류':
@@ -885,7 +887,10 @@ class BackEngineKiwoomTick:
         buy_전일동시간비 = round(float(self.arry_data[bi, 11]), 2)
         buy_고가 = int(self.arry_data[bi, 3])
         buy_저가 = int(self.arry_data[bi, 4])
-        is_tick_data = len(str(bt)) >= 14
+        # [2025-12-31] is_tick_data 판단: DataLoad 시점의 설정값 우선 사용 (인덱스 길이 기반 추론 폴백)
+        # - 기존 로직(인덱스 길이 기반)은 분봉/틱 DB 스키마 차이로 인해 잘못된 컬럼 매핑 발생 가능
+        # - self.is_tick은 dict_set['주식타임프레임'] 값으로, 실제 로드된 DB 타입과 일치
+        is_tick_data = self.is_tick if self.is_tick is not None else len(str(bt)) >= 14
         if is_tick_data:
             buy_고저평균대비등락율 = round(float(self.arry_data[bi, 20]), 2)
             buy_매도총잔량 = int(self.arry_data[bi, 21])
