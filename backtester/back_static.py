@@ -116,9 +116,71 @@ def _build_filter_mask_from_generated_code(df: pd.DataFrame, generated_code: dic
     return result
 
 
+def _load_segment_config_from_ranges(global_best: dict):
+    """
+    global_best에 저장된 ranges_path를 로드하여 고정 모드 SegmentConfig를 생성합니다.
+
+    [2026-01-01 신규 추가]
+    - 목적: 세그먼트 분석 시 사용한 정확한 경계값으로 필터 적용
+    - 입력: global_best dict (ranges_path 포함)
+    - 출력: SegmentConfig (dynamic_mode='fixed', 저장된 범위 사용)
+    - 폴백: ranges_path가 없으면 기본 SegmentConfig 반환
+    """
+    from backtester.segment_analysis.segmentation import SegmentConfig
+    from pathlib import Path
+    import pandas as pd
+
+    # ranges_path 추출
+    ranges_path = global_best.get('ranges_path')
+    if not ranges_path or not Path(ranges_path).exists():
+        # 폴백: 기본 설정 반환 (하위 호환성)
+        return SegmentConfig()
+
+    try:
+        # ranges.csv 로드
+        df_ranges = pd.read_csv(ranges_path, encoding='utf-8-sig')
+
+        # market_cap_ranges 딕셔너리 생성
+        market_cap_ranges = {}
+        time_ranges = {}
+
+        for _, row in df_ranges.iterrows():
+            range_type = row.get('range_type')
+            label = row.get('label')
+            min_val = row.get('min')
+            max_val = row.get('max')
+
+            if pd.isna(max_val):
+                max_val = float('inf')
+
+            if range_type == 'market_cap':
+                market_cap_ranges[label] = (float(min_val), float(max_val))
+            elif range_type == 'time':
+                time_ranges[label] = (int(min_val), int(max_val))
+
+        # SegmentConfig 생성 (dynamic_mode='fixed')
+        return SegmentConfig(
+            dynamic_mode='fixed',
+            market_cap_ranges=market_cap_ranges,
+            time_ranges=time_ranges,
+        )
+    except Exception as e:
+        # 로드 실패 시 기본 설정 반환
+        print(f"[Warning] ranges.csv 로드 실패: {e}, 기본 설정 사용")
+        return SegmentConfig()
+
+
 def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
     """
     세그먼트 전역 조합(global_best)을 이용해 df에서 통과 마스크를 생성합니다.
+
+    [2026-01-01 버그 수정]
+    - 기존: 새로운 SegmentBuilder() 생성 → dynamic 모드로 세그먼트 경계 재계산
+    - 문제: 분위수 기반 동적 분할은 데이터마다 경계가 달라짐
+           → combos.csv 예측값(+1,085M)과 실제 적용값(+972M)이 불일치
+    - 원인: 세그먼트 분석 시 계산된 경계와 이미지 생성 시 재계산된 경계가 다름
+    - 해결: global_best에 저장된 ranges_path를 로드하여 고정 모드로 세그먼트 분할
+    - 결과: 분석 시 사용한 정확한 경계로 필터 적용 → 예측값과 실제값 일치
     """
     result = {
         'mask': None,
@@ -140,7 +202,8 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
         return result
 
     try:
-        from backtester.segment_analysis.segmentation import SegmentBuilder
+        from backtester.segment_analysis.segmentation import SegmentBuilder, SegmentConfig
+        from pathlib import Path
     except Exception as e:
         result['error'] = f"세그먼트 모듈 로드 실패: {e}"
         return result
@@ -156,7 +219,9 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
         df_work = df.copy()
         df_work[row_col] = np.arange(len(df_work))
 
-        builder = SegmentBuilder()
+        # [2026-01-01 수정] 저장된 ranges.csv를 로드하여 고정 모드로 세그먼트 분할
+        seg_config = _load_segment_config_from_ranges(global_best)
+        builder = SegmentBuilder(seg_config)
         segments = builder.build_segments(df_work)
     except Exception as e:
         result['error'] = f"세그먼트 분할 실패: {e}"

@@ -89,6 +89,13 @@ def run_phase2(
     local_combo_path = save_segment_local_combos(local_combo_df, output_dir, output_prefix)
 
     global_best = optimize_global_combination(segment_combos, total_trades, combo_config)
+
+    # [2026-01-01 추가] global_best에 ranges_path 저장
+    # - 목적: 필터 적용 시 동일한 세그먼트 경계 사용
+    # - 효과: combos.csv 예측값과 실제 적용값 일치
+    if global_best and isinstance(global_best, dict):
+        global_best['ranges_path'] = ranges_path
+
     filtered_df = _apply_global_combination(segments, global_best)
     risk_metrics = summarize_risk(filtered_df)
     global_combo_df = build_global_combo_df(global_best, total_trades, risk_metrics=risk_metrics)

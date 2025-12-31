@@ -26,6 +26,34 @@
 
 ---
 
+## 🔄 최근 업데이트 (2026-01-01)
+
+### 세그먼트 필터 적용 버그 수정 - 예측값과 실제값 일치
+
+**배경**: "backtest → segment filtering → optimal combinations → condition generation → **direct application**" 철학 구현
+
+**문제 발견**:
+- combos.csv 예측: +1,085M원 (1,475건, 29.1% 잔여)
+- 실제 적용 결과: +972M원 (1,095건, 21.5% 잔여)
+- 차이: -113M원 (-380건, -7.6%p)
+
+**근본 원인**:
+- Dynamic 세그먼트 분할은 분위수(quantile) 기반으로 경계를 계산
+- 세그먼트 분석 시: 원본 데이터 → 분위수 계산 → 경계 A (대형주 ≥ 6,432억) → ranges.csv 저장
+- 필터 적용 시: 강화 데이터 → 분위수 **재계산** → 경계 B (다름!) → 다른 거래에 필터 적용
+
+**해결 방법**:
+1. `phase2_runner.py`: global_best에 ranges_path 저장 (Line 93-97)
+2. `back_static.py`: _load_segment_config_from_ranges() 헬퍼 함수 추가 (Line 119-170)
+3. 필터 적용 시: 저장된 ranges.csv 로드 → fixed 모드 → 동일한 경계 사용
+
+**효과**:
+- ✅ 세그먼트 분석 시 계산한 **정확한 경계**로 필터 적용
+- ✅ combos.csv 예측값 = 실제 적용값 (일치!)
+- ✅ 사용자 철학 "조건을 그대로 적용" 완벽 구현
+
+---
+
 ## 개요
 
 **STOM (System Trading Optimization Manager)**은 PyQt5로 구축된 멀티프로세스 실시간 트레이딩 플랫폼으로, 한국 주식시장(키움증권 연동)과 암호화폐 시장(업비트, 바이낸스)에서 고빈도 트레이딩을 수행합니다.
