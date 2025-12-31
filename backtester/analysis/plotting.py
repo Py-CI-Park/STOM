@@ -1562,8 +1562,31 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             try:
                 if teleQ is not None and enhanced_result:
                     seg_outputs = enhanced_result.get('segment_outputs') or {}
-                    phase2 = seg_outputs.get('phase2') or {}
-                    global_best = phase2.get('global_best')
+
+                    # [2026-01-01 버그 수정]
+                    # - 기존: segment_outputs['phase2']['global_best'] 사용 (기본 템플릿)
+                    # - 문제: segment_code_final.txt는 template_comparison의 BEST 템플릿 사용
+                    # - 결과: 텔레그램 이미지 필터 ≠ segment_code_final.txt 필터
+                    # - 수정: segment_code_final.txt와 동일한 global_best 사용
+                    template_comparison = seg_outputs.get('template_comparison')
+                    base_phase2 = seg_outputs.get('phase2') or {}
+
+                    # segment_code_final.txt와 동일한 로직으로 best 템플릿의 global_best 사용
+                    if template_comparison and isinstance(template_comparison, dict):
+                        try:
+                            from backtester.analysis_enhanced.runner import _resolve_best_template_segment_code
+                            _, source_phase2, source_desc = _resolve_best_template_segment_code(
+                                template_comparison=template_comparison,
+                                base_phase2=base_phase2,
+                            )
+                            global_best = source_phase2.get('global_best') if isinstance(source_phase2, dict) else None
+                        except Exception:
+                            # Fallback to base phase2
+                            global_best = base_phase2.get('global_best')
+                    else:
+                        # 템플릿 비교가 없으면 base phase2 사용
+                        global_best = base_phase2.get('global_best')
+
                     df_enh = enhanced_result.get('enhanced_df')
                     if isinstance(global_best, dict) and isinstance(df_enh, pd.DataFrame) and not df_enh.empty:
                         if _build_segment_mask_from_global_best is None:
