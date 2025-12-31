@@ -24,6 +24,134 @@ from .filters import (
 from .plotting import PltEnhancedAnalysisCharts
 from .utils import ComputeStrategyKey
 
+
+# =============================================================================
+# 세그먼트 분석 헬퍼 함수
+# =============================================================================
+
+def _resolve_best_template_segment_code(
+    template_comparison: dict,
+    base_phase2: dict,
+) -> tuple[str | None, dict | None, str]:
+    """
+    세그먼트 최종 조건식 생성에 사용할 segment_code_path를 결정합니다.
+
+    [우선순위]
+    1. 템플릿 비교 결과가 있고, 최상위 템플릿의 segment_code_path가 존재하면 사용
+    2. 그렇지 않으면 base phase2의 segment_code_path 사용 (하위 호환성)
+
+    [중요 배경 - 2025-12-31 버그 수정]
+    - 기존 코드는 항상 base phase2의 segment_code_path를 사용
+    - base phase2는 기본 SegmentConfig(고정 범위)로 실행됨
+    - 템플릿 비교에서 최상위로 선정된 템플릿은 동적 범위(quantile)를 사용할 수 있음
+    - 예: 동적 범위 대형주 >= 6,432억 vs 고정 범위 대형주 >= 10,000억
+    - 이 불일치로 인해 세그먼트 필터가 잘못된 거래에 적용되어 기대 성과와 실제 성과가 크게 다름
+
+    Args:
+        template_comparison: run_segment_template_comparison() 반환값
+            - 'comparison_path': 템플릿 비교 CSV 경로
+            - 'results': {template_key: phase2_result} 딕셔너리
+        base_phase2: run_phase2() 반환값 (기본 phase2 결과)
+
+    Returns:
+        tuple: (segment_code_path, source_phase2_result, source_description)
+            - segment_code_path: 사용할 segment_code.txt 경로
+            - source_phase2_result: 해당 phase2 결과 딕셔너리
+            - source_description: 출처 설명 문자열 (로깅/디버깅용)
+    """
+    # 기본값: base phase2 사용
+    fallback_path = base_phase2.get('segment_code_path') if isinstance(base_phase2, dict) else None
+    fallback_result = base_phase2
+    fallback_desc = "base_phase2 (기본 SegmentConfig)"
+
+    # 템플릿 비교 결과가 없으면 기본값 반환
+    if not isinstance(template_comparison, dict):
+        return fallback_path, fallback_result, fallback_desc
+
+    comparison_path = template_comparison.get('comparison_path')
+    results = template_comparison.get('results')
+
+    if not comparison_path or not isinstance(results, dict) or not results:
+        return fallback_path, fallback_result, fallback_desc
+
+    # 템플릿 비교 CSV에서 최상위 템플릿 식별
+    best_template_key = _find_best_template_key_from_csv(comparison_path, results)
+
+    if not best_template_key:
+        return fallback_path, fallback_result, fallback_desc
+
+    # 최상위 템플릿의 phase2 결과에서 segment_code_path 추출
+    best_result = results.get(best_template_key)
+    if not isinstance(best_result, dict):
+        return fallback_path, fallback_result, fallback_desc
+
+    best_segment_code_path = best_result.get('segment_code_path')
+    if not best_segment_code_path or not Path(best_segment_code_path).exists():
+        return fallback_path, fallback_result, fallback_desc
+
+    # 최상위 템플릿의 segment_code_path 반환
+    source_desc = f"best_template: {best_template_key}"
+    return best_segment_code_path, best_result, source_desc
+
+
+def _find_best_template_key_from_csv(comparison_csv_path: str, results: dict) -> str | None:
+    """
+    템플릿 비교 CSV에서 최상위 score를 가진 템플릿의 key를 찾습니다.
+
+    Args:
+        comparison_csv_path: 템플릿 비교 CSV 파일 경로
+        results: {template_key: phase2_result} 딕셔너리
+
+    Returns:
+        최상위 템플릿의 key (예: "T3C3_time3:dynamic:semi") 또는 None
+    """
+    try:
+        df = pd.read_csv(comparison_csv_path, encoding='utf-8-sig')
+        if df.empty:
+            return None
+
+        # score 컬럼으로 정렬하여 최상위 행 선택
+        if 'score' in df.columns:
+            df = df.sort_values('score', ascending=False)
+        elif 'total_improvement' in df.columns:
+            df = df.sort_values('total_improvement', ascending=False)
+        else:
+            return None
+
+        best_row = df.iloc[0]
+
+        # 템플릿 key 구성: template:variant 또는 template:variant:dynamic_mode
+        template_name = str(best_row.get('template', '')).strip()
+        variant = str(best_row.get('variant', 'fixed')).strip()
+        dynamic_mode = best_row.get('dynamic_mode')
+
+        if not template_name:
+            return None
+
+        # results 딕셔너리의 key 형식과 매칭
+        # 가능한 key 형식:
+        #   - "{template}:fixed"
+        #   - "{template}:dynamic:{mode}"
+        if variant == 'dynamic' and dynamic_mode and str(dynamic_mode).lower() not in ('nan', 'none', ''):
+            candidate_key = f"{template_name}:dynamic:{dynamic_mode}"
+        else:
+            candidate_key = f"{template_name}:{variant}"
+
+        # 정확히 매칭되는 key가 있는지 확인
+        if candidate_key in results:
+            return candidate_key
+
+        # 대소문자/공백 차이로 매칭 안 될 수 있으므로 유사 매칭 시도
+        candidate_lower = candidate_key.lower().replace(' ', '_')
+        for key in results.keys():
+            if key.lower().replace(' ', '_') == candidate_lower:
+                return key
+
+        return None
+
+    except Exception:
+        return None
+
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
                         buystg_name=None, sellstg_name=None, backname=None,
                         ml_train_mode: str = 'train', send_condition_summary: bool = True,
@@ -272,35 +400,68 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 segment_timing['total_s'] = round(time.perf_counter() - segment_start, 4)
                 segment_outputs['timing'] = segment_timing
 
+                # ===============================================================
                 # 최종 매수 조건식(세그먼트 필터 반영) 생성
+                # ===============================================================
+                # [2025-12-31 버그 수정]
+                # - 기존: 항상 base phase2의 segment_code 사용 (고정 시가총액 범위)
+                # - 수정: 템플릿 비교 결과가 있으면 최상위 템플릿의 segment_code 사용
+                #
+                # [중요]
+                # 템플릿 비교에서 동적(dynamic) 모드가 최상위로 선정된 경우,
+                # 해당 템플릿은 데이터 분포 기반 quantile로 시가총액 범위를 계산함.
+                # 예: 동적 범위 (대형주 >= 6,432억) vs 고정 범위 (대형주 >= 10,000억)
+                # 이 범위가 일치해야 세그먼트 필터가 올바른 거래에 적용됨.
+                # ===============================================================
                 try:
                     from backtester.segment_analysis.code_generator import (
                         build_segment_final_code,
                         save_segment_code_final,
                     )
 
-                    phase2_result = segment_outputs.get('phase2') if isinstance(segment_outputs, dict) else None
-                    if isinstance(phase2_result, dict):
-                        segment_code_path = phase2_result.get('segment_code_path')
-                        if segment_code_path:
-                            seg_lines = Path(segment_code_path).read_text(encoding='utf-8-sig').splitlines()
-                            final_lines, final_summary = build_segment_final_code(
-                                buystg_text=buystg,
-                                sellstg_text=sellstg,
-                                segment_code_lines=seg_lines,
-                                buystg_name=buystg_name,
-                                sellstg_name=sellstg_name,
-                                segment_code_path=segment_code_path,
-                                global_combo_path=phase2_result.get('global_combo_path'),
-                                code_summary=phase2_result.get('segment_code_summary'),
-                                save_file_name=save_file_name,
-                            )
-                            final_path = save_segment_code_final(final_lines, segment_output_base, save_file_name)
-                            if final_path:
-                                phase2_result['segment_code_final_path'] = final_path
-                                phase2_result['segment_code_final_summary'] = final_summary
-                                if teleQ is not None:
-                                    teleQ.put(f"최종 작성 업데이트 된 조건식 파일: {final_path}")
+                    # 최상위 템플릿의 segment_code_path 결정
+                    base_phase2 = segment_outputs.get('phase2') if isinstance(segment_outputs, dict) else None
+                    template_comparison = segment_outputs.get('template_comparison') if isinstance(segment_outputs, dict) else None
+
+                    segment_code_path, source_phase2, source_desc = _resolve_best_template_segment_code(
+                        template_comparison=template_comparison,
+                        base_phase2=base_phase2,
+                    )
+
+                    if segment_code_path and Path(segment_code_path).exists():
+                        # 로깅: 어떤 segment_code가 사용되는지 기록
+                        print(f"[Segment Code Final] 출처: {source_desc}")
+                        print(f"[Segment Code Final] 경로: {segment_code_path}")
+
+                        seg_lines = Path(segment_code_path).read_text(encoding='utf-8-sig').splitlines()
+
+                        # source_phase2에서 global_combo_path와 code_summary 추출
+                        global_combo_path = source_phase2.get('global_combo_path') if isinstance(source_phase2, dict) else None
+                        code_summary = source_phase2.get('segment_code_summary') if isinstance(source_phase2, dict) else None
+
+                        final_lines, final_summary = build_segment_final_code(
+                            buystg_text=buystg,
+                            sellstg_text=sellstg,
+                            segment_code_lines=seg_lines,
+                            buystg_name=buystg_name,
+                            sellstg_name=sellstg_name,
+                            segment_code_path=segment_code_path,
+                            global_combo_path=global_combo_path,
+                            code_summary=code_summary,
+                            save_file_name=save_file_name,
+                        )
+                        final_path = save_segment_code_final(final_lines, segment_output_base, save_file_name)
+
+                        if final_path:
+                            # 결과를 base phase2에 저장 (하위 호환성 - 기존 코드가 phase2에서 결과를 찾음)
+                            if isinstance(base_phase2, dict):
+                                base_phase2['segment_code_final_path'] = final_path
+                                base_phase2['segment_code_final_summary'] = final_summary
+                                base_phase2['segment_code_final_source'] = source_desc
+
+                            if teleQ is not None:
+                                teleQ.put(f"최종 작성 업데이트 된 조건식 파일: {final_path}")
+                                teleQ.put(f"[세그먼트 코드 출처: {source_desc}]")
                 except Exception:
                     print_exc()
 
