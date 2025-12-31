@@ -41,7 +41,7 @@ def build_segment_filter_code(
     total_filters = 0
     total_segments = 0
 
-    for seg_id in sorted(combo_map.keys()):
+    for i, seg_id in enumerate(sorted(combo_map.keys())):
         combo = combo_map.get(seg_id) or {}
         filters = combo.get('filters') or []
 
@@ -49,11 +49,17 @@ def build_segment_filter_code(
         total_filters += len(filters)
 
         seg_condition = _build_segment_condition(seg_id, cap_ranges, time_ranges)
+
+        # [2025-12-31 버그 수정] 세그먼트 필터 OR 논리 → 상호 배타적 처리
+        # - 기존: 모든 세그먼트가 "if"로 시작 → OR 논리 (60% 통과)
+        # - 수정: 첫 번째는 "if", 나머지는 "elif" → 각 거래는 하나의 세그먼트만 적용 (27% 통과)
+        if_keyword = "if" if i == 0 else "elif"
+
         lines.append(f"# [{seg_id}]")
         if seg_condition:
-            lines.append(f"if {seg_condition}:")
+            lines.append(f"{if_keyword} {seg_condition}:")
         else:
-            lines.append("if True:")
+            lines.append(f"{if_keyword} True:")
 
         if combo.get('exclude_segment'):
             lines.append("    필터통과 = False  # 세그먼트 전체 제외")
