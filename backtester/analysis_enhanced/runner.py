@@ -6,6 +6,7 @@ from traceback import print_exc
 import pandas as pd
 
 from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.analysis.output_config import get_backtesting_output_config
 from backtester.detail_schema import reorder_detail_columns
 from .metrics_enhanced import CalculateEnhancedDerivedMetrics
 from .ml import (
@@ -254,6 +255,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
         # - 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML 컬럼이 포함되어 비교 가능
         output_dir = ensure_backtesting_output_dir(save_file_name)
+        output_cfg = get_backtesting_output_config()
+        csv_chunk_size = output_cfg.get('csv_chunk_size') if output_cfg.get('enable_csv_parallel') else None
         detail_path = str(output_dir / f"{save_file_name}_detail.csv")
         df_enhanced_out = reorder_detail_columns(df_enhanced)
         df_enhanced_out.to_csv(detail_path, encoding='utf-8-sig', index=True)
@@ -481,6 +484,121 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 print_exc()
 
         result['segment_outputs'] = segment_outputs
+
+        # 9-2. 필터/세그먼트 적용 detail.csv 생성 (검증/비교용)
+        try:
+            if isinstance(df_enhanced, pd.DataFrame) and not df_enhanced.empty:
+                from backtester.analysis.filter_apply import build_filter_mask_from_generated_code
+                mask_info = build_filter_mask_from_generated_code(df_enhanced, generated_code)
+                if mask_info and mask_info.get('mask') is not None:
+                    df_filtered = df_enhanced[mask_info['mask']].copy()
+                    filtered_path = str(output_dir / f"{save_file_name}_detail_filtered.csv")
+                    df_filtered_out = reorder_detail_columns(df_filtered)
+                    df_filtered_out.to_csv(
+                        filtered_path,
+                        encoding='utf-8-sig',
+                        index=True,
+                        chunksize=csv_chunk_size,
+                    )
+                    result['csv_files'].append(filtered_path)
+
+                    try:
+                        total_trades = int(len(df_enhanced))
+                        remaining_trades = int(len(df_filtered))
+                        remaining_ratio = remaining_trades / max(1, total_trades)
+                        total_profit = int(pd.to_numeric(df_enhanced['수익금'], errors='coerce').fillna(0).sum())
+                        remaining_profit = int(pd.to_numeric(df_filtered['수익금'], errors='coerce').fillna(0).sum())
+                        improvement = remaining_profit - total_profit
+                        expected_improvement = None
+                        if isinstance(generated_code, dict):
+                            summary = generated_code.get('summary') or {}
+                            expected_improvement = summary.get('total_improvement_combined')
+
+                        verify_row = {
+                            'total_trades': total_trades,
+                            'remaining_trades': remaining_trades,
+                            'remaining_ratio': round(remaining_ratio, 6),
+                            'total_profit': total_profit,
+                            'remaining_profit': remaining_profit,
+                            'improvement': improvement,
+                            'expected_improvement': expected_improvement,
+                        }
+                        verify_path = str(output_dir / f"{save_file_name}_filter_verification.csv")
+                        pd.DataFrame([verify_row]).to_csv(verify_path, encoding='utf-8-sig', index=False)
+                        result['csv_files'].append(verify_path)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        try:
+            if isinstance(df_enhanced, pd.DataFrame) and not df_enhanced.empty and isinstance(segment_outputs, dict):
+                from backtester.segment_analysis.segment_apply import build_segment_mask_from_global_best
+
+                base_phase2 = segment_outputs.get('phase2') if isinstance(segment_outputs, dict) else None
+                template_comparison = segment_outputs.get('template_comparison') if isinstance(segment_outputs, dict) else None
+
+                _, source_phase2, source_desc = _resolve_best_template_segment_code(
+                    template_comparison=template_comparison,
+                    base_phase2=base_phase2,
+                )
+                segment_global_best = source_phase2.get('global_best') if isinstance(source_phase2, dict) else None
+
+                if isinstance(segment_global_best, dict):
+                    seg_mask_info = build_segment_mask_from_global_best(df_enhanced, segment_global_best)
+                    if seg_mask_info and seg_mask_info.get('mask') is not None:
+                        df_segment = df_enhanced[seg_mask_info['mask']].copy()
+                        segment_path = str(output_dir / f"{save_file_name}_detail_segment.csv")
+                        df_segment_out = reorder_detail_columns(df_segment)
+                        df_segment_out.to_csv(
+                            segment_path,
+                            encoding='utf-8-sig',
+                            index=True,
+                            chunksize=csv_chunk_size,
+                        )
+                        result['csv_files'].append(segment_path)
+
+                        try:
+                            total_trades = int(len(df_enhanced))
+                            remaining_trades = int(len(df_segment))
+                            remaining_ratio = remaining_trades / max(1, total_trades)
+                            total_profit = int(pd.to_numeric(df_enhanced['수익금'], errors='coerce').fillna(0).sum())
+                            remaining_profit = int(pd.to_numeric(df_segment['수익금'], errors='coerce').fillna(0).sum())
+                            improvement = remaining_profit - total_profit
+
+                            expected_remaining = None
+                            expected_ratio = None
+                            expected_improvement = None
+                            global_combo_path = source_phase2.get('global_combo_path') if isinstance(source_phase2, dict) else None
+                            if global_combo_path and Path(global_combo_path).exists():
+                                df_combo = pd.read_csv(global_combo_path, encoding='utf-8-sig')
+                                if not df_combo.empty:
+                                    row = df_combo.iloc[0]
+                                    expected_remaining = row.get('remaining_trades')
+                                    expected_ratio = row.get('remaining_ratio')
+                                    expected_improvement = row.get('total_improvement')
+
+                            verify_row = {
+                                'total_trades': total_trades,
+                                'remaining_trades': remaining_trades,
+                                'remaining_ratio': round(remaining_ratio, 6),
+                                'total_profit': total_profit,
+                                'remaining_profit': remaining_profit,
+                                'improvement': improvement,
+                                'expected_remaining_trades': expected_remaining,
+                                'expected_remaining_ratio': expected_ratio,
+                                'expected_improvement': expected_improvement,
+                                'segment_source': source_desc,
+                                'missing_columns': ",".join(seg_mask_info.get('missing_columns') or []),
+                                'out_of_range_trades': int(seg_mask_info.get('out_of_range_trades', 0) or 0),
+                            }
+                            verify_path = str(output_dir / f"{save_file_name}_segment_verification.csv")
+                            pd.DataFrame([verify_row]).to_csv(verify_path, encoding='utf-8-sig', index=False)
+                            result['csv_files'].append(verify_path)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
 
         # 10. 추천 메시지 생성
         recommendations = []

@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 
+from backtester.analysis.metric_registry import ANALYSIS_ONLY_COLUMNS, BUY_TIME_FILTER_COLUMNS
+
 from .config import (
     FILTER_MAX_EXCLUSION_RATIO,
     FILTER_MIN_REMAINING_TRADES,
@@ -275,8 +277,12 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
             '당일거래대금_매수매도_비율',
             '매수금액',
         }
+        if col in ANALYSIS_ONLY_COLUMNS:
+            return False
         if col in explicit_excludes:
             return False
+        if col.endswith('_ML'):
+            return bool(allow_ml_filters)
         if col in ('수익금', '수익률', '보유시간', '매수시간', '매도시간', '매수일자', '추가매수시간', '매도조건'):
             return False
         if col.startswith('매도') and col not in allow_sellside_buytime_cols:
@@ -293,7 +299,11 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
         # 시간 컬럼은 별도(시간대 필터)로 처리
         if col in ('매수시', '매수분', '매수초'):
             return False
-        return True
+        if col.startswith('매수'):
+            return True
+        if col in BUY_TIME_FILTER_COLUMNS:
+            return True
+        return False
 
     candidate_cols = []
     for col in df_tsg.columns:

@@ -14,6 +14,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from backtester.analysis.metric_registry import BUY_TIME_FILTER_COLUMNS, ANALYSIS_ONLY_COLUMNS
+
 try:
     from scipy import stats
 except Exception:  # pragma: no cover - optional dependency
@@ -42,22 +44,8 @@ class FilterEvaluatorConfig:
         '매수시간', '매수금액', '변화', '추세', '연속이익', '연속손실', '리스크조정수익률',
         '합계', '누적', '매수매도위험도점수',
     )
-    explicit_buy_columns: Tuple[str, ...] = (
-        '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
-        '매수전일비', '매수회전율', '매수전일동시간비', '매수고가', '매수저가',
-        '매수고저평균대비등락율', '매수매도총잔량', '매수매수총잔량',
-        '매수호가잔량비', '매수매도호가1', '매수매수호가1', '매수스프레드',
-        '매수초당매수수량', '매수초당매도수량', '매수초당거래대금',
-        '시가총액', '매수가', '매수시', '매수분', '매수초',
-        '모멘텀점수', '매수변동폭', '매수변동폭비율', '거래품질점수',
-        '초당매수수량_매도총잔량_비율', '매도잔량_매수잔량_비율',
-        '매수잔량_매도잔량_비율', '초당매도_매수_비율', '초당매수_매도_비율',
-        '현재가_고저범위_위치', '초당거래대금_당일비중',
-        '초당순매수수량', '초당순매수금액', '초당순매수비율',
-        # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표 (LOOKAHEAD-FREE)
-        # 주의: 당일거래대금_매수매도_비율은 매도시점 데이터 사용으로 LOOKAHEAD 문제 있어 제외
-        '당일거래대금_전틱분봉_비율', '당일거래대금_5틱분봉평균_비율',
-    )
+    explicit_buy_columns: Tuple[str, ...] = tuple(BUY_TIME_FILTER_COLUMNS)
+    analysis_only_columns: Tuple[str, ...] = tuple(ANALYSIS_ONLY_COLUMNS)
     extra_columns: Tuple[str, ...] = (
         '시가총액', '모멘텀점수', '거래품질점수', '위험도점수', '타이밍점수'
     )
@@ -208,6 +196,16 @@ class FilterEvaluator:
             if col in df.columns and col not in feature_columns:
                 feature_columns.append(col)
 
+        if self.config.allow_ml_filters:
+            for col in df.columns:
+                if col in feature_columns:
+                    continue
+                if not str(col).endswith('_ML'):
+                    continue
+                if not pd.api.types.is_numeric_dtype(df[col]):
+                    continue
+                feature_columns.append(col)
+
         return feature_columns
 
     def _should_exclude(self, col: str) -> bool:
@@ -215,6 +213,9 @@ class FilterEvaluator:
         for pattern in self.config.exclude_patterns:
             if pattern.lower() in col_lower:
                 return True
+
+        if col in self.config.analysis_only_columns:
+            return True
 
         if not self.config.allow_ml_filters and '_ml' in col_lower:
             return True

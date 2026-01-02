@@ -1538,10 +1538,10 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 starttime=starttime,
                                 endtime=endtime,
                             )
-                            if p_sub:
-                                teleQ.put(p_sub)
                             if p_main:
                                 teleQ.put(p_main)
+                            if p_sub:
+                                teleQ.put(p_sub)
                             if not p_main and not p_sub:
                                 teleQ.put("필터 적용 미리보기: 이미지 생성 실패(경로 없음)")
                         else:
@@ -1579,12 +1579,15 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 template_comparison=template_comparison,
                                 base_phase2=base_phase2,
                             )
+                            phase2 = source_phase2 if isinstance(source_phase2, dict) else base_phase2
                             global_best = source_phase2.get('global_best') if isinstance(source_phase2, dict) else None
                         except Exception:
                             # Fallback to base phase2
+                            phase2 = base_phase2
                             global_best = base_phase2.get('global_best')
                     else:
                         # 템플릿 비교가 없으면 base phase2 사용
+                        phase2 = base_phase2
                         global_best = base_phase2.get('global_best')
 
                     df_enh = enhanced_result.get('enhanced_df')
@@ -1664,10 +1667,10 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                                 starttime=starttime,
                                 endtime=endtime,
                             )
-                            if p_sub:
-                                teleQ.put(p_sub)
                             if p_main:
                                 teleQ.put(p_main)
+                            if p_sub:
+                                teleQ.put(p_sub)
                             if not p_main and not p_sub:
                                 teleQ.put("세그먼트 필터 미리보기: 이미지 생성 실패(경로 없음)")
                         else:
