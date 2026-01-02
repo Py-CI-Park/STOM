@@ -1,4 +1,4 @@
-import re
+﻿import re
 import pyupbit
 import sqlite3
 import operator
@@ -213,12 +213,48 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 return '필터 조합 시너지 분석 결과'
             if filename.endswith('_filter_stability.csv'):
                 return '기간별 필터 안정성(일관성) 분석 결과'
+            if filename.endswith('_filter_lookahead.csv'):
+                return '필터 Lookahead 요약/검증'
             if filename.endswith('_filter_verification.csv'):
                 return '필터 적용 검증 요약'
+            if filename.endswith('_filter_efficiency.png'):
+                return '필터 효율 차트'
             if filename.endswith('_segment_summary_full.txt'):
                 return '세그먼트 종합 요약 리포트'
+            if filename.endswith('_segment_summary.csv'):
+                return '세그먼트 요약 통계(거래수/수익/승률/변동성 등)'
+            if filename.endswith('_segment_filters.csv'):
+                return '세그먼트 필터 후보/조건식 목록'
+            if filename.endswith('_segment_local_combos.csv'):
+                return '세그먼트별 로컬 조합 결과'
+            if filename.endswith('_segment_combos.csv'):
+                return '세그먼트 전역 조합 결과(최적 조합)'
+            if filename.endswith('_segment_ranges.csv'):
+                return '세그먼트 구간 경계값'
+            if filename.endswith('_segment_code.txt'):
+                return '세그먼트 조건식 코드(원본)'
+            if filename.endswith('_segment_code_final.txt'):
+                return '세그먼트 조건식 코드(최종 적용용)'
+            if filename.endswith('_segment_validation.csv'):
+                return '세그먼트 조합/임계 검증 결과'
             if filename.endswith('_segment_verification.csv'):
                 return '세그먼트 필터 적용 검증 요약'
+            if filename.endswith('_segment_template_comparison.csv'):
+                return '세그먼트 템플릿 비교 결과'
+            if filename.endswith('_segment_mode_comparison.csv'):
+                return '세그먼트 모드 비교 결과'
+            if filename.endswith('_segment_thresholds.csv'):
+                return '세그먼트 최적 임계값'
+            if filename.endswith('_pareto_front.csv'):
+                return 'Pareto front 결과(다목적 최적화)'
+            if filename.endswith('_advanced_optuna.csv'):
+                return '고급 Optuna 탐색 결과'
+            if filename.endswith('_nsga2_front.csv'):
+                return 'NSGA-II Pareto front 결과'
+            if filename.endswith('_decision_score.csv'):
+                return '의사결정 점수/랭킹'
+            if filename.endswith('_segment_heatmap.png'):
+                return '세그먼트 히트맵'
             if filename.endswith('_report.txt'):
                 return '이번 실행 산출물 리포트(파일/시간/조건/요약)'
             if filename.endswith('_.png'):

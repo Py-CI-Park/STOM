@@ -24,46 +24,56 @@ _ALIAS_RULES: List[OutputAliasRule] = [
     OutputAliasRule('_report.txt', '0-1', 'report', 'summary', 10),
     OutputAliasRule('_condition_study.md', '0-2', 'condition_study', 'summary', 20),
 
-    OutputAliasRule('_detail.csv', '1-1', 'detail', 'basic', 110),
-    OutputAliasRule('_summary.csv', '1-2', 'summary_csv', 'basic', 120),
-    OutputAliasRule('_analysis.png', '1-3', 'analysis_chart', 'basic', 130),
-    OutputAliasRule('_comparison.png', '1-4', 'comparison_chart', 'basic', 140),
-    OutputAliasRule('.png', '1-5', 'main_chart', 'basic', 150),
-    OutputAliasRule('_.png', '1-6', 'main_chart_summary', 'basic', 160),
+    OutputAliasRule('_summary.csv', '1-1', 'summary_csv', 'basic', 110),
+    OutputAliasRule('_detail.csv', '1-2', 'detail', 'basic', 120),
+    OutputAliasRule('.png', '1-21', 'main_chart', 'basic', 1210),
+    OutputAliasRule('_.png', '1-22', 'main_chart_summary', 'basic', 1220),
+    OutputAliasRule('_analysis.png', '1-23', 'analysis_chart', 'basic', 1230),
+    OutputAliasRule('_comparison.png', '1-24', 'comparison_chart', 'basic', 1240),
 
-    OutputAliasRule('_detail_filtered.csv', '2-1', 'detail_filtered', 'filter', 210),
-    OutputAliasRule('_filter.csv', '2-2', 'filter', 'filter', 220),
+    OutputAliasRule('_filter.csv', '2-1', 'filter', 'filter', 210),
+    OutputAliasRule('_detail_filtered.csv', '2-2', 'detail_filtered', 'filter', 220),
     OutputAliasRule('_filter_combinations.csv', '2-3', 'filter_combinations', 'filter', 230),
     OutputAliasRule('_filter_stability.csv', '2-4', 'filter_stability', 'filter', 240),
     OutputAliasRule('_filter_lookahead.csv', '2-5', 'filter_lookahead', 'filter', 250),
     OutputAliasRule('_optimal_thresholds.csv', '2-6', 'optimal_thresholds', 'filter', 260),
     OutputAliasRule('_filter_verification.csv', '2-7', 'filter_verification', 'filter', 270),
-    OutputAliasRule('_enhanced.png', '2-8', 'enhanced_chart', 'filter', 280),
-    OutputAliasRule('_filter_efficiency.png', '2-9', 'filter_efficiency', 'filter', 290),
-    OutputAliasRule('_filtered.png', '2-10', 'filtered', 'filter', 300),
-    OutputAliasRule('_filtered_.png', '2-11', 'filtered_summary', 'filter', 310),
+    OutputAliasRule('_enhanced.png', '2-21', 'enhanced_chart', 'filter', 2210),
+    OutputAliasRule('_filter_efficiency.png', '2-22', 'filter_efficiency', 'filter', 2220),
+    OutputAliasRule('_filtered.png', '2-23', 'filtered', 'filter', 2230),
+    OutputAliasRule('_filtered_.png', '2-24', 'filtered_summary', 'filter', 2240),
 
-    OutputAliasRule('_detail_segment.csv', '3-1', 'detail_segment', 'segment', 310),
-    OutputAliasRule('_segment_summary.csv', '3-2', 'segment_summary', 'segment', 320),
-    OutputAliasRule('_segment_filters.csv', '3-3', 'segment_filters', 'segment', 330),
-    OutputAliasRule('_segment_local_combos.csv', '3-4', 'segment_local_combos', 'segment', 340),
+    OutputAliasRule('_segment_summary.csv', '3-1', 'segment_summary', 'segment', 310),
+    OutputAliasRule('_segment_summary_full.txt', '3-2', 'segment_summary_full', 'segment', 320),
+    OutputAliasRule('_detail_segment.csv', '3-3', 'detail_segment', 'segment', 330),
+    OutputAliasRule('_segment_filters.csv', '3-4', 'segment_filters', 'segment', 340),
     OutputAliasRule('_segment_combos.csv', '3-5', 'segment_combos', 'segment', 350),
     OutputAliasRule('_segment_ranges.csv', '3-6', 'segment_ranges', 'segment', 360),
     OutputAliasRule('_segment_code.txt', '3-7', 'segment_code', 'segment', 370),
     OutputAliasRule('_segment_code_final.txt', '3-8', 'segment_code_final', 'segment', 380),
     OutputAliasRule('_segment_validation.csv', '3-9', 'segment_validation', 'segment', 390),
-    OutputAliasRule('_segment_summary_full.txt', '3-10', 'segment_summary_full', 'segment', 400),
-    OutputAliasRule('_segment_template_comparison.csv', '3-11', 'segment_template_comparison', 'segment', 410),
-    OutputAliasRule('_segment_mode_comparison.csv', '3-12', 'segment_mode_comparison', 'segment', 420),
-    OutputAliasRule('_segment_thresholds.csv', '3-13', 'segment_thresholds', 'segment', 430),
-    OutputAliasRule('_pareto_front.csv', '3-14', 'pareto_front', 'segment', 440),
-    OutputAliasRule('_advanced_optuna.csv', '3-15', 'advanced_optuna', 'segment', 450),
-    OutputAliasRule('_nsga2_front.csv', '3-16', 'nsga2_front', 'segment', 460),
-    OutputAliasRule('_decision_score.csv', '3-17', 'decision_score', 'segment', 470),
-    OutputAliasRule('_segment_verification.csv', '3-18', 'segment_verification', 'segment', 480),
-    OutputAliasRule('_segment_heatmap.png', '3-19', 'segment_heatmap', 'segment', 490),
-    OutputAliasRule('_segment_filtered.png', '3-20', 'segment_filtered', 'segment', 500),
-    OutputAliasRule('_segment_filtered_.png', '3-21', 'segment_filtered_summary', 'segment', 510),
+    OutputAliasRule('_segment_verification.csv', '3-10', 'segment_verification', 'segment', 400),
+    OutputAliasRule('_segment_local_combos.csv', '3-11', 'segment_local_combos', 'segment', 3110),
+    OutputAliasRule('_segment_template_comparison.csv', '3-12', 'segment_template_comparison', 'segment', 3120),
+    OutputAliasRule('_segment_mode_comparison.csv', '3-13', 'segment_mode_comparison', 'segment', 3130),
+    OutputAliasRule('_segment_thresholds.csv', '3-14', 'segment_thresholds', 'segment', 3140),
+    OutputAliasRule('_pareto_front.csv', '3-15', 'pareto_front', 'segment', 3150),
+    OutputAliasRule('_advanced_optuna.csv', '3-16', 'advanced_optuna', 'segment', 3160),
+    OutputAliasRule('_nsga2_front.csv', '3-17', 'nsga2_front', 'segment', 3170),
+    OutputAliasRule('_decision_score.csv', '3-18', 'decision_score', 'segment', 3180),
+    OutputAliasRule('_segment_heatmap.png', '3-21', 'segment_heatmap', 'segment', 3210),
+    OutputAliasRule('_segment_filtered.png', '3-22', 'segment_filtered', 'segment', 3220),
+    OutputAliasRule('_segment_filtered_.png', '3-23', 'segment_filtered_summary', 'segment', 3230),
+]
+
+_TEMPLATE_RULES: List[OutputAliasRule] = [
+    OutputAliasRule('_segment_summary.csv', '3-51', 'segment_summary', 'segment', 3510),
+    OutputAliasRule('_segment_filters.csv', '3-52', 'segment_filters', 'segment', 3520),
+    OutputAliasRule('_segment_combos.csv', '3-53', 'segment_combos', 'segment', 3530),
+    OutputAliasRule('_segment_ranges.csv', '3-54', 'segment_ranges', 'segment', 3540),
+    OutputAliasRule('_segment_code.txt', '3-55', 'segment_code', 'segment', 3550),
+    OutputAliasRule('_segment_local_combos.csv', '3-56', 'segment_local_combos', 'segment', 3560),
+    OutputAliasRule('_segment_thresholds.csv', '3-57', 'segment_thresholds', 'segment', 3570),
 ]
 
 
@@ -131,7 +141,8 @@ def build_output_manifest(
 
 
 def build_numbered_filename(prefix: str, suffix: str) -> str:
-    rule = _match_rule_by_suffix(suffix)
+    rules = _TEMPLATE_RULES if _is_template_prefix(prefix) else _ALIAS_RULES
+    rule = _match_rule_by_suffix(suffix, rules=rules)
     if rule is None:
         return f"{prefix}{suffix}"
     return f"{rule.prefix}_{prefix}{rule.suffix}"
@@ -180,11 +191,16 @@ def _match_rule(filename: str, save_file_name: str) -> Optional[OutputAliasRule]
     return None
 
 
-def _match_rule_by_suffix(suffix: str) -> Optional[OutputAliasRule]:
-    for rule in _ALIAS_RULES:
+def _match_rule_by_suffix(suffix: str, *, rules: Optional[Iterable[OutputAliasRule]] = None) -> Optional[OutputAliasRule]:
+    rule_list = list(rules) if rules is not None else _ALIAS_RULES
+    for rule in rule_list:
         if rule.suffix == suffix:
             return rule
     return None
+
+
+def _is_template_prefix(prefix: str) -> bool:
+    return '_tmpl_' in (prefix or '')
 
 
 def _ensure_alias(src: Path, dst: Path, mode: str) -> str:
