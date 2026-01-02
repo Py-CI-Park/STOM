@@ -21,10 +21,10 @@ _DEFAULT_CONFIG = {
     'enable_cache': False,
     'cache_dir': './_cache/backtesting_output',
     'output_manifest_enabled': True,
-    'output_alias_enabled': True,
+    'output_alias_enabled': False,
     'output_alias_mode': 'hardlink',  # hardlink | copy | none
     'output_alias_subdir': None,
-    'output_alias_cleanup_legacy': True,
+    'output_alias_cleanup_legacy': False,
 }
 
 

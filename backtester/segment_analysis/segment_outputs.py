@@ -13,6 +13,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from backtester.output_paths import build_backtesting_output_path
 
 def resolve_segment_output_dir(detail_path: Path, output_dir: Optional[str]) -> str:
     if output_dir:
@@ -40,7 +41,7 @@ def build_segment_summary(
 def save_segment_summary(df_summary: pd.DataFrame, output_dir: str, prefix: str) -> str:
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    summary_path = path / f"{prefix}_segment_summary.csv"
+    summary_path = build_backtesting_output_path(prefix, "_segment_summary.csv", output_dir=path)
     df_summary.to_csv(summary_path, index=False, encoding='utf-8-sig')
     return str(summary_path)
 
@@ -50,7 +51,7 @@ def save_segment_filters(df_filters: pd.DataFrame, output_dir: str, prefix: str)
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    filter_path = path / f"{prefix}_segment_filters.csv"
+    filter_path = build_backtesting_output_path(prefix, "_segment_filters.csv", output_dir=path)
     df_filters.to_csv(filter_path, index=False, encoding='utf-8-sig')
     return str(filter_path)
 
@@ -79,7 +80,7 @@ def save_segment_local_combos(df_local: pd.DataFrame, output_dir: str, prefix: s
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    combo_path = path / f"{prefix}_segment_local_combos.csv"
+    combo_path = build_backtesting_output_path(prefix, "_segment_local_combos.csv", output_dir=path)
     df_local.to_csv(combo_path, index=False, encoding='utf-8-sig')
     return str(combo_path)
 
@@ -121,7 +122,7 @@ def save_segment_combos(df_combos: pd.DataFrame, output_dir: str, prefix: str) -
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    combo_path = path / f"{prefix}_segment_combos.csv"
+    combo_path = build_backtesting_output_path(prefix, "_segment_combos.csv", output_dir=path)
     df_combos.to_csv(combo_path, index=False, encoding='utf-8-sig')
     return str(combo_path)
 
@@ -131,7 +132,7 @@ def save_segment_thresholds(df_thresholds: pd.DataFrame, output_dir: str, prefix
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    threshold_path = path / f"{prefix}_segment_thresholds.csv"
+    threshold_path = build_backtesting_output_path(prefix, "_segment_thresholds.csv", output_dir=path)
     df_thresholds.to_csv(threshold_path, index=False, encoding='utf-8-sig')
     return str(threshold_path)
 
@@ -141,7 +142,7 @@ def save_segment_validation(df_validation: pd.DataFrame, output_dir: str, prefix
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    validation_path = path / f"{prefix}_segment_validation.csv"
+    validation_path = build_backtesting_output_path(prefix, "_segment_validation.csv", output_dir=path)
     df_validation.to_csv(validation_path, index=False, encoding='utf-8-sig')
     return str(validation_path)
 
@@ -151,7 +152,7 @@ def save_segment_ranges(df_ranges: pd.DataFrame, output_dir: str, prefix: str) -
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    range_path = path / f"{prefix}_segment_ranges.csv"
+    range_path = build_backtesting_output_path(prefix, "_segment_ranges.csv", output_dir=path)
     df_ranges.to_csv(range_path, index=False, encoding='utf-8-sig')
     return str(range_path)
 
@@ -161,7 +162,7 @@ def save_pareto_front(df_pareto: pd.DataFrame, output_dir: str, prefix: str) -> 
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    pareto_path = path / f"{prefix}_pareto_front.csv"
+    pareto_path = build_backtesting_output_path(prefix, "_pareto_front.csv", output_dir=path)
     df_pareto.to_csv(pareto_path, index=False, encoding='utf-8-sig')
     return str(pareto_path)
 
@@ -171,7 +172,7 @@ def save_segment_mode_comparison(df_comp: pd.DataFrame, output_dir: str, prefix:
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    comp_path = path / f"{prefix}_segment_mode_comparison.csv"
+    comp_path = build_backtesting_output_path(prefix, "_segment_mode_comparison.csv", output_dir=path)
     df_comp.to_csv(comp_path, index=False, encoding='utf-8-sig')
     return str(comp_path)
 
@@ -181,7 +182,7 @@ def save_segment_template_comparison(df_comp: pd.DataFrame, output_dir: str, pre
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    comp_path = path / f"{prefix}_segment_template_comparison.csv"
+    comp_path = build_backtesting_output_path(prefix, "_segment_template_comparison.csv", output_dir=path)
     df_comp.to_csv(comp_path, index=False, encoding='utf-8-sig')
     return str(comp_path)
 
@@ -191,7 +192,7 @@ def save_advanced_optuna_result(df_result: pd.DataFrame, output_dir: str, prefix
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    optuna_path = path / f"{prefix}_advanced_optuna.csv"
+    optuna_path = build_backtesting_output_path(prefix, "_advanced_optuna.csv", output_dir=path)
     df_result.to_csv(optuna_path, index=False, encoding='utf-8-sig')
     return str(optuna_path)
 
@@ -201,7 +202,7 @@ def save_nsga2_front(df_front: pd.DataFrame, output_dir: str, prefix: str) -> Op
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    nsga2_path = path / f"{prefix}_nsga2_front.csv"
+    nsga2_path = build_backtesting_output_path(prefix, "_nsga2_front.csv", output_dir=path)
     df_front.to_csv(nsga2_path, index=False, encoding='utf-8-sig')
     return str(nsga2_path)
 
@@ -211,7 +212,7 @@ def save_decision_report(df_score: pd.DataFrame, output_dir: str, prefix: str) -
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    score_path = path / f"{prefix}_decision_score.csv"
+    score_path = build_backtesting_output_path(prefix, "_decision_score.csv", output_dir=path)
     df_score.to_csv(score_path, index=False, encoding='utf-8-sig')
     return str(score_path)
 

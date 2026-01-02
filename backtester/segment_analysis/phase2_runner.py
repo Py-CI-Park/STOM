@@ -13,6 +13,7 @@ from typing import Optional
 
 import pandas as pd
 
+from backtester.output_manifest import strip_numeric_prefix
 from .segmentation import SegmentBuilder, SegmentConfig
 from .filter_evaluator import FilterEvaluator, FilterEvaluatorConfig
 from .combination_optimizer import (
@@ -152,6 +153,7 @@ def run_phase2(
 
 
 def _build_prefix(filename: str) -> str:
+    filename = strip_numeric_prefix(filename)
     if filename.endswith('_detail.csv'):
         return filename.replace('_detail.csv', '')
     return filename.replace('.csv', '')

@@ -14,6 +14,7 @@ import re
 
 import pandas as pd
 
+from backtester.output_manifest import strip_numeric_prefix
 from .segmentation import SegmentConfig
 from .filter_evaluator import FilterEvaluatorConfig
 from .combination_optimizer import CombinationOptimizerConfig
@@ -80,6 +81,7 @@ def run_segment_mode_comparison(
 
 
 def _build_prefix(filename: str) -> str:
+    filename = strip_numeric_prefix(filename)
     if filename.endswith('_detail.csv'):
         return filename.replace('_detail.csv', '')
     return filename.replace('.csv', '')

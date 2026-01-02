@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from backtester.analysis.ipc_utils import load_dataframe_ipc
-from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 
 
 def _run_chart_job(job: dict) -> dict:
@@ -41,7 +41,7 @@ def _run_chart_job(job: dict) -> dict:
                 starttime=job.get('starttime'),
                 endtime=job.get('endtime'),
             )
-            path = str(output_dir / f"{save_file_name}_analysis.png")
+            path = str(build_backtesting_output_path(save_file_name, "_analysis.png", output_dir=output_dir))
             if Path(path).exists():
                 paths.append(path)
         elif job_type == 'comparison':
@@ -57,7 +57,7 @@ def _run_chart_job(job: dict) -> dict:
                 starttime=job.get('starttime'),
                 endtime=job.get('endtime'),
             )
-            path = str(output_dir / f"{save_file_name}_comparison.png")
+            path = str(build_backtesting_output_path(save_file_name, "_comparison.png", output_dir=output_dir))
             if Path(path).exists():
                 paths.append(path)
         elif job_type == 'enhanced':
@@ -82,7 +82,7 @@ def _run_chart_job(job: dict) -> dict:
                 starttime=job.get('starttime'),
                 endtime=job.get('endtime'),
             )
-            path = str(output_dir / f"{save_file_name}_enhanced.png")
+            path = str(build_backtesting_output_path(save_file_name, "_enhanced.png", output_dir=output_dir))
             if Path(path).exists():
                 paths.append(path)
         else:

@@ -6,7 +6,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 
-from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 from utility.mpl_setup import ensure_mpl_font
 from .metrics_enhanced import DetectTimeframe
 from backtester.analysis.memo_utils import build_strategy_memo_text, add_memo_box
@@ -790,7 +790,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
         # 고정 margins로 레이아웃을 안정화합니다.
         fig.subplots_adjust(left=0.05, right=0.98, bottom=0.04, top=0.94, hspace=0.55, wspace=0.3)
         output_dir = ensure_backtesting_output_dir(save_file_name)
-        analysis_path = str(output_dir / f"{save_file_name}_enhanced.png")
+        analysis_path = str(build_backtesting_output_path(save_file_name, "_enhanced.png", output_dir=output_dir))
         add_memo_box(fig, memo_text)
         plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
         plt.close(fig)

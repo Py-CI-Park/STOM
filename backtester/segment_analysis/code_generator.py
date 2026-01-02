@@ -13,6 +13,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from .segmentation import SegmentConfig
+from backtester.output_paths import build_backtesting_output_path
 
 
 def build_segment_filter_code(
@@ -95,7 +96,7 @@ def save_segment_code(code_lines: List[str], output_dir: str, prefix: str) -> Op
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    code_path = path / f"{prefix}_segment_code.txt"
+    code_path = build_backtesting_output_path(prefix, "_segment_code.txt", output_dir=path)
     code_path.write_text("\n".join(code_lines), encoding='utf-8-sig')
     return str(code_path)
 
@@ -105,7 +106,7 @@ def save_segment_code_final(code_lines: List[str], output_dir: str, prefix: str)
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    code_path = path / f"{prefix}_segment_code_final.txt"
+    code_path = build_backtesting_output_path(prefix, "_segment_code_final.txt", output_dir=path)
     code_path.write_text("\n".join(code_lines), encoding='utf-8-sig')
     return str(code_path)
 

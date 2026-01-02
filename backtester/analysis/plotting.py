@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib import font_manager, gridspec
 from utility.static import strp_time, strf_time
 from utility.mpl_setup import ensure_mpl_font
-from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 from backtester.analysis.text_utils import _format_progress_logs, _extract_strategy_block_lines
 from backtester.analysis.memo_utils import build_strategy_memo_text, add_memo_box
 from backtester.analysis.output_config import get_backtesting_output_config
@@ -597,7 +597,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
         ax.set_title(f'{backname} - 필터 적용 결과 경고 (거래 0건)', fontsize=14, color='red')
         ax.axis('off')
 
-        path_main = str(output_dir / f"{save_file_name}{tag}_filtered.png")
+        path_main = str(build_backtesting_output_path(save_file_name, f"{tag}_filtered.png", output_dir=output_dir))
         add_memo_box(fig, memo_text)
         plt.savefig(path_main, dpi=100, bbox_inches='tight', facecolor='white')
         plt.close(fig)
@@ -630,7 +630,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     unit_label = _extract_unit(label_text or '') or '원'
 
     # ===== 1) filtered.png (수익곡선 요약) =====
-    path_main = str(output_dir / f"{save_file_name}{tag}_filtered.png")
+    path_main = str(build_backtesting_output_path(save_file_name, f"{tag}_filtered.png", output_dir=output_dir))
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=1, height_ratios=[1, 3])
 
@@ -857,7 +857,7 @@ def PltFilterAppliedPreviewCharts(df_all: pd.DataFrame, df_filtered: pd.DataFram
     plt.close(fig)
 
     # ===== 2) filtered_.png (분포/단계 요약) =====
-    path_sub = str(output_dir / f"{save_file_name}{tag}_filtered_.png")
+    path_sub = str(build_backtesting_output_path(save_file_name, f"{tag}_filtered_.png", output_dir=output_dir))
     fig = plt.figure(figsize=(12, 10))
     gs = gridspec.GridSpec(nrows=2, ncols=2, figure=fig, hspace=0.35, wspace=0.25)
 
@@ -1256,7 +1256,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.grid()
     plt.tight_layout()
     add_memo_box(fig, memo_text)
-    plt.savefig(str(output_dir / f"{save_file_name}_.png"))
+    plt.savefig(str(build_backtesting_output_path(save_file_name, "_.png", output_dir=output_dir)))
 
     if buy_vars is None:
         fig = plt.figure(f'{backname} 결과', figsize=(12, 10))
@@ -1338,10 +1338,10 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     plt.grid()
     plt.tight_layout()
     add_memo_box(fig, memo_text)
-    plt.savefig(str(output_dir / f"{save_file_name}.png"))
+    plt.savefig(str(build_backtesting_output_path(save_file_name, ".png", output_dir=output_dir)))
 
-    teleQ.put(str(output_dir / f"{save_file_name}_.png"))
-    teleQ.put(str(output_dir / f"{save_file_name}.png"))
+    teleQ.put(str(build_backtesting_output_path(save_file_name, "_.png", output_dir=output_dir)))
+    teleQ.put(str(build_backtesting_output_path(save_file_name, ".png", output_dir=output_dir)))
 
     enable_parallel = bool(cfg.get('enable_parallel_charts'))
     enable_ipc = bool(cfg.get('enable_ipc_transfer'))
@@ -2171,7 +2171,7 @@ def PltAnalysisCharts(df_tsg, save_file_name, teleQ,
             plt.tight_layout(rect=[0, 0.03, 1, 0.97])
 
         output_dir = ensure_backtesting_output_dir(save_file_name)
-        analysis_path = str(output_dir / f"{save_file_name}_analysis.png")
+        analysis_path = str(build_backtesting_output_path(save_file_name, "_analysis.png", output_dir=output_dir))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             add_memo_box(fig, memo_text)
@@ -2461,7 +2461,7 @@ def PltBuySellComparison_Legacy(df_tsg, save_file_name, teleQ=None,
             plt.tight_layout(rect=[0, 0.02, 1, 0.97])
 
         output_dir = ensure_backtesting_output_dir(save_file_name)
-        comparison_path = str(output_dir / f"{save_file_name}_comparison.png")
+        comparison_path = str(build_backtesting_output_path(save_file_name, "_comparison.png", output_dir=output_dir))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             add_memo_box(fig, memo_text)
@@ -2865,7 +2865,7 @@ def PltBuySellComparison(df_tsg, save_file_name, teleQ=None,
             plt.tight_layout(rect=[0, 0.02, 1, 0.97])
 
         output_dir = ensure_backtesting_output_dir(save_file_name)
-        comparison_path = str(output_dir / f"{save_file_name}_comparison.png")
+        comparison_path = str(build_backtesting_output_path(save_file_name, "_comparison.png", output_dir=output_dir))
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             add_memo_box(fig, memo_text)

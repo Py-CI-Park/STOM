@@ -14,13 +14,15 @@ from typing import Optional
 
 import pandas as pd
 
+from backtester.output_paths import build_backtesting_output_path
+
 
 def write_segment_summary_report(output_dir: str, prefix: str, segment_outputs: dict) -> Optional[str]:
     if not output_dir or not prefix:
         return None
     output_path = Path(output_dir).expanduser().resolve()
     output_path.mkdir(parents=True, exist_ok=True)
-    report_path = output_path / f"{prefix}_segment_summary_full.txt"
+    report_path = build_backtesting_output_path(prefix, "_segment_summary_full.txt", output_dir=output_path)
 
     phase2 = (segment_outputs or {}).get('phase2') or {}
     phase3 = (segment_outputs or {}).get('phase3') or {}
