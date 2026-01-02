@@ -27,4 +27,6 @@ BACKTESTING_OUTPUT_CONFIG = {
     'output_manifest_enabled': True,
     'output_alias_enabled': True,
     'output_alias_mode': 'hardlink',
+    'output_alias_subdir': None,
+    'output_alias_cleanup_legacy': True,
 }

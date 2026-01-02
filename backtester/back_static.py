@@ -724,15 +724,28 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
 
         output_dir = ensure_backtesting_output_dir(save_file_name)
         manifest_path = None
+        cfg = {}
+        enable_manifest = False
+        enable_alias = True
+        alias_mode = 'hardlink'
+        alias_dir = None
+        cleanup_legacy = False
         try:
             cfg = get_backtesting_output_config() or {}
-            if cfg.get('output_manifest_enabled', True):
+            enable_manifest = bool(cfg.get('output_manifest_enabled', True))
+            enable_alias = bool(cfg.get('output_alias_enabled', True))
+            alias_mode = str(cfg.get('output_alias_mode', 'hardlink'))
+            alias_dir = cfg.get('output_alias_subdir') or None
+            cleanup_legacy = bool(cfg.get('output_alias_cleanup_legacy', False))
+            if enable_manifest:
                 from backtester.output_manifest import build_output_manifest
                 manifest_path = build_output_manifest(
                     output_dir,
                     save_file_name,
-                    enable_alias=bool(cfg.get('output_alias_enabled', True)),
-                    alias_mode=str(cfg.get('output_alias_mode', 'hardlink')),
+                    enable_alias=enable_alias,
+                    alias_mode=alias_mode,
+                    alias_dir=alias_dir,
+                    cleanup_legacy=False,
                 )
         except Exception:
             manifest_path = None
@@ -1270,6 +1283,24 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             pass
 
         report_path.write_text("\n".join(lines), encoding='utf-8-sig')
+        try:
+            if enable_manifest and cleanup_legacy:
+                from backtester.output_manifest import build_output_manifest
+                manifest_path = build_output_manifest(
+                    output_dir,
+                    save_file_name,
+                    enable_alias=enable_alias,
+                    alias_mode=alias_mode,
+                    alias_dir=alias_dir,
+                    cleanup_legacy=True,
+                )
+                if enable_alias:
+                    alias_root = output_dir / alias_dir if alias_dir else output_dir
+                    report_alias_path = alias_root / f"0_{save_file_name}_report.txt"
+                    if report_alias_path.exists():
+                        return str(report_alias_path)
+        except Exception:
+            pass
         return str(report_path)
     except:
         print_exc()

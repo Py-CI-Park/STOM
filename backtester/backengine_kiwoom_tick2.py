@@ -806,6 +806,13 @@ class BackEngineKiwoomTick2(BackEngineKiwoomTick):
         buy_시가 = float(self.arry_data[bi, 2])
         buy_시가등락율 = round((bp - buy_시가) / buy_시가 * 100, 2) if buy_시가 > 0 else 0.0
         buy_당일거래대금 = int(self.arry_data[bi, 6])
+        prev_trade = float(self.arry_data[bi - 1, 6]) if bi - 1 >= 0 else 0.0
+        prev_trade2 = float(self.arry_data[bi - 2, 6]) if bi - 2 >= 0 else 0.0
+        prev_trade3 = float(self.arry_data[bi - 3, 6]) if bi - 3 >= 0 else 0.0
+        prev_trade4 = float(self.arry_data[bi - 4, 6]) if bi - 4 >= 0 else 0.0
+        trade_avg = (buy_당일거래대금 + prev_trade + prev_trade2 + prev_trade3 + prev_trade4) / 5
+        buy_당일거래대금_전틱분봉_비율 = buy_당일거래대금 / (prev_trade + 1e-6) if prev_trade > 0 else 0.0
+        buy_당일거래대금_5틱분봉평균_비율 = buy_당일거래대금 / (trade_avg + 1e-6) if trade_avg > 0 else 0.0
         buy_체결강도 = round(float(self.arry_data[bi, 7]), 2)
         buy_전일비 = round(float(self.arry_data[bi, 9]), 2)
         buy_회전율 = round(float(self.arry_data[bi, 10]), 2)
@@ -869,7 +876,7 @@ class BackEngineKiwoomTick2(BackEngineKiwoomTick):
 
         data = ('백테결과', self.name, sgtg, bt, st, ht, bp, sp, bg, pg, pp, sg, sc, abt, bcx, vturn, vkey,
                 buy_date, buy_hour, buy_min, buy_sec,
-                buy_등락율, buy_시가등락율, buy_당일거래대금, buy_체결강도,
+                buy_등락율, buy_시가등락율, buy_당일거래대금, buy_당일거래대금_전틱분봉_비율, buy_당일거래대금_5틱분봉평균_비율, buy_체결강도,
                 buy_전일비, buy_회전율, buy_전일동시간비,
                 buy_고가, buy_저가, buy_고저평균대비등락율,
                 buy_매도총잔량, buy_매수총잔량, buy_호가잔량비,
