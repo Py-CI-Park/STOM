@@ -274,16 +274,19 @@ def _build_segment_runtime_preamble() -> List[str]:
     # [2025-12-31 버그 수정]
     # - 기존: 'in locals()' 체크 - exec() 내부에서 백테스트 엔진 함수가 locals()에 없어 항상 실패
     # - 수정: try/except로 함수 호출 가능 여부 확인 (백테스트 엔진 스코프에서 함수가 정의됨)
+    # [2026-01-01 기본값 수정]
+    # - 기존: except 기본값 1.0 → >= 조건을 잘못 통과시킴 (예상 1,458개 vs 실제 2,790개)
+    # - 수정: except 기본값 0.0 → >= 조건 대부분 실패 (보수적 접근)
     lines.append("try:")
     lines.append("    _prev_trade = 당일거래대금N(1)")
-    lines.append("    당일거래대금_전틱분봉_비율 = 당일거래대금 / (_prev_trade + 1e-6) if _prev_trade > 0 else 1.0")
+    lines.append("    당일거래대금_전틱분봉_비율 = 당일거래대금 / (_prev_trade + 1e-6) if _prev_trade > 0 else 0.0")
     lines.append("except (NameError, TypeError):")
-    lines.append("    당일거래대금_전틱분봉_비율 = 1.0")
+    lines.append("    당일거래대금_전틱분봉_비율 = 0.0")
     lines.append("try:")
     lines.append("    _trade_avg = (당일거래대금 + 당일거래대금N(1) + 당일거래대금N(2) + 당일거래대금N(3) + 당일거래대금N(4)) / 5")
-    lines.append("    당일거래대금_5틱분봉평균_비율 = 당일거래대금 / (_trade_avg + 1e-6) if _trade_avg > 0 else 1.0")
+    lines.append("    당일거래대금_5틱분봉평균_비율 = 당일거래대금 / (_trade_avg + 1e-6) if _trade_avg > 0 else 0.0")
     lines.append("except (NameError, TypeError):")
-    lines.append("    당일거래대금_5틱분봉평균_비율 = 1.0")
+    lines.append("    당일거래대금_5틱분봉평균_비율 = 0.0")
     lines.append("")
     lines.append("# Snapshot mappings for buy-time columns")
     lines.append("매수매수호가1 = 매수호가1")
