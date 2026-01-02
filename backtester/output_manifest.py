@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 import json
+import re
 import shutil
 
 
@@ -19,6 +20,7 @@ class OutputAliasRule:
 
 
 _ALIAS_RULES: List[OutputAliasRule] = [
+    OutputAliasRule('_manifest.json', '0-0', 'manifest', 'summary', 5),
     OutputAliasRule('_report.txt', '0-1', 'report', 'summary', 10),
     OutputAliasRule('_condition_study.md', '0-2', 'condition_study', 'summary', 20),
 
@@ -123,9 +125,24 @@ def build_output_manifest(
         'entries': entries,
     }
 
-    manifest_path = output_dir / f"0_{save_file_name}_manifest.json"
+    manifest_path = build_numbered_path(output_dir, save_file_name, "_manifest.json")
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8-sig')
     return manifest_path
+
+
+def build_numbered_filename(prefix: str, suffix: str) -> str:
+    rule = _match_rule_by_suffix(suffix)
+    if rule is None:
+        return f"{prefix}{suffix}"
+    return f"{rule.prefix}_{prefix}{rule.suffix}"
+
+
+def build_numbered_path(output_dir: Path, prefix: str, suffix: str) -> Path:
+    return Path(output_dir) / build_numbered_filename(prefix, suffix)
+
+
+def strip_numeric_prefix(name: str) -> str:
+    return re.sub(r"^\d[\d-]*_", "", name or "")
 
 
 def resolve_alias_for_legacy_path(
@@ -153,10 +170,19 @@ def resolve_alias_for_legacy_path(
 
 
 def _match_rule(filename: str, save_file_name: str) -> Optional[OutputAliasRule]:
-    if not filename.startswith(save_file_name):
+    if filename == save_file_name:
         return None
     for rule in _ALIAS_RULES:
         if filename == f"{save_file_name}{rule.suffix}":
+            return rule
+        if filename == f"{rule.prefix}_{save_file_name}{rule.suffix}":
+            return rule
+    return None
+
+
+def _match_rule_by_suffix(suffix: str) -> Optional[OutputAliasRule]:
+    for rule in _ALIAS_RULES:
+        if rule.suffix == suffix:
             return rule
     return None
 

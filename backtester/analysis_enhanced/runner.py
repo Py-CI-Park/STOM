@@ -5,7 +5,7 @@ from traceback import print_exc
 
 import pandas as pd
 
-from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 from backtester.analysis.output_config import get_backtesting_output_config
 from backtester.detail_schema import reorder_detail_columns
 from .metrics_enhanced import CalculateEnhancedDerivedMetrics
@@ -257,7 +257,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         output_dir = ensure_backtesting_output_dir(save_file_name)
         output_cfg = get_backtesting_output_config()
         csv_chunk_size = output_cfg.get('csv_chunk_size') if output_cfg.get('enable_csv_parallel') else None
-        detail_path = str(output_dir / f"{save_file_name}_detail.csv")
+        detail_path = str(build_backtesting_output_path(save_file_name, "_detail.csv", output_dir=output_dir))
         df_enhanced_out = reorder_detail_columns(df_enhanced)
         df_enhanced_out.to_csv(detail_path, encoding='utf-8-sig', index=True)
         result['csv_files'].append(detail_path)
@@ -265,25 +265,25 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 필터 분석 결과
         if filter_results:
             # 강화 분석 사용 시: filter.csv로 통합하여 중복 생성 방지
-            filter_path = str(output_dir / f"{save_file_name}_filter.csv")
+            filter_path = str(build_backtesting_output_path(save_file_name, "_filter.csv", output_dir=output_dir))
             pd.DataFrame(filter_results).to_csv(filter_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(filter_path)
 
         # (진단용) 룩어헤드 포함 필터 분석 결과
         if filter_results_lookahead:
-            lookahead_path = str(output_dir / f"{save_file_name}_filter_lookahead.csv")
+            lookahead_path = str(build_backtesting_output_path(save_file_name, "_filter_lookahead.csv", output_dir=output_dir))
             pd.DataFrame(filter_results_lookahead).to_csv(lookahead_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(lookahead_path)
 
         # 최적 임계값
         if optimal_thresholds:
-            threshold_path = str(output_dir / f"{save_file_name}_optimal_thresholds.csv")
+            threshold_path = str(build_backtesting_output_path(save_file_name, "_optimal_thresholds.csv", output_dir=output_dir))
             pd.DataFrame(optimal_thresholds).to_csv(threshold_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(threshold_path)
 
         # 필터 조합
         if filter_combinations:
-            combo_path = str(output_dir / f"{save_file_name}_filter_combinations.csv")
+            combo_path = str(build_backtesting_output_path(save_file_name, "_filter_combinations.csv", output_dir=output_dir))
             df_combo = pd.DataFrame(filter_combinations)
             if '조합개선' in df_combo.columns:
                 sort_cols = ['조합개선']
@@ -310,7 +310,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
 
         # 필터 안정성
         if filter_stability:
-            stability_path = str(output_dir / f"{save_file_name}_filter_stability.csv")
+            stability_path = str(build_backtesting_output_path(save_file_name, "_filter_stability.csv", output_dir=output_dir))
             pd.DataFrame(filter_stability).to_csv(stability_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(stability_path)
 
@@ -492,7 +492,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 mask_info = build_filter_mask_from_generated_code(df_enhanced, generated_code)
                 if mask_info and mask_info.get('mask') is not None:
                     df_filtered = df_enhanced[mask_info['mask']].copy()
-                    filtered_path = str(output_dir / f"{save_file_name}_detail_filtered.csv")
+                    filtered_path = str(build_backtesting_output_path(save_file_name, "_detail_filtered.csv", output_dir=output_dir))
                     df_filtered_out = reorder_detail_columns(df_filtered)
                     df_filtered_out.to_csv(
                         filtered_path,
@@ -523,7 +523,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             'improvement': improvement,
                             'expected_improvement': expected_improvement,
                         }
-                        verify_path = str(output_dir / f"{save_file_name}_filter_verification.csv")
+                        verify_path = str(build_backtesting_output_path(save_file_name, "_filter_verification.csv", output_dir=output_dir))
                         pd.DataFrame([verify_row]).to_csv(verify_path, encoding='utf-8-sig', index=False)
                         result['csv_files'].append(verify_path)
                     except Exception:
@@ -548,7 +548,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     seg_mask_info = build_segment_mask_from_global_best(df_enhanced, segment_global_best)
                     if seg_mask_info and seg_mask_info.get('mask') is not None:
                         df_segment = df_enhanced[seg_mask_info['mask']].copy()
-                        segment_path = str(output_dir / f"{save_file_name}_detail_segment.csv")
+                        segment_path = str(build_backtesting_output_path(save_file_name, "_detail_segment.csv", output_dir=output_dir))
                         df_segment_out = reorder_detail_columns(df_segment)
                         df_segment_out.to_csv(
                             segment_path,
@@ -592,7 +592,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                                 'missing_columns': ",".join(seg_mask_info.get('missing_columns') or []),
                                 'out_of_range_trades': int(seg_mask_info.get('out_of_range_trades', 0) or 0),
                             }
-                            verify_path = str(output_dir / f"{save_file_name}_segment_verification.csv")
+                            verify_path = str(build_backtesting_output_path(save_file_name, "_segment_verification.csv", output_dir=output_dir))
                             pd.DataFrame([verify_row]).to_csv(verify_path, encoding='utf-8-sig', index=False)
                             result['csv_files'].append(verify_path)
                         except Exception:

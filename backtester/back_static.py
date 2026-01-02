@@ -9,7 +9,7 @@ from pathlib import Path
 from traceback import print_exc
 from utility.static import strp_time, strf_time
 from utility.setting import ui_num, DB_SETTING
-from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 from backtester.detail_schema import reorder_detail_columns
 from backtester.analysis.exports import ExportBacktestCSV, ExportBacktestCSVParallel
 from backtester.analysis.output_config import get_backtesting_output_config
@@ -750,7 +750,7 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
         except Exception:
             manifest_path = None
 
-        report_path = output_dir / f"{save_file_name}_report.txt"
+        report_path = build_backtesting_output_path(save_file_name, "_report.txt", output_dir=output_dir)
 
         now = datetime.now()
         lines = []
@@ -1090,7 +1090,7 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
         # [2025-12-19] 조건식/필터 스터디 파일(md) 자동 생성
         # - 최근 백테스팅에 사용한 매수/매도 조건식 + 자동 생성 필터 코드 + 컬럼(거래 항목) 목록을 한 파일로 묶어 학습용으로 제공
         try:
-            study_path = output_dir / f"{save_file_name}_condition_study.md"
+            study_path = build_backtesting_output_path(save_file_name, "_condition_study.md", output_dir=output_dir)
             study_lines: list[str] = []
 
             study_lines.append("# 조건식/필터 스터디 노트 (자동 생성)")
@@ -1136,10 +1136,10 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
 
             study_lines.append("")
             study_lines.append("## 참고 파일")
-            study_lines.append(f"- `{save_file_name}_enhanced.png`: 강화 분석 차트(Chart 18 포함)")
-            study_lines.append(f"- `{save_file_name}_filter.csv`: 필터 후보/조건식 목록")
-            study_lines.append(f"- `{save_file_name}_detail.csv`: 거래 상세 기록(컬럼=거래 항목)")
-            study_lines.append(f"- `{save_file_name}_report.txt`: 실행 리포트")
+            study_lines.append(f"- `{build_backtesting_output_path(save_file_name, '_enhanced.png', output_dir=output_dir).name}`: 강화 분석 차트(Chart 18 포함)")
+            study_lines.append(f"- `{build_backtesting_output_path(save_file_name, '_filter.csv', output_dir=output_dir).name}`: 필터 후보/조건식 목록")
+            study_lines.append(f"- `{build_backtesting_output_path(save_file_name, '_detail.csv', output_dir=output_dir).name}`: 거래 상세 기록(컬럼=거래 항목)")
+            study_lines.append(f"- `{build_backtesting_output_path(save_file_name, '_report.txt', output_dir=output_dir).name}`: 실행 리포트")
 
             seg_items = _collect_segment_outputs((enhanced_result or {}).get('segment_outputs') or {})
             if seg_items:
@@ -1296,7 +1296,7 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 )
                 if enable_alias:
                     alias_root = output_dir / alias_dir if alias_dir else output_dir
-                    report_alias_path = alias_root / f"0_{save_file_name}_report.txt"
+                    report_alias_path = build_backtesting_output_path(save_file_name, "_report.txt", output_dir=alias_root)
                     if report_alias_path.exists():
                         return str(report_alias_path)
         except Exception:
@@ -1918,7 +1918,7 @@ def RunFullAnalysis(df_tsg, save_file_name, teleQ=None,
                 endtime=endtime,
             )
         output_dir = ensure_backtesting_output_dir(save_file_name)
-        result['charts'].append(str(output_dir / f"{save_file_name}_comparison.png"))
+        result['charts'].append(str(build_backtesting_output_path(save_file_name, "_comparison.png", output_dir=output_dir)))
 
         # 4. 필터 추천 생성/전송 (기본 분석)
         if include_filter_recommendations:

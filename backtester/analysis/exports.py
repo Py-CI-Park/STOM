@@ -8,7 +8,7 @@ from backtester.analysis.ipc_utils import save_dataframe_ipc, load_dataframe_ipc
 from backtester.analysis.output_config import get_backtesting_output_config
 from backtester.analysis.cache import load_cached_df, save_cached_df, build_df_signature
 from backtester.detail_schema import reorder_detail_columns
-from backtester.output_paths import ensure_backtesting_output_dir
+from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 
 
 def _export_detail_csv(df_analysis: pd.DataFrame,
@@ -17,7 +17,7 @@ def _export_detail_csv(df_analysis: pd.DataFrame,
                        chunk_size: int | None = None) -> str | None:
     if df_analysis is None or df_analysis.empty:
         return None
-    detail_path = str(output_dir / f"{save_file_name}_detail.csv")
+    detail_path = str(build_backtesting_output_path(save_file_name, "_detail.csv", output_dir=output_dir))
     if chunk_size:
         df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True, chunksize=chunk_size)
     else:
@@ -108,7 +108,7 @@ def _export_summary_csv(df_analysis: pd.DataFrame, output_dir, save_file_name: s
     df_summary = _build_summary_df(df_analysis)
     if df_summary.empty:
         return None
-    summary_path = str(output_dir / f"{save_file_name}_summary.csv")
+    summary_path = str(build_backtesting_output_path(save_file_name, "_summary.csv", output_dir=output_dir))
     df_summary.to_csv(summary_path, encoding='utf-8-sig', index=False)
     return summary_path
 
@@ -117,7 +117,7 @@ def _export_filter_csv(df_analysis: pd.DataFrame, output_dir, save_file_name: st
     filter_data = AnalyzeFilterEffects(df_analysis)
     if len(filter_data) == 0:
         return None
-    filter_path = str(output_dir / f"{save_file_name}_filter.csv")
+    filter_path = str(build_backtesting_output_path(save_file_name, "_filter.csv", output_dir=output_dir))
     df_filter = pd.DataFrame(filter_data)
     df_filter = df_filter.sort_values('수익개선금액', ascending=False)
     df_filter.to_csv(filter_path, encoding='utf-8-sig', index=False)
@@ -270,9 +270,9 @@ def ExportBacktestCSVParallel(df_tsg,
         if cfg.get('ipc_cleanup', True):
             cleanup_ipc_path(ipc_path)
 
-        detail_path = str(output_dir / f"{save_file_name}_detail.csv") if write_detail else None
-        summary_path = str(output_dir / f"{save_file_name}_summary.csv") if write_summary else None
-        filter_path = str(output_dir / f"{save_file_name}_filter.csv") if write_filter else None
+        detail_path = str(build_backtesting_output_path(save_file_name, "_detail.csv", output_dir=output_dir)) if write_detail else None
+        summary_path = str(build_backtesting_output_path(save_file_name, "_summary.csv", output_dir=output_dir)) if write_summary else None
+        filter_path = str(build_backtesting_output_path(save_file_name, "_filter.csv", output_dir=output_dir)) if write_filter else None
 
         return detail_path, summary_path, filter_path
 

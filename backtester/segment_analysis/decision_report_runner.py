@@ -15,6 +15,7 @@ from typing import Optional
 import json
 import pandas as pd
 
+from backtester.output_manifest import strip_numeric_prefix
 from .segment_outputs import resolve_segment_output_dir, save_decision_report
 
 
@@ -353,6 +354,7 @@ def _build_markdown(
 
 
 def _build_prefix(filename: str) -> str:
+    filename = strip_numeric_prefix(filename)
     if filename.endswith('_detail.csv'):
         return filename.replace('_detail.csv', '')
     return filename.replace('.csv', '')

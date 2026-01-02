@@ -13,6 +13,8 @@ from typing import Optional
 
 import pandas as pd
 
+from backtester.output_paths import build_backtesting_output_path
+from backtester.output_manifest import strip_numeric_prefix
 from .segmentation import SegmentBuilder, SegmentConfig
 from .filter_evaluator import FilterEvaluator, FilterEvaluatorConfig
 from .validation import StabilityValidationConfig, validate_filter_stability
@@ -81,7 +83,7 @@ def run_phase3(
     memo_name = save_file_name or output_prefix
     heatmap_path = plot_segment_heatmap(
         summary_df,
-        str(output_dir_path / f"{output_prefix}_segment_heatmap.png"),
+        str(build_backtesting_output_path(output_prefix, "_segment_heatmap.png", output_dir=output_dir_path)),
         filtered_summary_df=filtered_summary_df,
         ranges_df=ranges_df,
         buystg_name=buystg_name,
@@ -90,7 +92,7 @@ def run_phase3(
     )
     efficiency_path = plot_filter_efficiency(
         filters_df,
-        str(output_dir_path / f"{output_prefix}_filter_efficiency.png"),
+        str(build_backtesting_output_path(output_prefix, "_filter_efficiency.png", output_dir=output_dir_path)),
         buystg_name=buystg_name,
         sellstg_name=sellstg_name,
         save_file_name=memo_name,
@@ -176,6 +178,7 @@ def _apply_filters(seg_df: pd.DataFrame, filters: list) -> pd.DataFrame:
 
 
 def _build_prefix(filename: str) -> str:
+    filename = strip_numeric_prefix(filename)
     if filename.endswith('_detail.csv'):
         return filename.replace('_detail.csv', '')
     return filename.replace('.csv', '')
