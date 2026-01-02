@@ -20,6 +20,9 @@ _DEFAULT_CONFIG = {
     'enable_numba': True,
     'enable_cache': False,
     'cache_dir': './_cache/backtesting_output',
+    'output_manifest_enabled': True,
+    'output_alias_enabled': True,
+    'output_alias_mode': 'hardlink',  # hardlink | copy | none
 }
 
 

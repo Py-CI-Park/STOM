@@ -126,46 +126,11 @@ def _load_segment_config_from_ranges(global_best: dict):
     - 출력: SegmentConfig (dynamic_mode='fixed', 저장된 범위 사용)
     - 폴백: ranges_path가 없으면 기본 SegmentConfig 반환
     """
-    from backtester.segment_analysis.segmentation import SegmentConfig
-    from pathlib import Path
-    import pandas as pd
-
-    # ranges_path 추출
-    ranges_path = global_best.get('ranges_path')
-    if not ranges_path or not Path(ranges_path).exists():
-        # 폴백: 기본 설정 반환 (하위 호환성)
-        return SegmentConfig()
-
     try:
-        # ranges.csv 로드
-        df_ranges = pd.read_csv(ranges_path, encoding='utf-8-sig')
-
-        # market_cap_ranges 딕셔너리 생성
-        market_cap_ranges = {}
-        time_ranges = {}
-
-        for _, row in df_ranges.iterrows():
-            range_type = row.get('range_type')
-            label = row.get('label')
-            min_val = row.get('min')
-            max_val = row.get('max')
-
-            if pd.isna(max_val):
-                max_val = float('inf')
-
-            if range_type == 'market_cap':
-                market_cap_ranges[label] = (float(min_val), float(max_val))
-            elif range_type == 'time':
-                time_ranges[label] = (int(min_val), int(max_val))
-
-        # SegmentConfig 생성 (dynamic_mode='fixed')
-        return SegmentConfig(
-            dynamic_mode='fixed',
-            market_cap_ranges=market_cap_ranges,
-            time_ranges=time_ranges,
-        )
+        from backtester.segment_analysis.segment_apply import load_segment_config_from_ranges
+        return load_segment_config_from_ranges(global_best)
     except Exception as e:
-        # 로드 실패 시 기본 설정 반환
+        from backtester.segment_analysis.segmentation import SegmentConfig
         print(f"[Warning] ranges.csv 로드 실패: {e}, 기본 설정 사용")
         return SegmentConfig()
 
@@ -182,90 +147,17 @@ def _build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict):
     - 해결: global_best에 저장된 ranges_path를 로드하여 고정 모드로 세그먼트 분할
     - 결과: 분석 시 사용한 정확한 경계로 필터 적용 → 예측값과 실제값 일치
     """
-    result = {
-        'mask': None,
-        'error': None,
-        'segment_trades': {},
-        'missing_columns': [],
-        'out_of_range_trades': 0,
-    }
-    if not isinstance(df, pd.DataFrame) or df.empty:
-        result['error'] = 'df가 비어있음'
-        return result
-    if not isinstance(global_best, dict):
-        result['error'] = 'global_best가 dict가 아님'
-        return result
-
-    combo_map = global_best.get('combination')
-    if not isinstance(combo_map, dict) or not combo_map:
-        result['error'] = 'combination 없음'
-        return result
-
     try:
-        from backtester.segment_analysis.segmentation import SegmentBuilder, SegmentConfig
-        from pathlib import Path
+        from backtester.segment_analysis.segment_apply import build_segment_mask_from_global_best
+        return build_segment_mask_from_global_best(df, global_best)
     except Exception as e:
-        result['error'] = f"세그먼트 모듈 로드 실패: {e}"
-        return result
-
-    try:
-        row_col = '__row_pos__'
-        if row_col in df.columns:
-            idx = 1
-            while f"{row_col}{idx}" in df.columns:
-                idx += 1
-            row_col = f"{row_col}{idx}"
-
-        df_work = df.copy()
-        df_work[row_col] = np.arange(len(df_work))
-
-        # [2026-01-01 수정] 저장된 ranges.csv를 로드하여 고정 모드로 세그먼트 분할
-        seg_config = _load_segment_config_from_ranges(global_best)
-        builder = SegmentBuilder(seg_config)
-        segments = builder.build_segments(df_work)
-    except Exception as e:
-        result['error'] = f"세그먼트 분할 실패: {e}"
-        return result
-
-    mask = np.zeros(len(df_work), dtype=bool)
-    missing = set()
-
-    for seg_id, seg_df in segments.items():
-        combo = combo_map.get(seg_id)
-        if combo is None:
-            continue
-        if combo.get('exclude_segment'):
-            result['segment_trades'][seg_id] = 0
-            continue
-        filters = combo.get('filters') or []
-        seg_mask = np.ones(len(seg_df), dtype=bool)
-
-        for flt in filters:
-            column = flt.get('column')
-            threshold = flt.get('threshold')
-            direction = flt.get('direction')
-            if column is None or column not in seg_df.columns:
-                if column:
-                    missing.add(column)
-                continue
-
-            values = pd.to_numeric(seg_df[column], errors='coerce')
-            if direction == 'less':
-                cond = values >= threshold
-            else:
-                cond = values < threshold
-            seg_mask &= cond.fillna(False).to_numpy(dtype=bool)
-
-        row_positions = seg_df[row_col].to_numpy(dtype=int, copy=False)
-        mask[row_positions] = seg_mask
-        result['segment_trades'][seg_id] = int(seg_mask.sum())
-
-    if hasattr(builder, 'out_of_range') and isinstance(builder.out_of_range, pd.DataFrame):
-        result['out_of_range_trades'] = int(len(builder.out_of_range))
-
-    result['mask'] = mask
-    result['missing_columns'] = sorted(missing)
-    return result
+        return {
+            'mask': None,
+            'error': f"세그먼트 필터 적용 실패: {e}",
+            'segment_trades': {},
+            'missing_columns': [],
+            'out_of_range_trades': 0,
+        }
 
 
 def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd=None,
@@ -281,7 +173,12 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
     - detail.csv 컬럼 설명/공식(이번 실행 기준)
     """
     try:
+        def _strip_numeric_prefix(name: str) -> str:
+            m = re.match(r'^\d[\d-]*_(.+)$', name)
+            return m.group(1) if m else name
+
         def _describe_output_file(filename: str) -> str:
+            filename = _strip_numeric_prefix(filename)
             if filename.endswith('_segment_filtered_.png'):
                 return '세그먼트 필터 적용 분포/단계 요약(미리보기)'
             if filename.endswith('_segment_filtered.png'):
@@ -292,6 +189,8 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 return '자동 생성 필터 적용 수익곡선(미리보기)'
             if filename.endswith('_condition_study.md'):
                 return '조건식/필터 스터디 노트(md, 자동 생성)'
+            if filename.endswith('_manifest.json'):
+                return '산출물 목록/별칭 매니페스트'
             if filename.endswith('_analysis.png'):
                 return '백테스팅 결과 분석 차트(분 단위 시간축/구간별 수익 분포)'
             if filename.endswith('_comparison.png'):
@@ -300,6 +199,10 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 return '필터 기능 분석 차트(통계/시너지/안정성/임계값/코드생성)'
             if filename.endswith('_detail.csv'):
                 return '거래 상세 기록(강화 분석 사용 시 강화 파생지표 포함)'
+            if filename.endswith('_detail_filtered.csv'):
+                return '일반 필터 적용 거래 상세(검증용)'
+            if filename.endswith('_detail_segment.csv'):
+                return '세그먼트 필터 적용 거래 상세(검증용)'
             if filename.endswith('_summary.csv'):
                 return '구간/조건별 요약 통계'
             if filename.endswith('_filter.csv'):
@@ -310,6 +213,12 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 return '필터 조합 시너지 분석 결과'
             if filename.endswith('_filter_stability.csv'):
                 return '기간별 필터 안정성(일관성) 분석 결과'
+            if filename.endswith('_filter_verification.csv'):
+                return '필터 적용 검증 요약'
+            if filename.endswith('_segment_summary_full.txt'):
+                return '세그먼트 종합 요약 리포트'
+            if filename.endswith('_segment_verification.csv'):
+                return '세그먼트 필터 적용 검증 요약'
             if filename.endswith('_report.txt'):
                 return '이번 실행 산출물 리포트(파일/시간/조건/요약)'
             if filename.endswith('_.png'):
@@ -461,10 +370,10 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 },
                 # 강화 분석 주요 지표
                 '모멘텀점수': {
-                    'desc': '매수등락율/매수체결강도 정규화 기반 모멘텀 점수',
+                    'desc': '매수등락율/매수체결강도 고정 스케일 기반 모멘텀 점수',
                     'unit': '점수',
                     'formula': [
-                        "등락율_norm = (매수등락율-mean)/ (std+0.001)",
+                        "등락율_norm = 매수등락율 / 10",
                         "체결강도_norm = (매수체결강도-100)/50",
                         "모멘텀점수 = (등락율_norm*0.4 + 체결강도_norm*0.6) * 10"
                     ],
@@ -814,6 +723,20 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
             return deduped
 
         output_dir = ensure_backtesting_output_dir(save_file_name)
+        manifest_path = None
+        try:
+            cfg = get_backtesting_output_config() or {}
+            if cfg.get('output_manifest_enabled', True):
+                from backtester.output_manifest import build_output_manifest
+                manifest_path = build_output_manifest(
+                    output_dir,
+                    save_file_name,
+                    enable_alias=bool(cfg.get('output_alias_enabled', True)),
+                    alias_mode=str(cfg.get('output_alias_mode', 'hardlink')),
+                )
+        except Exception:
+            manifest_path = None
+
         report_path = output_dir / f"{save_file_name}_report.txt"
 
         now = datetime.now()
@@ -822,6 +745,8 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
         lines.append(f"- 생성 시각: {now.strftime('%Y-%m-%d %H:%M:%S')}")
         lines.append(f"- 저장 키(save_file_name): {save_file_name}")
         lines.append(f"- 출력 경로: {output_dir}")
+        if manifest_path:
+            lines.append(f"- 매니페스트: {manifest_path}")
         if backname is not None:
             lines.append(f"- 백테스트 구분: {backname}")
         if startday is not None and endday is not None:
@@ -1101,16 +1026,25 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
         lines.append("=== 생성 파일 목록 ===")
         prefix = str(save_file_name)
         matched = []
+        matched_map = {}
         for p in output_dir.iterdir():
             if not p.is_file():
                 continue
             name = p.name
-            if not name.startswith(prefix):
+            norm_name = _strip_numeric_prefix(name)
+            if not norm_name.startswith(prefix):
                 continue
-            rest = name[len(prefix):]
-            if rest == '' or rest.startswith('_') or rest.startswith('.'):
-                matched.append(p)
-        matched = sorted(matched, key=lambda x: x.name)
+            rest = norm_name[len(prefix):]
+            if not (rest == '' or rest.startswith('_') or rest.startswith('.')):
+                continue
+            key = norm_name
+            if key not in matched_map:
+                matched_map[key] = p
+            else:
+                # 숫자 프리픽스(새 이름)를 우선 선택
+                if name != norm_name and matched_map[key].name == norm_name:
+                    matched_map[key] = p
+        matched = sorted(matched_map.values(), key=lambda x: x.name)
         if not matched:
             lines.append("(없음)")
         else:
