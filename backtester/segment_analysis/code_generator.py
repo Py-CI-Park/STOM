@@ -235,152 +235,398 @@ def _inject_segment_runtime_preamble(segment_code_lines: List[str]) -> List[str]
     if any(line.strip().startswith(marker) for line in segment_code_lines):
         return segment_code_lines
     lines: List[str] = []
-    lines.extend(_build_segment_runtime_preamble())
+    used_vars = _extract_segment_used_variables(segment_code_lines)
+    lines.extend(_build_segment_runtime_preamble(used_vars))
     lines.append("")
     lines.extend(segment_code_lines)
     return lines
 
 
-def _build_segment_runtime_preamble() -> List[str]:
+_SEGMENT_FILTER_TOKEN_RE = re.compile(r"[A-Za-z_가-힣][A-Za-z0-9_가-힣]*")
+_SEGMENT_FILTER_KEYWORDS = {
+    "if", "elif", "else", "and", "or", "not", "True", "False", "None",
+    "try", "except", "in", "is", "self", "필터통과",
+}
+_SEGMENT_FILTER_IGNORE = {"e"}
+
+
+def _extract_segment_used_variables(segment_code_lines: List[str]) -> List[str]:
+    used: List[str] = []
+    seen = set()
+    for line in segment_code_lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        for token in _SEGMENT_FILTER_TOKEN_RE.findall(line):
+            if token in _SEGMENT_FILTER_KEYWORDS or token in _SEGMENT_FILTER_IGNORE:
+                continue
+            if token[0].isdigit():
+                continue
+            if token in seen:
+                continue
+            seen.add(token)
+            used.append(token)
+    return used
+
+
+def _build_segment_runtime_preamble(used_vars: Optional[List[str]] = None) -> List[str]:
+    blocks = _get_segment_runtime_blocks()
+    used_vars = used_vars or []
+    needed = _resolve_runtime_dependencies(set(used_vars), blocks)
+
     lines: List[str] = []
     lines.append("# === Segment filter runtime mapping (buy-time) ===")
+    lines.extend(_format_var_comment("used vars (segment filter)", used_vars))
     lines.append("# Derived metrics for segment filter evaluation")
-    lines.append("try:")
-    lines.append("    초당매수수량 = 분당매수수량 / 60")
-    lines.append("except NameError:")
-    lines.append("    초당매수수량 = 0")
-    lines.append("try:")
-    lines.append("    초당매도수량 = 분당매도수량 / 60")
-    lines.append("except NameError:")
-    lines.append("    초당매도수량 = 0")
-    lines.append("초당매도_매수_비율 = 초당매도수량 / (초당매수수량 + 1e-6)")
-    lines.append("초당매수_매도_비율 = 초당매수수량 / (초당매도수량 + 1e-6)")
-    lines.append("초당순매수수량 = 초당매수수량 - 초당매도수량")
-    lines.append("초당순매수금액 = 초당순매수수량 * 현재가 / 1_000_000")
-    lines.append("매수초당매수수량 = 초당매수수량")
-    lines.append("매수초당매도수량 = 초당매도수량")
-    lines.append("초당순매수비율 = (매수초당매수수량 / (매수초당매수수량 + 매수초당매도수량)) * 100 if (매수초당매수수량 + 매수초당매도수량) > 0 else 50")
-    lines.append("try:")
-    lines.append("    매수초당거래대금 = 분당거래대금 / 60")
-    lines.append("except NameError:")
-    lines.append("    매수초당거래대금 = 0")
-    lines.append("매수스프레드 = ((매도호가1 - 매수호가1) / 매수호가1) * 100 if 매수호가1 > 0 else 0")
-    lines.append("매수호가잔량비 = (매수총잔량 / (매도총잔량 + 1e-6)) * 100")
-    lines.append("매도호가잔량비 = (매도총잔량 / (매수총잔량 + 1e-6)) * 100")
-    lines.append("매수변동폭 = 고가 - 저가")
-    lines.append("매수변동폭비율 = ((고가 - 저가) / 저가) * 100 if 저가 > 0 else 0")
-    lines.append("현재가_고저범위_위치 = (현재가 - 저가) / (고가 - 저가 + 1e-6) * 100")
-    lines.append("초당매수수량_매도총잔량_비율 = (초당매수수량 / (매도총잔량 + 1e-6)) * 100")
-    # [2025-12-31 버그 수정]
-    # - 기존: 'in locals()' 체크 - exec() 내부에서 백테스트 엔진 함수가 locals()에 없어 항상 실패
-    # - 수정: try/except로 함수 호출 가능 여부 확인 (백테스트 엔진 스코프에서 함수가 정의됨)
-    # [2026-01-01 기본값 수정]
-    # - 기존: except 기본값 1.0 → >= 조건을 잘못 통과시킴 (예상 1,458개 vs 실제 2,790개)
-    # - 수정: except 기본값 0.0 → >= 조건 대부분 실패 (보수적 접근)
-    lines.append("try:")
-    lines.append("    _prev_trade = 당일거래대금N(1)")
-    lines.append("    당일거래대금_전틱분봉_비율 = 당일거래대금 / (_prev_trade + 1e-6) if _prev_trade > 0 else 0.0")
-    lines.append("except (NameError, TypeError):")
-    lines.append("    당일거래대금_전틱분봉_비율 = 0.0")
-    lines.append("try:")
-    lines.append("    _trade_avg = (당일거래대금 + 당일거래대금N(1) + 당일거래대금N(2) + 당일거래대금N(3) + 당일거래대금N(4)) / 5")
-    lines.append("    당일거래대금_5틱분봉평균_비율 = 당일거래대금 / (_trade_avg + 1e-6) if _trade_avg > 0 else 0.0")
-    lines.append("except (NameError, TypeError):")
-    lines.append("    당일거래대금_5틱분봉평균_비율 = 0.0")
-    lines.append("")
-    lines.append("# Snapshot mappings for buy-time columns")
-    lines.append("매수매수호가1 = 매수호가1")
-    lines.append("매수매도호가1 = 매도호가1")
-    lines.append("매수매수총잔량 = 매수총잔량")
-    lines.append("매수매도총잔량 = 매도총잔량")
-    lines.append("매수전일비 = 전일비")
-    lines.append("매수전일동시간비 = 전일동시간비")
-    lines.append("매수체결강도 = 체결강도")
-    lines.append("매수등락율 = 등락율")
-    lines.append("매수시가등락율 = 시가등락율")
-    lines.append("매수회전율 = 회전율")
-    lines.append("매수당일거래대금 = 당일거래대금")
-    lines.append("매수고가 = 고가")
-    lines.append("매수저가 = 저가")
-    lines.append("매수고저평균대비등락율 = 고저평균대비등락율")
-    lines.append("매수시가 = 시가")
-    lines.append("매수초당거래대금_당일비중 = (매수초당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 if 매수당일거래대금 > 0 else 0")
-    lines.append("초당거래대금_당일비중 = 매수초당거래대금_당일비중")
-    lines.append("매수가 = 현재가")
-    lines.append("try:")
-    lines.append("    매수금액 = 현재가 * 매수수량")
-    lines.append("except NameError:")
-    lines.append("    매수금액 = 0")
-    lines.append("매수초당매수수량_매수매도총잔량_비율 = (매수초당매수수량 / (매수매도총잔량 + 1e-6)) * 100")
-    lines.append("매수매도총잔량_매수매수총잔량_비율 = (매수매도총잔량 / 매수매수총잔량) if 매수매수총잔량 > 0 else 0")
-    lines.append("매수매수총잔량_매수매도총잔량_비율 = (매수매수총잔량 / 매수매도총잔량) if 매수매도총잔량 > 0 else 0")
-    lines.append("매도잔량_매수잔량_비율 = 매수매도총잔량_매수매수총잔량_비율")
-    lines.append("매수잔량_매도잔량_비율 = 매수매수총잔량_매수매도총잔량_비율")
-    lines.append("try:")
-    lines.append("    _t = 시분초")
-    lines.append("    매수시 = _t // 10000")
-    lines.append("    매수분 = (_t // 100) % 100")
-    lines.append("    매수초 = _t % 100")
-    lines.append("    매수시간 = _t")
-    lines.append("except NameError:")
-    lines.append("    매수시 = 0")
-    lines.append("    매수분 = 0")
-    lines.append("    매수초 = 0")
-    lines.append("    매수시간 = 0")
-    lines.append("try:")
-    lines.append("    _index_val = str(self.index)")
-    lines.append("    매수일자 = int(_index_val[:8]) if len(_index_val) >= 8 else 0")
-    lines.append("except (NameError, AttributeError):")
-    lines.append("    매수일자 = 0")
-    lines.append("")
-    lines.append("# Trade quality score (approx, buy-time only)")
-    lines.append("거래품질점수 = 50")
-    lines.append("if 매수체결강도 >= 120: 거래품질점수 += 10")
-    lines.append("if 매수체결강도 >= 150: 거래품질점수 += 10")
-    lines.append("if 매수호가잔량비 >= 100: 거래품질점수 += 10")
-    lines.append("if 시가총액 >= 1000 and 시가총액 <= 10000: 거래품질점수 += 10")
-    lines.append("if 매수등락율 >= 25: 거래품질점수 -= 15")
-    lines.append("if 매수등락율 >= 30: 거래품질점수 -= 10")
-    lines.append("if 매수스프레드 >= 0.5: 거래품질점수 -= 10")
-    lines.append("거래품질점수 = max(0, min(100, 거래품질점수))")
-    lines.append("")
-    lines.append("# Risk score (approx, buy-time only)")
-    lines.append("위험도점수 = 0")
-    lines.append("if 매수등락율 >= 20: 위험도점수 += 20")
-    lines.append("if 매수등락율 >= 25: 위험도점수 += 10")
-    lines.append("if 매수등락율 >= 30: 위험도점수 += 10")
-    lines.append("if 매수체결강도 < 80: 위험도점수 += 15")
-    lines.append("if 매수체결강도 < 60: 위험도점수 += 10")
-    lines.append("if 매수체결강도 >= 150: 위험도점수 += 10")
-    lines.append("if 매수체결강도 >= 200: 위험도점수 += 10")
-    lines.append("if 매수체결강도 >= 250: 위험도점수 += 10")
-    lines.append("if 매수당일거래대금 / 100 < 50: 위험도점수 += 15")
-    lines.append("if 매수당일거래대금 / 100 < 100: 위험도점수 += 10")
-    lines.append("if 시가총액 < 1000: 위험도점수 += 15")
-    lines.append("if 시가총액 < 5000: 위험도점수 += 10")
-    lines.append("if 매수호가잔량비 < 90: 위험도점수 += 10")
-    lines.append("if 매수호가잔량비 < 70: 위험도점수 += 15")
-    lines.append("if 매수스프레드 >= 0.5: 위험도점수 += 10")
-    lines.append("if 매수스프레드 >= 1.0: 위험도점수 += 10")
-    lines.append("if 매수회전율 < 10: 위험도점수 += 5")
-    lines.append("if 매수회전율 < 5: 위험도점수 += 10")
-    lines.append("if 매수변동폭비율 >= 7.5: 위험도점수 += 10")
-    lines.append("if 매수변동폭비율 >= 10: 위험도점수 += 10")
-    lines.append("if 매수변동폭비율 >= 15: 위험도점수 += 10")
-    lines.append("위험도점수 = min(100, 위험도점수)")
-    lines.append("매수매도위험도점수 = 위험도점수")
-    lines.append("")
-    lines.append("# Momentum score (approx using fixed scales)")
-    lines.append("try:")
-    lines.append("    _등락율_norm = 매수등락율 / 10")
-    lines.append("except NameError:")
-    lines.append("    _등락율_norm = 0")
-    lines.append("try:")
-    lines.append("    _체결강도_norm = (매수체결강도 - 100) / 50")
-    lines.append("except NameError:")
-    lines.append("    _체결강도_norm = 0")
-    lines.append("모멘텀점수 = round((_등락율_norm * 0.4 + _체결강도_norm * 0.6) * 10, 2)")
+
+    group_headers = {
+        "snapshot": "# Snapshot mappings for buy-time columns",
+    }
+    added_groups = set()
+    for block in blocks:
+        if not (needed & block["names"]):
+            continue
+        group = block.get("group")
+        if group and group not in added_groups:
+            lines.append("")
+            lines.append(group_headers.get(group, f"# {group}"))
+            added_groups.add(group)
+        lines.extend(block["lines"])
+
     return lines
+
+
+def _format_var_comment(label: str, values: List[str], chunk_size: int = 6) -> List[str]:
+    if not values:
+        return [f"# {label}: (none)"]
+    lines = []
+    chunk: List[str] = []
+    for val in values:
+        chunk.append(val)
+        if len(chunk) >= chunk_size:
+            prefix = f"# {label}: " if not lines else "# "
+            lines.append(prefix + ", ".join(chunk))
+            chunk = []
+    if chunk:
+        prefix = f"# {label}: " if not lines else "# "
+        lines.append(prefix + ", ".join(chunk))
+    return lines
+
+
+def _resolve_runtime_dependencies(
+    used: set,
+    blocks: List[Dict[str, object]],
+) -> set:
+    needed = set(used)
+    changed = True
+    while changed:
+        changed = False
+        for block in blocks:
+            if not (needed & block["names"]):
+                continue
+            for dep in block["deps"]:
+                if dep not in needed:
+                    needed.add(dep)
+                    changed = True
+    return needed
+
+
+def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
+    blocks: List[Dict[str, object]] = []
+
+    def add_block(names, deps, lines, group=None):
+        name_set = {names} if isinstance(names, str) else set(names)
+        dep_set = set(deps or [])
+        block = {"names": name_set, "deps": dep_set, "lines": list(lines)}
+        if group:
+            block["group"] = group
+        blocks.append(block)
+
+    def try_assign(name: str, expr: str, fallback: str, except_clause: str = "except NameError:") -> List[str]:
+        return [
+            "try:",
+            f"    {name} = {expr}",
+            except_clause,
+            f"    {name} = {fallback}",
+        ]
+
+    add_block(
+        "초당매수수량",
+        ["분당매수수량"],
+        try_assign("초당매수수량", "분당매수수량 / 60", "0"),
+    )
+    add_block(
+        "초당매도수량",
+        ["분당매도수량"],
+        try_assign("초당매도수량", "분당매도수량 / 60", "0"),
+    )
+    add_block(
+        "초당매도_매수_비율",
+        ["초당매도수량", "초당매수수량"],
+        ["초당매도_매수_비율 = 초당매도수량 / (초당매수수량 + 1e-6)"],
+    )
+    add_block(
+        "초당매수_매도_비율",
+        ["초당매수수량", "초당매도수량"],
+        ["초당매수_매도_비율 = 초당매수수량 / (초당매도수량 + 1e-6)"],
+    )
+    add_block(
+        "초당순매수수량",
+        ["초당매수수량", "초당매도수량"],
+        ["초당순매수수량 = 초당매수수량 - 초당매도수량"],
+    )
+    add_block(
+        "초당순매수금액",
+        ["초당순매수수량", "현재가"],
+        ["초당순매수금액 = 초당순매수수량 * 현재가 / 1_000_000"],
+    )
+    add_block(
+        "매수초당매수수량",
+        ["초당매수수량"],
+        ["매수초당매수수량 = 초당매수수량"],
+    )
+    add_block(
+        "매수초당매도수량",
+        ["초당매도수량"],
+        ["매수초당매도수량 = 초당매도수량"],
+    )
+    add_block(
+        "초당순매수비율",
+        ["매수초당매수수량", "매수초당매도수량"],
+        [
+            "초당순매수비율 = (매수초당매수수량 / (매수초당매수수량 + 매수초당매도수량)) * 100 "
+            "if (매수초당매수수량 + 매수초당매도수량) > 0 else 50"
+        ],
+    )
+    add_block(
+        "매수초당거래대금",
+        ["분당거래대금"],
+        try_assign("매수초당거래대금", "분당거래대금 / 60", "0"),
+    )
+    add_block(
+        "매수스프레드",
+        ["매도호가1", "매수호가1"],
+        ["매수스프레드 = ((매도호가1 - 매수호가1) / 매수호가1) * 100 if 매수호가1 > 0 else 0"],
+    )
+    add_block(
+        "매수호가잔량비",
+        ["매수총잔량", "매도총잔량"],
+        ["매수호가잔량비 = (매수총잔량 / (매도총잔량 + 1e-6)) * 100"],
+    )
+    add_block(
+        "매도호가잔량비",
+        ["매도총잔량", "매수총잔량"],
+        ["매도호가잔량비 = (매도총잔량 / (매수총잔량 + 1e-6)) * 100"],
+    )
+    add_block(
+        "매수변동폭",
+        ["고가", "저가"],
+        ["매수변동폭 = 고가 - 저가"],
+    )
+    add_block(
+        "매수변동폭비율",
+        ["고가", "저가"],
+        ["매수변동폭비율 = ((고가 - 저가) / 저가) * 100 if 저가 > 0 else 0"],
+    )
+    add_block(
+        "현재가_고저범위_위치",
+        ["현재가", "고가", "저가"],
+        ["현재가_고저범위_위치 = (현재가 - 저가) / (고가 - 저가 + 1e-6) * 100"],
+    )
+    add_block(
+        "초당매수수량_매도총잔량_비율",
+        ["초당매수수량", "매도총잔량"],
+        ["초당매수수량_매도총잔량_비율 = (초당매수수량 / (매도총잔량 + 1e-6)) * 100"],
+    )
+    add_block(
+        "당일거래대금_전틱분봉_비율",
+        ["당일거래대금"],
+        [
+            "try:",
+            "    _prev_trade = 당일거래대금N(1)",
+            "    당일거래대금_전틱분봉_비율 = 당일거래대금 / (_prev_trade + 1e-6) if _prev_trade > 0 else 0.0",
+            "except (NameError, TypeError):",
+            "    당일거래대금_전틱분봉_비율 = 0.0",
+        ],
+    )
+    add_block(
+        "당일거래대금_5틱분봉평균_비율",
+        ["당일거래대금"],
+        [
+            "try:",
+            "    _trade_avg = (당일거래대금 + 당일거래대금N(1) + 당일거래대금N(2) + 당일거래대금N(3) + 당일거래대금N(4)) / 5",
+            "    당일거래대금_5틱분봉평균_비율 = 당일거래대금 / (_trade_avg + 1e-6) if _trade_avg > 0 else 0.0",
+            "except (NameError, TypeError):",
+            "    당일거래대금_5틱분봉평균_비율 = 0.0",
+        ],
+    )
+
+    add_block("매수매수호가1", ["매수호가1"], ["매수매수호가1 = 매수호가1"], group="snapshot")
+    add_block("매수매도호가1", ["매도호가1"], ["매수매도호가1 = 매도호가1"], group="snapshot")
+    add_block("매수매수총잔량", ["매수총잔량"], ["매수매수총잔량 = 매수총잔량"], group="snapshot")
+    add_block("매수매도총잔량", ["매도총잔량"], ["매수매도총잔량 = 매도총잔량"], group="snapshot")
+    add_block("매수전일비", ["전일비"], ["매수전일비 = 전일비"], group="snapshot")
+    add_block("매수전일동시간비", ["전일동시간비"], ["매수전일동시간비 = 전일동시간비"], group="snapshot")
+    add_block("매수체결강도", ["체결강도"], ["매수체결강도 = 체결강도"], group="snapshot")
+    add_block("매수등락율", ["등락율"], ["매수등락율 = 등락율"], group="snapshot")
+    add_block("매수시가등락율", ["시가등락율"], ["매수시가등락율 = 시가등락율"], group="snapshot")
+    add_block("매수회전율", ["회전율"], ["매수회전율 = 회전율"], group="snapshot")
+    add_block("매수당일거래대금", ["당일거래대금"], ["매수당일거래대금 = 당일거래대금"], group="snapshot")
+    add_block("매수고가", ["고가"], ["매수고가 = 고가"], group="snapshot")
+    add_block("매수저가", ["저가"], ["매수저가 = 저가"], group="snapshot")
+    add_block("매수고저평균대비등락율", ["고저평균대비등락율"], ["매수고저평균대비등락율 = 고저평균대비등락율"], group="snapshot")
+    add_block("매수시가", ["시가"], ["매수시가 = 시가"], group="snapshot")
+    add_block(
+        "매수초당거래대금_당일비중",
+        ["매수초당거래대금", "매수당일거래대금"],
+        [
+            "매수초당거래대금_당일비중 = (매수초당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 "
+            "if 매수당일거래대금 > 0 else 0"
+        ],
+        group="snapshot",
+    )
+    add_block(
+        "초당거래대금_당일비중",
+        ["매수초당거래대금_당일비중"],
+        ["초당거래대금_당일비중 = 매수초당거래대금_당일비중"],
+        group="snapshot",
+    )
+    add_block("매수가", ["현재가"], ["매수가 = 현재가"], group="snapshot")
+    add_block(
+        "매수금액",
+        ["현재가", "매수수량"],
+        try_assign("매수금액", "현재가 * 매수수량", "0"),
+        group="snapshot",
+    )
+    add_block(
+        "매수초당매수수량_매수매도총잔량_비율",
+        ["매수초당매수수량", "매수매도총잔량"],
+        ["매수초당매수수량_매수매도총잔량_비율 = (매수초당매수수량 / (매수매도총잔량 + 1e-6)) * 100"],
+        group="snapshot",
+    )
+    add_block(
+        "매수매도총잔량_매수매수총잔량_비율",
+        ["매수매도총잔량", "매수매수총잔량"],
+        ["매수매도총잔량_매수매수총잔량_비율 = (매수매도총잔량 / 매수매수총잔량) if 매수매수총잔량 > 0 else 0"],
+        group="snapshot",
+    )
+    add_block(
+        "매수매수총잔량_매수매도총잔량_비율",
+        ["매수매수총잔량", "매수매도총잔량"],
+        ["매수매수총잔량_매수매도총잔량_비율 = (매수매수총잔량 / 매수매도총잔량) if 매수매도총잔량 > 0 else 0"],
+        group="snapshot",
+    )
+    add_block(
+        "매도잔량_매수잔량_비율",
+        ["매수매도총잔량_매수매수총잔량_비율"],
+        ["매도잔량_매수잔량_비율 = 매수매도총잔량_매수매수총잔량_비율"],
+        group="snapshot",
+    )
+    add_block(
+        "매수잔량_매도잔량_비율",
+        ["매수매수총잔량_매수매도총잔량_비율"],
+        ["매수잔량_매도잔량_비율 = 매수매수총잔량_매수매도총잔량_비율"],
+        group="snapshot",
+    )
+    add_block(
+        ["매수시", "매수분", "매수초", "매수시간"],
+        ["시분초"],
+        [
+            "try:",
+            "    _t = 시분초",
+            "    매수시 = _t // 10000",
+            "    매수분 = (_t // 100) % 100",
+            "    매수초 = _t % 100",
+            "    매수시간 = _t",
+            "except NameError:",
+            "    매수시 = 0",
+            "    매수분 = 0",
+            "    매수초 = 0",
+            "    매수시간 = 0",
+        ],
+    )
+    add_block(
+        "매수일자",
+        [],
+        [
+            "try:",
+            "    _index_val = str(self.index)",
+            "    매수일자 = int(_index_val[:8]) if len(_index_val) >= 8 else 0",
+            "except (NameError, AttributeError):",
+            "    매수일자 = 0",
+        ],
+    )
+    add_block(
+        "거래품질점수",
+        ["매수체결강도", "매수호가잔량비", "시가총액", "매수등락율", "매수스프레드"],
+        [
+            "",
+            "# Trade quality score (approx, buy-time only)",
+            "거래품질점수 = 50",
+            "if 매수체결강도 >= 120: 거래품질점수 += 10",
+            "if 매수체결강도 >= 150: 거래품질점수 += 10",
+            "if 매수호가잔량비 >= 100: 거래품질점수 += 10",
+            "if 시가총액 >= 1000 and 시가총액 <= 10000: 거래품질점수 += 10",
+            "if 매수등락율 >= 25: 거래품질점수 -= 15",
+            "if 매수등락율 >= 30: 거래품질점수 -= 10",
+            "if 매수스프레드 >= 0.5: 거래품질점수 -= 10",
+            "거래품질점수 = max(0, min(100, 거래품질점수))",
+        ],
+    )
+    add_block(
+        ["위험도점수", "매수매도위험도점수"],
+        [
+            "매수등락율", "매수체결강도", "매수당일거래대금", "시가총액",
+            "매수호가잔량비", "매수스프레드", "매수회전율", "매수변동폭비율",
+        ],
+        [
+            "",
+            "# Risk score (approx, buy-time only)",
+            "위험도점수 = 0",
+            "if 매수등락율 >= 20: 위험도점수 += 20",
+            "if 매수등락율 >= 25: 위험도점수 += 10",
+            "if 매수등락율 >= 30: 위험도점수 += 10",
+            "if 매수체결강도 < 80: 위험도점수 += 15",
+            "if 매수체결강도 < 60: 위험도점수 += 10",
+            "if 매수체결강도 >= 150: 위험도점수 += 10",
+            "if 매수체결강도 >= 200: 위험도점수 += 10",
+            "if 매수체결강도 >= 250: 위험도점수 += 10",
+            "if 매수당일거래대금 / 100 < 50: 위험도점수 += 15",
+            "if 매수당일거래대금 / 100 < 100: 위험도점수 += 10",
+            "if 시가총액 < 1000: 위험도점수 += 15",
+            "if 시가총액 < 5000: 위험도점수 += 10",
+            "if 매수호가잔량비 < 90: 위험도점수 += 10",
+            "if 매수호가잔량비 < 70: 위험도점수 += 15",
+            "if 매수스프레드 >= 0.5: 위험도점수 += 10",
+            "if 매수스프레드 >= 1.0: 위험도점수 += 10",
+            "if 매수회전율 < 10: 위험도점수 += 5",
+            "if 매수회전율 < 5: 위험도점수 += 10",
+            "if 매수변동폭비율 >= 7.5: 위험도점수 += 10",
+            "if 매수변동폭비율 >= 10: 위험도점수 += 10",
+            "if 매수변동폭비율 >= 15: 위험도점수 += 10",
+            "위험도점수 = min(100, 위험도점수)",
+            "매수매도위험도점수 = 위험도점수",
+        ],
+    )
+    add_block(
+        "모멘텀점수",
+        ["매수등락율", "매수체결강도"],
+        [
+            "",
+            "# Momentum score (approx using fixed scales)",
+            "try:",
+            "    _등락율_norm = 매수등락율 / 10",
+            "except NameError:",
+            "    _등락율_norm = 0",
+            "try:",
+            "    _체결강도_norm = (매수체결강도 - 100) / 50",
+            "except NameError:",
+            "    _체결강도_norm = 0",
+            "모멘텀점수 = round((_등락율_norm * 0.4 + _체결강도_norm * 0.6) * 10, 2)",
+        ],
+    )
+
+    return blocks
 
 
 def _build_segment_condition(
@@ -437,14 +683,10 @@ def _format_value(value: float) -> str:
     if v.is_integer():
         return str(int(v))
 
-    if abs(v) >= 100:
-        text = f"{v:.2f}"
-    elif abs(v) >= 1:
-        text = f"{v:.4f}"
-    else:
-        text = f"{v:.6f}"
-
-    return text.rstrip('0').rstrip('.')
+    text = format(v, ".17g")
+    if text == "-0":
+        text = "0"
+    return text
 
 
 def _split_segment_id(segment_id: str) -> Tuple[str, str]:

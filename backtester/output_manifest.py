@@ -19,46 +19,49 @@ class OutputAliasRule:
 
 
 _ALIAS_RULES: List[OutputAliasRule] = [
-    OutputAliasRule('_report.txt', '0', 'report', 'summary', 1),
-    OutputAliasRule('_condition_study.md', '0', 'condition_study', 'summary', 2),
-    OutputAliasRule('_segment_summary_full.txt', '3-9', 'segment_summary_full', 'segment', 390),
-    OutputAliasRule('_detail.csv', '1-1', 'detail', 'detail', 110),
-    OutputAliasRule('_detail_filtered.csv', '1-2', 'detail_filtered', 'detail', 120),
-    OutputAliasRule('_detail_segment.csv', '1-3', 'detail_segment', 'detail', 130),
-    OutputAliasRule('_summary.csv', '1-4', 'summary_csv', 'detail', 140),
-    OutputAliasRule('_filter.csv', '2-1', 'filter', 'filter', 210),
-    OutputAliasRule('_filter_combinations.csv', '2-2', 'filter_combinations', 'filter', 220),
-    OutputAliasRule('_filter_stability.csv', '2-3', 'filter_stability', 'filter', 230),
-    OutputAliasRule('_filter_lookahead.csv', '2-4', 'filter_lookahead', 'filter', 240),
-    OutputAliasRule('_optimal_thresholds.csv', '2-5', 'optimal_thresholds', 'filter', 250),
-    OutputAliasRule('_filter_verification.csv', '2-6', 'filter_verification', 'filter', 260),
-    OutputAliasRule('_segment_summary.csv', '3-1', 'segment_summary', 'segment', 310),
-    OutputAliasRule('_segment_filters.csv', '3-2', 'segment_filters', 'segment', 320),
-    OutputAliasRule('_segment_local_combos.csv', '3-3', 'segment_local_combos', 'segment', 330),
-    OutputAliasRule('_segment_combos.csv', '3-4', 'segment_combos', 'segment', 340),
-    OutputAliasRule('_segment_ranges.csv', '3-5', 'segment_ranges', 'segment', 350),
-    OutputAliasRule('_segment_code.txt', '3-6', 'segment_code', 'segment', 360),
-    OutputAliasRule('_segment_code_final.txt', '3-7', 'segment_code_final', 'segment', 370),
-    OutputAliasRule('_segment_validation.csv', '3-8', 'segment_validation', 'segment', 380),
-    OutputAliasRule('_segment_template_comparison.csv', '3-10', 'segment_template_comparison', 'segment', 395),
-    OutputAliasRule('_segment_mode_comparison.csv', '3-11', 'segment_mode_comparison', 'segment', 396),
-    OutputAliasRule('_segment_thresholds.csv', '3-12', 'segment_thresholds', 'segment', 397),
-    OutputAliasRule('_pareto_front.csv', '3-13', 'pareto_front', 'segment', 398),
-    OutputAliasRule('_advanced_optuna.csv', '3-14', 'advanced_optuna', 'segment', 399),
-    OutputAliasRule('_nsga2_front.csv', '3-15', 'nsga2_front', 'segment', 400),
-    OutputAliasRule('_decision_score.csv', '3-16', 'decision_score', 'segment', 410),
-    OutputAliasRule('_segment_verification.csv', '3-17', 'segment_verification', 'segment', 420),
-    OutputAliasRule('_analysis.png', '4-2', 'analysis_chart', 'image', 420),
-    OutputAliasRule('_comparison.png', '4-3', 'comparison_chart', 'image', 430),
-    OutputAliasRule('_enhanced.png', '4-1', 'enhanced_chart', 'image', 410),
-    OutputAliasRule('_segment_heatmap.png', '4-4', 'segment_heatmap', 'image', 440),
-    OutputAliasRule('_filter_efficiency.png', '4-5', 'filter_efficiency', 'image', 450),
-    OutputAliasRule('_segment_filtered.png', '4-6', 'segment_filtered', 'image', 460),
-    OutputAliasRule('_segment_filtered_.png', '4-7', 'segment_filtered_summary', 'image', 470),
-    OutputAliasRule('_filtered.png', '4-8', 'filtered', 'image', 480),
-    OutputAliasRule('_filtered_.png', '4-9', 'filtered_summary', 'image', 490),
-    OutputAliasRule('_.png', '4-10', 'extra_chart', 'image', 495),
-    OutputAliasRule('.png', '4-11', 'main_chart', 'image', 500),
+    OutputAliasRule('_report.txt', '0-1', 'report', 'summary', 10),
+    OutputAliasRule('_condition_study.md', '0-2', 'condition_study', 'summary', 20),
+
+    OutputAliasRule('_detail.csv', '1-1', 'detail', 'basic', 110),
+    OutputAliasRule('_summary.csv', '1-2', 'summary_csv', 'basic', 120),
+    OutputAliasRule('_analysis.png', '1-3', 'analysis_chart', 'basic', 130),
+    OutputAliasRule('_comparison.png', '1-4', 'comparison_chart', 'basic', 140),
+    OutputAliasRule('.png', '1-5', 'main_chart', 'basic', 150),
+    OutputAliasRule('_.png', '1-6', 'main_chart_summary', 'basic', 160),
+
+    OutputAliasRule('_detail_filtered.csv', '2-1', 'detail_filtered', 'filter', 210),
+    OutputAliasRule('_filter.csv', '2-2', 'filter', 'filter', 220),
+    OutputAliasRule('_filter_combinations.csv', '2-3', 'filter_combinations', 'filter', 230),
+    OutputAliasRule('_filter_stability.csv', '2-4', 'filter_stability', 'filter', 240),
+    OutputAliasRule('_filter_lookahead.csv', '2-5', 'filter_lookahead', 'filter', 250),
+    OutputAliasRule('_optimal_thresholds.csv', '2-6', 'optimal_thresholds', 'filter', 260),
+    OutputAliasRule('_filter_verification.csv', '2-7', 'filter_verification', 'filter', 270),
+    OutputAliasRule('_enhanced.png', '2-8', 'enhanced_chart', 'filter', 280),
+    OutputAliasRule('_filter_efficiency.png', '2-9', 'filter_efficiency', 'filter', 290),
+    OutputAliasRule('_filtered.png', '2-10', 'filtered', 'filter', 300),
+    OutputAliasRule('_filtered_.png', '2-11', 'filtered_summary', 'filter', 310),
+
+    OutputAliasRule('_detail_segment.csv', '3-1', 'detail_segment', 'segment', 310),
+    OutputAliasRule('_segment_summary.csv', '3-2', 'segment_summary', 'segment', 320),
+    OutputAliasRule('_segment_filters.csv', '3-3', 'segment_filters', 'segment', 330),
+    OutputAliasRule('_segment_local_combos.csv', '3-4', 'segment_local_combos', 'segment', 340),
+    OutputAliasRule('_segment_combos.csv', '3-5', 'segment_combos', 'segment', 350),
+    OutputAliasRule('_segment_ranges.csv', '3-6', 'segment_ranges', 'segment', 360),
+    OutputAliasRule('_segment_code.txt', '3-7', 'segment_code', 'segment', 370),
+    OutputAliasRule('_segment_code_final.txt', '3-8', 'segment_code_final', 'segment', 380),
+    OutputAliasRule('_segment_validation.csv', '3-9', 'segment_validation', 'segment', 390),
+    OutputAliasRule('_segment_summary_full.txt', '3-10', 'segment_summary_full', 'segment', 400),
+    OutputAliasRule('_segment_template_comparison.csv', '3-11', 'segment_template_comparison', 'segment', 410),
+    OutputAliasRule('_segment_mode_comparison.csv', '3-12', 'segment_mode_comparison', 'segment', 420),
+    OutputAliasRule('_segment_thresholds.csv', '3-13', 'segment_thresholds', 'segment', 430),
+    OutputAliasRule('_pareto_front.csv', '3-14', 'pareto_front', 'segment', 440),
+    OutputAliasRule('_advanced_optuna.csv', '3-15', 'advanced_optuna', 'segment', 450),
+    OutputAliasRule('_nsga2_front.csv', '3-16', 'nsga2_front', 'segment', 460),
+    OutputAliasRule('_decision_score.csv', '3-17', 'decision_score', 'segment', 470),
+    OutputAliasRule('_segment_verification.csv', '3-18', 'segment_verification', 'segment', 480),
+    OutputAliasRule('_segment_heatmap.png', '3-19', 'segment_heatmap', 'segment', 490),
+    OutputAliasRule('_segment_filtered.png', '3-20', 'segment_filtered', 'segment', 500),
+    OutputAliasRule('_segment_filtered_.png', '3-21', 'segment_filtered_summary', 'segment', 510),
 ]
 
 
@@ -68,13 +71,16 @@ def build_output_manifest(
     *,
     enable_alias: bool = True,
     alias_mode: str = 'hardlink',
+    alias_dir: Optional[str] = None,
+    cleanup_legacy: bool = False,
 ) -> Optional[Path]:
     output_dir = Path(output_dir)
     if not output_dir.exists() or not save_file_name:
         return None
 
     entries = []
-    for file_path in output_dir.iterdir():
+    alias_root = output_dir / alias_dir if alias_dir else output_dir
+    for file_path in list(output_dir.iterdir()):
         if not file_path.is_file():
             continue
         rule = _match_rule(file_path.name, save_file_name)
@@ -82,16 +88,27 @@ def build_output_manifest(
             continue
 
         new_name = f"{rule.prefix}_{save_file_name}{rule.suffix}"
-        alias_path = output_dir / new_name
+        alias_path = alias_root / new_name
         alias_action = None
         if enable_alias:
             alias_action = _ensure_alias(file_path, alias_path, alias_mode)
+
+        legacy_deleted = False
+        if cleanup_legacy and enable_alias:
+            if alias_path.exists():
+                try:
+                    if alias_path.resolve() != file_path.resolve():
+                        file_path.unlink()
+                        legacy_deleted = True
+                except Exception:
+                    legacy_deleted = False
 
         entries.append(_build_entry(
             file_path,
             alias_path if enable_alias else None,
             rule,
             alias_action,
+            legacy_deleted,
         ))
 
     entries.sort(key=lambda x: (x.get('order', 0), x.get('legacy_name', '')))
@@ -101,12 +118,38 @@ def build_output_manifest(
         'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'alias_mode': alias_mode,
         'alias_enabled': bool(enable_alias),
+        'alias_dir': alias_dir,
+        'cleanup_legacy': bool(cleanup_legacy),
         'entries': entries,
     }
 
     manifest_path = output_dir / f"0_{save_file_name}_manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8-sig')
     return manifest_path
+
+
+def resolve_alias_for_legacy_path(
+    legacy_path: Path | str,
+    alias_dir: Optional[str] = None,
+) -> Optional[Path]:
+    try:
+        legacy = Path(legacy_path)
+    except Exception:
+        return None
+
+    if not legacy.name:
+        return None
+    output_dir = legacy.parent
+    save_file_name = output_dir.name
+    rule = _match_rule(legacy.name, save_file_name)
+    if rule is None:
+        return None
+
+    alias_root = output_dir / alias_dir if alias_dir else output_dir
+    alias_path = alias_root / f"{rule.prefix}_{save_file_name}{rule.suffix}"
+    if alias_path.exists():
+        return alias_path
+    return None
 
 
 def _match_rule(filename: str, save_file_name: str) -> Optional[OutputAliasRule]:
@@ -147,6 +190,7 @@ def _build_entry(
     alias_path: Optional[Path],
     rule: OutputAliasRule,
     alias_action: Optional[str],
+    legacy_deleted: bool,
 ) -> Dict[str, object]:
     try:
         stat = legacy_path.stat()
@@ -165,6 +209,7 @@ def _build_entry(
         'alias_name': alias_path.name if alias_path else None,
         'alias_path': str(alias_path) if alias_path else None,
         'alias_action': alias_action,
+        'legacy_deleted': legacy_deleted,
         'size': size,
         'mtime': mtime,
     }

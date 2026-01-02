@@ -389,14 +389,33 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
     # - 비율 < 1: 거래대금 감소 (유동성 감소)
     # - 활용: 필터 조건 (예: 당일거래대금_전틱분봉_비율 >= 1.2)
     if '매수당일거래대금' in df.columns:
-        # 전 거래의 당일거래대금 (shift(1))
-        prev_trade_money = df['매수당일거래대금'].shift(1)
+        has_trade_ratio = '당일거래대금_전틱분봉_비율' in df.columns
+        has_trade_avg_ratio = '당일거래대금_5틱분봉평균_비율' in df.columns
+        if has_trade_ratio:
+            existing = pd.to_numeric(df['당일거래대금_전틱분봉_비율'], errors='coerce').fillna(0)
+            has_trade_ratio = existing.ne(0).any()
+        if has_trade_avg_ratio:
+            existing = pd.to_numeric(df['당일거래대금_5틱분봉평균_비율'], errors='coerce').fillna(0)
+            has_trade_avg_ratio = existing.ne(0).any()
+        group_cols = []
+        if '종목명' in df.columns:
+            group_cols.append('종목명')
+        if '매수일자' in df.columns:
+            group_cols.append('매수일자')
+        if group_cols:
+            grouped = df.groupby(group_cols, sort=False)['매수당일거래대금']
+            prev_trade_money = grouped.shift(1)
+            rolling_avg = grouped.rolling(window=5, min_periods=1).mean().reset_index(level=group_cols, drop=True)
+        else:
+            prev_trade_money = df['매수당일거래대금'].shift(1)
+            rolling_avg = df['매수당일거래대금'].rolling(window=5, min_periods=1).mean()
 
-        df['당일거래대금_전틱분봉_비율'] = np.where(
-            prev_trade_money > 0,
-            df['매수당일거래대금'] / prev_trade_money,
-            1.0  # 첫 거래는 변화 없음으로 처리
-        )
+        if not has_trade_ratio:
+            df['당일거래대금_전틱분봉_비율'] = np.where(
+                prev_trade_money > 0,
+                df['매수당일거래대금'] / (prev_trade_money + 1e-6),
+                0.0
+            )
 
     # 15.2 매도 시점 당일거래대금 비율 (매수→매도 간 거래대금 변화)
     # - 의미: 매수 시점 대비 매도 시점의 당일거래대금 변화율
@@ -415,14 +434,11 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
     # - 비율 > 1: 평균 대비 높은 유동성 (거래 활성화)
     # - 비율 < 1: 평균 대비 낮은 유동성 (거래 둔화)
     # - 활용: 노이즈 감소, 장기 트렌드 기반 필터 조건
-    if '매수당일거래대금' in df.columns:
-        # 최근 5틱/분봉 평균 대비
-        rolling_avg = df['매수당일거래대금'].rolling(window=5, min_periods=1).mean()
-
-        df['당일거래대금_5틱분봉평균_비율'] = np.where(
-            rolling_avg > 0,
-            df['매수당일거래대금'] / rolling_avg,
-            1.0
-        )
+        if not has_trade_avg_ratio:
+            df['당일거래대금_5틱분봉평균_비율'] = np.where(
+                rolling_avg > 0,
+                df['매수당일거래대금'] / (rolling_avg + 1e-6),
+                0.0
+            )
 
     return df

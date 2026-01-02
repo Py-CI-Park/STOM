@@ -7,6 +7,7 @@ import telegram
 import pandas as pd
 
 from backtester.analysis.output_config import get_backtesting_output_config
+from backtester.output_manifest import resolve_alias_for_legacy_path
 from utility.setting import DICT_SET
 from telegram.ext import Updater, MessageHandler, Filters
 
@@ -45,8 +46,14 @@ class TelegramMsg:
                 continue
 
             if type(data) == str:
-                if '.png' in data and os.path.exists(data):
-                    self.QueuePhoto(data)
+                if '.png' in data:
+                    resolved = self._resolve_photo_path(data)
+                    if resolved and os.path.exists(resolved):
+                        self.QueuePhoto(resolved)
+                    else:
+                        self.FlushPhotoQueue(force=True)
+                        self.SendMsg(data)
+                    continue
                 else:
                     self.FlushPhotoQueue(force=True)
                     self.SendMsg(data)
@@ -169,6 +176,9 @@ class TelegramMsg:
     def SendPhoto(self, path):
         if self.bot is not None:
             try:
+                path = self._resolve_photo_path(path)
+                if not path or not os.path.exists(path):
+                    return
                 with open(path, 'rb') as image:
                     self.bot.send_photo(chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'], photo=image)
             except Exception as e:
@@ -194,9 +204,14 @@ class TelegramMsg:
             try:
                 media_group = []
                 for path in chunk:
-                    f = open(path, 'rb')
+                    resolved = self._resolve_photo_path(path)
+                    if not resolved or not os.path.exists(resolved):
+                        continue
+                    f = open(resolved, 'rb')
                     opened_files.append(f)
                     media_group.append(telegram.InputMediaPhoto(media=f))
+                if not media_group:
+                    continue
                 self.bot.send_media_group(
                     chat_id=self.dict_set[f'텔레그램사용자아이디{self.gubun}'],
                     media=media_group
@@ -239,6 +254,18 @@ class TelegramMsg:
         self.photo_batch_max = int(cfg.get('telegram_batch_size', 10))
         self.photo_flush_interval = float(cfg.get('telegram_batch_interval_s', 1.0))
         self.photo_poll_timeout = float(cfg.get('telegram_queue_timeout_s', 0.2))
+        self.output_alias_enabled = bool(cfg.get('output_alias_enabled', False))
+        self.output_alias_subdir = cfg.get('output_alias_subdir') or None
+
+    def _resolve_photo_path(self, path: str | None) -> str | None:
+        if not path:
+            return path
+        if os.path.exists(path):
+            return path
+        if not self.output_alias_enabled:
+            return path
+        alias_path = resolve_alias_for_legacy_path(path, alias_dir=self.output_alias_subdir)
+        return str(alias_path) if alias_path else path
 
     def _start_photo_sender(self):
         if not self.enable_telegram_async:
