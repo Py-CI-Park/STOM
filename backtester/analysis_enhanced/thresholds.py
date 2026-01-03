@@ -253,31 +253,32 @@ def FindAllOptimalThresholds(df_tsg):
         return '백만'
 
     trade_money_unit = None
-    if '매수당일거래대금' in df_tsg.columns:
-        trade_money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금'])
+    if 'B_당일거래대금' in df_tsg.columns:
+        trade_money_unit = _detect_trade_money_unit(df_tsg['B_당일거래대금'])
 
     # 분석할 컬럼과 방향 정의
     columns_config = [
-        ('매수등락율', 'greater', '매수등락율 {:.0f}% 이상 제외'),
-        ('매수등락율', 'less', '매수등락율 {:.0f}% 미만 제외'),
-        ('매수체결강도', 'less', '매수체결강도 {:.0f} 미만 제외'),
-        ('매수체결강도', 'greater', '매수체결강도 {:.0f} 이상 제외'),
-        ('매수당일거래대금', 'less', '매수당일거래대금 {:.0f}억 미만 제외'),
-        ('시가총액', 'less', '매수시가총액 {:.0f}억 미만 제외'),
-        ('시가총액', 'greater', '매수시가총액 {:.0f}억 이상 제외'),
-        ('매수호가잔량비', 'less', '매수호가잔량비 {:.0f}% 미만 제외'),
-        ('매수스프레드', 'greater', '매수스프레드 {:.2f}% 이상 제외'),
+        ('B_등락율', 'greater', 'B_등락율 {:.0f}% 이상 제외'),
+        ('B_등락율', 'less', 'B_등락율 {:.0f}% 미만 제외'),
+        ('B_체결강도', 'less', 'B_체결강도 {:.0f} 미만 제외'),
+        ('B_체결강도', 'greater', 'B_체결강도 {:.0f} 이상 제외'),
+        ('B_당일거래대금', 'less', 'B_당일거래대금 {:.0f}억 미만 제외'),
+        ('시가총액', 'less', '시가총액 {:.0f}억 미만 제외'),
+        ('시가총액', 'greater', '시가총액 {:.0f}억 이상 제외'),
+        ('B_호가잔량비', 'less', 'B_호가잔량비 {:.0f}% 미만 제외'),
+        ('B_스프레드', 'greater', 'B_스프레드 {:.2f}% 이상 제외'),
     ]
 
     # 파생 지표도 분석
-    if '위험도점수' in df_tsg.columns:
-        columns_config.append(('위험도점수', 'greater', '매수위험도 {:.0f}점 이상 제외'))
+    if 'B_위험도점수' in df_tsg.columns:
+        columns_config.append(('B_위험도점수', 'greater', 'B_위험도점수 {:.0f}점 이상 제외'))
 
-    if '거래품질점수' in df_tsg.columns:
-        columns_config.append(('거래품질점수', 'less', '거래품질(매수) {:.0f}점 미만 제외'))
+    if 'B_거래품질점수' in df_tsg.columns:
+        columns_config.append(('B_거래품질점수', 'less', 'B_거래품질점수 {:.0f}점 미만 제외'))
 
-    if '모멘텀점수' in df_tsg.columns:
-        columns_config.append(('모멘텀점수', 'less', '모멘텀(매수) {:.1f} 미만 제외'))
+    if 'B_모멘텀점수' in df_tsg.columns:
+        columns_config.append(('B_모멘텀점수', 'less', 'B_모멘텀점수 {:.1f} 미만 제외'))
+
 
     for column, direction, name_template in columns_config:
         result = FindOptimalThresholds(df_tsg, column, direction)
@@ -286,7 +287,7 @@ def FindAllOptimalThresholds(df_tsg):
             result['임계값(원본)'] = raw_thr
 
             # 표시용 라벨 정리(단위/스케일 혼동 방지)
-            if column == '매수당일거래대금':
+            if column == 'B_당일거래대금':
                 unit = trade_money_unit or '백만'
                 try:
                     thr_eok = float(raw_thr) / 100.0 if unit == '백만' else float(raw_thr)
@@ -294,7 +295,7 @@ def FindAllOptimalThresholds(df_tsg):
                     thr_eok = raw_thr
                 result['임계값(표시)'] = _fmt_eok_to_korean(thr_eok)
                 result['원본단위'] = unit
-                result['필터명'] = f"매수당일거래대금 {result['임계값(표시)']} 미만 제외"
+                result['필터명'] = f"B_당일거래대금 {result['임계값(표시)']} 미만 제외"
             elif column == '시가총액':
                 try:
                     thr_eok = float(raw_thr)
@@ -302,7 +303,8 @@ def FindAllOptimalThresholds(df_tsg):
                     thr_eok = raw_thr
                 result['임계값(표시)'] = _fmt_eok_to_korean(thr_eok)
                 suffix = '미만 제외' if direction == 'less' else '이상 제외'
-                result['필터명'] = f"매수시가총액 {result['임계값(표시)']} {suffix}"
+                result['필터명'] = f"시가총액 {result['임계값(표시)']} {suffix}"
+
             else:
                 result['필터명'] = name_template.format(raw_thr)
             results.append(result)

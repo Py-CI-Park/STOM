@@ -264,8 +264,8 @@ def _apply_ml_bundle(df: pd.DataFrame, bundle: dict):
             loss_prob_all = np.full(len(df), 0.5, dtype=np.float64)
 
         df = df.copy()
-        df['손실확률_ML'] = loss_prob_all
-        df['위험도_ML'] = (loss_prob_all * 100).clip(0, 100)
+        df['B_손실확률_ML'] = loss_prob_all
+        df['B_위험도_ML'] = (loss_prob_all * 100).clip(0, 100)
 
         # (옵션) 매수매도위험도 회귀 예측
         rr = bundle.get('risk_regression') if isinstance(bundle.get('risk_regression'), dict) else None
@@ -274,26 +274,26 @@ def _apply_ml_bundle(df: pd.DataFrame, bundle: dict):
                 Xr_all = _prepare_feature_matrix(df, rr.get('features') or features)
                 Xr_all_s = rr['scaler'].transform(Xr_all)
                 pred_all = rr['model'].predict(Xr_all_s)
-                df['예측매수매도위험도점수_ML'] = np.clip(pred_all, 0, 100)
+                df['B_예측매수매도위험도점수_ML'] = np.clip(pred_all, 0, 100)
             except Exception:
-                df['예측매수매도위험도점수_ML'] = np.nan
+                df['B_예측매수매도위험도점수_ML'] = np.nan
         else:
-            if '예측매수매도위험도점수_ML' not in df.columns:
-                df['예측매수매도위험도점수_ML'] = np.nan
+            if 'B_예측매수매도위험도점수_ML' not in df.columns:
+                df['B_예측매수매도위험도점수_ML'] = np.nan
 
-        # (옵션) 당일거래대금_매수매도_비율 회귀 예측
+        # (옵션) S_당일거래대금_매수매도_비율 회귀 예측
         tmr = bundle.get('trade_money_regression') if isinstance(bundle.get('trade_money_regression'), dict) else None
         if tmr and tmr.get('model') is not None and tmr.get('scaler') is not None:
             try:
                 Xtm_all = _prepare_feature_matrix(df, tmr.get('features') or features)
                 Xtm_all_s = tmr['scaler'].transform(Xtm_all)
                 pred_all_tm = tmr['model'].predict(Xtm_all_s)
-                df['당일거래대금_매수매도_비율_ML'] = np.clip(pred_all_tm, 0, None)
+                df['S_당일거래대금_매수매도_비율_ML'] = np.clip(pred_all_tm, 0, None)
             except Exception:
-                df['당일거래대금_매수매도_비율_ML'] = np.nan
+                df['S_당일거래대금_매수매도_비율_ML'] = np.nan
         else:
-            if '당일거래대금_매수매도_비율_ML' not in df.columns:
-                df['당일거래대금_매수매도_비율_ML'] = np.nan
+            if 'S_당일거래대금_매수매도_비율_ML' not in df.columns:
+                df['S_당일거래대금_매수매도_비율_ML'] = np.nan
 
         info['used_saved_model'] = True
         return df, info
@@ -389,16 +389,16 @@ def AnalyzeFeatureImportance(df_tsg):
     # ================================================================
     # 매수 시점에서 사용 가능한 모든 숫자형 변수를 동적으로 탐지
     # ================================================================
-    # 1) 명시적 매수 시점 컬럼 (접두사 '매수')
-    # 2) 매수 시점에서 확정된 컬럼 (시가총액, 위험도점수, 모멘텀점수 등 파생 지표)
+    # 1) 명시적 매수 시점 컬럼 (접두사 'B_')
+    # 2) 매수 시점에서 확정된 컬럼 (시가총액, B_위험도점수, B_모멘텀점수 등 파생 지표)
     # 3) 제외할 컬럼: 매도 시점 변수, 결과 변수, 변화량 지표(룩어헤드)
     
     # 매도 시점 또는 결과 관련 컬럼 패턴 (제외)
-    # - 주의: "매도" 문자열이 포함되더라도, 매수시점 호가/잔량(예: 매수매도총잔량, 매도잔량_매수잔량_비율)은
+    # - 주의: "매도" 문자열이 포함되더라도, 매수시점 호가/잔량(예: B_매도총잔량, B_매도잔량_매수잔량_비율)은
     #         매수 시점에 알 수 있는 정보이므로 제외하지 않습니다.
     exclude_patterns = [
         '수익금', '수익률', '손실', '이익', '보유시간',
-        '변화', '추세', '매수매도위험도점수',  # 사후 계산 위험도(룩어헤드 포함)
+        '변화', '추세', 'B_매수매도위험도점수', '매수매도위험도점수',  # 사후 계산 위험도(룩어헤드 포함)
         '연속이익', '연속손실', '리스크조정수익률',  # 사후 통계
         '합계', '누적', '수익금합계',
         '손실확률', '_ML',  # 모델 출력 컬럼(재실행 시 자기 자신 포함 방지)
@@ -406,22 +406,23 @@ def AnalyzeFeatureImportance(df_tsg):
     
     # 명시적으로 매수 시점에서 사용 가능한 변수 목록
     explicit_buy_columns = [
-        '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
-        '매수전일비', '매수회전율', '매수전일동시간비', '매수고가', '매수저가',
-        '매수고저평균대비등락율', '매수매도총잔량', '매수매수총잔량',
-        '매수호가잔량비', '매수매도호가1', '매수매수호가1', '매수스프레드',
-        '매수초당매수수량', '매수초당매도수량', '매수초당거래대금',
-        '시가총액', '매수가', '매수시', '매수분', '매수초',
+        'B_등락율', 'B_시가등락율', 'B_당일거래대금', 'B_체결강도',
+        'B_전일비', 'B_회전율', 'B_전일동시간비', 'B_고가', 'B_저가',
+        'B_고저평균대비등락율', 'B_매도총잔량', 'B_매수총잔량',
+        'B_호가잔량비', 'B_매도호가1', 'B_매수호가1', 'B_스프레드',
+        'B_초당매수수량', 'B_초당매도수량', 'B_초당거래대금',
+        '시가총액', 'B_가', 'B_시', 'B_분', 'B_초',
         # 파생 지표 (매수 시점 데이터만으로 계산된 것들)
-        '모멘텀점수', '매수변동폭', '매수변동폭비율', '거래품질점수',
-        '초당매수수량_매도총잔량_비율', '매도잔량_매수잔량_비율',
-        '매수잔량_매도잔량_비율', '초당매도_매수_비율', '초당매수_매도_비율',
-        '현재가_고저범위_위치', '초당거래대금_당일비중',
-        '초당순매수수량', '초당순매수금액', '초당순매수비율',
+        'B_모멘텀점수', 'B_변동폭', 'B_변동폭비율', 'B_거래품질점수',
+        'B_초당매수수량_매도총잔량_비율', 'B_매도잔량_매수잔량_비율',
+        'B_매수잔량_매도잔량_비율', 'B_초당매도_매수_비율', 'B_초당매수_매도_비율',
+        'B_현재가_고저범위_위치', 'B_초당거래대금_당일비중',
+        'B_초당순매수수량', 'B_초당순매수금액', 'B_초당순매수비율',
         # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표 (LOOKAHEAD-FREE)
-        # 주의: 당일거래대금_매수매도_비율은 매도시점 데이터 사용으로 LOOKAHEAD 문제 있어 제외
-        '당일거래대금_전틱분봉_비율', '당일거래대금_5틱분봉평균_비율',
+        # 주의: S_당일거래대금_매수매도_비율은 매도시점 데이터 사용으로 LOOKAHEAD 문제 있어 제외
+        'B_당일거래대금_전틱분봉_비율', 'B_당일거래대금_5틱분봉평균_비율',
     ]
+
     
     # 동적으로 사용 가능한 컬럼 선택
     feature_columns = []
@@ -441,16 +442,19 @@ def AnalyzeFeatureImportance(df_tsg):
         if should_exclude:
             continue
         
-        # 명시적 매수 컬럼이거나 매수 접두사가 있는 경우
+        # 명시적 매수 컬럼이거나 B_ 접두사가 있는 경우
         if col in explicit_buy_columns:
+            feature_columns.append(col)
+        elif col.startswith('B_') and col not in feature_columns:
             feature_columns.append(col)
         elif col.startswith('매수') and col not in feature_columns:
             feature_columns.append(col)
     
     # 추가: 시가총액 등 명시적으로 매수 시점 확정 변수
-    for col in ['시가총액', '모멘텀점수', '거래품질점수', '위험도점수']:
+    for col in ['시가총액', 'B_모멘텀점수', 'B_거래품질점수', 'B_위험도점수']:
         if col in df_tsg.columns and col not in feature_columns:
             feature_columns.append(col)
+
     
     available_features = [col for col in feature_columns if col in df_tsg.columns]
 
@@ -613,7 +617,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     매수 시점에서 사용 가능한 모든 변수를 바탕으로:
     1. 손실 확률(loss_prob_ml) 예측
     2. ML 기반 위험도 점수(risk_score_ml) 계산
-    3. 실제 매수매도위험도점수와 비교
+    3. 실제 B_매수매도위험도점수와 비교
 
     추가 기능:
     - (저장) 실행별로 학습된 모델 번들(joblib)을 저장하고, 전략(조건식) 폴더의 latest도 갱신합니다.
@@ -684,9 +688,9 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                 return df_loaded, stats
         if train_mode == 'load_only':
             # 로드만 허용인데 실패한 경우: 기본값으로 폴백
-            df['손실확률_ML'] = 0.5
-            df['위험도_ML'] = 50
-            df['예측매수매도위험도점수_ML'] = np.nan
+            df['B_손실확률_ML'] = 0.5
+            df['B_위험도_ML'] = 50
+            df['B_예측매수매도위험도점수_ML'] = np.nan
             timing['load_only_failed_s'] = round(time.perf_counter() - t0_load, 4)
             timing['total_s'] = round(time.perf_counter() - total_start, 4)
             return df, {
@@ -702,27 +706,28 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     # ================================================================
     exclude_patterns = [
         '수익금', '수익률', '손실', '이익', '보유시간',
-        '변화', '추세', '매수매도위험도점수',  # 사후 계산 위험도(룩어헤드 포함)
+        '변화', '추세', 'B_매수매도위험도점수', '매수매도위험도점수',  # 사후 계산 위험도(룩어헤드 포함)
         '연속이익', '연속손실', '리스크조정수익률',
         '합계', '누적', '수익금합계', '손실확률', '_ML', 'risk_score_ml',
     ]
     
     explicit_buy_columns = [
-        '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
-        '매수전일비', '매수회전율', '매수전일동시간비', '매수고가', '매수저가',
-        '매수고저평균대비등락율', '매수매도총잔량', '매수매수총잔량',
-        '매수호가잔량비', '매수매도호가1', '매수매수호가1', '매수스프레드',
-        '매수초당매수수량', '매수초당매도수량', '매수초당거래대금',
-        '시가총액', '매수가', '매수시', '매수분', '매수초',
-        '모멘텀점수', '매수변동폭', '매수변동폭비율', '거래품질점수',
-        '초당매수수량_매도총잔량_비율', '매도잔량_매수잔량_비율',
-        '매수잔량_매도잔량_비율', '초당매도_매수_비율', '초당매수_매도_비율',
-        '현재가_고저범위_위치', '초당거래대금_당일비중',
-        '초당순매수수량', '초당순매수금액', '초당순매수비율',
-        '위험도점수',  # 규칙 기반 위험도 (매수 시점 정보만 사용)
+        'B_등락율', 'B_시가등락율', 'B_당일거래대금', 'B_체결강도',
+        'B_전일비', 'B_회전율', 'B_전일동시간비', 'B_고가', 'B_저가',
+        'B_고저평균대비등락율', 'B_매도총잔량', 'B_매수총잔량',
+        'B_호가잔량비', 'B_매도호가1', 'B_매수호가1', 'B_스프레드',
+        'B_초당매수수량', 'B_초당매도수량', 'B_초당거래대금',
+        '시가총액', 'B_가', 'B_시', 'B_분', 'B_초',
+        'B_모멘텀점수', 'B_변동폭', 'B_변동폭비율', 'B_거래품질점수',
+        'B_초당매수수량_매도총잔량_비율', 'B_매도잔량_매수잔량_비율',
+        'B_매수잔량_매도잔량_비율', 'B_초당매도_매수_비율', 'B_초당매수_매도_비율',
+        'B_현재가_고저범위_위치', 'B_초당거래대금_당일비중',
+        'B_초당순매수수량', 'B_초당순매수금액', 'B_초당순매수비율',
+        'B_위험도점수',  # 규칙 기반 위험도 (매수 시점 정보만 사용)
         # [NEW 2025-12-28] 당일거래대금 시계열 비율 지표 (LOOKAHEAD-FREE)
-        '당일거래대금_전틱분봉_비율', '당일거래대금_5틱분봉평균_비율',
+        'B_당일거래대금_전틱분봉_비율', 'B_당일거래대금_5틱분봉평균_비율',
     ]
+
     
     feature_columns = []
     for col in df.columns:
@@ -741,20 +746,23 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         
         if col in explicit_buy_columns:
             feature_columns.append(col)
+        elif col.startswith('B_') and col not in feature_columns:
+            feature_columns.append(col)
         elif col.startswith('매수') and col not in feature_columns:
             feature_columns.append(col)
     
-    for col in ['시가총액', '모멘텀점수', '거래품질점수', '위험도점수']:
+    for col in ['시가총액', 'B_모멘텀점수', 'B_거래품질점수', 'B_위험도점수']:
         if col in df.columns and col not in feature_columns:
             feature_columns.append(col)
+
     
     available_features = [col for col in feature_columns if col in df.columns]
     
     if len(available_features) < 5:
         # 피처가 부족하면 기본값 설정
-        df['손실확률_ML'] = 0.5
-        df['위험도_ML'] = 50
-        df['예측매수매도위험도점수_ML'] = np.nan
+        df['B_손실확률_ML'] = 0.5
+        df['B_위험도_ML'] = 50
+        df['B_예측매수매도위험도점수_ML'] = np.nan
         timing['total_s'] = round(time.perf_counter() - total_start, 4)
         return df, {
             'model_type': 'N/A',
@@ -779,9 +787,9 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     df_clean = df_analysis.dropna(subset=['수익금'])
     
     if len(df_clean) < 50:
-        df['손실확률_ML'] = 0.5
-        df['위험도_ML'] = 50
-        df['예측매수매도위험도점수_ML'] = np.nan
+        df['B_손실확률_ML'] = 0.5
+        df['B_위험도_ML'] = 50
+        df['B_예측매수매도위험도점수_ML'] = np.nan
         timing['total_s'] = round(time.perf_counter() - total_start, 4)
         return df, {
             'model_type': 'N/A',
@@ -907,8 +915,8 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
     timing['predict_all_s'] = round(time.perf_counter() - t0, 4)
     
     # DataFrame에 추가 (원본 인덱스 유지)
-    df['손실확률_ML'] = np.nan
-    df['위험도_ML'] = np.nan
+    df['B_손실확률_ML'] = np.nan
+    df['B_위험도_ML'] = np.nan
 
     # df_analysis와 동일한 인덱스로 할당 (안전한 방식)
     # - 대용량 데이터에서 인덱스 중복/불일치 문제 방지를 위해 Series.update() 사용
@@ -918,12 +926,12 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         risk_prob_series = pd.Series((loss_prob_all * 100).clip(0, 100), index=df_analysis.index)
 
         # df의 해당 컬럼을 Series로 변환 후 update
-        df['손실확률_ML'] = df['손실확률_ML'].astype(float)
-        df['위험도_ML'] = df['위험도_ML'].astype(float)
+        df['B_손실확률_ML'] = df['B_손실확률_ML'].astype(float)
+        df['B_위험도_ML'] = df['B_위험도_ML'].astype(float)
 
         # update는 인덱스가 일치하는 위치에만 값을 할당
-        df['손실확률_ML'].update(loss_prob_series)
-        df['위험도_ML'].update(risk_prob_series)
+        df['B_손실확률_ML'].update(loss_prob_series)
+        df['B_위험도_ML'].update(risk_prob_series)
     except Exception:
         # 방법 2: 폴백 - iloc 기반 위치 매핑 (인덱스 무관)
         try:
@@ -934,31 +942,31 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
             for df_idx in df.index:
                 if df_idx in idx_to_pos:
                     pos = idx_to_pos[df_idx]
-                    df.at[df_idx, '손실확률_ML'] = loss_prob_all[pos]
-                    df.at[df_idx, '위험도_ML'] = min(max(loss_prob_all[pos] * 100, 0), 100)
+                    df.at[df_idx, 'B_손실확률_ML'] = loss_prob_all[pos]
+                    df.at[df_idx, 'B_위험도_ML'] = min(max(loss_prob_all[pos] * 100, 0), 100)
         except Exception:
             pass  # 최종 폴백: NaN 유지 후 중앙값으로 채움
     
     # NaN 채우기 (중앙값)
     median_prob = float(np.nanmedian(loss_prob_all))
-    df['손실확률_ML'] = df['손실확률_ML'].fillna(median_prob)
-    df['위험도_ML'] = df['위험도_ML'].fillna(median_prob * 100)
+    df['B_손실확률_ML'] = df['B_손실확률_ML'].fillna(median_prob)
+    df['B_위험도_ML'] = df['B_위험도_ML'].fillna(median_prob * 100)
 
     # ================================================================
-    # (추가) 매수 시점 변수로 "매수매도위험도점수"를 예측(회귀)하여 비교 컬럼 생성
+    # (추가) 매수 시점 변수로 "B_매수매도위험도점수"를 예측(회귀)하여 비교 컬럼 생성
     # - 목적: 룩어헤드로 계산된 위험도(사후 점수)를 매수시점 정보만으로 얼마나 근사할 수 있는지 확인
     # ================================================================
     risk_regression_stats = None
     risk_reg_model = None
     risk_reg_scaler = None
     risk_reg_model_name = None
-    df['예측매수매도위험도점수_ML'] = np.nan
-    if '매수매도위험도점수' in df.columns:
+    df['B_예측매수매도위험도점수_ML'] = np.nan
+    if 'B_매수매도위험도점수' in df.columns:
         t0 = time.perf_counter()
         try:
-            df_risk = df[available_features + ['매수매도위험도점수']].copy()
-            df_risk['매수매도위험도점수'] = pd.to_numeric(df_risk['매수매도위험도점수'], errors='coerce')
-            df_risk = df_risk.dropna(subset=['매수매도위험도점수'])
+            df_risk = df[available_features + ['B_매수매도위험도점수']].copy()
+            df_risk['B_매수매도위험도점수'] = pd.to_numeric(df_risk['B_매수매도위험도점수'], errors='coerce')
+            df_risk = df_risk.dropna(subset=['B_매수매도위험도점수'])
 
             if len(df_risk) >= 50:
                 for col in available_features:
@@ -966,7 +974,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                         df_risk[col] = df_risk[col].fillna(df_risk[col].median())
 
                 Xr = df_risk[available_features].values
-                yr = df_risk['매수매도위험도점수'].values
+                yr = df_risk['B_매수매도위험도점수'].values
 
                 try:
                     Xr_train, Xr_test, yr_train, yr_test = train_test_split(
@@ -1033,14 +1041,14 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                         Xr_all[col] = Xr_all[col].fillna(Xr_all[col].median())
                 Xr_all_s = scaler_r.transform(Xr_all.values)
                 pred_all = best_model.predict(Xr_all_s)
-                df['예측매수매도위험도점수_ML'] = np.clip(pred_all, 0, 100)
+                df['B_예측매수매도위험도점수_ML'] = np.clip(pred_all, 0, 100)
 
                 # NaN 채우기 (중앙값)
-                med_pred = float(np.nanmedian(df['예측매수매도위험도점수_ML'].values))
-                df['예측매수매도위험도점수_ML'] = df['예측매수매도위험도점수_ML'].fillna(med_pred)
+                med_pred = float(np.nanmedian(df['B_예측매수매도위험도점수_ML'].values))
+                df['B_예측매수매도위험도점수_ML'] = df['B_예측매수매도위험도점수_ML'].fillna(med_pred)
 
                 risk_regression_stats = {
-                    'target': '매수매도위험도점수',
+                    'target': 'B_매수매도위험도점수',
                     'best_model': best_name,
                     'test_mae': round(best_mae, 2),
                     'test_rmse': round(rmse, 2),
@@ -1057,21 +1065,21 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         timing['risk_regression_s'] = round(time.perf_counter() - t0, 4)
 
     # ================================================================
-    # (추가 2025-12-28) 매수 시점 변수로 "당일거래대금_매수매도_비율"을 예측(회귀)
-    # - 목적: LOOKAHEAD 있는 당일거래대금_매수매도_비율을 매수시점 정보만으로 예측
+    # (추가 2025-12-28) 매수 시점 변수로 "S_당일거래대금_매수매도_비율"을 예측(회귀)
+    # - 목적: LOOKAHEAD 있는 S_당일거래대금_매수매도_비율을 매수시점 정보만으로 예측
     # - 특징: 당일거래대금_전틱분봉_비율, 당일거래대금_5틱분봉평균_비율 등 사용
     # ================================================================
     trade_money_regression_stats = None
     trade_money_reg_model = None
     trade_money_reg_scaler = None
     trade_money_reg_model_name = None
-    df['당일거래대금_매수매도_비율_ML'] = np.nan
-    if '당일거래대금_매수매도_비율' in df.columns:
+    df['S_당일거래대금_매수매도_비율_ML'] = np.nan
+    if 'S_당일거래대금_매수매도_비율' in df.columns:
         t0 = time.perf_counter()
         try:
-            df_tm = df[available_features + ['당일거래대금_매수매도_비율']].copy()
-            df_tm['당일거래대금_매수매도_비율'] = pd.to_numeric(df_tm['당일거래대금_매수매도_비율'], errors='coerce')
-            df_tm = df_tm.dropna(subset=['당일거래대금_매수매도_비율'])
+            df_tm = df[available_features + ['S_당일거래대금_매수매도_비율']].copy()
+            df_tm['S_당일거래대금_매수매도_비율'] = pd.to_numeric(df_tm['S_당일거래대금_매수매도_비율'], errors='coerce')
+            df_tm = df_tm.dropna(subset=['S_당일거래대금_매수매도_비율'])
 
             if len(df_tm) >= 50:
                 for col in available_features:
@@ -1079,7 +1087,7 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                         df_tm[col] = df_tm[col].fillna(df_tm[col].median())
 
                 Xtm = df_tm[available_features].values
-                ytm = df_tm['당일거래대금_매수매도_비율'].values
+                ytm = df_tm['S_당일거래대금_매수매도_비율'].values
 
                 try:
                     Xtm_train, Xtm_test, ytm_train, ytm_test = train_test_split(
@@ -1147,14 +1155,14 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
                 Xtm_all_s = scaler_tm.transform(Xtm_all.values)
                 pred_all_tm = best_model_tm.predict(Xtm_all_s)
                 # 당일거래대금 비율은 양수 값이므로 0 이상으로 클리핑
-                df['당일거래대금_매수매도_비율_ML'] = np.clip(pred_all_tm, 0, None)
+                df['S_당일거래대금_매수매도_비율_ML'] = np.clip(pred_all_tm, 0, None)
 
                 # NaN 채우기 (중앙값)
-                med_pred_tm = float(np.nanmedian(df['당일거래대금_매수매도_비율_ML'].values))
-                df['당일거래대금_매수매도_비율_ML'] = df['당일거래대금_매수매도_비율_ML'].fillna(med_pred_tm)
+                med_pred_tm = float(np.nanmedian(df['S_당일거래대금_매수매도_비율_ML'].values))
+                df['S_당일거래대금_매수매도_비율_ML'] = df['S_당일거래대금_매수매도_비율_ML'].fillna(med_pred_tm)
 
                 trade_money_regression_stats = {
-                    'target': '당일거래대금_매수매도_비율',
+                    'target': 'S_당일거래대금_매수매도_비율',
                     'best_model': best_name_tm,
                     'test_mae': round(best_mae_tm, 4),
                     'test_rmse': round(rmse_tm, 4),
@@ -1171,23 +1179,24 @@ def PredictRiskWithML(df_tsg, save_file_name=None, buystg=None, sellstg=None, st
         timing['trade_money_regression_s'] = round(time.perf_counter() - t0, 4)
 
     # ================================================================
-    # 실제 매수매도위험도점수와 비교 (상관관계)
+    # 실제 B_매수매도위험도점수와 비교 (상관관계)
     # ================================================================
     correlation_actual = None
-    if '매수매도위험도점수' in df.columns:
+    if 'B_매수매도위험도점수' in df.columns:
         try:
-            corr = df[['위험도_ML', '매수매도위험도점수']].corr().iloc[0, 1]
+            corr = df[['B_위험도_ML', 'B_매수매도위험도점수']].corr().iloc[0, 1]
             correlation_actual = round(corr * 100, 1) if pd.notna(corr) else None
         except Exception:
             pass
     
     correlation_rule = None
-    if '위험도점수' in df.columns:
+    if 'B_위험도점수' in df.columns:
         try:
-            corr = df[['위험도_ML', '위험도점수']].corr().iloc[0, 1]
+            corr = df[['B_위험도_ML', 'B_위험도점수']].corr().iloc[0, 1]
             correlation_rule = round(corr * 100, 1) if pd.notna(corr) else None
         except Exception:
             pass
+
     
     # Feature Importance 추출
     feature_importance = sorted(

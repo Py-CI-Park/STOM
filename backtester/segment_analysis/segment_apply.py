@@ -7,7 +7,8 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-from .segmentation import SegmentBuilder, SegmentConfig
+from .segmentation import SegmentBuilder, SegmentConfig, normalize_segment_columns
+
 
 
 def load_segment_config_from_ranges(global_best: dict) -> SegmentConfig:
@@ -60,6 +61,9 @@ def build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict) -> 
     if not isinstance(df, pd.DataFrame) or df.empty:
         result['error'] = 'df가 비어있음'
         return result
+
+    df = normalize_segment_columns(df)
+
     if not isinstance(global_best, dict):
         result['error'] = 'global_best가 dict가 아님'
         return result

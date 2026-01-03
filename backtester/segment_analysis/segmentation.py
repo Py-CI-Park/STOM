@@ -21,8 +21,11 @@ from typing import Any, Dict, List, Tuple, Optional
 import pandas as pd
 import numpy as np
 
+from backtester.analysis.metric_registry import BUY_TIME_FILTER_COLUMNS
+
 # 'Backtester' 로거를 사용하여 BK_YYYYMMDD.txt에 로그 저장
 logger = logging.getLogger('Backtester')
+
 
 
 @dataclass
@@ -99,12 +102,63 @@ class SegmentConfig:
         )
 
 
+def normalize_segment_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    세그먼트 분석용 컬럼 정규화:
+    - Min 데이터: 초당 변수명을 분당으로 복사 (스케일 변환 없음)
+    - 매수/매도 컬럼에 B_/S_ 접두 alias 생성
+    - 매수 접두 없는 buy-time 지표도 B_ alias 생성
+    """
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return df
+
+    df_norm = df.copy()
+    col_set = set(df_norm.columns)
+
+    is_min = any('분당' in col for col in col_set)
+    if is_min:
+        for col in list(col_set):
+            if '초당' in col:
+                alias = col.replace('초당', '분당')
+                if alias not in col_set:
+                    df_norm[alias] = df_norm[col]
+                    col_set.add(alias)
+
+    for col in list(col_set):
+        if col.startswith('매수'):
+            alias = f"B_{col[2:]}"
+            if alias not in col_set:
+                df_norm[alias] = df_norm[col]
+                col_set.add(alias)
+        elif col.startswith('매도'):
+            alias = f"S_{col[2:]}"
+            if alias not in col_set:
+                df_norm[alias] = df_norm[col]
+                col_set.add(alias)
+
+    for base in BUY_TIME_FILTER_COLUMNS:
+        base_name = base.replace('초당', '분당') if is_min else base
+        if base_name in col_set:
+            if base_name.startswith(('B_', 'S_')):
+                continue
+            if base_name.startswith('매수'):
+                alias = f"B_{base_name[2:]}"
+            else:
+                alias = f"B_{base_name}"
+            if alias not in col_set:
+                df_norm[alias] = df_norm[base_name]
+                col_set.add(alias)
+
+    return df_norm
+
+
 class SegmentBuilder:
     """
     세그먼트 분할 실행 클래스
 
     detail.csv 데이터를 시가총액/시간 기준으로 16개 세그먼트로 분할
     """
+
 
     def __init__(self, config: Optional[SegmentConfig] = None):
         """

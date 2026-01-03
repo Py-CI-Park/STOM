@@ -399,12 +399,12 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             ax8.text(0.5, 0.5, '조합 분석 데이터 없음', ha='center', va='center',
                      fontsize=12, transform=ax8.transAxes)
 
-        # ============ Chart 9: 거래품질점수별 수익금 ============
+        # ============ Chart 9: B_거래품질점수별 수익금 ============
         ax9 = fig.add_subplot(gs[3, 0])
-        if '거래품질점수' in df_tsg.columns:
+        if 'B_거래품질점수' in df_tsg.columns:
             bins = [0, 30, 40, 50, 60, 70, 100]
             labels = ['~30', '30-40', '40-50', '50-60', '60-70', '70+']
-            df_tsg['품질구간'] = pd.cut(df_tsg['거래품질점수'], bins=bins, labels=labels, right=False)
+            df_tsg['품질구간'] = pd.cut(df_tsg['B_거래품질점수'], bins=bins, labels=labels, right=False)
             df_qual = df_tsg.groupby('품질구간', observed=True).agg({'수익금': 'sum', '종목명': 'count'}).reset_index()
             df_qual.columns = ['품질구간', '수익금', '거래수']
             colors = [color_profit if x >= 0 else color_loss for x in df_qual['수익금']]
@@ -421,12 +421,12 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                 ax9.text(bar.get_x() + bar.get_width()/2, bar.get_height(),
                         f'n={cnt}', ha='center', va='bottom' if bar.get_height() >= 0 else 'top', fontsize=8)
 
-        # ============ Chart 10: 매수 위험도점수별 수익금 ============
+        # ============ Chart 10: 매수 B_위험도점수별 수익금 ============
         ax10 = fig.add_subplot(gs[3, 1])
-        if '위험도점수' in df_tsg.columns:
+        if 'B_위험도점수' in df_tsg.columns:
             # 동적 bins 생성: 데이터 분포에 기반
-            risk_min = df_tsg['위험도점수'].min()
-            risk_max = df_tsg['위험도점수'].max()
+            risk_min = df_tsg['B_위험도점수'].min()
+            risk_max = df_tsg['B_위험도점수'].max()
             if risk_max - risk_min > 50:
                 bins = [0, 20, 40, 60, 80, 100]
             else:
@@ -435,7 +435,7 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
                 if bins[-1] < 100:
                     bins.append(100)
             labels = [f'{bins[i]}-{bins[i+1]}' for i in range(len(bins)-1)]
-            df_tsg['위험도구간'] = pd.cut(df_tsg['위험도점수'], bins=bins, labels=labels, right=False)
+            df_tsg['위험도구간'] = pd.cut(df_tsg['B_위험도점수'], bins=bins, labels=labels, right=False)
             df_risk = df_tsg.groupby('위험도구간', observed=True).agg({'수익금': 'sum', '종목명': 'count'}).reset_index()
             df_risk.columns = ['위험도구간', '수익금', '거래수']
             colors = [color_profit if x >= 0 else color_loss for x in df_risk['수익금']]
@@ -449,20 +449,21 @@ def PltEnhancedAnalysisCharts(df_tsg, save_file_name, teleQ,
             # 위험도 공식 표시 (매수 시점 기반 / 룩어헤드 제거)
             risk_formula = (
                 "위험도(매수 시점) 공식:\n"
-                "- 매수등락율>=20:+20, >=25:+10, >=30:+10\n"
-                "- 매수체결강도<80:+15, <60:+10 | 과열>=150:+10, >=200:+10, >=250:+10\n"
-                "- 거래대금(억=매수당일거래대금/100)<50:+15, <100:+10\n"
-                "- 시총(억)<1000:+15, <5000:+10 | 호가잔량비<90:+10, <70:+15\n"
-                "- 스프레드>=0.5:+10, >=1.0:+10 | 회전율<10:+5, <5:+10\n"
-                "- 변동폭비율>=7.5:+10, >=10:+10, >=15:+10"
+                "- B_등락율>=20:+20, >=25:+10, >=30:+10\n"
+                "- B_체결강도<80:+15, <60:+10 | 과열>=150:+10, >=200:+10, >=250:+10\n"
+                "- 거래대금(억=B_당일거래대금/100)<50:+15, <100:+10\n"
+                "- 시총(억)<1000:+15, <5000:+10 | B_호가잔량비<90:+10, <70:+15\n"
+                "- B_스프레드>=0.5:+10, >=1.0:+10 | B_회전율<10:+5, <5:+10\n"
+                "- B_변동폭비율>=7.5:+10, >=10:+10, >=15:+10"
             )
+
             ax10.set_title(f'매수 위험도 점수별 수익금 (룩어헤드 없음)\n{risk_formula}', fontsize=8, loc='left')
 
-        # ============ Chart 11: 리스크조정수익률 분포 ============
+        # ============ Chart 11: B_리스크조정수익률 분포 ============
         ax11 = fig.add_subplot(gs[3, 2])
-        if '리스크조정수익률' in df_tsg.columns:
-            profit_trades = df_tsg[df_tsg['수익금'] > 0]['리스크조정수익률']
-            loss_trades = df_tsg[df_tsg['수익금'] <= 0]['리스크조정수익률']
+        if 'B_리스크조정수익률' in df_tsg.columns:
+            profit_trades = df_tsg[df_tsg['수익금'] > 0]['B_리스크조정수익률']
+            loss_trades = df_tsg[df_tsg['수익금'] <= 0]['B_리스크조정수익률']
 
             ax11.hist(profit_trades, bins=30, alpha=0.6, color=color_profit, label='이익 거래', edgecolor='black')
             ax11.hist(loss_trades, bins=30, alpha=0.6, color=color_loss, label='손실 거래', edgecolor='black')

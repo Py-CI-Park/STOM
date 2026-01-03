@@ -7,8 +7,10 @@ import pandas as pd
 
 from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
 from backtester.analysis.output_config import get_backtesting_output_config
-from backtester.detail_schema import reorder_detail_columns
+from backtester.detail_schema import reorder_detail_columns, canonicalize_detail_columns
+from backtester.segment_analysis.segmentation import normalize_segment_columns
 from .metrics_enhanced import CalculateEnhancedDerivedMetrics
+
 from .ml import (
     AssessMlReliability,
     AnalyzeFeatureImportance,
@@ -153,7 +155,55 @@ def _find_best_template_key_from_csv(comparison_csv_path: str, results: dict) ->
     except Exception:
         return None
 
+
+def _build_segment_results(global_combo_path: str | None) -> dict | None:
+    if not global_combo_path:
+        return None
+    try:
+        path = Path(global_combo_path)
+        if not path.exists():
+            return None
+        df = pd.read_csv(path, encoding='utf-8-sig')
+        if df.empty:
+            return None
+        row = df.iloc[0]
+        result: dict = {}
+
+        def _get_num(key: str) -> float | None:
+            if key not in row:
+                return None
+            val = row.get(key)
+            if pd.isna(val):
+                return None
+            try:
+                return float(val)
+            except Exception:
+                return None
+
+        def _get_int(key: str) -> int | None:
+            val = _get_num(key)
+            if val is None:
+                return None
+            return int(round(val))
+
+        for key in ('total_improvement', 'remaining_ratio', 'validation_score', 'mdd_pct',
+                    'profit_volatility', 'return_volatility'):
+            val = _get_num(key)
+            if val is not None:
+                result[key] = val
+
+        for key in ('remaining_trades',):
+            val = _get_int(key)
+            if val is not None:
+                result[key] = val
+
+        return result or None
+    except Exception:
+        return None
+
+
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
+
                         buystg_name=None, sellstg_name=None, backname=None,
                         ml_train_mode: str = 'train', send_condition_summary: bool = True,
                         segment_analysis_mode: str = 'off',
@@ -196,7 +246,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
 
     try:
         # 1. 강화된 파생 지표 계산
+        df_tsg = canonicalize_detail_columns(df_tsg)
         df_enhanced = CalculateEnhancedDerivedMetrics(df_tsg)
+
         
         # 1.5. ML 기반 위험도 예측 (NEW)
         # - 손실확률_ML: ML이 예측한 손실 확률 (0~1)
@@ -259,7 +311,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         csv_chunk_size = output_cfg.get('csv_chunk_size') if output_cfg.get('enable_csv_parallel') else None
         detail_path = str(build_backtesting_output_path(save_file_name, "_detail.csv", output_dir=output_dir))
         df_enhanced_out = reorder_detail_columns(df_enhanced)
+        df_enhanced_out = normalize_segment_columns(df_enhanced_out)
         df_enhanced_out.to_csv(detail_path, encoding='utf-8-sig', index=True)
+
         result['csv_files'].append(detail_path)
 
         # 필터 분석 결과
@@ -442,6 +496,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         global_combo_path = source_phase2.get('global_combo_path') if isinstance(source_phase2, dict) else None
                         code_summary = source_phase2.get('segment_code_summary') if isinstance(source_phase2, dict) else None
 
+                        segment_results = _build_segment_results(global_combo_path)
+
                         final_lines, final_summary = build_segment_final_code(
                             buystg_text=buystg,
                             sellstg_text=sellstg,
@@ -452,7 +508,9 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             global_combo_path=global_combo_path,
                             code_summary=code_summary,
                             save_file_name=save_file_name,
+                            segment_results=segment_results,
                         )
+
                         final_path = save_segment_code_final(final_lines, segment_output_base, save_file_name)
 
                         if final_path:

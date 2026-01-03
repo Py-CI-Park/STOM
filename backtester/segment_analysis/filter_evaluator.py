@@ -38,7 +38,8 @@ class FilterEvaluatorConfig:
     allow_ml_filters: bool = True
 
     include_columns: Optional[List[str]] = None
-    exclude_prefixes: Tuple[str, ...] = ('매도',)
+    exclude_prefixes: Tuple[str, ...] = ('매도', 'S_')
+
     exclude_patterns: Tuple[str, ...] = (
         '수익금', '수익률', '손실', '이익', '보유시간', '매수일자',
         '매수시간', '매수금액', '변화', '추세', '연속이익', '연속손실', '리스크조정수익률',
@@ -59,7 +60,33 @@ class FilterEvaluator:
     def __init__(self, config: Optional[FilterEvaluatorConfig] = None):
         self.config = config or FilterEvaluatorConfig()
 
+    def _detect_timeframe(self, columns: List[str]) -> str:
+        if any('분당' in col for col in columns):
+            return 'min'
+        return 'tick'
+
+    def _map_buy_column(self, col: str, column_set: set) -> str:
+        if col.startswith('B_'):
+            return col
+        if col.startswith('매수'):
+            alias = f"B_{col[2:]}"
+            if alias in column_set:
+                return alias
+        else:
+            alias = f"B_{col}"
+            if alias in column_set:
+                return alias
+        return col
+
+    def _normalize_col_for_patterns(self, col: str) -> str:
+        if col.startswith('B_'):
+            return f"매수{col[2:]}"
+        if col.startswith('S_'):
+            return f"매도{col[2:]}"
+        return col
+
     def evaluate_segment(self, segment_df: pd.DataFrame, segment_id: str) -> List[dict]:
+
         if segment_df.empty or '수익금' not in segment_df.columns:
             return []
 
@@ -79,8 +106,9 @@ class FilterEvaluator:
             if len(unique_vals) < 5:
                 continue
 
-            thresholds = values[valid].quantile(self.config.quantiles).dropna().unique()
+            thresholds = values[valid].quantile(self.config.quantiles).round(4).dropna().unique()
             for thr in sorted(set(thresholds)):
+
                 for direction in ('less', 'greater'):
                     result = self._evaluate_threshold(
                         segment_df,
@@ -180,53 +208,94 @@ class FilterEvaluator:
         return round(float(p_value), 4), round(float(effect_size), 3)
 
     def _select_columns(self, df: pd.DataFrame) -> List[str]:
+        df_cols = list(df.columns)
+        col_set = set(df_cols)
+        timeframe = self._detect_timeframe(df_cols)
+        ignore_seconds = timeframe == 'min'
+
+        def _should_skip(col: str) -> bool:
+            return ignore_seconds and '초당' in col
+
+        def _add(col: str, feature_columns: List[str], seen: set) -> None:
+            if not col or col not in col_set:
+                return
+            if _should_skip(col):
+                return
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                return
+            if self._should_exclude(col):
+                return
+            if col in seen:
+                return
+            seen.add(col)
+            feature_columns.append(col)
+
         if self.config.include_columns:
-            return [c for c in self.config.include_columns if c in df.columns]
+            feature_columns: List[str] = []
+            seen: set = set()
+            for col in self.config.include_columns:
+                mapped = col.replace('초당', '분당') if ignore_seconds else col
+                mapped = self._map_buy_column(mapped, col_set)
+                _add(mapped, feature_columns, seen)
+            return feature_columns
 
         feature_columns: List[str] = []
-        for col in df.columns:
-            if not pd.api.types.is_numeric_dtype(df[col]):
-                continue
-            if self._should_exclude(col):
-                continue
-            if col in self.config.explicit_buy_columns or col.startswith('매수'):
-                feature_columns.append(col)
+        seen: set = set()
 
+        # 1) 명시적 매수 컬럼 우선 추가
+        for col in self.config.explicit_buy_columns:
+            mapped = col.replace('초당', '분당') if ignore_seconds else col
+            mapped = self._map_buy_column(mapped, col_set)
+            _add(mapped, feature_columns, seen)
+
+        # 2) 매수/ B_ 접두 컬럼 추가
+        for col in df_cols:
+            if col.startswith('매수') or col.startswith('B_'):
+                mapped = self._map_buy_column(col, col_set)
+                _add(mapped, feature_columns, seen)
+
+        # 3) 추가 컬럼
         for col in self.config.extra_columns:
-            if col in df.columns and col not in feature_columns:
-                feature_columns.append(col)
+            _add(col, feature_columns, seen)
 
+        # 4) ML 컬럼
         if self.config.allow_ml_filters:
-            for col in df.columns:
-                if col in feature_columns:
+            for col in df_cols:
+                if col in seen:
                     continue
                 if not str(col).endswith('_ML'):
                     continue
+                if _should_skip(col):
+                    continue
                 if not pd.api.types.is_numeric_dtype(df[col]):
                     continue
+                seen.add(col)
                 feature_columns.append(col)
 
         return feature_columns
 
+
     def _should_exclude(self, col: str) -> bool:
-        col_lower = col.lower()
+        base_col = self._normalize_col_for_patterns(col)
+        col_lower = base_col.lower()
         for pattern in self.config.exclude_patterns:
             if pattern.lower() in col_lower:
                 return True
 
-        if col in self.config.analysis_only_columns:
+        if base_col in self.config.analysis_only_columns:
             return True
 
         if not self.config.allow_ml_filters and '_ml' in col_lower:
             return True
 
-        if col in self.config.explicit_buy_columns:
+        if base_col in self.config.explicit_buy_columns:
             return False
 
-        if any(col.startswith(prefix) for prefix in self.config.exclude_prefixes):
+        if any(base_col.startswith(prefix) for prefix in self.config.exclude_prefixes):
             return True
 
         return False
+
 
     def _format_filter_name(self, column: str, threshold: float, direction: str) -> str:
         suffix = '미만 제외' if direction == 'less' else '이상 제외'

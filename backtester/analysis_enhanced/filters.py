@@ -166,7 +166,8 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
 
     Args:
         df_tsg: DataFrame
-        allow_ml_filters: True면 *_ML 컬럼(손실확률_ML/위험도_ML 등)도 필터 후보로 포함합니다.
+        allow_ml_filters: True면 *_ML 컬럼(B_손실확률_ML/B_위험도_ML 등)도 필터 후보로 포함합니다.
+
 
     Returns:
         list: 필터 효과 분석 결과 (통계 검정 결과 포함)
@@ -203,21 +204,21 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
         return '백만'
 
     # 1. 시간대 필터
-    if '매수시' in df_tsg.columns:
-        for hour in sorted(df_tsg['매수시'].unique()):
+    if 'B_시' in df_tsg.columns:
+        for hour in sorted(df_tsg['B_시'].unique()):
             filter_conditions.append({
                 '필터명': f'시간대 {hour}시 제외',
-                '조건': df_tsg['매수시'] == hour,
-                '조건식': f"df_tsg['매수시'] == {hour}",
+                '조건': df_tsg['B_시'] == hour,
+                '조건식': f"df_tsg['B_시'] == {hour}",
                 '분류': '시간대',
-                '코드': f'매수시 != {hour}'
+                '코드': f'B_시 != {hour}'
             })
 
     # 2. 전 컬럼 스캔: "매수 시점에 알 수 있는 변수" 중심으로 동적 임계값/범위 필터 탐색
     # - 목적: 매수시점 모든 변수(가능한 범위)를 검토하고, 개선 효과가 큰 필터를 추천
     # - 원칙(룩어헤드 방지): 매도* / 변화량(*변화, *변화율) / 보유시간 / 수익결과 기반 컬럼은 제외
 
-    trade_money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금']) if '매수당일거래대금' in df_tsg.columns else '백만'
+    trade_money_unit = _detect_trade_money_unit(df_tsg['B_당일거래대금']) if 'B_당일거래대금' in df_tsg.columns else '백만'
 
     def _fmt_number(v, decimals=2):
         try:
@@ -232,7 +233,7 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
         return s.rstrip('0').rstrip('.')
 
     def _fmt_trade_money(raw_value):
-        # raw_value: df_tsg['매수당일거래대금'] 원본 단위(권장: 백만)
+        # raw_value: df_tsg['B_당일거래대금'] 원본 단위(권장: 백만)
         try:
             rv = float(raw_value)
         except Exception:
@@ -269,12 +270,15 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
 
     def _is_buytime_candidate(col: str) -> bool:
         # "매도"로 시작하더라도, 매수 시점 호가/잔량에서 파생된 변수는 예외적으로 허용합니다.
-        # (예: 매도잔량_매수잔량_비율 = 매수 시점의 매도/매수 잔량 비율)
+        # (예: B_매도잔량_매수잔량_비율 = 매수 시점의 매도/매수 잔량 비율)
         allow_sellside_buytime_cols = {
+            'B_매도잔량_매수잔량_비율',
             '매도잔량_매수잔량_비율',
         }
         explicit_excludes = {
-            '당일거래대금_매수매도_비율',
+            'S_당일거래대금_매수매도_비율',
+            'B_금액',
+            'B_매수금액',
             '매수금액',
         }
         if col in ANALYSIS_ONLY_COLUMNS:
@@ -283,21 +287,30 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
             return False
         if col.endswith('_ML'):
             return bool(allow_ml_filters)
-        if col in ('수익금', '수익률', '보유시간', '매수시간', '매도시간', '매수일자', '추가매수시간', '매도조건'):
+        if col in (
+            '수익금', '수익률', '보유시간',
+            'B_시간', 'S_시간', 'B_일자', 'B_추가매수시간', 'S_조건',
+            '매수시간', '매도시간', '매수일자', '추가매수시간', '매도조건',
+        ):
+            return False
+        if col.startswith('S_') and col not in allow_sellside_buytime_cols:
             return False
         if col.startswith('매도') and col not in allow_sellside_buytime_cols:
             return False
         if col.startswith('수익금'):
             return False
-        if col in ('이익금액', '손실금액', '이익여부', '시간대평균수익률', '타이밍점수', '리스크조정수익률',
-                   '연속이익', '연속손실', '매수매도위험도점수'):
+        if col in (
+            '이익금액', '손실금액', '이익여부',
+            'B_시간대평균수익률', 'B_타이밍점수', 'B_리스크조정수익률',
+            '연속이익', '연속손실', 'B_매수매도위험도점수',
+        ):
             return False
         if '매도시' in col:
             return False
         if '변화' in col:
             return False
         # 시간 컬럼은 별도(시간대 필터)로 처리
-        if col in ('매수시', '매수분', '매수초'):
+        if col in ('B_시', 'B_분', 'B_초', '매수시', '매수분', '매수초'):
             return False
         if col.startswith('매수'):
             return True
@@ -350,16 +363,16 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
                     keep_code = f"({col} < {round(thr, 6)})"
                     suffix = '이상 제외'
 
-                if col == '매수당일거래대금':
+                if col == 'B_당일거래대금':
                     thr_label = _fmt_trade_money(thr)
-                    name = f"매수당일거래대금 {thr_label} {suffix}"
+                    name = f"B_당일거래대금 {thr_label} {suffix}"
                     keep_code = f"{keep_code}  # 단위:{trade_money_unit}(≈{thr_label})"
                 elif col == '시가총액':
-                    name = f"매수시가총액 {_fmt_eok_to_korean(thr)} {suffix}"
-                elif col == '위험도점수':
-                    name = f"매수 위험도점수 {thr:.0f}점 {suffix}"
-                elif col == '거래품질점수':
-                    name = f"거래품질점수 {thr:.0f}점 {suffix}"
+                    name = f"시가총액 {_fmt_eok_to_korean(thr)} {suffix}"
+                elif col == 'B_위험도점수':
+                    name = f"B_위험도점수 {thr:.0f}점 {suffix}"
+                elif col == 'B_거래품질점수':
+                    name = f"B_거래품질점수 {thr:.0f}점 {suffix}"
                 else:
                     name = f"{col} {_fmt_number(thr)} {suffix}"
 
@@ -404,15 +417,15 @@ def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
                     keep_code = f"(({col} < {round(low, 6)}) or ({col} >= {round(high, 6)}))"
                     suffix = '구간 제외'
 
-                if col == '매수당일거래대금':
+                if col == 'B_당일거래대금':
                     lo_label = _fmt_trade_money(low)
                     hi_label = _fmt_trade_money(high)
-                    name = f"매수당일거래대금 {lo_label}~{hi_label} {suffix}"
+                    name = f"B_당일거래대금 {lo_label}~{hi_label} {suffix}"
                     keep_code = f"{keep_code}  # 단위:{trade_money_unit}(≈{lo_label}~{hi_label})"
                 elif col == '시가총액':
-                    name = f"매수시가총액 {_fmt_eok_to_korean(low)}~{_fmt_eok_to_korean(high)} {suffix}"
-                elif col == '위험도점수':
-                    name = f"매수 위험도점수 {low:.0f}~{high:.0f} {suffix}"
+                    name = f"시가총액 {_fmt_eok_to_korean(low)}~{_fmt_eok_to_korean(high)} {suffix}"
+                elif col == 'B_위험도점수':
+                    name = f"B_위험도점수 {low:.0f}~{high:.0f} {suffix}"
                 else:
                     name = f"{col} {_fmt_number(low)}~{_fmt_number(high)} {suffix}"
 
@@ -533,10 +546,10 @@ def AnalyzeFilterEffectsLookahead(df_tsg):
         return '백만'
 
     trade_money_unit = None
-    if '매도당일거래대금' in df_tsg.columns:
-        trade_money_unit = _detect_trade_money_unit(df_tsg['매도당일거래대금'])
-    elif '매수당일거래대금' in df_tsg.columns:
-        trade_money_unit = _detect_trade_money_unit(df_tsg['매수당일거래대금'])
+    if 'S_당일거래대금' in df_tsg.columns:
+        trade_money_unit = _detect_trade_money_unit(df_tsg['S_당일거래대금'])
+    elif 'B_당일거래대금' in df_tsg.columns:
+        trade_money_unit = _detect_trade_money_unit(df_tsg['B_당일거래대금'])
     else:
         trade_money_unit = '백만'
 
@@ -551,11 +564,11 @@ def AnalyzeFilterEffectsLookahead(df_tsg):
     # 사후 진단용으로 의미 있는 대표 컬럼만 선정(과도한 계산/과적합 방지)
     candidate_cols = [
         # 매도 확정 정보/변화량
-        '매수매도위험도점수', '보유시간',
+        'B_매수매도위험도점수', '보유시간',
         '등락율변화', '체결강도변화', '거래대금변화율', '체결강도변화율', '호가잔량비변화',
         '급락신호', '매도세증가', '거래량급감',
         # 매도 시점 스냅샷
-        '매도등락율', '매도체결강도', '매도당일거래대금', '매도전일비', '매도회전율', '매도호가잔량비', '매도스프레드',
+        'S_등락율', 'S_체결강도', 'S_당일거래대금', 'S_전일비', 'S_회전율', 'S_호가잔량비', 'S_스프레드',
     ]
 
     filter_conditions = []
@@ -602,7 +615,7 @@ def AnalyzeFilterEffectsLookahead(df_tsg):
                 keep_code = f"({col} < {round(thr, 6)})"
                 suffix = '이상 제외'
 
-            if col in ('매수당일거래대금', '매도당일거래대금'):
+            if col in ('B_당일거래대금', 'S_당일거래대금'):
                 thr_label = _fmt_trade_money(thr)
                 name = f"{col} {thr_label} {suffix}(사후진단)"
                 keep_code = f"{keep_code}  # 단위:{trade_money_unit}(≈{thr_label})"
@@ -696,15 +709,15 @@ def AnalyzeFilterStability(df_tsg, n_periods=5):
 
     # 주요 필터만 안정성 분석
     key_filters = [
-        ('매수등락율 >= 20', lambda df: df['매수등락율'] >= 20, '등락율'),
-        ('매수체결강도 < 80', lambda df: df['매수체결강도'] < 80, '체결강도'),
+        ('B_등락율 >= 20', lambda df: df['B_등락율'] >= 20, '등락율'),
+        ('B_체결강도 < 80', lambda df: df['B_체결강도'] < 80, '체결강도'),
     ]
 
     if '시가총액' in df_tsg.columns:
-        key_filters.append(('매수시가총액 < 1000', lambda df: df['시가총액'] < 1000, '시가총액'))
+        key_filters.append(('시가총액 < 1000', lambda df: df['시가총액'] < 1000, '시가총액'))
 
-    if '위험도점수' in df_tsg.columns:
-        key_filters.append(('위험도점수 >= 50', lambda df: df['위험도점수'] >= 50, '위험도'))
+    if 'B_위험도점수' in df_tsg.columns:
+        key_filters.append(('B_위험도점수 >= 50', lambda df: df['B_위험도점수'] >= 50, '위험도'))
 
     stability_results = []
 

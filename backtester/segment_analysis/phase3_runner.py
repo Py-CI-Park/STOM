@@ -15,7 +15,8 @@ import pandas as pd
 
 from backtester.output_paths import build_backtesting_output_path
 from backtester.output_manifest import strip_numeric_prefix
-from .segmentation import SegmentBuilder, SegmentConfig
+from .segmentation import SegmentBuilder, SegmentConfig, normalize_segment_columns
+
 from .filter_evaluator import FilterEvaluator, FilterEvaluatorConfig
 from .validation import StabilityValidationConfig, validate_filter_stability
 from .segment_outputs import (
@@ -49,7 +50,9 @@ def run_phase3(
     runner_config = runner_config or Phase3RunnerConfig()
     detail_path = Path(detail_path).expanduser().resolve()
     df_detail = pd.read_csv(detail_path, encoding='utf-8-sig')
+    df_detail = normalize_segment_columns(df_detail)
     output_dir = resolve_segment_output_dir(detail_path, runner_config.output_dir)
+
 
     builder = SegmentBuilder(seg_config)
     segments = builder.build_segments(df_detail)
