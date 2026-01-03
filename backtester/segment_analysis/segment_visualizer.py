@@ -112,10 +112,13 @@ def plot_segment_heatmap(
         except Exception:
             cap_range_map = {}
 
-    def _draw_heatmap(ax, profits, trades, title: str):
-        vmax = max(abs(profits.max().max()), abs(profits.min().min()))
-        if vmax == 0:
-            vmax = 1.0
+    def _draw_heatmap(ax, profits, trades, title: str, vmax_override=None):
+        if vmax_override is not None:
+            vmax = vmax_override
+        else:
+            vmax = max(abs(profits.max().max()), abs(profits.min().min()))
+            if vmax == 0:
+                vmax = 1.0
 
         col_count = max(1, len(profits.columns))
         row_count = max(1, len(profits.index))
@@ -196,15 +199,24 @@ def plot_segment_heatmap(
         save_file_name or output_path,
     )
 
+    # 2025-01-03: 히트맵 동적 범위 통일 - 필터 적용 전후 비교를 위해 동일한 scale 사용
+    # 기준과 필터 적용 데이터 중 최대 절대값을 사용하여 color scale 통일
+    vmax_global = max(abs(profits_base.max().max()), abs(profits_base.min().min()))
+    if profits_filt is not None:
+        vmax_filt = max(abs(profits_filt.max().max()), abs(profits_filt.min().min()))
+        vmax_global = max(vmax_global, vmax_filt)
+    if vmax_global == 0:
+        vmax_global = 1.0
+
     fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=(fig_width, fig_height))
     if nrows == 1:
         axes = [axes]
 
-    im = _draw_heatmap(axes[0], profits_base, trades_base, 'Segment Heatmap (기준)')
+    im = _draw_heatmap(axes[0], profits_base, trades_base, 'Segment Heatmap (기준)', vmax_override=vmax_global)
     fig.colorbar(im, ax=axes[0], fraction=0.046, pad=0.04, label='Profit')
 
     if nrows == 2 and profits_filt is not None and trades_filt is not None:
-        im2 = _draw_heatmap(axes[1], profits_filt, trades_filt, 'Segment Heatmap (필터 적용)')
+        im2 = _draw_heatmap(axes[1], profits_filt, trades_filt, 'Segment Heatmap (필터 적용)', vmax_override=vmax_global)
         fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04, label='Profit')
 
     add_memo_box(fig, memo_text)

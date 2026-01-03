@@ -22,7 +22,7 @@ def write_segment_summary_report(output_dir: str, prefix: str, segment_outputs: 
         return None
     output_path = Path(output_dir).expanduser().resolve()
     output_path.mkdir(parents=True, exist_ok=True)
-    report_path = build_backtesting_output_path(prefix, "_segment_summary_full.txt", output_dir=output_path)
+    report_path = build_backtesting_output_path(prefix, "_segment_summary.txt", output_dir=output_path)
 
     phase2 = (segment_outputs or {}).get('phase2') or {}
     phase3 = (segment_outputs or {}).get('phase3') or {}
@@ -96,6 +96,15 @@ def _build_template_explain_lines() -> list[str]:
     lines.append("- 템플릿 비교 CSV는 시간/시총 세그먼트 조합별 전역 조합 성과를 요약합니다.")
     lines.append("- score는 개선금액/잔여비율/MDD/변동성/복잡도(세그먼트 수) 가중치를 합산한 점수입니다.")
     lines.append("- eligible은 최소 잔여비율/개선금액 기준을 만족하는 템플릿을 의미합니다.")
+    lines.append("")
+    lines.append("[템플릿 기능 설명]")
+    lines.append("- market_cap_only: 시가총액 구간만 사용하여 세그먼트 분할 (시간 구간 무시)")
+    lines.append("- time_only: 시간 구간만 사용하여 세그먼트 분할 (시가총액 무시)")
+    lines.append("- both: 시가총액과 시간 구간을 모두 사용하여 2차원 세그먼트 분할")
+    lines.append("- 동적 모드(dynamic/semi/fixed): 세그먼트 구간 경계를 데이터 분포에 따라 조정하는 방식")
+    lines.append("  - fixed: 고정 구간 사용")
+    lines.append("  - semi: 일부 구간을 동적 조정")
+    lines.append("  - dynamic: 모든 구간을 데이터 기반 동적 조정")
     return lines
 
 

@@ -1,4 +1,4 @@
-﻿import re
+import re
 import pyupbit
 import sqlite3
 import operator
@@ -699,9 +699,13 @@ def WriteGraphOutputReport(save_file_name, df_tsg, backname=None, seed=None, mdd
                 if isinstance(formula, str):
                     formula = [formula]
                 if formula:
-                    lines_local.append("- 공식:")
-                    for fline in formula:
-                        lines_local.append(f"  - {fline}")
+                    # 2025-01-03: 공식을 레이블과 같은 줄에 표시
+                    if len(formula) == 1:
+                        lines_local.append(f"- 공식: {formula[0]}")
+                    else:
+                        lines_local.append("- 공식:")
+                        for fline in formula:
+                            lines_local.append(f"  - {fline}")
                 note = info.get('note')
                 if note:
                     lines_local.append(f"- 비고: {note}")

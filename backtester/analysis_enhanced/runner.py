@@ -303,6 +303,18 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced, allow_ml_filters=allow_ml_filters)
         result['generated_code'] = generated_code
 
+        # 7-1. 필터 조건식 코드 파일 저장 (2025-01-03: 비-세그먼트 필터도 *_code.txt 생성)
+        if generated_code and isinstance(generated_code, dict):
+            code_text = generated_code.get('code_text')
+            if code_text:
+                try:
+                    output_dir_path = ensure_backtesting_output_dir(save_file_name)
+                    code_file_path = build_backtesting_output_path(save_file_name, "_code.txt", output_dir=output_dir_path)
+                    Path(code_file_path).write_text(str(code_text), encoding='utf-8-sig')
+                    result['code_file_path'] = str(code_file_path)
+                except Exception:
+                    pass
+
         # 8. CSV 파일 저장
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
         # - 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML 컬럼이 포함되어 비교 가능

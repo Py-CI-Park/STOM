@@ -102,11 +102,16 @@ def save_segment_code(code_lines: List[str], output_dir: str, prefix: str) -> Op
 
 
 def save_segment_code_final(code_lines: List[str], output_dir: str, prefix: str) -> Optional[str]:
+    """
+    2025-01-03: _segment_code_final.txt 대신 _segment_code.txt로 통합
+    최종 코드(매수조건 통합)를 기본 세그먼트 코드 파일에 병합하여 단일 파일로 관리
+    """
     if not code_lines:
         return None
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
-    code_path = build_backtesting_output_path(prefix, "_segment_code_final.txt", output_dir=path)
+    # 기존: _segment_code_final.txt → 변경: _segment_code.txt (통합)
+    code_path = build_backtesting_output_path(prefix, "_segment_code.txt", output_dir=path)
     code_path.write_text("\n".join(code_lines), encoding='utf-8-sig')
     return str(code_path)
 
