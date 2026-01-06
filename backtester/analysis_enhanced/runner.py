@@ -261,6 +261,148 @@ def _find_best_template_key_from_csv(comparison_csv_path: str, results: dict) ->
         return None
 
 
+def _save_filtered_strategy_to_db(
+    final_lines: list,
+    buystg_name: str | None,
+    sellstg_name: str | None,
+    sellstg: str | None,
+    save_file_name: str | None,
+    teleQ=None,
+) -> dict:
+    """
+    [Issue #5] 세그먼트 필터 자동 적용 메커니즘
+    
+    segment_code_final.txt 내용을 strategy.db에 저장하여
+    사용자가 바로 필터 적용된 조건으로 백테스트 가능하게 함.
+    
+    동작:
+    1. final_lines에서 매수 조건식 부분만 추출
+    2. buystg_name 기반으로 market type 감지 (stock/coin)
+    3. "{buystg_name}_Filtered" 이름으로 strategy.db에 저장
+    
+    Args:
+        final_lines: build_segment_final_code()가 반환한 전체 코드 라인
+        buystg_name: 원본 매수 조건식 이름
+        sellstg_name: 원본 매도 조건식 이름
+        sellstg: 원본 매도 조건식 코드
+        save_file_name: 백테스트 저장 파일명
+        teleQ: 텔레그램 알림 큐
+        
+    Returns:
+        dict: {
+            'saved': bool,
+            'strategy_name': str,
+            'table_name': str,
+            'error': str or None
+        }
+    """
+    import sqlite3
+    
+    result = {
+        'saved': False,
+        'strategy_name': None,
+        'table_name': None,
+        'buy_table': None,
+        'sell_table': None,
+        'error': None,
+    }
+    
+    try:
+        if not final_lines or not buystg_name:
+            result['error'] = "필수 파라미터 누락 (final_lines 또는 buystg_name)"
+            return result
+        
+        # 1. 매수 조건식 추출 (# === 매수 조건식 ~ # === 매도 조건식 사이)
+        buy_code_lines = []
+        in_buy_section = False
+        
+        for line in final_lines:
+            if '# === 매수 조건식' in line:
+                in_buy_section = True
+                continue  # 헤더 라인은 제외
+            if '# === 매도 조건식' in line:
+                in_buy_section = False
+                break
+            if in_buy_section:
+                buy_code_lines.append(line)
+        
+        if not buy_code_lines:
+            result['error'] = "매수 조건식 섹션을 찾을 수 없음"
+            return result
+        
+        buy_code = '\n'.join(buy_code_lines).strip()
+        
+        # 2. Market type 감지 (buystg_name 기반)
+        # 패턴: Min_B_*, Tick_B_*, Min_S_* = 주식 / Min_C_*, Tick_C_* = 코인
+        name_upper = buystg_name.upper()
+        if '_C_' in name_upper or name_upper.startswith('C_') or 'COIN' in name_upper:
+            market = 'coin'
+            buy_table = 'coinbuy'
+            sell_table = 'coinsell'
+        else:
+            # 기본값: 주식
+            market = 'stock'
+            buy_table = 'stockbuy'
+            sell_table = 'stocksell'
+        
+        # 3. 새 전략 이름 생성
+        base_name = buystg_name.rstrip('_Filtered').rstrip('_Filter')
+        filtered_name = f"{base_name}_Filtered"
+        
+        result['strategy_name'] = filtered_name
+        result['buy_table'] = buy_table
+        result['sell_table'] = sell_table
+        
+        # 4. strategy.db에 저장
+        DB_STRATEGY = './_database/strategy.db'
+        con = sqlite3.connect(DB_STRATEGY)
+        cur = con.cursor()
+        
+        try:
+            # 기존 항목 삭제 (있으면)
+            cur.execute(f"DELETE FROM {buy_table} WHERE `index` = ?", (filtered_name,))
+            
+            # 새 항목 삽입
+            cur.execute(
+                f"INSERT INTO {buy_table} (`index`, `전략코드`) VALUES (?, ?)",
+                (filtered_name, buy_code)
+            )
+            
+            # 매도 조건식도 같이 저장 (원본 유지)
+            if sellstg_name and sellstg:
+                sell_filtered_name = f"{sellstg_name.rstrip('_Filtered').rstrip('_Filter')}_Filtered"
+                cur.execute(f"DELETE FROM {sell_table} WHERE `index` = ?", (sell_filtered_name,))
+                cur.execute(
+                    f"INSERT INTO {sell_table} (`index`, `전략코드`) VALUES (?, ?)",
+                    (sell_filtered_name, sellstg)
+                )
+            
+            con.commit()
+            result['saved'] = True
+            
+            print(f"[Auto Save] 필터 적용 전략 저장 완료")
+            print(f"  - 매수 전략: {filtered_name} -> {buy_table}")
+            if sellstg_name:
+                print(f"  - 매도 전략: {sell_filtered_name} -> {sell_table}")
+            
+            if teleQ is not None:
+                teleQ.put(f"[자동 저장] 필터 적용 전략: {filtered_name}")
+                teleQ.put(f"  - DB 테이블: {buy_table}")
+                
+        except Exception as db_err:
+            result['error'] = f"DB 저장 실패: {db_err}"
+            print(f"[Auto Save] DB 저장 실패: {db_err}")
+        finally:
+            con.close()
+            
+    except Exception as e:
+        result['error'] = str(e)
+        print(f"[Auto Save] 전략 저장 중 오류: {e}")
+        print_exc()
+    
+    return result
+
+
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
                         buystg_name=None, sellstg_name=None, backname=None,
                         ml_train_mode: str = 'train', send_condition_summary: bool = True,
@@ -795,6 +937,21 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             if teleQ is not None:
                                 teleQ.put(f"최종 작성 업데이트 된 조건식 파일: {final_path}")
                                 teleQ.put(f"[세그먼트 코드 출처: {source_desc}]")
+
+                            # [2026-01-06] Issue #5: 세그먼트 필터 자동 적용 - strategy.db에 저장
+                            try:
+                                auto_save_result = _save_filtered_strategy_to_db(
+                                    final_lines=final_lines,
+                                    buystg_name=buystg_name,
+                                    sellstg_name=sellstg_name,
+                                    sellstg=sellstg,
+                                    save_file_name=save_file_name,
+                                    teleQ=teleQ,
+                                )
+                                if isinstance(base_phase2, dict):
+                                    base_phase2['auto_save_result'] = auto_save_result
+                            except Exception as auto_save_err:
+                                print(f"[Auto Save] 자동 저장 실패: {auto_save_err}")
                 except Exception:
                     print_exc()
 
