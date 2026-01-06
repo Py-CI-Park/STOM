@@ -91,3 +91,6 @@ STOM V1 venv.lnk
 
 # Backtester analysis artifacts (local)
 /backtester/analysis_enhanced/models/
+
+backtester/graph/
+nul

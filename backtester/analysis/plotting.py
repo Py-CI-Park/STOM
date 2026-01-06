@@ -1735,6 +1735,25 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
             except:
                 print_exc()
 
+    # [2026-01-06] 조건식 파일 텔레그램 전송
+    # - filter_code_final.txt: 일반 필터 적용된 매수 조건식
+    # - segment_code_final.txt: 세그먼트 필터 적용된 매수 조건식
+    try:
+        if teleQ is not None and enhanced_result:
+            # 1. 일반 필터 조건식 파일 전송
+            filter_code_path = enhanced_result.get('filter_code_final_path')
+            if filter_code_path:
+                teleQ.put(f"[일반 필터 조건식] {filter_code_path}")
+
+            # 2. 세그먼트 필터 조건식 파일 전송
+            seg_outputs = enhanced_result.get('segment_outputs') or {}
+            phase2 = seg_outputs.get('phase2') or {}
+            segment_code_path = phase2.get('segment_code_final_path')
+            if segment_code_path:
+                teleQ.put(f"[세그먼트 필터 조건식] {segment_code_path}")
+    except Exception:
+        print_exc()
+
     # [2025-12-14] 산출물 메타 리포트(txt) 저장
     try:
         from backtester.back_static import WriteGraphOutputReport

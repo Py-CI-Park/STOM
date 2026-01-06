@@ -24,11 +24,97 @@ from .filters import (
 )
 from .plotting import PltEnhancedAnalysisCharts
 from .utils import ComputeStrategyKey
+from backtester.segment_analysis.code_generator import (
+    build_filter_final_code,
+    save_filter_code_final,
+)
 
 
 # =============================================================================
 # 세그먼트 분석 헬퍼 함수
 # =============================================================================
+
+def _has_segment_filter_in_buystg(buystg: str) -> bool:
+    """
+    buystg 문자열에 이미 세그먼트 필터 코드가 포함되어 있는지 확인합니다.
+
+    [2026-01-06 버그 수정]
+    - 문제: Filter 백테스트 시 원본 백테스트의 segment_code_final.txt가 buystg에 이미 포함됨
+    - 결과: RunEnhancedAnalysis()가 세그먼트 분석을 다시 실행하여 새 필터가 추가로 삽입됨
+    - 증상: segment_code_final.txt에 두 개의 세그먼트 필터가 연속 배치됨
+            (T3C3_time3 + T5C3_time5 = 517줄, 원본은 302줄)
+    - 해결: buystg에 세그먼트 필터 마커가 있으면 세그먼트 분석 건너뛰기
+
+    [2026-01-06 추가 강화]
+    - 더 많은 마커 추가 (segment_code_final.txt 실제 내용 기반)
+    - 공백 정규화 처리 (탭/공백 차이 무시)
+    - 디버그 로깅 추가
+
+    Args:
+        buystg: 매수 조건식 문자열
+
+    Returns:
+        True if segment filter markers are found, False otherwise
+    """
+    if not buystg:
+        return False
+
+    # 공백 정규화: 연속 공백을 단일 공백으로, 탭을 공백으로 변환
+    normalized_buystg = ' '.join(buystg.split())
+
+    # 세그먼트 필터 코드에 사용되는 마커들
+    # segment_code_final.txt의 실제 구조 기반으로 선정 (더 많은 변형 포함)
+    segment_markers = [
+        # === 헤더 마커 ===
+        '# === 세그먼트 필터',           # segment_code_final.txt 헤더 (여러 변형 매칭)
+        '세그먼트 필터 반영',            # 헤더 내 반영 구문
+        '# 세그먼트 코드:',              # segment_code_final.txt 헤더
+        '최종 매수 조건식_filtered',     # segment_code_final.txt 첫 줄
+        '# 세그먼트 필터 조건식',        # 세그먼트 필터 조건식 시작 주석
+
+        # === 필터 로직 마커 ===
+        '필터통과 = False',              # 세그먼트 필터 조건식 (공백 포함)
+        '필터통과 = True',               # 세그먼트 필터 조건식 (공백 포함)
+        '필터통과=False',                # 세그먼트 필터 조건식 (공백 없음)
+        '필터통과=True',                 # 세그먼트 필터 조건식 (공백 없음)
+
+        # === 세그먼트 제외/반영 마커 ===
+        '세그먼트 전체 제외',            # 세그먼트 전체 제외 주석
+        '매수 = 매수 and 필터통과',      # 최종 조건 합성 (공백 포함)
+        '매수=매수 and 필터통과',        # 최종 조건 합성 (일부 공백 없음)
+
+        # === 세그먼트 분할 마커 (시가총액/시간 기반) ===
+        '[대형주_T',                     # 세그먼트 주석 (대형주)
+        '[중형주_T',                     # 세그먼트 주석 (중형주)
+        '[소형주_T',                     # 세그먼트 주석 (소형주)
+        '[초소형주_T',                   # 세그먼트 주석 (초소형주)
+    ]
+
+    # 원본 문자열에서 마커 검색
+    for marker in segment_markers:
+        if marker in buystg:
+            print(f"[Segment Filter Detection] 마커 감지됨: '{marker}'")
+            return True
+
+    # 정규화된 문자열에서 마커 검색 (공백 차이 무시)
+    normalized_markers = [
+        '필터통과 = False',
+        '필터통과 = True',
+        '매수 = 매수 and 필터통과',
+    ]
+    for marker in normalized_markers:
+        normalized_marker = ' '.join(marker.split())
+        if normalized_marker in normalized_buystg:
+            print(f"[Segment Filter Detection] 정규화 마커 감지됨: '{marker}'")
+            return True
+
+    # 디버그: 감지 실패 시 buystg 일부 출력 (첫 500자)
+    if len(buystg) > 100:
+        print(f"[Segment Filter Detection] 마커 미감지. buystg 길이: {len(buystg)}")
+        print(f"[Segment Filter Detection] buystg 시작 500자: {buystg[:500]}")
+
+    return False
+
 
 def _resolve_best_template_segment_code(
     template_comparison: dict,
@@ -251,6 +337,35 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced, allow_ml_filters=allow_ml_filters)
         result['generated_code'] = generated_code
 
+        # 7-1. 일반 필터 조건식 파일 생성 (filter_code_final.txt)
+        # [2026-01-06 추가] segment_code_final.txt와 유사하게 일반 필터도 최종 조건식 파일 생성
+        try:
+            if generated_code:
+                filter_final_output_dir = ensure_backtesting_output_dir(save_file_name)
+                filter_final_lines, filter_final_summary = build_filter_final_code(
+                    buystg_text=buystg,
+                    sellstg_text=sellstg,
+                    generated_code=generated_code,
+                    buystg_name=buystg_name,
+                    sellstg_name=sellstg_name,
+                    save_file_name=save_file_name,
+                )
+                
+                if filter_final_lines:
+                    filter_code_path = save_filter_code_final(
+                        filter_final_lines,
+                        str(filter_final_output_dir),
+                        save_file_name
+                    )
+                    if filter_code_path:
+                        result['filter_code_final_path'] = filter_code_path
+                        print(f"[Enhanced Analysis] 일반 필터 조건식 파일 생성: {filter_code_path}")
+                        print(f"  - 필터 수: {filter_final_summary.get('total_filters', 0)}")
+                        print(f"  - 예상 개선: {filter_final_summary.get('total_improvement', 0):,}원")
+        except Exception as e:
+            print(f"[Enhanced Analysis] 일반 필터 조건식 파일 생성 실패: {e}")
+            print_exc()
+
         # 8. CSV 파일 저장
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
         # - 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML 컬럼이 포함되어 비교 가능
@@ -335,7 +450,26 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             result['charts'].append(chart_path)
 
         # 9-1. 세그먼트 분석(옵션)
+        # [2026-01-06 리팩토링] 세그먼트 분석 항상 실행 + 중복 방지는 code_generator.py에서 처리
+        #
+        # 동작 방식:
+        # 1. 세그먼트 분석(Phase2/3)은 항상 실행 - 일반 필터의 고도화 단계로 함께 진행
+        # 2. buystg에 기존 세그먼트 필터가 있으면 경고 로그 출력
+        # 3. 최종 코드 생성 시 code_generator.py가 기존 필터를 감지하여 교체(replace)
+        #    - _has_existing_segment_filter(): 기존 필터 감지
+        #    - _extract_original_buy_code(): 원본 코드 추출 (기존 필터 제거)
+        #    - _inject_segment_filter_into_buy_lines(): 새 필터 삽입
+        #
+        # 결과: 기존 필터가 있어도 최신 세그먼트 분석 결과로 교체됨
         segment_outputs = None
+
+        # 기존 세그먼트 필터 감지 (경고용)
+        has_existing_filter = _has_segment_filter_in_buystg(buystg)
+        if has_existing_filter:
+            print(f"[Segment Analysis] buystg에 기존 세그먼트 필터 감지됨 - 최신 분석 결과로 교체 예정")
+            if teleQ is not None:
+                teleQ.put("[세그먼트 분석] 기존 세그먼트 필터 감지됨 - 최신 분석 결과로 교체됩니다")
+
         if segment_analysis_mode and str(segment_analysis_mode).lower() not in ('off', 'false', 'none'):
             try:
                 from backtester.segment_analysis.phase2_runner import run_phase2, Phase2RunnerConfig

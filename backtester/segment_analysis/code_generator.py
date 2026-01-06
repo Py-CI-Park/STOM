@@ -16,6 +16,155 @@ from .segmentation import SegmentConfig
 from backtester.output_paths import build_backtesting_output_path
 
 
+# =============================================================================
+# 세그먼트 필터 중복 삽입 방지 헬퍼 함수
+# =============================================================================
+
+# 세그먼트 필터 마커 목록 (감지용)
+_SEGMENT_FILTER_MARKERS = [
+    '# === 세그먼트 필터',           # 세그먼트 필터 블록 시작
+    '# 세그먼트 필터 조건식',        # 세그먼트 필터 조건식 주석
+    '필터통과 = False',              # 세그먼트 필터 초기화
+    '세그먼트 전체 제외',            # 세그먼트 전체 제외 주석
+    '매수 = 매수 and 필터통과',      # 세그먼트 필터 반영
+    '[대형주_T',                     # 세그먼트 분할 주석
+    '[중형주_T',
+    '[소형주_T',
+    '[초소형주_T',
+]
+
+# 세그먼트 필터 블록 시작/끝 마커 (제거용)
+_SEGMENT_BLOCK_START_MARKERS = [
+    '# === 세그먼트 필터 (자동 생성) ===',
+    '# === Segment filter runtime mapping',
+    '# 세그먼트 필터 조건식 (자동 생성)',
+]
+
+_SEGMENT_BLOCK_END_MARKERS = [
+    '# === 세그먼트 필터 반영 ===',
+    '매수 = 매수 and 필터통과',
+    '매수 = 필터통과',
+]
+
+
+def _has_existing_segment_filter(buy_lines: List[str]) -> bool:
+    """
+    buy_lines에 이미 세그먼트 필터 코드가 포함되어 있는지 확인합니다.
+
+    [2026-01-06 추가]
+    - 목적: 세그먼트 필터 중복 삽입 방지
+    - Filter 백테스트 시 기존 필터를 감지하여 교체 로직 적용
+
+    Args:
+        buy_lines: 매수 조건식 코드 라인 리스트
+
+    Returns:
+        True if segment filter markers are found
+    """
+    if not buy_lines:
+        return False
+
+    text = '\n'.join(buy_lines)
+    return any(marker in text for marker in _SEGMENT_FILTER_MARKERS)
+
+
+def _extract_original_buy_code(buy_lines: List[str]) -> List[str]:
+    """
+    기존 세그먼트 필터 코드를 제거하고 원본 매수 조건식만 추출합니다.
+
+    [2026-01-06 추가]
+    - 목적: 세그먼트 필터 교체 시 원본 코드 추출
+    - 세그먼트 필터 블록(시작~끝)을 찾아 제거
+
+    세그먼트 필터 블록 구조:
+    ```
+    # === 세그먼트 필터 (자동 생성) ===     <- 시작 마커
+    # === Segment filter runtime mapping ...
+    ... (필터 코드) ...
+    # === 세그먼트 필터 반영 ===            <- 끝 마커
+    try:
+        매수 = 매수 and 필터통과
+    except NameError:
+        매수 = 필터통과
+    ```
+
+    Args:
+        buy_lines: 세그먼트 필터가 포함된 매수 조건식 코드 라인 리스트
+
+    Returns:
+        세그먼트 필터가 제거된 원본 매수 조건식 코드 라인 리스트
+    """
+    if not buy_lines:
+        return []
+
+    # 세그먼트 필터가 없으면 그대로 반환
+    if not _has_existing_segment_filter(buy_lines):
+        return buy_lines
+
+    result = []
+    in_segment_block = False
+    skip_until_empty_or_code = False
+
+    for i, line in enumerate(buy_lines):
+        stripped = line.strip()
+
+        # 세그먼트 블록 시작 감지
+        if any(marker in stripped for marker in _SEGMENT_BLOCK_START_MARKERS):
+            in_segment_block = True
+            continue
+
+        # 세그먼트 블록 끝 감지
+        if in_segment_block:
+            # "매수 = 필터통과" 이후의 빈 줄까지 스킵
+            if any(marker in stripped for marker in _SEGMENT_BLOCK_END_MARKERS):
+                skip_until_empty_or_code = True
+                continue
+
+            if skip_until_empty_or_code:
+                # try/except 블록도 스킵
+                if stripped.startswith('try:') or stripped.startswith('except') or stripped == '매수 = 필터통과':
+                    continue
+                # 빈 줄이면 블록 종료
+                if not stripped:
+                    in_segment_block = False
+                    skip_until_empty_or_code = False
+                    continue
+                # 새로운 코드가 시작되면 블록 종료
+                if not stripped.startswith('#') and '=' in stripped:
+                    in_segment_block = False
+                    skip_until_empty_or_code = False
+                    result.append(line)
+                    continue
+
+            continue
+
+        # 세그먼트 필터 관련 라인 스킵 (블록 외부)
+        if any(marker in stripped for marker in ['# 세그먼트 필터 조건식', '필터통과 = False', '필터통과 = True']):
+            # 단독 라인인 경우 스킵
+            if stripped == '필터통과 = False' or stripped == '필터통과 = True':
+                continue
+
+        # 세그먼트 분할 주석 스킵
+        if stripped.startswith('# [') and any(seg in stripped for seg in ['대형주_T', '중형주_T', '소형주_T', '초소형주_T']):
+            in_segment_block = True
+            continue
+
+        # 일반 라인은 결과에 추가
+        result.append(line)
+
+    # 연속된 빈 줄 정리
+    cleaned = []
+    prev_empty = False
+    for line in result:
+        is_empty = not line.strip()
+        if is_empty and prev_empty:
+            continue
+        cleaned.append(line)
+        prev_empty = is_empty
+
+    return cleaned
+
+
 def build_segment_filter_code(
     global_best: Optional[dict],
     seg_config: Optional[SegmentConfig] = None,
@@ -191,16 +340,46 @@ def _inject_segment_filter_into_buy_lines(
     buy_lines: List[str],
     segment_code_lines: List[str],
 ) -> Tuple[List[str], bool]:
+    """
+    매수 조건식에 세그먼트 필터를 삽입합니다.
+
+    [2026-01-06 버그 수정] 세그먼트 필터 중복 삽입 방지
+    - 기존: buy_lines에 세그먼트 필터가 있어도 무조건 추가 (중복 발생)
+    - 수정: 기존 세그먼트 필터가 있으면 먼저 제거 후 새 필터 삽입 (교체)
+
+    동작 방식:
+    1. buy_lines에 기존 세그먼트 필터가 있는지 확인
+    2. 있으면 _extract_original_buy_code()로 원본 코드 추출
+    3. 원본 코드에 새 세그먼트 필터 삽입
+
+    Args:
+        buy_lines: 매수 조건식 코드 라인 리스트
+        segment_code_lines: 삽입할 세그먼트 필터 코드 라인 리스트
+
+    Returns:
+        (합쳐진 코드 라인 리스트, 삽입 성공 여부)
+    """
     if not buy_lines:
         return buy_lines, False
 
+    # [2026-01-06 추가] 기존 세그먼트 필터 감지 및 제거 (교체 로직)
+    working_lines = buy_lines
+    if _has_existing_segment_filter(buy_lines):
+        print("[Segment Code Generator] 기존 세그먼트 필터 감지됨 - 제거 후 새 필터로 교체")
+        working_lines = _extract_original_buy_code(buy_lines)
+        if not working_lines:
+            print("[Segment Code Generator] 원본 코드 추출 실패 - 전체 코드 사용")
+            working_lines = buy_lines
+
+    # "if 매수:" 라인 찾기
     last_idx = None
-    for idx, line in enumerate(buy_lines):
+    for idx, line in enumerate(working_lines):
         if re.match(r'^\s*if\s+매수\s*:', line):
             last_idx = idx
 
     if last_idx is None:
-        fallback = list(buy_lines)
+        # "if 매수:" 라인이 없으면 끝에 추가 (fallback)
+        fallback = list(working_lines)
         fallback.append("")
         fallback.append("# === 세그먼트 필터 (자동 생성) ===")
         fallback.extend(segment_code_lines)
@@ -212,6 +391,7 @@ def _inject_segment_filter_into_buy_lines(
         fallback.append("    매수 = 필터통과")
         return fallback, False
 
+    # 세그먼트 필터 블록 생성
     injected_block = ["", "# === 세그먼트 필터 (자동 생성) ==="]
     injected_block.extend(segment_code_lines)
     injected_block.append("")
@@ -222,10 +402,11 @@ def _inject_segment_filter_into_buy_lines(
     injected_block.append("    매수 = 필터통과")
     injected_block.append("")
 
+    # "if 매수:" 라인 앞에 세그먼트 필터 삽입
     new_lines = []
-    new_lines.extend(buy_lines[:last_idx])
+    new_lines.extend(working_lines[:last_idx])
     new_lines.extend(injected_block)
-    new_lines.extend(buy_lines[last_idx:])
+    new_lines.extend(working_lines[last_idx:])
     return new_lines, True
 
 
@@ -695,3 +876,170 @@ def _split_segment_id(segment_id: str) -> Tuple[str, str]:
         return segment_id, ''
     cap_label, time_label = segment_id.split('_', 1)
     return cap_label, time_label
+
+
+# =============================================================================
+# 일반 필터 조건식 생성 함수 (2026-01-06 추가)
+# =============================================================================
+
+def build_filter_final_code(
+    buystg_text: Optional[str],
+    sellstg_text: Optional[str],
+    generated_code: Optional[dict],
+    buystg_name: Optional[str] = None,
+    sellstg_name: Optional[str] = None,
+    save_file_name: Optional[str] = None,
+) -> Tuple[List[str], Dict[str, int]]:
+    """
+    매수 조건식 + 일반 필터 조건식을 합쳐 바로 사용할 수 있는 최종 코드 블록 생성.
+
+    [2026-01-06 추가]
+    - segment_code_final.txt와 유사한 형태로 filter_code_final.txt 생성
+    - GenerateFilterCode()의 결과를 매수 조건식에 통합
+
+    Args:
+        buystg_text: 원본 매수 조건식 코드
+        sellstg_text: 원본 매도 조건식 코드
+        generated_code: GenerateFilterCode()의 반환값
+        buystg_name: 매수 조건식 이름
+        sellstg_name: 매도 조건식 이름
+        save_file_name: 저장 파일명 (헤더용)
+
+    Returns:
+        (최종 코드 라인 리스트, 요약 정보)
+    """
+    summary = {
+        'total_filters': 0,
+        'total_improvement': 0,
+        'injected': 0,
+    }
+
+    if not isinstance(generated_code, dict):
+        return [], summary
+
+    buy_conditions = generated_code.get('buy_conditions') or []
+    individual_conditions = generated_code.get('individual_conditions') or []
+    combine_steps = generated_code.get('combine_steps') or []
+    code_summary = generated_code.get('summary') or {}
+
+    if not buy_conditions:
+        return [], summary
+
+    summary['total_filters'] = len(individual_conditions)
+    summary['total_improvement'] = int(code_summary.get('total_improvement_combined', 0) or 0)
+
+    # 헤더 생성
+    header = []
+    header.append("# 최종 매수 조건식_filtered (일반 필터 반영)")
+    header.append(f"# 생성 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if save_file_name:
+        header.append(f"# save_file_name: {save_file_name}")
+    if buystg_name:
+        header.append(f"# 매수 조건식: {buystg_name}")
+    if sellstg_name:
+        header.append(f"# 매도 조건식: {sellstg_name}")
+    header.append(f"# 필터 수: {summary['total_filters']}")
+    header.append(f"# 예상 개선금액: {summary['total_improvement']:,}원")
+    header.append("")
+
+    # 필터 요약 정보
+    header.append("# === 적용된 필터 목록 ===")
+    for i, cond in enumerate(individual_conditions, 1):
+        header.append(f"# {i}. {cond.get('필터명', 'N/A')}: 개선 {cond.get('수익개선', 0):,}원, 제외 {cond.get('제외율', 0)}%")
+    header.append("")
+
+    # 조합 단계 정보
+    if combine_steps:
+        header.append("# === 필터 조합 단계 ===")
+        for step in combine_steps:
+            header.append(f"# {step.get('순서', '')}. {step.get('필터명', '')}: "
+                         f"+{step.get('추가개선(중복반영)', 0):,}원 → 누적 {step.get('누적수익금', 0):,}원")
+        header.append("")
+
+    # 매수 조건식 처리
+    buy_lines = _normalize_code_lines(buystg_text)
+    sell_lines = _normalize_code_lines(sellstg_text)
+
+    # 필터 조건 블록 생성
+    filter_block = []
+    filter_block.append("")
+    filter_block.append("# === 일반 필터 (자동 생성) ===")
+    filter_block.append("# 각 필터는 '해당 조건이면 매수하지 않음(제외)'을 의미합니다.")
+    filter_block.append("# 여러 필터를 함께 쓴다는 것은: (필터1 통과) AND (필터2 통과) AND ... 입니다.")
+    filter_block.append("")
+
+    for cond in individual_conditions:
+        filter_name = cond.get('필터명', 'N/A')
+        filter_code = cond.get('조건코드', '')
+        improvement = cond.get('수익개선', 0)
+        exclusion = cond.get('제외율', 0)
+
+        filter_block.append(f"# [{filter_name}] 개선: {improvement:,}원, 제외: {exclusion}%")
+        if filter_code:
+            # not (조건) 형태로 변환 - 조건에 해당하면 제외
+            filter_block.append(f"if {filter_code}:")
+            filter_block.append(f"    매수 = False")
+        filter_block.append("")
+
+    filter_block.append("# === 일반 필터 반영 완료 ===")
+    filter_block.append("")
+
+    # "if 매수:" 라인 찾기 및 필터 삽입
+    last_idx = None
+    for idx, line in enumerate(buy_lines):
+        if re.match(r'^\s*if\s+매수\s*:', line):
+            last_idx = idx
+
+    if last_idx is None:
+        # "if 매수:" 라인이 없으면 끝에 추가
+        combined_buy = list(buy_lines)
+        combined_buy.extend(filter_block)
+        summary['injected'] = 0
+    else:
+        # "if 매수:" 라인 앞에 필터 삽입
+        combined_buy = []
+        combined_buy.extend(buy_lines[:last_idx])
+        combined_buy.extend(filter_block)
+        combined_buy.extend(buy_lines[last_idx:])
+        summary['injected'] = 1
+
+    # 최종 라인 조합
+    lines = []
+    lines.extend(header)
+    lines.append("# === 매수 조건식 (일반 필터 반영) ===")
+    lines.extend(combined_buy)
+
+    if sell_lines:
+        lines.append("")
+        lines.append("# === 매도 조건식 (원본 유지) ===")
+        lines.extend(sell_lines)
+
+    lines.append("")
+    lines.append("# 일반 필터가 적용된 최종 조건식 파일입니다.")
+    lines.append("# 세그먼트 필터와 함께 사용하려면 segment_code_final.txt를 참조하세요.")
+
+    return lines, summary
+
+
+def save_filter_code_final(code_lines: List[str], output_dir: str, prefix: str) -> Optional[str]:
+    """
+    일반 필터 최종 조건식 파일을 저장합니다.
+
+    [2026-01-06 추가]
+    - segment_code_final.txt와 유사한 형태로 filter_code_final.txt 저장
+
+    Args:
+        code_lines: 조건식 코드 라인 리스트
+        output_dir: 출력 디렉토리
+        prefix: 파일명 접두사
+
+    Returns:
+        저장된 파일 경로 또는 None
+    """
+    if not code_lines:
+        return None
+    path = Path(output_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    code_path = build_backtesting_output_path(prefix, "_filter_code_final.txt", output_dir=path)
+    code_path.write_text("\n".join(code_lines), encoding='utf-8-sig')
+    return str(code_path)
