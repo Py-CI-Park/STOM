@@ -12,6 +12,8 @@ from .config import (
 from .stats import (
     CalculateStatisticalSignificance,
     CalculateEffectSizeInterpretation,
+    apply_multiple_testing_correction,
+    get_correction_summary,
 )
 from .thresholds import (
     FindOptimalThresholds,
@@ -160,16 +162,27 @@ def AnalyzeFilterCombinations(df_tsg, single_filters=None, max_filters=3, top_n=
 
     return combination_results
 
-def AnalyzeFilterEffectsEnhanced(df_tsg, allow_ml_filters: bool = True):
+def AnalyzeFilterEffectsEnhanced(
+    df_tsg,
+    allow_ml_filters: bool = True,
+    correction_method: str = 'bonferroni',
+):
     """
-    강화된 필터 효과 분석 (통계적 유의성 + 동적 임계값 포함)
+    강화된 필터 효과 분석 (통계적 유의성 + 동적 임계값 + 다중 검정 보정)
 
     Args:
         df_tsg: DataFrame
         allow_ml_filters: True면 *_ML 컬럼(손실확률_ML/위험도_ML 등)도 필터 후보로 포함합니다.
+        correction_method: 다중 검정 보정 방법
+            - 'bonferroni': 가장 보수적 (False Positive 최소화)
+            - 'holm': Step-down 방식 (Bonferroni보다 관대)
+            - 'fdr_bh': Benjamini-Hochberg FDR 제어 (가장 관대, 탐색용)
+            - 'none': 보정 없음 (기존 동작)
 
     Returns:
         list: 필터 효과 분석 결과 (통계 검정 결과 포함)
+            - 'p값_adjusted': 보정된 p-값
+            - '유의함_adjusted': 보정 후 유의성 (보정 적용 시)
     """
     filter_results = []
     total_profit = df_tsg['수익금'].sum()
@@ -670,7 +683,15 @@ def AnalyzeFilterEffectsLookahead(df_tsg):
             continue
 
     filter_results.sort(key=lambda x: x.get('수익개선금액', 0), reverse=True)
+
+    # 다중 검정 보정 적용
+    if correction_method and correction_method != 'none' and filter_results:
+        filter_results = apply_multiple_testing_correction(
+            filter_results, method=correction_method
+        )
+
     return filter_results
+
 
 def AnalyzeFilterStability(df_tsg, n_periods=5):
     """
