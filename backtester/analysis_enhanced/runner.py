@@ -28,6 +28,7 @@ from backtester.segment_analysis.code_generator import (
     build_filter_final_code,
     save_filter_code_final,
 )
+from .analysis_logger import create_analysis_logger, AnalysisLogger
 
 
 # =============================================================================
@@ -278,17 +279,36 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         'ml_prediction_stats': None,  # NEW: ML 예측 통계
         'ml_reliability': None,       # NEW: ML 신뢰도/게이트 결과
         'segment_outputs': None,      # NEW: 세그먼트 분석 산출물
+        'analysis_log_path': None,    # NEW: 분석 로그 파일 경로
     }
 
+    # 분석 로거 초기화
+    output_dir = ensure_backtesting_output_dir(save_file_name)
+    analysis_logger = create_analysis_logger(
+        output_dir=str(output_dir),
+        save_file_name=save_file_name,
+        teleQ=teleQ,
+        total_steps=12
+    )
+
     try:
-        # 1. 강화된 파생 지표 계산
-        df_enhanced = CalculateEnhancedDerivedMetrics(df_tsg)
+        # === Phase A 시작: 일반 필터 분석 ===
+        analysis_logger.send_phase_notification('A', 'start')
         
-        # 1.5. ML 기반 위험도 예측 (NEW)
+        # 1. 강화된 파생 지표 계산
+        analysis_logger.log_step_start(1, "강화 파생 지표 계산 (CalculateEnhancedDerivedMetrics)")
+        df_enhanced = CalculateEnhancedDerivedMetrics(df_tsg)
+        analysis_logger.log_step_complete(1, metrics={
+            "원본_행수": len(df_tsg),
+            "강화_컬럼수": len(df_enhanced.columns),
+        })
+        
+        # 2. ML 기반 위험도 예측 (NEW)
         # - 손실확률_ML: ML이 예측한 손실 확률 (0~1)
         # - 위험도_ML: ML 기반 위험도 점수 (0~100)
         # - 예측매수매도위험도점수_ML: 매수 시점 변수로 예측한 매수매도위험도점수(0~100)
         # - detail.csv에 추가하여 실제 매수매도위험도점수와 비교 가능
+        analysis_logger.log_step_start(2, "ML 위험도 예측 (PredictRiskWithML)")
         df_enhanced, ml_prediction_stats = PredictRiskWithML(
             df_enhanced,
             save_file_name=save_file_name,
@@ -308,37 +328,121 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             pass
         
         result['enhanced_df'] = df_enhanced
+        analysis_logger.log_step_complete(2, metrics={
+            "ML_모델": ml_prediction_stats.get('model_type') if ml_prediction_stats else None,
+            "AUC": ml_prediction_stats.get('test_auc') if ml_prediction_stats else None,
+            "신뢰도_PASS": allow_ml_filters,
+        })
 
-        # 2. 강화된 필터 효과 분석 (통계 검정 포함)
+        # 3. 강화된 필터 효과 분석 (통계 검정 포함)
+        analysis_logger.log_step_start(3, "필터 효과 분석 (AnalyzeFilterEffectsEnhanced)")
         filter_results = AnalyzeFilterEffectsEnhanced(df_enhanced, allow_ml_filters=allow_ml_filters)
         result['filter_results'] = filter_results
+        
+        # 필터 결정 로그 기록 (상세 정보 포함)
+        total_trades = len(df_enhanced)
+        total_profit = int(df_enhanced['수익금'].sum()) if '수익금' in df_enhanced.columns else 0
+        analysis_logger.log_filter_decisions_from_results(
+            filter_results, 
+            total_trades=total_trades, 
+            total_profit=total_profit
+        )
+        
+        analysis_logger.log_step_complete(3, metrics={
+            "총_필터수": len(filter_results) if filter_results else 0,
+            "개선_필터수": len([f for f in (filter_results or []) if (f.get('수익개선금액', 0) or 0) > 0]),
+            "총_거래수": total_trades,
+            "총_수익금": total_profit,
+        })
 
-        # 2-1. (진단용) 룩어헤드 포함 필터 효과 분석
+        # 3-1. (진단용) 룩어헤드 포함 필터 효과 분석
         filter_results_lookahead = AnalyzeFilterEffectsLookahead(df_enhanced)
         result['filter_results_lookahead'] = filter_results_lookahead
 
-        # 3. 최적 임계값 탐색
+        # 4. 최적 임계값 탐색
+        analysis_logger.log_step_start(4, "최적 임계값 탐색 (FindAllOptimalThresholds)")
         optimal_thresholds = FindAllOptimalThresholds(df_enhanced)
         result['optimal_thresholds'] = optimal_thresholds
+        analysis_logger.log_step_complete(4, metrics={
+            "임계값_수": len(optimal_thresholds) if optimal_thresholds else 0,
+        })
 
-        # 4. 필터 조합 분석 (단일 필터 결과 재사용으로 중복 계산 제거)
+        # 5. 필터 조합 분석 (단일 필터 결과 재사용으로 중복 계산 제거)
+        analysis_logger.log_step_start(5, "필터 조합 분석 (AnalyzeFilterCombinations)")
         filter_combinations = AnalyzeFilterCombinations(df_enhanced, single_filters=filter_results)
         result['filter_combinations'] = filter_combinations
+        
+        # 상위 조합 로깅 (최대 5개)
+        for combo in (filter_combinations or [])[:5]:
+            filter_names = [combo.get('필터1', ''), combo.get('필터2', '')]
+            if combo.get('필터3'):
+                filter_names.append(combo.get('필터3'))
+            filter_names = [f for f in filter_names if f]
+            
+            analysis_logger.log_combination_evaluation(
+                filter_names=filter_names,
+                individual_improvements=[],  # 개별 개선금액은 결과에 없음
+                combined_improvement=int(combo.get('조합개선', 0) or 0),
+                synergy=int(combo.get('시너지효과', 0) or 0),
+                synergy_ratio=float(combo.get('시너지비율', 0) or 0),
+                excluded_ratio=float(combo.get('제외비율', 0) or 0),
+                recommendation=combo.get('권장', ''),
+            )
+        
+        analysis_logger.log_step_complete(5, metrics={
+            "조합_수": len(filter_combinations) if filter_combinations else 0,
+            "시너지_조합수": len([c for c in (filter_combinations or []) if (c.get('시너지효과', 0) or 0) > 0]),
+        })
 
-        # 5. ML 특성 중요도
+        # 6. ML 특성 중요도
+        analysis_logger.log_step_start(6, "ML 특성 중요도 (AnalyzeFeatureImportance)")
         feature_importance = AnalyzeFeatureImportance(df_enhanced)
         result['feature_importance'] = feature_importance
+        analysis_logger.log_step_complete(6, metrics={
+            "피처_수": len(feature_importance) if feature_importance else 0,
+        })
 
-        # 6. 필터 안정성 검증
+        # 7. 필터 안정성 검증
+        analysis_logger.log_step_start(7, "필터 안정성 검증 (AnalyzeFilterStability)")
         filter_stability = AnalyzeFilterStability(df_enhanced)
         result['filter_stability'] = filter_stability
+        
+        # 안정성 결과 로깅
+        for fs in (filter_stability or []):
+            period_results = []
+            period_improvements = fs.get('기간별개선', [])
+            for i, imp in enumerate(period_improvements):
+                period_results.append({
+                    'period': f'P{i+1}',
+                    'improvement': imp,
+                    'win_rate': 0,  # 승률 정보는 현재 없음
+                })
+            
+            analysis_logger.log_filter_stability_result(
+                filter_name=fs.get('필터명', ''),
+                period_results=period_results,
+                consistency_score=float(fs.get('일관성점수', 0) or 0),
+                is_stable=fs.get('안정성등급') == '안정',
+            )
+        
+        analysis_logger.log_step_complete(7, metrics={
+            "안정_필터수": len([f for f in (filter_stability or []) if f.get('안정성등급') == '안정']),
+            "보통_필터수": len([f for f in (filter_stability or []) if f.get('안정성등급') == '보통']),
+            "불안정_필터수": len([f for f in (filter_stability or []) if f.get('안정성등급') == '불안정']),
+        })
 
-        # 7. 조건식 코드 생성
+        # 8. 조건식 코드 생성
+        analysis_logger.log_step_start(8, "조건식 코드 생성 (GenerateFilterCode)")
         generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced, allow_ml_filters=allow_ml_filters)
         result['generated_code'] = generated_code
+        analysis_logger.log_step_complete(8, metrics={
+            "생성_필터수": generated_code.get('summary', {}).get('total_filters', 0) if generated_code else 0,
+            "예상_개선": generated_code.get('summary', {}).get('total_improvement_combined', 0) if generated_code else 0,
+        })
 
-        # 7-1. 일반 필터 조건식 파일 생성 (filter_code_final.txt)
+        # 9. 일반 필터 조건식 파일 생성 (filter_code_final.txt)
         # [2026-01-06 추가] segment_code_final.txt와 유사하게 일반 필터도 최종 조건식 파일 생성
+        analysis_logger.log_step_start(9, "일반 필터 조건식 파일 생성 (build_filter_final_code)")
         try:
             if generated_code:
                 filter_final_output_dir = ensure_backtesting_output_dir(save_file_name)
@@ -359,17 +463,28 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     )
                     if filter_code_path:
                         result['filter_code_final_path'] = filter_code_path
+                        analysis_logger.log_code_generation(f"일반 필터 조건식 파일 생성: {filter_code_path}")
                         print(f"[Enhanced Analysis] 일반 필터 조건식 파일 생성: {filter_code_path}")
                         print(f"  - 필터 수: {filter_final_summary.get('total_filters', 0)}")
                         print(f"  - 예상 개선: {filter_final_summary.get('total_improvement', 0):,}원")
+            analysis_logger.log_step_complete(9, metrics={
+                "파일_생성": bool(result.get('filter_code_final_path')),
+            })
         except Exception as e:
+            analysis_logger.log_step_failed(9, str(e))
             print(f"[Enhanced Analysis] 일반 필터 조건식 파일 생성 실패: {e}")
             print_exc()
+        
+        # === Phase A 완료, Phase B 시작: 결과 저장 ===
+        analysis_logger.send_phase_notification('A', 'complete')
+        analysis_logger.send_filter_summary()  # 상위 필터 요약 전송
+        analysis_logger.send_phase_notification('B', 'start')
 
-        # 8. CSV 파일 저장
+        # 10. CSV 파일 저장
+        analysis_logger.log_step_start(10, "CSV 파일 저장")
         # 상세 거래 기록 (강화 분석 사용 시: detail.csv로 통합하여 중복 생성 방지)
         # - 손실확률_ML, 위험도_ML, 예측매수매도위험도점수_ML 컬럼이 포함되어 비교 가능
-        output_dir = ensure_backtesting_output_dir(save_file_name)
+        # output_dir는 이미 로거 초기화 시 설정됨
         output_cfg = get_backtesting_output_config()
         csv_chunk_size = output_cfg.get('csv_chunk_size') if output_cfg.get('enable_csv_parallel') else None
         detail_path = str(build_backtesting_output_path(save_file_name, "_detail.csv", output_dir=output_dir))
@@ -428,8 +543,13 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             stability_path = str(build_backtesting_output_path(save_file_name, "_filter_stability.csv", output_dir=output_dir))
             pd.DataFrame(filter_stability).to_csv(stability_path, encoding='utf-8-sig', index=False)
             result['csv_files'].append(stability_path)
+        
+        analysis_logger.log_step_complete(10, metrics={
+            "CSV_파일수": len(result['csv_files']),
+        })
 
-        # 9. 강화된 차트 생성
+        # 11. 강화된 차트 생성
+        analysis_logger.log_step_start(11, "강화된 차트 생성 (PltEnhancedAnalysisCharts)")
         chart_path = PltEnhancedAnalysisCharts(
             df_enhanced,
             save_file_name,
@@ -448,8 +568,16 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         )
         if chart_path:
             result['charts'].append(chart_path)
+        analysis_logger.log_step_complete(11, metrics={
+            "차트_생성": bool(chart_path),
+        })
+        
+        # === Phase B 완료, Phase C 시작: 세그먼트 분석 ===
+        analysis_logger.send_phase_notification('B', 'complete')
+        analysis_logger.send_phase_notification('C', 'start')
 
-        # 9-1. 세그먼트 분석(옵션)
+        # 12. 세그먼트 분석(옵션)
+        analysis_logger.log_step_start(12, "세그먼트 분석 (Phase2/3)")
         # [2026-01-06 리팩토링] 세그먼트 분석 항상 실행 + 중복 방지는 code_generator.py에서 처리
         #
         # 동작 방식:
@@ -618,8 +746,26 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 print_exc()
 
         result['segment_outputs'] = segment_outputs
+        
+        # 세그먼트 분석 단계 완료 로그
+        if segment_outputs and isinstance(segment_outputs, dict):
+            seg_timing = segment_outputs.get('timing', {})
+            analysis_logger.log_step_complete(12, metrics={
+                "세그먼트_분석_완료": True,
+                "phase2_시간": seg_timing.get('phase2_s'),
+                "phase3_시간": seg_timing.get('phase3_s'),
+                "template_시간": seg_timing.get('template_s'),
+            })
+        else:
+            analysis_logger.log_step_complete(12, metrics={
+                "세그먼트_분석_완료": False,
+                "사유": "세그먼트 분석 비활성화 또는 결과 없음",
+            })
 
-        # 9-2. 필터/세그먼트 적용 detail.csv 생성 (검증/비교용)
+        # Phase C 완료 알림
+        analysis_logger.send_phase_notification('C', 'complete')
+
+        # 필터/세그먼트 적용 detail.csv 생성 (검증/비교용)
         try:
             if isinstance(df_enhanced, pd.DataFrame) and not df_enhanced.empty:
                 from backtester.analysis.filter_apply import build_filter_mask_from_generated_code
@@ -1135,6 +1281,19 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     pass
 
     except Exception as e:
+        analysis_logger.log_error(f"분석 중 예외 발생: {e}")
         print_exc()
+
+    # 분석 로그 저장
+    try:
+        log_path = analysis_logger.save()
+        if log_path:
+            result['analysis_log_path'] = log_path
+            print(f"[Enhanced Analysis] 분석 로그 저장: {log_path}")
+    except Exception as e:
+        print(f"[Enhanced Analysis] 분석 로그 저장 실패: {e}")
+
+    # 파이프라인 완료 알림 (텔레그램)
+    analysis_logger.send_pipeline_complete()
 
     return result
