@@ -30,6 +30,26 @@ from backtester.segment_analysis.code_generator import (
 )
 from .analysis_logger import create_analysis_logger, AnalysisLogger
 
+# === 강화된 필터 검증 모듈 (v1.0) ===
+from .stats import apply_multiple_testing_correction, get_correction_summary
+from .validation_enhanced import (
+    PurgedWalkForwardConfig,
+    validate_filters_batch,
+    get_cv_summary,
+)
+from .feature_selection import (
+    greedy_select_diverse_filters,
+    remove_redundant_filters,
+    filter_by_mutual_information,
+    get_feature_selection_summary,
+)
+from .ensemble_filter import (
+    EnsembleConfig,
+    run_ensemble_filter_analysis,
+    get_ensemble_summary,
+    convert_ensemble_results_to_filter_results,
+)
+
 
 # =============================================================================
 # 세그먼트 분석 헬퍼 함수
@@ -358,6 +378,29 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 3-1. (진단용) 룩어헤드 포함 필터 효과 분석
         filter_results_lookahead = AnalyzeFilterEffectsLookahead(df_enhanced)
         result['filter_results_lookahead'] = filter_results_lookahead
+
+        # 3-2. 강화된 필터 검증 (v1.0): OOS 검증 + 다양성 선택 + 앙상블
+        # - OOS 검증: Purged Walk-Forward CV로 Out-of-Sample 성능 추정
+        # - 다양성 선택: 상관관계 기반 중복 필터 제거
+        # - 앙상블: Bootstrap 투표로 견고한 필터 식별
+        try:
+            # OOS 검증 (상위 20개 필터만)
+            if filter_results and len(df_enhanced) >= 200:
+                cv_config = PurgedWalkForwardConfig(n_splits=5, min_trades_per_fold=30)
+                filter_results = validate_filters_batch(df_enhanced, filter_results, cv_config, top_n=20)
+                cv_summary = get_cv_summary(filter_results)
+                result['cv_summary'] = cv_summary
+                
+                # 다양성 기반 선택 (상위 30개 중 중복 제거)
+                filter_results = remove_redundant_filters(filter_results, df_enhanced, correlation_threshold=0.8)
+                
+                analysis_logger.log_info(
+                    f"[OOS 검증] 검증 {cv_summary.get('validated_count', 0)}개, "
+                    f"견고 {cv_summary.get('robust_count', 0)}개 "
+                    f"(일반화율 평균 {cv_summary.get('avg_generalization_ratio', 0):.1f}%)"
+                )
+        except Exception as e:
+            analysis_logger.log_warning(f"강화 검증 스킵: {e}")
 
         # 4. 최적 임계값 탐색
         analysis_logger.log_step_start(4, "최적 임계값 탐색 (FindAllOptimalThresholds)")
@@ -924,6 +967,20 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             except Exception:
                 continue
 
+        # OOS 검증 통과 필터 (v1.0)
+        oos_robust_filters = [
+            f for f in filter_results_safe
+            if f.get('OOS_견고') == '예' and float(f.get('수익개선금액', 0) or 0) > 0
+        ][:2]
+        for f in oos_robust_filters:
+            try:
+                recommendations.append(
+                    f"[OOS견고] {f.get('필터명', '')}: 일반화 {f.get('일반화비율', 0)}% "
+                    f"(+{int(f.get('OOS_평균개선', 0) or 0):,}원)"
+                )
+            except Exception:
+                continue
+
         result['recommendations'] = recommendations
 
         # 11. 텔레그램 전송
@@ -1075,6 +1132,19 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                 ml_lines.append("- detail.csv에 '손실확률_ML', '위험도_ML', '예측매수매도위험도점수_ML' 컬럼 추가됨")
                 
                 _safe_put("\n".join(ml_lines))
+
+            # OOS 검증 요약 메시지 (v1.0)
+            cv_summary = result.get('cv_summary')
+            if cv_summary and cv_summary.get('validated_count', 0) > 0:
+                oos_lines = []
+                oos_lines.append("OOS 검증 결과 (과적합 방지):")
+                oos_lines.append(f"- 검증 필터: {cv_summary.get('validated_count', 0)}개")
+                oos_lines.append(f"- OOS 견고: {cv_summary.get('robust_count', 0)}개 ({cv_summary.get('robust_ratio', 0):.1f}%)")
+                oos_lines.append(f"- 평균 일반화율: {cv_summary.get('avg_generalization_ratio', 0):.1f}%")
+                top_robust = cv_summary.get('top_robust_filters', [])[:3]
+                if top_robust:
+                    oos_lines.append(f"- 상위 견고 필터: {', '.join(str(f)[:20] for f in top_robust)}")
+                _safe_put("\n".join(oos_lines))
 
             # 요약 메시지
             if recommendations:
