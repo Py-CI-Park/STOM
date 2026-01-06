@@ -592,15 +592,36 @@ def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
             f"    {name} = {fallback}",
         ]
 
+    def try_assign_if_not_defined(name: str, expr: str, fallback: str) -> List[str]:
+        """틱 엔진에서 이미 정의된 변수를 덮어쓰지 않도록 보호.
+        
+        분봉 엔진: 분당* 변수로 초당* 계산
+        틱 엔진: 초당* 변수가 이미 존재 → 유지
+        """
+        return [
+            f"# {name}: 이미 정의된 경우 유지 (틱 엔진 호환)",
+            "try:",
+            f"    _{name}_exists = '{name}' in dir() and {name} != 0",
+            "except NameError:",
+            f"    _{name}_exists = False",
+            f"if not _{name}_exists:",
+            "    try:",
+            f"        {name} = {expr}",
+            "    except NameError:",
+            f"        {name} = {fallback}",
+        ]
+
+    # 초당매수수량: 틱 엔진에서는 직접 정의됨, 분봉 엔진에서는 분당/60으로 계산
     add_block(
         "초당매수수량",
         ["분당매수수량"],
-        try_assign("초당매수수량", "분당매수수량 / 60", "0"),
+        try_assign_if_not_defined("초당매수수량", "분당매수수량 / 60", "0"),
     )
+    # 초당매도수량: 틱 엔진에서는 직접 정의됨, 분봉 엔진에서는 분당/60으로 계산
     add_block(
         "초당매도수량",
         ["분당매도수량"],
-        try_assign("초당매도수량", "분당매도수량 / 60", "0"),
+        try_assign_if_not_defined("초당매도수량", "분당매도수량 / 60", "0"),
     )
     add_block(
         "초당매도_매수_비율",
@@ -640,10 +661,11 @@ def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
             "if (매수초당매수수량 + 매수초당매도수량) > 0 else 50"
         ],
     )
+    # 매수초당거래대금: 틱 엔진에서는 직접 정의됨, 분봉 엔진에서는 분당/60으로 계산
     add_block(
         "매수초당거래대금",
         ["분당거래대금"],
-        try_assign("매수초당거래대금", "분당거래대금 / 60", "0"),
+        try_assign_if_not_defined("매수초당거래대금", "분당거래대금 / 60", "0"),
     )
     add_block(
         "매수스프레드",
