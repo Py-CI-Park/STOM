@@ -260,6 +260,7 @@ def _find_best_template_key_from_csv(comparison_csv_path: str, results: dict) ->
     except Exception:
         return None
 
+
 def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg=None,
                         buystg_name=None, sellstg_name=None, backname=None,
                         ml_train_mode: str = 'train', send_condition_summary: bool = True,
@@ -747,6 +748,29 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         global_combo_path = source_phase2.get('global_combo_path') if isinstance(source_phase2, dict) else None
                         code_summary = source_phase2.get('segment_code_summary') if isinstance(source_phase2, dict) else None
 
+                        # [2026-01-06] expected_results 추출 (Issue #4: 예상 수익 정보 추가)
+                        # - global_combo.csv에서 total_improvement, remaining_trades, remaining_ratio 추출
+                        # - df_enhanced에서 total_trades, total_profit 계산
+                        # - expected_profit = total_profit + total_improvement
+                        expected_results = {}
+                        try:
+                            if isinstance(df_enhanced, pd.DataFrame) and not df_enhanced.empty:
+                                total_trades = len(df_enhanced)
+                                total_profit = int(pd.to_numeric(df_enhanced['수익금'], errors='coerce').fillna(0).sum())
+                                expected_results['total_trades'] = total_trades
+                                expected_results['total_profit'] = total_profit
+                                
+                                if global_combo_path and Path(global_combo_path).exists():
+                                    df_combo = pd.read_csv(global_combo_path, encoding='utf-8-sig')
+                                    if not df_combo.empty:
+                                        row = df_combo.iloc[0]
+                                        expected_results['remaining_trades'] = int(row.get('remaining_trades', 0) or 0)
+                                        expected_results['remaining_ratio'] = float(row.get('remaining_ratio', 0) or 0)
+                                        expected_results['expected_improvement'] = int(row.get('total_improvement', 0) or 0)
+                                        expected_results['expected_profit'] = total_profit + expected_results['expected_improvement']
+                        except Exception as e:
+                            print(f"[Segment Code Final] expected_results 추출 실패: {e}")
+
                         final_lines, final_summary = build_segment_final_code(
                             buystg_text=buystg,
                             sellstg_text=sellstg,
@@ -757,6 +781,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             global_combo_path=global_combo_path,
                             code_summary=code_summary,
                             save_file_name=save_file_name,
+                            expected_results=expected_results if expected_results else None,
                         )
                         final_path = save_segment_code_final(final_lines, segment_output_base, save_file_name)
 

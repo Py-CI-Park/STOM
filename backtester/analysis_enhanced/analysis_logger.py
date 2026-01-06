@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 
+from backtester.output_paths import build_backtesting_output_path
+
 
 @dataclass
 class PipelineStep:
@@ -131,8 +133,10 @@ class AnalysisLogger:
         self.save_file_name = save_file_name
         self.teleQ = teleQ
         
-        # 로그 파일 경로
-        self.log_path = self.output_dir / f"{save_file_name}_analysis_log.txt"
+        # 로그 파일 경로 (0-3 prefix 적용)
+        self.log_path = build_backtesting_output_path(
+            save_file_name, "_analysis_log.txt", output_dir=self.output_dir
+        )
         
         # 시작 시간
         self.start_time = datetime.now()

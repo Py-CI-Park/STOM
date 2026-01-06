@@ -270,15 +270,32 @@ def build_segment_final_code(
     global_combo_path: Optional[str] = None,
     code_summary: Optional[dict] = None,
     save_file_name: Optional[str] = None,
+    expected_results: Optional[dict] = None,
 ) -> Tuple[List[str], Dict[str, int]]:
     """
     매수 조건식 + 세그먼트 필터 조건식을 합쳐 바로 사용할 수 있는 최종 코드 블록 생성.
+
+    Args:
+        expected_results: 예상 결과 정보 (선택)
+            - total_trades: 원본 거래 수
+            - remaining_trades: 예상 잔여 거래 수
+            - remaining_ratio: 예상 잔여 비율
+            - expected_improvement: 예상 개선금액
+            - expected_profit: 예상 최종 수익금
     """
     summary = {
         'segments': int((code_summary or {}).get('segments', 0) or 0),
         'filters': int((code_summary or {}).get('filters', 0) or 0),
         'injected': 0,
     }
+
+    # 예상 결과 정보 추출
+    exp = expected_results or {}
+    total_trades = exp.get('total_trades', 0)
+    remaining_trades = exp.get('remaining_trades', 0)
+    remaining_ratio = exp.get('remaining_ratio', 0)
+    expected_improvement = exp.get('expected_improvement', 0)
+    expected_profit = exp.get('expected_profit', 0)
 
     header = []
     header.append("# 최종 매수 조건식_filtered (세그먼트 필터 반영)")
@@ -296,6 +313,24 @@ def build_segment_final_code(
     if summary['segments'] or summary['filters']:
         header.append(f"# 세그먼트 수: {summary['segments']} / 필터 수: {summary['filters']}")
     header.append("# runtime mapping: included (buy-time)")
+
+    # 예상 성과 정보 추가
+    if total_trades > 0 or remaining_trades > 0 or expected_improvement != 0:
+        header.append("#")
+        header.append("# === 예상 성과 (세그먼트 필터 적용 시) ===")
+        if total_trades > 0:
+            header.append(f"# 원본 거래 수: {total_trades:,}건")
+        if remaining_trades > 0:
+            ratio_pct = remaining_ratio * 100 if remaining_ratio < 1 else remaining_ratio
+            header.append(f"# 예상 잔여 거래: {remaining_trades:,}건 ({ratio_pct:.1f}%)")
+        if expected_improvement != 0:
+            sign = '+' if expected_improvement > 0 else ''
+            header.append(f"# 예상 개선금액: {sign}{int(expected_improvement):,}원")
+        if expected_profit != 0:
+            sign = '+' if expected_profit > 0 else ''
+            header.append(f"# 예상 최종 수익금: {sign}{int(expected_profit):,}원")
+        header.append("#")
+
     header.append("")
 
     buy_lines = _normalize_code_lines(buystg_text)
@@ -896,6 +931,7 @@ def build_filter_final_code(
     [2026-01-06 추가]
     - segment_code_final.txt와 유사한 형태로 filter_code_final.txt 생성
     - GenerateFilterCode()의 결과를 매수 조건식에 통합
+    - runtime mapping 포함 (모멘텀점수, 위험도점수 등 파생 변수 정의)
 
     Args:
         buystg_text: 원본 매수 조건식 코드
@@ -928,6 +964,14 @@ def build_filter_final_code(
     summary['total_filters'] = len(individual_conditions)
     summary['total_improvement'] = int(code_summary.get('total_improvement_combined', 0) or 0)
 
+    # 필터 조건에서 사용된 변수 추출
+    filter_code_lines = []
+    for cond in individual_conditions:
+        filter_code = cond.get('조건코드', '')
+        if filter_code:
+            filter_code_lines.append(filter_code)
+    used_vars = _extract_segment_used_variables(filter_code_lines)
+
     # 헤더 생성
     header = []
     header.append("# 최종 매수 조건식_filtered (일반 필터 반영)")
@@ -940,6 +984,7 @@ def build_filter_final_code(
         header.append(f"# 매도 조건식: {sellstg_name}")
     header.append(f"# 필터 수: {summary['total_filters']}")
     header.append(f"# 예상 개선금액: {summary['total_improvement']:,}원")
+    header.append("# runtime mapping: included (buy-time)")
     header.append("")
 
     # 필터 요약 정보
@@ -960,6 +1005,9 @@ def build_filter_final_code(
     buy_lines = _normalize_code_lines(buystg_text)
     sell_lines = _normalize_code_lines(sellstg_text)
 
+    # Runtime mapping 생성 (필터에서 사용된 파생 변수 정의)
+    runtime_preamble = _build_segment_runtime_preamble(used_vars)
+
     # 필터 조건 블록 생성
     filter_block = []
     filter_block.append("")
@@ -967,6 +1015,11 @@ def build_filter_final_code(
     filter_block.append("# 각 필터는 '해당 조건이면 매수하지 않음(제외)'을 의미합니다.")
     filter_block.append("# 여러 필터를 함께 쓴다는 것은: (필터1 통과) AND (필터2 통과) AND ... 입니다.")
     filter_block.append("")
+
+    # Runtime mapping 추가 (파생 변수 정의)
+    if runtime_preamble:
+        filter_block.extend(runtime_preamble)
+        filter_block.append("")
 
     for cond in individual_conditions:
         filter_name = cond.get('필터명', 'N/A')

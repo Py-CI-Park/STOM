@@ -23,6 +23,7 @@ _ALIAS_RULES: List[OutputAliasRule] = [
     OutputAliasRule('_manifest.json', '0-0', 'manifest', 'summary', 5),
     OutputAliasRule('_report.txt', '0-1', 'report', 'summary', 10),
     OutputAliasRule('_condition_study.md', '0-2', 'condition_study', 'summary', 20),
+    OutputAliasRule('_analysis_log.txt', '0-3', 'analysis_log', 'summary', 30),
 
     OutputAliasRule('_summary.csv', '1-1', 'summary_csv', 'basic', 110),
     OutputAliasRule('_detail.csv', '1-2', 'detail', 'basic', 120),
@@ -38,6 +39,7 @@ _ALIAS_RULES: List[OutputAliasRule] = [
     OutputAliasRule('_filter_lookahead.csv', '2-5', 'filter_lookahead', 'filter', 250),
     OutputAliasRule('_optimal_thresholds.csv', '2-6', 'optimal_thresholds', 'filter', 260),
     OutputAliasRule('_filter_verification.csv', '2-7', 'filter_verification', 'filter', 270),
+    OutputAliasRule('_filter_code_final.txt', '2-8', 'filter_code_final', 'filter', 280),
     OutputAliasRule('_enhanced.png', '2-21', 'enhanced_chart', 'filter', 2210),
     OutputAliasRule('_filter_efficiency.png', '2-22', 'filter_efficiency', 'filter', 2220),
     OutputAliasRule('_filtered.png', '2-23', 'filtered', 'filter', 2230),
