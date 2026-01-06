@@ -31,13 +31,17 @@ _SEGMENT_FILTER_MARKERS = [
     '[중형주_T',
     '[소형주_T',
     '[초소형주_T',
+    '# 최종 매수 조건식_filtered',   # [2026-01-06 추가] 메타데이터 헤더 감지
 ]
 
 # 세그먼트 필터 블록 시작/끝 마커 (제거용)
+# [2026-01-06 버그 수정] 메타데이터 헤더도 제거 대상에 포함
 _SEGMENT_BLOCK_START_MARKERS = [
     '# === 세그먼트 필터 (자동 생성) ===',
     '# === Segment filter runtime mapping',
     '# 세그먼트 필터 조건식 (자동 생성)',
+    '# 최종 매수 조건식_filtered',   # 메타데이터 헤더 시작
+    '# === 매수 조건식 (세그먼트 필터 반영) ===',  # build_segment_final_code 헤더
 ]
 
 _SEGMENT_BLOCK_END_MARKERS = [
@@ -143,6 +147,27 @@ def _extract_original_buy_code(buy_lines: List[str]) -> List[str]:
             # 단독 라인인 경우 스킵
             if stripped == '필터통과 = False' or stripped == '필터통과 = True':
                 continue
+
+        # [2026-01-06 버그 수정] 메타데이터 헤더 라인 스킵
+        # segment_code_final.txt의 상단 메타데이터 라인들을 제거
+        metadata_markers = [
+            '# 최종 매수 조건식_filtered',
+            '# 생성 시각:',
+            '# save_file_name:',
+            '# 매수 조건식:',
+            '# 매도 조건식:',
+            '# 세그먼트 코드:',
+            '# 전역 조합:',
+            '# 세그먼트 수:',
+            '# runtime mapping:',
+            '# === 예상 성과',
+            '# 원본 거래 수:',
+            '# 예상 잔여 거래:',
+            '# 예상 개선금액:',
+            '# 예상 최종 수익금:',
+        ]
+        if any(stripped.startswith(marker) for marker in metadata_markers):
+            continue
 
         # 세그먼트 분할 주석 스킵
         if stripped.startswith('# [') and any(seg in stripped for seg in ['대형주_T', '중형주_T', '소형주_T', '초소형주_T']):

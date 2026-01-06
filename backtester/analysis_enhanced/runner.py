@@ -777,14 +777,48 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         # 결과: 기존 필터가 있어도 최신 세그먼트 분석 결과로 교체됨
         segment_outputs = None
 
-        # 기존 세그먼트 필터 감지 (경고용)
+        # ============================================================================
+        # [설정] 기존 세그먼트 필터가 있는 전략에 대한 처리 방식
+        # ============================================================================
+        # True  = 기존 필터가 있으면 세그먼트 분석 스킵 (기존 필터 유지)
+        # False = 기존 필터가 있어도 새로 세그먼트 분석 실행 (추가 개선 시도)
+        # 
+        # [사용 시나리오]
+        # - True (기본값): _Filter 전략을 그대로 사용하고 싶을 때
+        # - False: _Filter 전략에 추가로 세그먼트 분석을 적용하여 더 개선하고 싶을 때
+        # ============================================================================
+        SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS = True  # ← 여기서 변경 (True/False)
+        # ============================================================================
+        
         has_existing_filter = _has_segment_filter_in_buystg(buystg)
-        if has_existing_filter:
-            print(f"[Segment Analysis] buystg에 기존 세그먼트 필터 감지됨 - 최신 분석 결과로 교체 예정")
+        should_skip_segment = has_existing_filter and SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS
+        
+        if should_skip_segment:
+            # 기존 필터 감지 + 스킵 설정 활성화 → 세그먼트 분석 건너뛰기
+            print(f"[Segment Analysis] buystg에 기존 세그먼트 필터 감지됨 - 세그먼트 분석 스킵")
+            print(f"                   (SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS = True)")
             if teleQ is not None:
-                teleQ.put("[세그먼트 분석] 기존 세그먼트 필터 감지됨 - 최신 분석 결과로 교체됩니다")
-
-        if segment_analysis_mode and str(segment_analysis_mode).lower() not in ('off', 'false', 'none'):
+                teleQ.put("[세그먼트 분석] 기존 세그먼트 필터 감지됨 - 분석을 건너뜁니다 (기존 필터 유지)")
+            # 세그먼트 분석을 스킵하고, 결과에 스킵 사유 기록
+            segment_outputs = {
+                'skipped': True,
+                'reason': '기존 세그먼트 필터가 buystg에 이미 존재함 (SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS=True)',
+            }
+            result['segment_outputs'] = segment_outputs
+            # Phase C 완료 (스킵)
+            analysis_logger.log_step_complete(12, metrics={
+                "세그먼트_분석_완료": False,
+                "사유": "기존 필터 감지로 스킵 (설정: SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS=True)",
+            })
+            analysis_logger.send_phase_notification('C', 'complete')
+            # 세그먼트 분석 건너뛰고 다음 단계로 진행
+        elif segment_analysis_mode and str(segment_analysis_mode).lower() not in ('off', 'false', 'none'):
+            # 기존 필터가 있지만 스킵 설정이 False인 경우 안내 메시지 출력
+            if has_existing_filter and not SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS:
+                print(f"[Segment Analysis] buystg에 기존 세그먼트 필터 감지됨 - 추가 세그먼트 분석 진행")
+                print(f"                   (SKIP_SEGMENT_ANALYSIS_IF_FILTER_EXISTS = False)")
+                if teleQ is not None:
+                    teleQ.put("[세그먼트 분석] 기존 필터 감지됨 - 추가 분석으로 개선 시도")
             try:
                 from backtester.segment_analysis.phase2_runner import run_phase2, Phase2RunnerConfig
                 from backtester.segment_analysis.phase3_runner import run_phase3, Phase3RunnerConfig
@@ -970,25 +1004,28 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             except Exception:
                 print_exc()
 
-        result['segment_outputs'] = segment_outputs
+        # 스킵된 경우가 아닐 때만 result에 segment_outputs 덮어쓰기
+        # (스킵 시에는 이미 위에서 설정됨)
+        if not (isinstance(segment_outputs, dict) and segment_outputs.get('skipped')):
+            result['segment_outputs'] = segment_outputs
         
-        # 세그먼트 분석 단계 완료 로그
-        if segment_outputs and isinstance(segment_outputs, dict):
-            seg_timing = segment_outputs.get('timing', {})
-            analysis_logger.log_step_complete(12, metrics={
-                "세그먼트_분석_완료": True,
-                "phase2_시간": seg_timing.get('phase2_s'),
-                "phase3_시간": seg_timing.get('phase3_s'),
-                "template_시간": seg_timing.get('template_s'),
-            })
-        else:
-            analysis_logger.log_step_complete(12, metrics={
-                "세그먼트_분석_완료": False,
-                "사유": "세그먼트 분석 비활성화 또는 결과 없음",
-            })
+            # 세그먼트 분석 단계 완료 로그 (스킵되지 않은 경우만)
+            if segment_outputs and isinstance(segment_outputs, dict):
+                seg_timing = segment_outputs.get('timing', {})
+                analysis_logger.log_step_complete(12, metrics={
+                    "세그먼트_분석_완료": True,
+                    "phase2_시간": seg_timing.get('phase2_s'),
+                    "phase3_시간": seg_timing.get('phase3_s'),
+                    "template_시간": seg_timing.get('template_s'),
+                })
+            else:
+                analysis_logger.log_step_complete(12, metrics={
+                    "세그먼트_분석_완료": False,
+                    "사유": "세그먼트 분석 비활성화 또는 결과 없음",
+                })
 
-        # Phase C 완료 알림
-        analysis_logger.send_phase_notification('C', 'complete')
+            # Phase C 완료 알림 (스킵되지 않은 경우만)
+            analysis_logger.send_phase_notification('C', 'complete')
 
         # 필터/세그먼트 적용 detail.csv 생성 (검증/비교용)
         try:
