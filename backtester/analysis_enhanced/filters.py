@@ -512,7 +512,7 @@ def AnalyzeFilterEffectsEnhanced(
 
     return filter_results
 
-def AnalyzeFilterEffectsLookahead(df_tsg):
+def AnalyzeFilterEffectsLookahead(df_tsg, correction_method: str = 'none'):
     """
     (진단용) 매도 시점 확정 정보까지 포함한 필터 효과 분석.
 
@@ -520,6 +520,10 @@ def AnalyzeFilterEffectsLookahead(df_tsg):
     - 이 분석은 매도 시점 데이터/변화량/보유시간 등 룩어헤드가 포함될 수 있으므로,
       실거래용 "매수 진입 필터 추천/자동 조건식 생성"에는 사용하지 않습니다.
     - 목적은 '손실 거래에서 사후적으로 어떤 지표가 같이 나왔는지'를 빠르게 파악하기 위함입니다.
+
+    Args:
+        df_tsg: DataFrame with trade data
+        correction_method: 다중 검정 보정 방법 ('bonferroni' | 'holm' | 'fdr_bh' | 'none')
     """
     filter_results = []
     if df_tsg is None or len(df_tsg) == 0:
