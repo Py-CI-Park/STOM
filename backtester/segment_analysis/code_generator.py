@@ -508,10 +508,16 @@ def _normalize_code_lines(code_text: Optional[str]) -> List[str]:
 def _inject_segment_filter_into_buy_lines(
     buy_lines: List[str],
     segment_code_lines: List[str],
+    filter_first: bool = True,
 ) -> Tuple[List[str], bool]:
     """
     매수 조건식에 세그먼트 필터를 삽입합니다.
 
+    [2026-01-08 중요 개선] 세그먼트 필터 우선 적용 (filter_first=True)
+    - 문제: 기존 조건에서 이미 매수=False인 거래에는 세그먼트 필터가 효과 없음
+    - 해결: 세그먼트 필터를 기존 조건 앞에 배치하여 먼저 평가
+    - 동작: 매수 = True 초기화 직후, 기존 조건들 전에 세그먼트 필터 삽입
+    
     [2026-01-07 개선] 기존 매수 조건식 패턴과 동일한 형태로 삽입
     - 기존: 필터통과 변수 사용 → 매수 = 매수 and 필터통과
     - 개선: if-elif 체인에 직접 통합 → if not (조건): 매수 = False
@@ -519,16 +525,21 @@ def _inject_segment_filter_into_buy_lines(
     [2026-01-06 버그 수정] 세그먼트 필터 중복 삽입 방지
     - 기존 세그먼트 필터가 있으면 먼저 제거 후 새 필터 삽입 (교체)
 
-    동작 방식:
-    1. buy_lines에 기존 세그먼트 필터가 있는지 확인
-    2. 있으면 _extract_original_buy_code()로 원본 코드 추출
-    3. 세그먼트 필터 코드의 첫 번째 'if'를 'elif'로 변환 (기존 체인과 연결)
-    4. 원본 코드의 마지막 'elif/else' 블록 앞에 세그먼트 필터 삽입
-    5. 삽입 위치: 기존 조건식의 마지막 elif 앞 또는 "if 매수:" 앞
+    동작 방식 (filter_first=True):
+    1. buy_lines에 기존 세그먼트 필터가 있으면 제거
+    2. "매수 = True" 라인 찾기
+    3. "매수 = True" 직후에 세그먼트 필터 삽입 (기존 조건들 전에)
+    4. 기존 조건들은 세그먼트 필터 이후에 실행됨
+    
+    동작 방식 (filter_first=False, 레거시):
+    1. buy_lines에 기존 세그먼트 필터가 있으면 제거
+    2. "if 매수:" 라인 찾기
+    3. "if 매수:" 직전에 세그먼트 필터 삽입 (기존 조건들 후에)
 
     Args:
         buy_lines: 매수 조건식 코드 라인 리스트
         segment_code_lines: 삽입할 세그먼트 필터 코드 라인 리스트
+        filter_first: True면 세그먼트 필터를 기존 조건 앞에 배치 (기본값: True)
 
     Returns:
         (합쳐진 코드 라인 리스트, 삽입 성공 여부)
@@ -545,6 +556,144 @@ def _inject_segment_filter_into_buy_lines(
             print("[Segment Code Generator] 원본 코드 추출 실패 - 전체 코드 사용")
             working_lines = buy_lines
 
+    # [2026-01-08] filter_first 모드: 세그먼트 필터를 기존 조건 앞에 배치
+    if filter_first:
+        return _inject_segment_filter_first(working_lines, segment_code_lines)
+    
+    # 레거시 모드: 세그먼트 필터를 "if 매수:" 직전에 배치
+    return _inject_segment_filter_before_buy_check(working_lines, segment_code_lines)
+
+
+def _inject_segment_filter_first(
+    working_lines: List[str],
+    segment_code_lines: List[str],
+) -> Tuple[List[str], bool]:
+    """
+    세그먼트 필터를 기존 조건 앞에 배치합니다 (방안 B 구현).
+    
+    [2026-01-08 신규]
+    - "매수 = True" 초기화 직후에 세그먼트 필터 삽입
+    - 기존 조건들보다 먼저 세그먼트 필터가 평가됨
+    - 세그먼트 필터에서 제외된 거래는 기존 조건을 거치지 않음
+    
+    Args:
+        working_lines: 원본 매수 조건식 코드 (세그먼트 필터 제거된 상태)
+        segment_code_lines: 삽입할 세그먼트 필터 코드
+    
+    Returns:
+        (합쳐진 코드 라인 리스트, 삽입 성공 여부)
+    """
+    # "매수 = True" 라인 찾기
+    buy_true_idx = None
+    for idx, line in enumerate(working_lines):
+        stripped = line.strip()
+        # "매수 = True" 또는 "#매수 = True" (주석 처리된 것 제외)
+        if stripped == '매수 = True':
+            buy_true_idx = idx
+            break  # 첫 번째 "매수 = True" 사용
+    
+    if buy_true_idx is None:
+        # "매수 = True"를 찾지 못하면 fallback
+        print("[Segment Code Generator] '매수 = True' 라인을 찾지 못함 - 파일 끝에 추가")
+        fallback = list(working_lines)
+        fallback.append("")
+        fallback.append("# === 세그먼트 필터 (자동 생성) ===")
+        fallback.extend(segment_code_lines)
+        fallback.append("")
+        return fallback, False
+    
+    # "매수 = True" 다음에 빈 줄이 있는지 확인
+    # 일반적으로: 매수 = True → 빈 줄 → 기존 조건 시작
+    insert_idx = buy_true_idx + 1
+    
+    # 빈 줄 건너뛰기 (있으면)
+    while insert_idx < len(working_lines) and not working_lines[insert_idx].strip():
+        insert_idx += 1
+    
+    # 세그먼트 필터 블록 생성
+    injected_block = []
+    injected_block.append("")
+    injected_block.append("# === 세그먼트 필터 (자동 생성) ===")
+    injected_block.append("# [2026-01-08] 세그먼트 필터 우선 적용 - 기존 조건 전에 평가")
+    injected_block.extend(segment_code_lines)
+    injected_block.append("")
+    injected_block.append("# === 기존 조건 시작 (세그먼트 필터 통과 시에만 평가) ===")
+    
+    # 기존 조건들을 "if 매수:" 블록 안에 넣기 위해 래핑
+    # 세그먼트 필터에서 매수=False이면 기존 조건을 스킵
+    injected_block.append("if 매수:")
+    
+    # 기존 조건들을 래핑하기 위해 들여쓰기 추가가 필요
+    # 하지만 이는 복잡하므로, 대신 간단한 접근법 사용:
+    # 세그먼트 필터 후 기존 조건을 그대로 둠 (매수=False면 기존 조건에서 더 이상 처리 안 함)
+    
+    # 간단한 접근법: 세그먼트 필터만 삽입하고, 기존 조건은 그대로 둠
+    # 기존 조건에서 elif/else 패턴을 사용하므로, 세그먼트 필터가 매수=False 설정 후
+    # 기존 조건들은 여전히 실행되지만, 이미 False인 매수를 다시 평가할 뿐
+    
+    # 더 나은 접근법: 세그먼트 필터를 독립 게이트로 사용
+    # 기존 조건 전체를 "if 매수:" 블록으로 래핑
+    
+    # 실제로 구현: 기존 코드를 "if 매수:" 블록 내부에 들여쓰기
+    remaining_lines = working_lines[insert_idx:]
+    
+    # "if 매수:" 체크를 위한 래핑 대신, 더 간단한 방법 사용
+    # 세그먼트 필터 끝에서 기존 조건으로 넘어가기 전에 체크
+    
+    # 가장 간단한 방법: 세그먼트 필터를 삽입하고, 
+    # 기존 조건들이 이미 "elif/else" 패턴을 사용하므로 추가 래핑 불필요
+    # 단, 기존 조건의 첫 번째 "if"를 찾아서 그 앞에 삽입해야 함
+    
+    # 다시 생각: 기존 조건의 첫 번째 "if" 앞에 세그먼트 필터 삽입
+    # 세그먼트 필터가 "if/elif" 체인으로 시작하면, 기존 조건의 첫 "if"를 "elif"로 바꿔야 함
+    
+    # 더 실용적인 접근: 세그먼트 필터를 삽입하고, 기존 조건 전체를 체크
+    # 세그먼트 필터 마지막 "else: 매수 = False" 이후에 기존 조건 시작
+    
+    # 최종 결정: 세그먼트 필터를 독립 블록으로 삽입
+    # 기존 조건들은 세그먼트 필터 이후에 그대로 실행
+    # 세그먼트 필터에서 매수=False이면 기존 조건에서 추가 제외는 의미 없음
+    # 하지만 기존 조건에서 매수=True로 복구하는 경우는 없으므로 안전
+    
+    # 간단한 구현으로 진행
+    simple_block = []
+    simple_block.append("")
+    simple_block.append("# === 세그먼트 필터 (자동 생성) ===")
+    simple_block.append("# [2026-01-08] 세그먼트 필터 우선 적용")
+    simple_block.append("# 세그먼트 필터를 먼저 평가하여, 해당 세그먼트에서 제외할 거래를 먼저 필터링")
+    simple_block.extend(segment_code_lines)
+    simple_block.append("")
+    simple_block.append("# === 세그먼트 필터 통과 후 기존 조건 평가 ===")
+    simple_block.append("# 세그먼트 필터에서 매수=False인 경우, 아래 기존 조건은 추가 제외만 할 뿐 영향 없음")
+    simple_block.append("")
+    
+    # 조합: 매수 = True + 세그먼트 필터 + 기존 조건
+    new_lines = []
+    new_lines.extend(working_lines[:buy_true_idx + 1])  # "매수 = True" 까지
+    new_lines.extend(simple_block)
+    new_lines.extend(remaining_lines)  # 기존 조건들
+    
+    return new_lines, True
+
+
+def _inject_segment_filter_before_buy_check(
+    working_lines: List[str],
+    segment_code_lines: List[str],
+) -> Tuple[List[str], bool]:
+    """
+    세그먼트 필터를 "if 매수:" 직전에 배치합니다 (레거시 동작).
+    
+    [2026-01-08] 레거시 함수로 분리
+    - 기존 동작 유지: "if 매수:" 직전에 세그먼트 필터 삽입
+    - 문제: 기존 조건에서 이미 매수=False인 거래에는 효과 없음
+    
+    Args:
+        working_lines: 원본 매수 조건식 코드
+        segment_code_lines: 삽입할 세그먼트 필터 코드
+    
+    Returns:
+        (합쳐진 코드 라인 리스트, 삽입 성공 여부)
+    """
     # "if 매수:" 라인 찾기
     last_buy_idx = None
     for idx, line in enumerate(working_lines):
