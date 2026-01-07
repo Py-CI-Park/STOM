@@ -30,6 +30,12 @@ from backtester.segment_analysis.code_generator import (
 )
 from .analysis_logger import create_analysis_logger, AnalysisLogger
 
+# === 세그먼트 필터 검증 모듈 (v1.1 - 2026-01-07) ===
+from backtester.segment_analysis.segment_apply import (
+    validate_segment_filter_consistency,
+    get_filter_diagnostic_info,
+)
+
 # === 강화된 필터 검증 모듈 (v1.0) ===
 from .stats import apply_multiple_testing_correction, get_correction_summary
 from .validation_enhanced import (
@@ -851,6 +857,53 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         )
                     )
                     segment_timing['phase2_s'] = round(time.perf_counter() - t0, 4)
+
+                    # =============================================================
+                    # [2026-01-07] 세그먼트 필터 일관성 검증 (예측-실제 불일치 방지)
+                    # - Phase2 완료 후, Phase3 실행 전에 검증 수행
+                    # - 문제 발견 시 경고 로깅 (Phase3는 계속 진행)
+                    # =============================================================
+                    try:
+                        p2_result = segment_outputs.get('phase2') if isinstance(segment_outputs, dict) else None
+                        p2_global_best = p2_result.get('global_best') if isinstance(p2_result, dict) else None
+                        
+                        if p2_global_best and isinstance(df_enhanced, pd.DataFrame) and not df_enhanced.empty:
+                            # 예상 필터 통과 거래 수 추출 (combos.csv에서)
+                            expected_remaining = None
+                            if isinstance(p2_result, dict):
+                                combo_path = p2_result.get('global_combo_path')
+                                if combo_path and Path(combo_path).exists():
+                                    try:
+                                        df_combo = pd.read_csv(combo_path, encoding='utf-8-sig')
+                                        if not df_combo.empty:
+                                            expected_remaining = int(df_combo.iloc[0].get('remaining_trades', 0) or 0)
+                                    except Exception:
+                                        pass
+                            
+                            # 일관성 검증 수행
+                            validation_result = validate_segment_filter_consistency(
+                                df=df_enhanced,
+                                global_best=p2_global_best,
+                                expected_remaining=expected_remaining,
+                                tolerance=0.05,  # 5% 허용 오차
+                            )
+                            
+                            # 결과 저장
+                            segment_outputs['validation'] = validation_result
+                            
+                            # 경고 메시지 출력
+                            if not validation_result.get('is_valid'):
+                                for warning in validation_result.get('warnings', []):
+                                    print(f"[Segment Validation WARNING] {warning}")
+                                if teleQ is not None:
+                                    teleQ.put(f"[세그먼트 검증] 예측-실제 불일치 감지: "
+                                              f"예상 {expected_remaining}건, "
+                                              f"실제 {validation_result.get('actual_remaining')}건")
+                            else:
+                                print(f"[Segment Validation OK] 예측-실제 일치 확인 "
+                                      f"(예상: {expected_remaining}, 실제: {validation_result.get('actual_remaining')})")
+                    except Exception as val_err:
+                        print(f"[Segment Validation ERROR] 검증 중 오류: {val_err}")
 
                 if mode in ('phase3', 'phase2+3', 'phase2_phase3', 'all', 'auto'):
                     t0 = time.perf_counter()

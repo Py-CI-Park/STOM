@@ -1,13 +1,28 @@
 # -*- coding: utf-8 -*-
+"""
+세그먼트 필터 적용 모듈
+
+[2026-01-07 개선]
+- 필터 적용 전 내부 검증 기능 추가
+- 누락 변수 상세 로깅
+- 예측-실제 불일치 진단 기능
+
+이 모듈은 세그먼트 분석 결과(global_best)를 DataFrame에 적용하여
+필터 통과 마스크를 생성합니다.
+"""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 from .segmentation import SegmentBuilder, SegmentConfig
+
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 
 def load_segment_config_from_ranges(global_best: dict) -> SegmentConfig:
@@ -125,4 +140,152 @@ def build_segment_mask_from_global_best(df: pd.DataFrame, global_best: dict) -> 
 
     result['mask'] = mask
     result['missing_columns'] = sorted(missing)
+    return result
+
+
+def validate_segment_filter_consistency(
+    df: pd.DataFrame,
+    global_best: dict,
+    expected_remaining: Optional[int] = None,
+    tolerance: float = 0.05,
+) -> Dict[str, object]:
+    """
+    세그먼트 필터 적용 전 일관성을 검증합니다.
+    
+    [2026-01-07 신규 추가]
+    - 목적: 예측-실제 불일치 사전 방지
+    - 기능: 필터 적용 결과와 예상 결과 비교
+    
+    Args:
+        df: 백테스팅 결과 DataFrame
+        global_best: 세그먼트 분석 결과
+        expected_remaining: 예상 필터 통과 거래 수 (combos.csv의 remaining_trades)
+        tolerance: 허용 오차율 (기본 5%)
+    
+    Returns:
+        dict: 검증 결과
+            - is_valid: 일관성 여부
+            - actual_remaining: 실제 필터 통과 수
+            - expected_remaining: 예상 필터 통과 수
+            - difference: 차이 (actual - expected)
+            - difference_ratio: 차이 비율
+            - missing_columns: 누락된 컬럼 목록
+            - segment_summary: 세그먼트별 통과 수
+            - warnings: 경고 메시지 목록
+    """
+    result = {
+        'is_valid': False,
+        'actual_remaining': 0,
+        'expected_remaining': expected_remaining,
+        'difference': 0,
+        'difference_ratio': 0.0,
+        'missing_columns': [],
+        'segment_summary': {},
+        'warnings': [],
+    }
+    
+    # 필터 적용
+    mask_result = build_segment_mask_from_global_best(df, global_best)
+    
+    if mask_result.get('error'):
+        result['warnings'].append(f"필터 적용 실패: {mask_result['error']}")
+        return result
+    
+    mask = mask_result.get('mask')
+    if mask is None:
+        result['warnings'].append("마스크 생성 실패")
+        return result
+    
+    actual_remaining = int(np.sum(mask))
+    result['actual_remaining'] = actual_remaining
+    result['segment_summary'] = mask_result.get('segment_trades', {})
+    result['missing_columns'] = mask_result.get('missing_columns', [])
+    
+    # 누락 컬럼 경고
+    if result['missing_columns']:
+        result['warnings'].append(
+            f"누락된 컬럼 {len(result['missing_columns'])}개: {', '.join(result['missing_columns'][:5])}"
+            + ("..." if len(result['missing_columns']) > 5 else "")
+        )
+    
+    # 예상값이 있으면 비교
+    if expected_remaining is not None and expected_remaining > 0:
+        result['difference'] = actual_remaining - expected_remaining
+        result['difference_ratio'] = result['difference'] / expected_remaining
+        
+        if abs(result['difference_ratio']) <= tolerance:
+            result['is_valid'] = True
+        else:
+            result['warnings'].append(
+                f"예측-실제 불일치: 예상 {expected_remaining}개, "
+                f"실제 {actual_remaining}개 (차이 {result['difference']:+d}, {result['difference_ratio']:+.1%})"
+            )
+    else:
+        # 예상값 없으면 일단 유효
+        result['is_valid'] = True
+    
+    # 로깅
+    if result['warnings']:
+        for warning in result['warnings']:
+            logger.warning(warning)
+    
+    return result
+
+
+def get_filter_diagnostic_info(
+    df: pd.DataFrame,
+    global_best: dict,
+) -> Dict[str, object]:
+    """
+    세그먼트 필터 진단 정보를 생성합니다.
+    
+    [2026-01-07 신규 추가]
+    - 목적: 문제 발생 시 상세 진단 정보 제공
+    
+    Args:
+        df: 백테스팅 결과 DataFrame
+        global_best: 세그먼트 분석 결과
+    
+    Returns:
+        dict: 진단 정보
+            - total_trades: 전체 거래 수
+            - segment_distribution: 세그먼트별 거래 분포
+            - filter_coverage: 필터가 사용하는 컬럼의 가용성
+            - ranges_path_valid: ranges.csv 경로 유효성
+            - config_mode: SegmentConfig 모드 (fixed/dynamic/semi)
+    """
+    result = {
+        'total_trades': len(df) if isinstance(df, pd.DataFrame) else 0,
+        'segment_distribution': {},
+        'filter_coverage': {},
+        'ranges_path_valid': False,
+        'config_mode': 'unknown',
+    }
+    
+    if not isinstance(global_best, dict):
+        return result
+    
+    # ranges.csv 경로 확인
+    ranges_path = global_best.get('ranges_path')
+    if ranges_path and Path(ranges_path).exists():
+        result['ranges_path_valid'] = True
+    
+    # SegmentConfig 로드
+    seg_config = load_segment_config_from_ranges(global_best)
+    result['config_mode'] = seg_config.dynamic_mode if hasattr(seg_config, 'dynamic_mode') else 'unknown'
+    
+    # 필터가 사용하는 컬럼 가용성 확인
+    combo_map = global_best.get('combination', {})
+    required_columns = set()
+    
+    for combo in combo_map.values():
+        if isinstance(combo, dict):
+            for flt in combo.get('filters', []):
+                if isinstance(flt, dict) and flt.get('column'):
+                    required_columns.add(flt['column'])
+    
+    if isinstance(df, pd.DataFrame):
+        for col in required_columns:
+            result['filter_coverage'][col] = col in df.columns
+    
     return result
