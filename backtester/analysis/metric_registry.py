@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+메트릭 레지스트리
+
+NOTE: 변수 관리의 단일 소스(Single Source of Truth)는 
+      `backtester/variable_registry.py`입니다.
+      이 파일의 BUY_TIME_FILTER_COLUMNS는 레거시 호환성을 위해 유지됩니다.
+      새로운 변수 추가 시 반드시 variable_registry.py에도 등록해주세요.
+      
+참조: docs/Guideline/Variable_Management_Guide.md
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,6 +25,9 @@ class MetricDefinition:
     for_filter: bool = True
 
 
+# NOTE: 이 리스트는 레거시 호환성을 위해 유지됩니다.
+# 변수 관리의 단일 소스: backtester/variable_registry.py
+# 새로운 변수 추가 시 variable_registry.py에도 등록하세요.
 BUY_TIME_FILTER_COLUMNS: List[str] = [
     '매수등락율', '매수시가등락율', '매수당일거래대금', '매수체결강도',
     '매수전일비', '매수회전율', '매수전일동시간비', '매수고가', '매수저가',

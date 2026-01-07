@@ -4,6 +4,7 @@ import pandas as pd
 from itertools import combinations
 
 from backtester.analysis.metric_registry import ANALYSIS_ONLY_COLUMNS, BUY_TIME_FILTER_COLUMNS
+from backtester.variable_registry import get_registry, VARIABLE_REGISTRY
 
 from .config import (
     FILTER_MAX_EXCLUSION_RATIO,
@@ -255,6 +256,14 @@ def AnalyzeFilterEffectsEnhanced(
         return _fmt_eok_to_korean(eok)
 
     def _categorize(col: str) -> str:
+        """변수 카테고리를 반환합니다. 레지스트리를 우선 참조하고, 없으면 휴리스틱 사용."""
+        # 1. 레지스트리에서 카테고리 조회
+        registry = get_registry()
+        var_def = registry.get(col)
+        if var_def and var_def.category:
+            return var_def.category
+        
+        # 2. 휴리스틱 폴백 (레지스트리에 없는 변수)
         if col == '시가총액':
             return '시가총액'
         if '위험도' in col:
@@ -282,6 +291,18 @@ def AnalyzeFilterEffectsEnhanced(
         return '기타'
 
     def _is_buytime_candidate(col: str) -> bool:
+        """
+        매수 시점 필터 후보 여부를 판단합니다.
+        레지스트리를 우선 참조하고, 없으면 기존 휴리스틱을 사용합니다.
+        """
+        # 1. 레지스트리 기반 판단 (우선)
+        registry = get_registry()
+        var_def = registry.get(col)
+        if var_def:
+            # 레지스트리에 등록된 변수: for_filter와 lookahead_free 기반 판단
+            return var_def.for_filter and var_def.lookahead_free
+        
+        # 2. 휴리스틱 폴백 (레지스트리에 없는 동적 생성 변수 등)
         # "매도"로 시작하더라도, 매수 시점 호가/잔량에서 파생된 변수는 예외적으로 허용합니다.
         # (예: 매도잔량_매수잔량_비율 = 매수 시점의 매도/매수 잔량 비율)
         allow_sellside_buytime_cols = {

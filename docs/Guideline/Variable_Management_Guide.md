@@ -889,11 +889,64 @@ categories:
 
 ---
 
+## 구현 상태
+
+### 완료된 구현 (2026-01-07)
+
+✅ **변수 레지스트리 (`backtester/variable_registry.py`)** - 약 1,230줄
+- `VariableScope` enum: BUY, SELL, COMBINED, ANALYSIS
+- `VariableTimeframe` enum: TICK, MIN, ALL
+- `VariableDefinition` dataclass: 변수 정의 (name, scope, timeframe, for_filter, lookahead_free, category, formula 등)
+- `VARIABLE_REGISTRY` dict: 67개 변수 등록 (원본 30+ 파생 37)
+- `VariableRegistry` 클래스: 헬퍼 메서드 (get_filter_candidates, is_lookahead_free, get_by_category 등)
+- `get_buy_time_filter_columns()`: metric_registry.py 호환 함수
+
+✅ **기존 코드 연동**
+- `filters.py`: `_categorize()`, `_is_buytime_candidate()` 함수가 레지스트리를 우선 참조하도록 수정
+- `metric_registry.py`: 레지스트리 참조 안내 주석 추가 (레거시 호환성 유지)
+
+### 사용 방법
+
+```python
+from backtester.variable_registry import get_registry, get_buy_time_filter_columns
+
+# 싱글톤 레지스트리 가져오기
+registry = get_registry()
+
+# 필터 후보 변수 목록 (Tick)
+tick_filter_cols = registry.get_filter_candidates('tick')  # 38개
+
+# 변수 정의 조회
+var_def = registry.get('위험도점수')
+print(f"Category: {var_def.category}")       # 위험신호
+print(f"For filter: {var_def.for_filter}")   # True
+print(f"Lookahead free: {var_def.lookahead_free}")  # True
+
+# 카테고리별 변수 조회
+price_vars = registry.get_by_category('가격')
+
+# 레거시 호환
+from backtester.variable_registry import get_buy_time_filter_columns
+columns = get_buy_time_filter_columns('tick')  # metric_registry.py와 동일한 형태
+```
+
+### 단일 소스 원칙 (Single Source of Truth)
+
+**변수 관리의 단일 소스**: `backtester/variable_registry.py`
+
+새로운 변수 추가 시:
+1. `variable_registry.py`에 `VariableDefinition` 등록 (필수)
+2. `metric_registry.py`의 `BUY_TIME_FILTER_COLUMNS` 업데이트 (선택, 레거시 호환)
+3. `metrics_enhanced.py`에 계산 로직 추가 (파생 변수인 경우)
+
+---
+
 ## 변경 이력
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
 | 1.0.0 | 2026-01-07 | 최초 작성 |
+| 1.1.0 | 2026-01-07 | 변수 레지스트리 구현 완료 (`variable_registry.py`), filters.py 연동 |
 
 ---
 
