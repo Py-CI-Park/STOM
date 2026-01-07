@@ -467,11 +467,43 @@ def Strategy(self):
 
 | 날짜 | 커밋 | 내용 |
 |------|------|------|
+| 2026-01-07 | 32c4697 | 세그먼트 필터 일관성 검증 기능 추가 (segment_apply.py) |
+| 2026-01-07 | 32c4697 | runner.py에 Walk-Forward CV 통합 |
+| 2026-01-07 | 32c4697 | 런타임 디버그 유틸리티 추가 (runtime_debug.py) |
+| 2026-01-07 | fa17d54 | 완전 분석 보고서 추가 |
 | 2026-01-07 | d81ecdb | 타임프레임별 변수 완전 분리 |
 | 2026-01-07 | 91931ee | 틱 엔진 초당* 변수 덮어쓰기 버그 수정 |
 | 2026-01-01 | - | 런타임 매핑 기본값 1.0 → 0.0 수정 |
 | 2026-01-01 | - | ranges.csv 고정 모드 도입 |
 | 2025-12-31 | - | if/elif 체인 버그 수정 |
+
+---
+
+## 10. 추가된 기능 (2026-01-07)
+
+### 10.1 런타임 검증 로깅 (runtime_debug.py)
+```python
+# 사용 예시
+from backtester.segment_analysis.runtime_debug import enable_runtime_debug, save_debug_log
+
+enable_runtime_debug(log_variables=['시분초', '시가총액', '필터통과'])
+# ... 백테스트 실행 ...
+save_debug_log('debug_output.json')
+```
+
+### 10.2 세그먼트 필터 일관성 검증
+- Phase2 완료 후 자동 검증 수행
+- 예상 필터 통과 수 vs 실제 필터 통과 수 비교
+- 5% 허용 오차 이상 시 경고 로깅
+
+### 10.3 Walk-Forward 교차 검증 통합
+- Purged Walk-Forward CV로 OOS 성능 추정
+- 과적합 방지를 위한 일반화 비율 계산
+- 견고한 필터 자동 식별 (OOS 양수 60%+)
+
+### 10.4 단위 테스트 추가
+- `tests/test_segment_apply.py`: 세그먼트 검증 함수 테스트
+- 통합 테스트: 전체 워크플로우 검증
 
 ---
 

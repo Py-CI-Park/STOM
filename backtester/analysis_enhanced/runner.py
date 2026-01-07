@@ -626,6 +626,50 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
             "불안정_필터수": len([f for f in (filter_stability or []) if f.get('안정성등급') == '불안정']),
         })
 
+        # 7.5 Walk-Forward 교차 검증 (Out-of-Sample 성능 추정)
+        # [2026-01-07 추가] 과적합 방지를 위한 OOS 검증
+        try:
+            if filter_results and len(filter_results) > 0:
+                print("[Enhanced Analysis] Walk-Forward 교차 검증 시작...")
+                
+                cv_config = PurgedWalkForwardConfig(
+                    n_splits=5,
+                    train_ratio=0.6,
+                    gap_ratio=0.05,
+                    min_trades_per_fold=30,
+                    date_column='매수일자',
+                )
+                
+                # 상위 필터만 검증 (계산량 제한)
+                validated_filters = validate_filters_batch(
+                    df=df_enhanced,
+                    filter_results=filter_results,
+                    config=cv_config,
+                    top_n=15,
+                )
+                
+                # CV 요약 계산
+                cv_summary = get_cv_summary(validated_filters)
+                result['cv_validation'] = {
+                    'config': {
+                        'n_splits': cv_config.n_splits,
+                        'train_ratio': cv_config.train_ratio,
+                        'gap_ratio': cv_config.gap_ratio,
+                    },
+                    'summary': cv_summary,
+                }
+                
+                # 로깅
+                robust_filters = [f for f in validated_filters if f.get('OOS_견고') == '예']
+                print(f"[Enhanced Analysis] Walk-Forward CV 완료:")
+                print(f"  - 검증된 필터: {cv_summary.get('validated_count', 0)}개")
+                print(f"  - 견고한 필터 (OOS 양수 60%+): {len(robust_filters)}개")
+                
+                if teleQ is not None:
+                    teleQ.put(f"[Walk-Forward CV] 검증 완료: {len(robust_filters)}개 필터가 OOS에서도 견고함")
+        except Exception as cv_err:
+            print(f"[Enhanced Analysis] Walk-Forward CV 실패: {cv_err}")
+
         # 8. 조건식 코드 생성
         analysis_logger.log_step_start(8, "조건식 코드 생성 (GenerateFilterCode)")
         generated_code = GenerateFilterCode(filter_results, df_tsg=df_enhanced, allow_ml_filters=allow_ml_filters)
