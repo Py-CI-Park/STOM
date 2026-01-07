@@ -19,6 +19,7 @@ from .thresholds import (
     FindOptimalThresholds,
     FindOptimalRangeThresholds,
 )
+from .utils import round_decimal, DEFAULT_DECIMAL_PLACES
 
 def AnalyzeFilterCombinations(df_tsg, single_filters=None, max_filters=3, top_n=10):
     """
@@ -481,6 +482,7 @@ def AnalyzeFilterEffectsEnhanced(
             else:
                 rating = ''
 
+            # [2026-01-07] 소수점 4자리 제한 적용
             filter_results.append({
                 '분류': fc['분류'],
                 '필터명': fc['필터명'],
@@ -489,16 +491,16 @@ def AnalyzeFilterEffectsEnhanced(
                 '제외거래수': filtered_count,
                 '제외비율': round(filtered_count / total_trades * 100, 1),
                 '제외거래수익금': int(filtered_profit),
-                '제외평균수익률': round(filtered_avg_profit, 2),
+                '제외평균수익률': round_decimal(filtered_avg_profit, 2),
                 '잔여거래수': remaining_count,
                 '잔여거래수익금': int(remaining_profit),
-                '잔여평균수익률': round(remaining_avg_profit, 2),
+                '잔여평균수익률': round_decimal(remaining_avg_profit, 2),
                 '수익개선금액': int(improvement),
                 '제외거래승률': round((profit_arr[cond_arr] > 0).mean() * 100, 1) if filtered_count > 0 else 0.0,
                 '잔여거래승률': round((profit_arr[~cond_arr] > 0).mean() * 100, 1) if remaining_count > 0 else 0.0,
-                't통계량': stat_result['t_stat'],
-                'p값': stat_result['p_value'],
-                '효과크기': stat_result['effect_size'],
+                't통계량': round_decimal(stat_result['t_stat'], DEFAULT_DECIMAL_PLACES),
+                'p값': round_decimal(stat_result['p_value'], DEFAULT_DECIMAL_PLACES),
+                '효과크기': round_decimal(stat_result['effect_size'], DEFAULT_DECIMAL_PLACES),
                 '효과해석': effect_interpretation,
                 '신뢰구간': stat_result['confidence_interval'],
                 '유의함': '예' if stat_result['significant'] else '아니오',
@@ -660,6 +662,7 @@ def AnalyzeFilterEffectsLookahead(df_tsg, correction_method: str = 'none'):
                 filtered_avg_profit = 0.0
                 remaining_avg_profit = 0.0
 
+            # [2026-01-07] 소수점 4자리 제한 적용
             filter_results.append({
                 '분류': fc.get('분류', '사후진단'),
                 '필터명': fc.get('필터명', ''),
@@ -668,16 +671,16 @@ def AnalyzeFilterEffectsLookahead(df_tsg, correction_method: str = 'none'):
                 '제외거래수': filtered_count,
                 '제외비율': round(filtered_count / total_trades * 100, 1),
                 '제외거래수익금': int(filtered_profit),
-                '제외평균수익률': round(filtered_avg_profit, 2),
+                '제외평균수익률': round_decimal(filtered_avg_profit, 2),
                 '잔여거래수': remaining_count,
                 '잔여거래수익금': int(remaining_profit),
-                '잔여평균수익률': round(remaining_avg_profit, 2),
+                '잔여평균수익률': round_decimal(remaining_avg_profit, 2),
                 '수익개선금액': int(improvement),
                 '제외거래승률': round((profit_arr[cond_arr] > 0).mean() * 100, 1) if filtered_count > 0 else 0.0,
                 '잔여거래승률': round((profit_arr[~cond_arr] > 0).mean() * 100, 1) if remaining_count > 0 else 0.0,
-                't통계량': stat_result['t_stat'],
-                'p값': stat_result['p_value'],
-                '효과크기': stat_result['effect_size'],
+                't통계량': round_decimal(stat_result['t_stat'], DEFAULT_DECIMAL_PLACES),
+                'p값': round_decimal(stat_result['p_value'], DEFAULT_DECIMAL_PLACES),
+                '효과크기': round_decimal(stat_result['effect_size'], DEFAULT_DECIMAL_PLACES),
                 '효과해석': effect_interpretation,
                 '신뢰구간': stat_result['confidence_interval'],
                 '유의함': '예' if stat_result['significant'] else '아니오',

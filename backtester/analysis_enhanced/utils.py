@@ -3,6 +3,121 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
+
+# =============================================================================
+# [2026-01-07] 소수점 정밀도 제한 유틸리티
+# =============================================================================
+# 백테스팅 분석에서 생성되는 파생 변수들의 소수점을 최대 4자리로 제한합니다.
+# - 목적: CSV 출력 시 가독성 향상, 파일 크기 감소, 일관된 정밀도 유지
+# - 적용 대상: 비율, 퍼센트, 점수 등 연산으로 생성되는 파생 변수
+
+DEFAULT_DECIMAL_PLACES = 4  # 기본 소수점 자릿수
+
+
+def round_decimal(value, decimals: int = DEFAULT_DECIMAL_PLACES):
+    """
+    단일 값의 소수점을 지정된 자릿수로 반올림합니다.
+    
+    Args:
+        value: 반올림할 값 (숫자, None, NaN 등)
+        decimals: 소수점 자릿수 (기본값: 4)
+    
+    Returns:
+        반올림된 값 (원본이 None/NaN이면 그대로 반환)
+    """
+    if value is None:
+        return None
+    try:
+        if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+            return value
+        return round(float(value), decimals)
+    except (TypeError, ValueError):
+        return value
+
+
+def round_series(series: pd.Series, decimals: int = DEFAULT_DECIMAL_PLACES) -> pd.Series:
+    """
+    pandas Series의 소수점을 지정된 자릿수로 반올림합니다.
+    
+    Args:
+        series: 반올림할 Series
+        decimals: 소수점 자릿수 (기본값: 4)
+    
+    Returns:
+        반올림된 Series
+    """
+    if series is None or not isinstance(series, pd.Series):
+        return series
+    try:
+        return series.round(decimals)
+    except Exception:
+        return series
+
+
+def round_dataframe_floats(
+    df: pd.DataFrame,
+    decimals: int = DEFAULT_DECIMAL_PLACES,
+    exclude_columns: list = None,
+) -> pd.DataFrame:
+    """
+    DataFrame의 모든 float 컬럼을 지정된 소수점 자릿수로 반올림합니다.
+    
+    Args:
+        df: 반올림할 DataFrame
+        decimals: 소수점 자릿수 (기본값: 4)
+        exclude_columns: 제외할 컬럼 목록 (예: 인덱스, ID 등)
+    
+    Returns:
+        반올림된 DataFrame
+    """
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+        return df
+    
+    exclude_columns = exclude_columns or []
+    result = df.copy()
+    
+    for col in result.columns:
+        if col in exclude_columns:
+            continue
+        if pd.api.types.is_float_dtype(result[col]):
+            try:
+                result[col] = result[col].round(decimals)
+            except Exception:
+                pass
+    
+    return result
+
+
+def format_float_str(value, decimals: int = DEFAULT_DECIMAL_PLACES) -> str:
+    """
+    숫자를 지정된 소수점 자릿수의 문자열로 변환합니다.
+    정수 값이면 소수점 없이 반환합니다.
+    
+    Args:
+        value: 변환할 값
+        decimals: 소수점 자릿수 (기본값: 4)
+    
+    Returns:
+        포맷팅된 문자열
+    """
+    if value is None:
+        return ''
+    try:
+        v = float(value)
+        if np.isnan(v) or np.isinf(v):
+            return str(value)
+        # 정수인 경우 소수점 없이 반환
+        if v == int(v):
+            return str(int(v))
+        # 소수점 자릿수 적용 후 불필요한 0 제거
+        formatted = f"{v:.{decimals}f}".rstrip('0').rstrip('.')
+        return formatted
+    except (TypeError, ValueError):
+        return str(value)
+
 def _normalize_text_for_hash(text) -> str:
     if text is None:
         return ''

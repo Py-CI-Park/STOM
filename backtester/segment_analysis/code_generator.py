@@ -21,21 +21,28 @@ from backtester.output_paths import build_backtesting_output_path
 # =============================================================================
 
 # 세그먼트 필터 마커 목록 (감지용)
+# [2026-01-07 개선] 새로운 if-elif NOT 패턴 반영
 _SEGMENT_FILTER_MARKERS = [
     '# === 세그먼트 필터',           # 세그먼트 필터 블록 시작
     '# 세그먼트 필터 조건식',        # 세그먼트 필터 조건식 주석
-    '필터통과 = False',              # 세그먼트 필터 초기화
+    '# 기존 매수 조건식 패턴과 동일한 if-elif NOT 구조',  # [2026-01-07 추가] 새 패턴 마커
+    '# 시간대 우선 → 시가총액 중첩 구조',  # [2026-01-07 추가] 새 패턴 마커
     '세그먼트 전체 제외',            # 세그먼트 전체 제외 주석
-    '매수 = 매수 and 필터통과',      # 세그먼트 필터 반영
+    '# 정의되지 않은 시간대 제외',   # [2026-01-07 추가] 새 패턴 마커
+    '# 정의되지 않은 시가총액 구간', # [2026-01-07 추가] 새 패턴 마커
     '[대형주_T',                     # 세그먼트 분할 주석
     '[중형주_T',
     '[소형주_T',
     '[초소형주_T',
     '# 최종 매수 조건식_filtered',   # [2026-01-06 추가] 메타데이터 헤더 감지
+    # 레거시 마커 (이전 버전 호환용)
+    '필터통과 = False',              # 세그먼트 필터 초기화 (레거시)
+    '매수 = 매수 and 필터통과',      # 세그먼트 필터 반영 (레거시)
 ]
 
 # 세그먼트 필터 블록 시작/끝 마커 (제거용)
 # [2026-01-06 버그 수정] 메타데이터 헤더도 제거 대상에 포함
+# [2026-01-07 개선] 새로운 패턴 마커 추가
 _SEGMENT_BLOCK_START_MARKERS = [
     '# === 세그먼트 필터 (자동 생성) ===',
     '# === Segment filter runtime mapping',
@@ -46,6 +53,8 @@ _SEGMENT_BLOCK_START_MARKERS = [
 
 _SEGMENT_BLOCK_END_MARKERS = [
     '# === 세그먼트 필터 반영 ===',
+    '# 정의되지 않은 시간대 제외',   # [2026-01-07 추가] 새 패턴 종료 마커
+    # 레거시 마커 (이전 버전 호환용)
     '매수 = 매수 and 필터통과',
     '매수 = 필터통과',
 ]
@@ -196,6 +205,42 @@ def build_segment_filter_code(
     runtime_market_cap_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
     runtime_time_ranges: Optional[Dict[str, Tuple[int, int]]] = None,
 ) -> Tuple[List[str], Dict[str, int]]:
+    """
+    세그먼트 필터 조건식 코드를 생성합니다.
+    
+    [2026-01-07 개선] 기존 매수 조건식 패턴과 동일한 형태로 생성
+    - 기존: 필터통과 = False → if (조건): 필터통과 = True → 매수 = 매수 and 필터통과
+    - 개선: 시간대 우선 → 시가총액 중첩 → if not (필터): 매수 = False 패턴
+    
+    생성되는 코드 구조:
+    ```
+    # 세그먼트 필터 조건식 (자동 생성)
+    elif 시분초 >= 92900 and 시분초 < 95900:  # T1 시간대
+        if 시가총액 >= 10000:  # 대형주
+            if not ((필터조건1) and (필터조건2)):
+                매수 = False
+        elif 시가총액 >= 5000:  # 중형주
+            if not ((필터조건)):
+                매수 = False
+        elif 시가총액 >= 2500:  # 소형주
+            ...
+        else:  # 초소형주 또는 미정의 → 해당 세그먼트가 exclude_segment이면 제외
+            매수 = False
+    elif 시분초 >= 95900 and 시분초 < 102900:  # T2 시간대
+        ...
+    else:  # 정의되지 않은 시간대
+        매수 = False
+    ```
+    
+    Args:
+        global_best: 세그먼트별 최적 조합 정보
+        seg_config: 세그먼트 설정 (기본값 사용 가능)
+        runtime_market_cap_ranges: 런타임 시가총액 구간 (동적 분할 시 사용)
+        runtime_time_ranges: 런타임 시간 구간 (동적 분할 시 사용)
+    
+    Returns:
+        (조건식 코드 라인 리스트, 요약 정보 딕셔너리)
+    """
     if not isinstance(global_best, dict):
         return [], {}
 
@@ -207,62 +252,126 @@ def build_segment_filter_code(
     cap_ranges = runtime_market_cap_ranges or seg_config.market_cap_ranges
     time_ranges = runtime_time_ranges or seg_config.time_ranges
 
+    # 세그먼트를 시간대 → 시가총액 구조로 재구성
+    # time_label → { cap_label → combo }
+    time_cap_structure = _reorganize_segments_by_time_cap(combo_map, cap_ranges, time_ranges)
+    
     lines: List[str] = []
     lines.append("# 세그먼트 필터 조건식 (자동 생성)")
-    lines.append("# 시분초는 매수시간(HHMMSS) 기준으로 계산 필요")
-    lines.append("필터통과 = False")
+    lines.append("# 기존 매수 조건식 패턴과 동일한 if-elif NOT 구조 사용")
+    lines.append("# 시간대 우선 → 시가총액 중첩 구조")
     lines.append("")
 
     total_filters = 0
     total_segments = 0
-
-    for i, seg_id in enumerate(sorted(combo_map.keys())):
-        combo = combo_map.get(seg_id) or {}
-        filters = combo.get('filters') or []
-
-        total_segments += 1
-        total_filters += len(filters)
-
-        seg_condition = _build_segment_condition(seg_id, cap_ranges, time_ranges)
-
-        # [2025-12-31 버그 수정] 세그먼트 필터 OR 논리 → 상호 배타적 처리
-        # - 기존: 모든 세그먼트가 "if"로 시작 → OR 논리 (60% 통과)
-        # - 수정: 첫 번째는 "if", 나머지는 "elif" → 각 거래는 하나의 세그먼트만 적용 (27% 통과)
-        if_keyword = "if" if i == 0 else "elif"
-
-        lines.append(f"# [{seg_id}]")
-        if seg_condition:
-            lines.append(f"{if_keyword} {seg_condition}:")
-        else:
-            lines.append(f"{if_keyword} True:")
-
-        if combo.get('exclude_segment'):
-            lines.append("    필터통과 = False  # 세그먼트 전체 제외")
-            lines.append("")
-            continue
-
-        if filters:
-            conditions = []
-            for flt in filters:
-                cond = _build_filter_condition(flt)
-                if cond:
-                    conditions.append(cond)
-
-            if conditions:
-                lines.append("    if (" + " and ".join(conditions) + "):")
-                lines.append("        필터통과 = True")
-            else:
-                lines.append("    필터통과 = True")
-        else:
-            lines.append("    필터통과 = True  # 필터 없음")
-
+    
+    # 시간 구간을 정렬 (시작 시간 기준)
+    sorted_time_labels = sorted(time_ranges.keys(), key=lambda k: time_ranges[k][0])
+    
+    for time_idx, time_label in enumerate(sorted_time_labels):
+        time_min, time_max = time_ranges[time_label]
+        time_data = time_cap_structure.get(time_label, {})
+        
+        # 시간대 조건 생성
+        time_cond = _build_range_condition('시분초', time_min, time_max)
+        if_keyword = "if" if time_idx == 0 else "elif"
+        
+        # 시간대 레이블 주석
+        lines.append(f"# [{time_label}] 시간대")
+        lines.append(f"{if_keyword} {time_cond}:")
+        
+        # 시가총액 구간을 정렬 (내림차순 - 대형주부터)
+        # 대형주 → 중형주 → 소형주 → 초소형주 순서
+        cap_order = ['대형주', '중형주', '소형주', '초소형주']
+        sorted_cap_labels = [c for c in cap_order if c in cap_ranges]
+        # 정의되지 않은 시가총액 라벨도 추가
+        for cap_label in cap_ranges.keys():
+            if cap_label not in sorted_cap_labels:
+                sorted_cap_labels.append(cap_label)
+        
+        for cap_idx, cap_label in enumerate(sorted_cap_labels):
+            cap_min, cap_max = cap_ranges[cap_label]
+            seg_id = f"{cap_label}_{time_label}"
+            combo = time_data.get(cap_label, {})
+            
+            total_segments += 1
+            filters = combo.get('filters') or []
+            total_filters += len(filters)
+            
+            # 시가총액 조건 생성
+            cap_cond = _build_range_condition('시가총액', cap_min, cap_max)
+            cap_if_keyword = "if" if cap_idx == 0 else "elif"
+            
+            lines.append(f"    # [{cap_label}] - {seg_id}")
+            lines.append(f"    {cap_if_keyword} {cap_cond}:")
+            
+            # 세그먼트 전체 제외인 경우
+            if combo.get('exclude_segment'):
+                lines.append(f"        매수 = False  # 세그먼트 전체 제외")
+            elif filters:
+                # 필터 조건 생성 (NOT 패턴)
+                conditions = []
+                for flt in filters:
+                    cond = _build_filter_condition(flt)
+                    if cond:
+                        conditions.append(cond)
+                
+                if conditions:
+                    combined_cond = " and ".join(conditions)
+                    lines.append(f"        if not ({combined_cond}):")
+                    lines.append(f"            매수 = False")
+                # else: 필터 조건이 없으면 통과 (아무것도 안 함)
+            # else: 필터가 없으면 통과 (아무것도 안 함) - 주석 없이 통과
+        
+        # 시가총액 구간 외 (else) - 데이터가 정의된 구간에 없으면
+        # 모든 시가총액 구간을 커버하므로 else는 필요 없음
+        # 단, combo_map에 없는 세그먼트가 있을 수 있으므로 처리
+        lines.append(f"    else:")
+        lines.append(f"        매수 = False  # 정의되지 않은 시가총액 구간")
         lines.append("")
+    
+    # 시간 구간 외 (else) - 정의되지 않은 시간대
+    lines.append("else:")
+    lines.append("    매수 = False  # 정의되지 않은 시간대 제외")
+    lines.append("")
 
     summary = {
         'segments': total_segments,
         'filters': total_filters,
     }
     return lines, summary
+
+
+def _reorganize_segments_by_time_cap(
+    combo_map: Dict[str, dict],
+    cap_ranges: Dict[str, Tuple[float, float]],
+    time_ranges: Dict[str, Tuple[int, int]],
+) -> Dict[str, Dict[str, dict]]:
+    """
+    세그먼트 조합을 시간대 → 시가총액 구조로 재구성합니다.
+    
+    Args:
+        combo_map: seg_id → combo 딕셔너리
+        cap_ranges: 시가총액 구간 딕셔너리
+        time_ranges: 시간 구간 딕셔너리
+    
+    Returns:
+        time_label → { cap_label → combo } 구조
+    """
+    result: Dict[str, Dict[str, dict]] = {}
+    
+    for seg_id, combo in combo_map.items():
+        if seg_id == 'Out_of_Range':
+            continue
+        
+        cap_label, time_label = _split_segment_id(seg_id)
+        
+        if time_label not in result:
+            result[time_label] = {}
+        
+        result[time_label][cap_label] = combo
+    
+    return result
 
 
 def save_segment_code(code_lines: List[str], output_dir: str, prefix: str) -> Optional[str]:
@@ -403,14 +512,19 @@ def _inject_segment_filter_into_buy_lines(
     """
     매수 조건식에 세그먼트 필터를 삽입합니다.
 
+    [2026-01-07 개선] 기존 매수 조건식 패턴과 동일한 형태로 삽입
+    - 기존: 필터통과 변수 사용 → 매수 = 매수 and 필터통과
+    - 개선: if-elif 체인에 직접 통합 → if not (조건): 매수 = False
+    
     [2026-01-06 버그 수정] 세그먼트 필터 중복 삽입 방지
-    - 기존: buy_lines에 세그먼트 필터가 있어도 무조건 추가 (중복 발생)
-    - 수정: 기존 세그먼트 필터가 있으면 먼저 제거 후 새 필터 삽입 (교체)
+    - 기존 세그먼트 필터가 있으면 먼저 제거 후 새 필터 삽입 (교체)
 
     동작 방식:
     1. buy_lines에 기존 세그먼트 필터가 있는지 확인
     2. 있으면 _extract_original_buy_code()로 원본 코드 추출
-    3. 원본 코드에 새 세그먼트 필터 삽입
+    3. 세그먼트 필터 코드의 첫 번째 'if'를 'elif'로 변환 (기존 체인과 연결)
+    4. 원본 코드의 마지막 'elif/else' 블록 앞에 세그먼트 필터 삽입
+    5. 삽입 위치: 기존 조건식의 마지막 elif 앞 또는 "if 매수:" 앞
 
     Args:
         buy_lines: 매수 조건식 코드 라인 리스트
@@ -432,42 +546,77 @@ def _inject_segment_filter_into_buy_lines(
             working_lines = buy_lines
 
     # "if 매수:" 라인 찾기
-    last_idx = None
+    last_buy_idx = None
     for idx, line in enumerate(working_lines):
         if re.match(r'^\s*if\s+매수\s*:', line):
-            last_idx = idx
+            last_buy_idx = idx
 
-    if last_idx is None:
+    # [2026-01-07 개선] 세그먼트 필터의 첫 번째 'if'를 'elif'로 변환
+    # 기존 매수 조건식의 if-elif 체인에 연결하기 위함
+    converted_segment_lines = _convert_first_if_to_elif(segment_code_lines)
+
+    if last_buy_idx is None:
         # "if 매수:" 라인이 없으면 끝에 추가 (fallback)
+        # 이 경우는 첫 번째 'if'를 그대로 유지
         fallback = list(working_lines)
         fallback.append("")
         fallback.append("# === 세그먼트 필터 (자동 생성) ===")
-        fallback.extend(segment_code_lines)
+        fallback.extend(segment_code_lines)  # 원본 유지 (elif 변환 없이)
         fallback.append("")
-        fallback.append("# === 세그먼트 필터 반영 ===")
-        fallback.append("try:")
-        fallback.append("    매수 = 매수 and 필터통과")
-        fallback.append("except NameError:")
-        fallback.append("    매수 = 필터통과")
         return fallback, False
 
-    # 세그먼트 필터 블록 생성
+    # [2026-01-07 개선] 삽입 위치 결정
+    # 기존 조건식의 마지막 elif/else 블록의 끝 직전에 삽입
+    # 즉, "if 매수:" 라인 바로 앞에 삽입
+    insert_idx = last_buy_idx
+    
+    # 삽입 위치 직전의 빈 줄 처리
+    # "if 매수:" 앞에 빈 줄이 있으면 그 앞에 삽입
+    while insert_idx > 0 and not working_lines[insert_idx - 1].strip():
+        insert_idx -= 1
+
+    # 세그먼트 필터 블록 생성 (필터통과 변수 없이 직접 매수 = False 패턴)
     injected_block = ["", "# === 세그먼트 필터 (자동 생성) ==="]
-    injected_block.extend(segment_code_lines)
-    injected_block.append("")
-    injected_block.append("# === 세그먼트 필터 반영 ===")
-    injected_block.append("try:")
-    injected_block.append("    매수 = 매수 and 필터통과")
-    injected_block.append("except NameError:")
-    injected_block.append("    매수 = 필터통과")
+    injected_block.extend(converted_segment_lines)
     injected_block.append("")
 
-    # "if 매수:" 라인 앞에 세그먼트 필터 삽입
+    # 삽입
     new_lines = []
-    new_lines.extend(working_lines[:last_idx])
+    new_lines.extend(working_lines[:insert_idx])
     new_lines.extend(injected_block)
-    new_lines.extend(working_lines[last_idx:])
+    new_lines.extend(working_lines[insert_idx:])
     return new_lines, True
+
+
+def _convert_first_if_to_elif(lines: List[str]) -> List[str]:
+    """
+    세그먼트 필터 코드의 첫 번째 'if'를 'elif'로 변환합니다.
+    
+    기존 매수 조건식의 if-elif 체인에 세그먼트 필터를 연결하기 위함.
+    주석 라인은 건너뛰고 첫 번째 실제 'if' 문을 찾아 변환합니다.
+    
+    Args:
+        lines: 세그먼트 필터 코드 라인 리스트
+    
+    Returns:
+        첫 번째 'if'가 'elif'로 변환된 코드 라인 리스트
+    """
+    if not lines:
+        return lines
+    
+    result = list(lines)
+    for i, line in enumerate(result):
+        stripped = line.strip()
+        # 주석이나 빈 줄 건너뛰기
+        if not stripped or stripped.startswith('#'):
+            continue
+        
+        # 첫 번째 'if' 문 찾기 (들여쓰기 없는 최상위 레벨)
+        if line.startswith('if ') and not line.startswith('if 매수'):
+            result[i] = 'elif ' + line[3:]  # 'if ' → 'elif '
+            break
+    
+    return result
 
 
 def _inject_segment_runtime_preamble(segment_code_lines: List[str], timeframe: str = 'tick') -> List[str]:
@@ -1047,7 +1196,21 @@ def _build_range_condition(name: str, min_value: float, max_value: float) -> Opt
     return f"{name} >= {_format_value(min_value)} and {name} < {_format_value(max_value)}"
 
 
-def _format_value(value: float) -> str:
+def _format_value(value: float, decimals: int = 4) -> str:
+    """
+    숫자 값을 조건식에서 사용할 수 있는 문자열로 포맷팅합니다.
+    
+    [2026-01-07 개선] 소수점 4자리 제한 적용
+    - 정수인 경우: 소수점 없이 반환
+    - 실수인 경우: 최대 4자리까지 반올림하여 반환
+    
+    Args:
+        value: 포맷팅할 값
+        decimals: 소수점 자릿수 (기본값: 4)
+    
+    Returns:
+        포맷팅된 문자열
+    """
     try:
         v = float(value)
     except Exception:
@@ -1056,7 +1219,13 @@ def _format_value(value: float) -> str:
     if v.is_integer():
         return str(int(v))
 
-    text = format(v, ".17g")
+    # [2026-01-07] 소수점 4자리로 제한
+    rounded = round(v, decimals)
+    if rounded.is_integer():
+        return str(int(rounded))
+    
+    # 불필요한 후행 0 제거
+    text = f"{rounded:.{decimals}f}".rstrip('0').rstrip('.')
     if text == "-0":
         text = "0"
     return text

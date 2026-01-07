@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from backtester.output_paths import build_backtesting_output_path
+from backtester.analysis_enhanced.utils import round_dataframe_floats, DEFAULT_DECIMAL_PLACES
 
 def resolve_segment_output_dir(detail_path: Path, output_dir: Optional[str]) -> str:
     if output_dir:
@@ -42,7 +43,9 @@ def save_segment_summary(df_summary: pd.DataFrame, output_dir: str, prefix: str)
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
     summary_path = build_backtesting_output_path(prefix, "_segment_summary.csv", output_dir=path)
-    df_summary.to_csv(summary_path, index=False, encoding='utf-8-sig')
+    # [2026-01-07] 소수점 4자리 제한 적용
+    df_rounded = round_dataframe_floats(df_summary, decimals=DEFAULT_DECIMAL_PLACES)
+    df_rounded.to_csv(summary_path, index=False, encoding='utf-8-sig')
     return str(summary_path)
 
 
@@ -52,7 +55,9 @@ def save_segment_filters(df_filters: pd.DataFrame, output_dir: str, prefix: str)
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
     filter_path = build_backtesting_output_path(prefix, "_segment_filters.csv", output_dir=path)
-    df_filters.to_csv(filter_path, index=False, encoding='utf-8-sig')
+    # [2026-01-07] 소수점 4자리 제한 적용
+    df_rounded = round_dataframe_floats(df_filters, decimals=DEFAULT_DECIMAL_PLACES)
+    df_rounded.to_csv(filter_path, index=False, encoding='utf-8-sig')
     return str(filter_path)
 
 
@@ -81,7 +86,9 @@ def save_segment_local_combos(df_local: pd.DataFrame, output_dir: str, prefix: s
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
     combo_path = build_backtesting_output_path(prefix, "_segment_local_combos.csv", output_dir=path)
-    df_local.to_csv(combo_path, index=False, encoding='utf-8-sig')
+    # [2026-01-07] 소수점 4자리 제한 적용
+    df_rounded = round_dataframe_floats(df_local, decimals=DEFAULT_DECIMAL_PLACES)
+    df_rounded.to_csv(combo_path, index=False, encoding='utf-8-sig')
     return str(combo_path)
 
 
@@ -123,7 +130,9 @@ def save_segment_combos(df_combos: pd.DataFrame, output_dir: str, prefix: str) -
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
     combo_path = build_backtesting_output_path(prefix, "_segment_combos.csv", output_dir=path)
-    df_combos.to_csv(combo_path, index=False, encoding='utf-8-sig')
+    # [2026-01-07] 소수점 4자리 제한 적용
+    df_rounded = round_dataframe_floats(df_combos, decimals=DEFAULT_DECIMAL_PLACES)
+    df_rounded.to_csv(combo_path, index=False, encoding='utf-8-sig')
     return str(combo_path)
 
 
@@ -153,7 +162,9 @@ def save_segment_ranges(df_ranges: pd.DataFrame, output_dir: str, prefix: str) -
     path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
     range_path = build_backtesting_output_path(prefix, "_segment_ranges.csv", output_dir=path)
-    df_ranges.to_csv(range_path, index=False, encoding='utf-8-sig')
+    # [2026-01-07] 소수점 4자리 제한 적용
+    df_rounded = round_dataframe_floats(df_ranges, decimals=DEFAULT_DECIMAL_PLACES)
+    df_rounded.to_csv(range_path, index=False, encoding='utf-8-sig')
     return str(range_path)
 
 

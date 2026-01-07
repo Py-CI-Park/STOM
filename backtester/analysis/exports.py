@@ -9,6 +9,7 @@ from backtester.analysis.output_config import get_backtesting_output_config
 from backtester.analysis.cache import load_cached_df, save_cached_df, build_df_signature
 from backtester.detail_schema import reorder_detail_columns
 from backtester.output_paths import ensure_backtesting_output_dir, build_backtesting_output_path
+from backtester.analysis_enhanced.utils import round_dataframe_floats, DEFAULT_DECIMAL_PLACES
 
 
 def _export_detail_csv(df_analysis: pd.DataFrame,
@@ -18,10 +19,12 @@ def _export_detail_csv(df_analysis: pd.DataFrame,
     if df_analysis is None or df_analysis.empty:
         return None
     detail_path = str(build_backtesting_output_path(save_file_name, "_detail.csv", output_dir=output_dir))
+    # [2026-01-07] 소수점 4자리 제한 적용 후 CSV 저장
+    df_rounded = round_dataframe_floats(df_analysis, decimals=DEFAULT_DECIMAL_PLACES)
     if chunk_size:
-        df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True, chunksize=chunk_size)
+        df_rounded.to_csv(detail_path, encoding='utf-8-sig', index=True, chunksize=chunk_size)
     else:
-        df_analysis.to_csv(detail_path, encoding='utf-8-sig', index=True)
+        df_rounded.to_csv(detail_path, encoding='utf-8-sig', index=True)
     return detail_path
 
 
