@@ -459,11 +459,14 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
         analysis_logger.send_phase_notification('A', 'start')
         
         # 1. 강화된 파생 지표 계산
+        # [2026-01-07 개선] save_file_name 전달로 타임프레임 자동 감지
         analysis_logger.log_step_start(1, "강화 파생 지표 계산 (CalculateEnhancedDerivedMetrics)")
-        df_enhanced = CalculateEnhancedDerivedMetrics(df_tsg)
+        df_enhanced = CalculateEnhancedDerivedMetrics(df_tsg, timeframe='auto', save_file_name=save_file_name)
+        detected_timeframe = df_enhanced.attrs.get('timeframe', 'tick')
         analysis_logger.log_step_complete(1, metrics={
             "원본_행수": len(df_tsg),
             "강화_컬럼수": len(df_enhanced.columns),
+            "감지된_타임프레임": detected_timeframe,
         })
         
         # 2. ML 기반 위험도 예측 (NEW)
@@ -639,6 +642,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                     buystg_name=buystg_name,
                     sellstg_name=sellstg_name,
                     save_file_name=save_file_name,
+                    timeframe=detected_timeframe,  # 2026-01-07: 감지된 타임프레임 전달
                 )
                 
                 if filter_final_lines:

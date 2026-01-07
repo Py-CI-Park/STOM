@@ -58,7 +58,7 @@ def DetectTimeframe(df_tsg, save_file_name=''):
             'label': 'Min 데이터'
         }
 
-def CalculateEnhancedDerivedMetrics(df_tsg):
+def CalculateEnhancedDerivedMetrics(df_tsg, timeframe: str = 'auto', save_file_name: str = ''):
     """
     강화된 파생 지표를 계산합니다.
 
@@ -69,13 +69,28 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
     - 리스크 조정 수익률
     - 시장 타이밍 점수
 
+    [2026-01-07] 타임프레임별 변수 분리:
+    - 틱 모드: 초당매수수량, 초당매도수량, 초당거래대금 사용
+    - 분봉 모드: 분당매수수량, 분당매도수량, 분당거래대금 사용
+    - 변환 금지: 초당* = 분당*/60 같은 변환은 하지 않음
+
     Args:
         df_tsg: 백테스팅 결과 DataFrame
+        timeframe: 'tick', 'min', 또는 'auto' (자동 감지)
+        save_file_name: 저장 파일명 (타임프레임 자동 감지용)
 
     Returns:
         DataFrame: 강화된 파생 지표가 추가된 DataFrame
     """
     df = df_tsg.copy()
+
+    # 타임프레임 자동 감지
+    if timeframe == 'auto':
+        tf_info = DetectTimeframe(df, save_file_name)
+        timeframe = tf_info.get('timeframe', 'tick')
+    
+    # 타임프레임 정보를 DataFrame에 저장 (디버깅/검증용)
+    df.attrs['timeframe'] = timeframe
 
     # 기존 매도 시점 컬럼 확인
     sell_columns = ['매도등락율', '매도체결강도', '매도당일거래대금', '매도전일비', '매도회전율', '매도호가잔량비']
@@ -278,107 +293,220 @@ def CalculateEnhancedDerivedMetrics(df_tsg):
 
     df['거래품질점수'] = df['거래품질점수'].clip(0, 100)
 
-    # === 13. 지표 조합 비율 (NEW 2025-12-14) ===
-    # 조건식에서 사용하는 주요 지표 조합을 파생 지표로 추가
+    # === 13. 지표 조합 비율 - 타임프레임별 분기 (2026-01-07 개선) ===
+    # [핵심 원칙] 분봉 모드에서는 분당* 변수만 사용, 틱 모드에서는 초당* 변수만 사용
+    # 변환 금지: 초당* = 분당*/60 같은 변환은 하지 않음
+    
+    if timeframe == 'tick':
+        # === 13-TICK. 틱 모드 전용 지표 조합 ===
+        
+        # 13.1 초당매수수량 / 매도총잔량 비율 (매수세 강도)
+        if '매수초당매수수량' in df.columns and '매수매도총잔량' in df.columns:
+            df['초당매수수량_매도총잔량_비율'] = np.where(
+                df['매수매도총잔량'] > 0,
+                df['매수초당매수수량'] / df['매수매도총잔량'] * 100,
+                0
+            )
 
-    # 13.1 초당매수수량 / 매도총잔량 비율 (매수세 강도)
-    if '매수초당매수수량' in df.columns and '매수매도총잔량' in df.columns:
-        df['초당매수수량_매도총잔량_비율'] = np.where(
-            df['매수매도총잔량'] > 0,
-            df['매수초당매수수량'] / df['매수매도총잔량'] * 100,
-            0
-        )
+        # 13.2 매도총잔량 / 매수총잔량 비율 (호가 불균형 - 매도 우위)
+        if '매수매도총잔량' in df.columns and '매수매수총잔량' in df.columns:
+            df['매도잔량_매수잔량_비율'] = np.where(
+                df['매수매수총잔량'] > 0,
+                df['매수매도총잔량'] / df['매수매수총잔량'],
+                0
+            )
 
-    # 13.2 매도총잔량 / 매수총잔량 비율 (호가 불균형 - 매도 우위)
-    if '매수매도총잔량' in df.columns and '매수매수총잔량' in df.columns:
-        df['매도잔량_매수잔량_비율'] = np.where(
-            df['매수매수총잔량'] > 0,
-            df['매수매도총잔량'] / df['매수매수총잔량'],
-            0
-        )
+        # 13.3 매수총잔량 / 매도총잔량 비율 (호가 불균형 - 매수 우위)
+        if '매수매수총잔량' in df.columns and '매수매도총잔량' in df.columns:
+            df['매수잔량_매도잔량_비율'] = np.where(
+                df['매수매도총잔량'] > 0,
+                df['매수매수총잔량'] / df['매수매도총잔량'],
+                0
+            )
 
-    # 13.3 매수총잔량 / 매도총잔량 비율 (호가 불균형 - 매수 우위)
-    if '매수매수총잔량' in df.columns and '매수매도총잔량' in df.columns:
-        df['매수잔량_매도잔량_비율'] = np.where(
-            df['매수매도총잔량'] > 0,
-            df['매수매수총잔량'] / df['매수매도총잔량'],
-            0
-        )
+        # 13.4 초당매도수량 / 초당매수수량 비율 (매도 압력)
+        if '매수초당매도수량' in df.columns and '매수초당매수수량' in df.columns:
+            df['초당매도_매수_비율'] = np.where(
+                df['매수초당매수수량'] > 0,
+                df['매수초당매도수량'] / df['매수초당매수수량'],
+                0
+            )
 
-    # 13.4 초당매도수량 / 초당매수수량 비율 (매도 압력)
-    if '매수초당매도수량' in df.columns and '매수초당매수수량' in df.columns:
-        df['초당매도_매수_비율'] = np.where(
-            df['매수초당매수수량'] > 0,
-            df['매수초당매도수량'] / df['매수초당매수수량'],
-            0
-        )
+        # 13.5 초당매수수량 / 초당매도수량 비율 (매수 압력)
+        if '매수초당매수수량' in df.columns and '매수초당매도수량' in df.columns:
+            df['초당매수_매도_비율'] = np.where(
+                df['매수초당매도수량'] > 0,
+                df['매수초당매수수량'] / df['매수초당매도수량'],
+                0
+            )
 
-    # 13.5 초당매수수량 / 초당매도수량 비율 (매수 압력)
-    if '매수초당매수수량' in df.columns and '매수초당매도수량' in df.columns:
-        df['초당매수_매도_비율'] = np.where(
-            df['매수초당매도수량'] > 0,
-            df['매수초당매수수량'] / df['매수초당매도수량'],
-            0
-        )
+        # 13.6 현재가 위치 비율
+        if '매수가' in df.columns and '매수고가' in df.columns and '매수저가' in df.columns:
+            price_range = df['매수고가'] - df['매수저가']
+            df['현재가_고저범위_위치'] = np.where(
+                price_range > 0,
+                (df['매수가'] - df['매수저가']) / price_range * 100,
+                50
+            )
 
-    # 13.6 현재가 위치 비율: 매수가 / (고가 - (고가-저가)*factor) 형태
-    # 고가 근처에서 거래 중인지 확인 (저가 대비 현재가 위치)
-    if '매수가' in df.columns and '매수고가' in df.columns and '매수저가' in df.columns:
-        price_range = df['매수고가'] - df['매수저가']
-        df['현재가_고저범위_위치'] = np.where(
-            price_range > 0,
-            (df['매수가'] - df['매수저가']) / price_range * 100,
-            50  # 범위가 0이면 중간값
-        )
+        # 13.7 초당거래대금 관련 지표 (거래 강도)
+        if '매수초당거래대금' in df.columns and '매수당일거래대금' in df.columns:
+            df['초당거래대금_당일비중'] = np.where(
+                df['매수당일거래대금'] > 0,
+                df['매수초당거래대금'] / df['매수당일거래대금'] * 10000,
+                0
+            )
 
-    # 13.7 초당거래대금 관련 지표 (거래 강도)
-    if '매수초당거래대금' in df.columns and '매수당일거래대금' in df.columns:
-        # 초당거래대금 비중 (당일거래대금 대비)
-        df['초당거래대금_당일비중'] = np.where(
-            df['매수당일거래대금'] > 0,
-            df['매수초당거래대금'] / df['매수당일거래대금'] * 10000,  # 만분율
-            0
-        )
+        # 13.8 초당순매수금액
+        if '매수초당매수수량' in df.columns and '매수초당매도수량' in df.columns and '매수가' in df.columns:
+            df['초당순매수수량'] = df['매수초당매수수량'] - df['매수초당매도수량']
+            df['초당순매수금액'] = df['초당순매수수량'] * df['매수가'] / 1_000_000
 
-    # 13.8 초당순매수금액 (초당매수수량 - 초당매도수량) * 현재가
-    if '매수초당매수수량' in df.columns and '매수초당매도수량' in df.columns and '매수가' in df.columns:
-        df['초당순매수수량'] = df['매수초당매수수량'] - df['매수초당매도수량']
-        df['초당순매수금액'] = df['초당순매수수량'] * df['매수가'] / 1_000_000  # 백만원 단위
+        # 13.9 초당순매수비율
+        if '매수초당매수수량' in df.columns and '매수초당매도수량' in df.columns:
+            total_volume = df['매수초당매수수량'] + df['매수초당매도수량']
+            df['초당순매수비율'] = np.where(
+                total_volume > 0,
+                df['매수초당매수수량'] / total_volume * 100,
+                50
+            )
 
-    # 13.9 초당매수수량 / 초당매도수량 순매수 비율 (0~200 범위로 정규화)
-    if '매수초당매수수량' in df.columns and '매수초당매도수량' in df.columns:
-        total_volume = df['매수초당매수수량'] + df['매수초당매도수량']
-        df['초당순매수비율'] = np.where(
-            total_volume > 0,
-            df['매수초당매수수량'] / total_volume * 100,
-            50  # 거래 없으면 중립
-        )
+    else:
+        # === 13-MIN. 분봉 모드 전용 지표 조합 (2026-01-07 신규) ===
+        # 분당* 변수만 직접 사용, 초당* 변수로의 변환 금지
+        
+        # 13.1-MIN 분당매수수량 / 매도총잔량 비율 (매수세 강도)
+        if '매수분당매수수량' in df.columns and '매수매도총잔량' in df.columns:
+            df['분당매수수량_매도총잔량_비율'] = np.where(
+                df['매수매도총잔량'] > 0,
+                df['매수분당매수수량'] / df['매수매도총잔량'] * 100,
+                0
+            )
 
-    # === 14. 매도 시점 지표 조합 (NEW 2025-12-14) ===
-    # 매도 시점에서의 지표 변화도 분석에 활용
+        # 13.2-MIN 매도총잔량 / 매수총잔량 비율 (호가 불균형 - 매도 우위)
+        if '매수매도총잔량' in df.columns and '매수매수총잔량' in df.columns:
+            df['매도잔량_매수잔량_비율'] = np.where(
+                df['매수매수총잔량'] > 0,
+                df['매수매도총잔량'] / df['매수매수총잔량'],
+                0
+            )
 
-    # 14.1 매도 시점 초당매수/매도 비율
-    if '매도초당매수수량' in df.columns and '매도초당매도수량' in df.columns:
-        df['매도시_초당매수_매도_비율'] = np.where(
-            df['매도초당매도수량'] > 0,
-            df['매도초당매수수량'] / df['매도초당매도수량'],
-            0
-        )
+        # 13.3-MIN 매수총잔량 / 매도총잔량 비율 (호가 불균형 - 매수 우위)
+        if '매수매수총잔량' in df.columns and '매수매도총잔량' in df.columns:
+            df['매수잔량_매도잔량_비율'] = np.where(
+                df['매수매도총잔량'] > 0,
+                df['매수매수총잔량'] / df['매수매도총잔량'],
+                0
+            )
 
-    # 14.2 초당 지표 변화 (매도 - 매수)
-    if '매수초당매수수량' in df.columns and '매도초당매수수량' in df.columns:
-        df['초당매수수량변화'] = df['매도초당매수수량'] - df['매수초당매수수량']
+        # 13.4-MIN 분당매도수량 / 분당매수수량 비율 (매도 압력)
+        if '매수분당매도수량' in df.columns and '매수분당매수수량' in df.columns:
+            df['분당매도_매수_비율'] = np.where(
+                df['매수분당매수수량'] > 0,
+                df['매수분당매도수량'] / df['매수분당매수수량'],
+                0
+            )
 
-    if '매수초당매도수량' in df.columns and '매도초당매도수량' in df.columns:
-        df['초당매도수량변화'] = df['매도초당매도수량'] - df['매수초당매도수량']
+        # 13.5-MIN 분당매수수량 / 분당매도수량 비율 (매수 압력)
+        if '매수분당매수수량' in df.columns and '매수분당매도수량' in df.columns:
+            df['분당매수_매도_비율'] = np.where(
+                df['매수분당매도수량'] > 0,
+                df['매수분당매수수량'] / df['매수분당매도수량'],
+                0
+            )
 
-    if '매수초당거래대금' in df.columns and '매도초당거래대금' in df.columns:
-        df['초당거래대금변화'] = df['매도초당거래대금'] - df['매수초당거래대금']
-        df['초당거래대금변화율'] = np.where(
-            df['매수초당거래대금'] > 0,
-            df['매도초당거래대금'] / df['매수초당거래대금'],
-            1.0
-        )
+        # 13.6-MIN 현재가 위치 비율 (분봉 고저가 사용)
+        if '매수가' in df.columns and '매수분봉고가' in df.columns and '매수분봉저가' in df.columns:
+            price_range = df['매수분봉고가'] - df['매수분봉저가']
+            df['현재가_분봉고저범위_위치'] = np.where(
+                price_range > 0,
+                (df['매수가'] - df['매수분봉저가']) / price_range * 100,
+                50
+            )
+        # 폴백: 일반 고가/저가 사용
+        elif '매수가' in df.columns and '매수고가' in df.columns and '매수저가' in df.columns:
+            price_range = df['매수고가'] - df['매수저가']
+            df['현재가_고저범위_위치'] = np.where(
+                price_range > 0,
+                (df['매수가'] - df['매수저가']) / price_range * 100,
+                50
+            )
+
+        # 13.7-MIN 분당거래대금 관련 지표 (거래 강도)
+        if '매수분당거래대금' in df.columns and '매수당일거래대금' in df.columns:
+            df['분당거래대금_당일비중'] = np.where(
+                df['매수당일거래대금'] > 0,
+                df['매수분당거래대금'] / df['매수당일거래대금'] * 10000,
+                0
+            )
+
+        # 13.8-MIN 분당순매수금액
+        if '매수분당매수수량' in df.columns and '매수분당매도수량' in df.columns and '매수가' in df.columns:
+            df['분당순매수수량'] = df['매수분당매수수량'] - df['매수분당매도수량']
+            df['분당순매수금액'] = df['분당순매수수량'] * df['매수가'] / 1_000_000
+
+        # 13.9-MIN 분당순매수비율
+        if '매수분당매수수량' in df.columns and '매수분당매도수량' in df.columns:
+            total_volume = df['매수분당매수수량'] + df['매수분당매도수량']
+            df['분당순매수비율'] = np.where(
+                total_volume > 0,
+                df['매수분당매수수량'] / total_volume * 100,
+                50
+            )
+
+    # === 14. 매도 시점 지표 조합 - 타임프레임별 분기 ===
+    
+    if timeframe == 'tick':
+        # === 14-TICK. 틱 모드 매도 시점 지표 ===
+        
+        # 14.1 매도 시점 초당매수/매도 비율
+        if '매도초당매수수량' in df.columns and '매도초당매도수량' in df.columns:
+            df['매도시_초당매수_매도_비율'] = np.where(
+                df['매도초당매도수량'] > 0,
+                df['매도초당매수수량'] / df['매도초당매도수량'],
+                0
+            )
+
+        # 14.2 초당 지표 변화 (매도 - 매수)
+        if '매수초당매수수량' in df.columns and '매도초당매수수량' in df.columns:
+            df['초당매수수량변화'] = df['매도초당매수수량'] - df['매수초당매수수량']
+
+        if '매수초당매도수량' in df.columns and '매도초당매도수량' in df.columns:
+            df['초당매도수량변화'] = df['매도초당매도수량'] - df['매수초당매도수량']
+
+        if '매수초당거래대금' in df.columns and '매도초당거래대금' in df.columns:
+            df['초당거래대금변화'] = df['매도초당거래대금'] - df['매수초당거래대금']
+            df['초당거래대금변화율'] = np.where(
+                df['매수초당거래대금'] > 0,
+                df['매도초당거래대금'] / df['매수초당거래대금'],
+                1.0
+            )
+
+    else:
+        # === 14-MIN. 분봉 모드 매도 시점 지표 (2026-01-07 신규) ===
+        
+        # 14.1-MIN 매도 시점 분당매수/매도 비율
+        if '매도분당매수수량' in df.columns and '매도분당매도수량' in df.columns:
+            df['매도시_분당매수_매도_비율'] = np.where(
+                df['매도분당매도수량'] > 0,
+                df['매도분당매수수량'] / df['매도분당매도수량'],
+                0
+            )
+
+        # 14.2-MIN 분당 지표 변화 (매도 - 매수)
+        if '매수분당매수수량' in df.columns and '매도분당매수수량' in df.columns:
+            df['분당매수수량변화'] = df['매도분당매수수량'] - df['매수분당매수수량']
+
+        if '매수분당매도수량' in df.columns and '매도분당매도수량' in df.columns:
+            df['분당매도수량변화'] = df['매도분당매도수량'] - df['매수분당매도수량']
+
+        if '매수분당거래대금' in df.columns and '매도분당거래대금' in df.columns:
+            df['분당거래대금변화'] = df['매도분당거래대금'] - df['매수분당거래대금']
+            df['분당거래대금변화율'] = np.where(
+                df['매수분당거래대금'] > 0,
+                df['매도분당거래대금'] / df['매수분당거래대금'],
+                1.0
+            )
 
     # === 15. 당일거래대금 시계열 비율 (NEW 2025-12-28) ===
     # 거래 흐름 상의 당일거래대금 변화율을 분석하여 유동성 증감 트렌드 파악

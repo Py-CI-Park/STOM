@@ -470,7 +470,16 @@ def _inject_segment_filter_into_buy_lines(
     return new_lines, True
 
 
-def _inject_segment_runtime_preamble(segment_code_lines: List[str]) -> List[str]:
+def _inject_segment_runtime_preamble(segment_code_lines: List[str], timeframe: str = 'tick') -> List[str]:
+    """세그먼트 코드에 런타임 preamble을 주입합니다.
+    
+    Args:
+        segment_code_lines: 세그먼트 코드 라인
+        timeframe: 'tick' 또는 'min' (2026-01-07 추가)
+    
+    Returns:
+        런타임 preamble이 주입된 코드 라인
+    """
     if not segment_code_lines:
         return segment_code_lines
     marker = "# === Segment filter runtime mapping"
@@ -478,7 +487,7 @@ def _inject_segment_runtime_preamble(segment_code_lines: List[str]) -> List[str]
         return segment_code_lines
     lines: List[str] = []
     used_vars = _extract_segment_used_variables(segment_code_lines)
-    lines.extend(_build_segment_runtime_preamble(used_vars))
+    lines.extend(_build_segment_runtime_preamble(used_vars, timeframe=timeframe))
     lines.append("")
     lines.extend(segment_code_lines)
     return lines
@@ -511,8 +520,17 @@ def _extract_segment_used_variables(segment_code_lines: List[str]) -> List[str]:
     return used
 
 
-def _build_segment_runtime_preamble(used_vars: Optional[List[str]] = None) -> List[str]:
-    blocks = _get_segment_runtime_blocks()
+def _build_segment_runtime_preamble(used_vars: Optional[List[str]] = None, timeframe: str = 'tick') -> List[str]:
+    """세그먼트 런타임 preamble을 생성합니다.
+    
+    Args:
+        used_vars: 사용된 변수 목록
+        timeframe: 'tick' 또는 'min' (2026-01-07 추가)
+    
+    Returns:
+        런타임 preamble 라인 리스트
+    """
+    blocks = _get_segment_runtime_blocks(timeframe=timeframe)
     used_vars = used_vars or []
     needed = _resolve_runtime_dependencies(set(used_vars), blocks)
 
@@ -573,7 +591,20 @@ def _resolve_runtime_dependencies(
     return needed
 
 
-def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
+def _get_segment_runtime_blocks(timeframe: str = 'tick') -> List[Dict[str, object]]:
+    """세그먼트 분석을 위한 런타임 변수 블록을 생성합니다.
+    
+    [2026-01-07 개선] 타임프레임별 변수 분리:
+    - 틱 모드: 초당매수수량, 초당매도수량, 초당거래대금 사용
+    - 분봉 모드: 분당매수수량, 분당매도수량, 분당거래대금 사용
+    - 변환 금지: 초당* = 분당*/60 같은 변환은 하지 않음
+    
+    Args:
+        timeframe: 'tick' 또는 'min' (기본값: 'tick')
+    
+    Returns:
+        List of runtime blocks for segment analysis
+    """
     blocks: List[Dict[str, object]] = []
 
     def add_block(names, deps, lines, group=None):
@@ -592,81 +623,120 @@ def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
             f"    {name} = {fallback}",
         ]
 
-    def try_assign_if_not_defined(name: str, expr: str, fallback: str) -> List[str]:
-        """틱 엔진에서 이미 정의된 변수를 덮어쓰지 않도록 보호.
-        
-        분봉 엔진: 분당* 변수로 초당* 계산
-        틱 엔진: 초당* 변수가 이미 존재 → 유지
-        """
-        return [
-            f"# {name}: 이미 정의된 경우 유지 (틱 엔진 호환)",
-            "try:",
-            f"    _{name}_exists = '{name}' in dir() and {name} != 0",
-            "except NameError:",
-            f"    _{name}_exists = False",
-            f"if not _{name}_exists:",
-            "    try:",
-            f"        {name} = {expr}",
-            "    except NameError:",
-            f"        {name} = {fallback}",
-        ]
-
-    # 초당매수수량: 틱 엔진에서는 직접 정의됨, 분봉 엔진에서는 분당/60으로 계산
-    add_block(
-        "초당매수수량",
-        ["분당매수수량"],
-        try_assign_if_not_defined("초당매수수량", "분당매수수량 / 60", "0"),
-    )
-    # 초당매도수량: 틱 엔진에서는 직접 정의됨, 분봉 엔진에서는 분당/60으로 계산
-    add_block(
-        "초당매도수량",
-        ["분당매도수량"],
-        try_assign_if_not_defined("초당매도수량", "분당매도수량 / 60", "0"),
-    )
-    add_block(
-        "초당매도_매수_비율",
-        ["초당매도수량", "초당매수수량"],
-        ["초당매도_매수_비율 = 초당매도수량 / (초당매수수량 + 1e-6)"],
-    )
-    add_block(
-        "초당매수_매도_비율",
-        ["초당매수수량", "초당매도수량"],
-        ["초당매수_매도_비율 = 초당매수수량 / (초당매도수량 + 1e-6)"],
-    )
-    add_block(
-        "초당순매수수량",
-        ["초당매수수량", "초당매도수량"],
-        ["초당순매수수량 = 초당매수수량 - 초당매도수량"],
-    )
-    add_block(
-        "초당순매수금액",
-        ["초당순매수수량", "현재가"],
-        ["초당순매수금액 = 초당순매수수량 * 현재가 / 1_000_000"],
-    )
-    add_block(
-        "매수초당매수수량",
-        ["초당매수수량"],
-        ["매수초당매수수량 = 초당매수수량"],
-    )
-    add_block(
-        "매수초당매도수량",
-        ["초당매도수량"],
-        ["매수초당매도수량 = 초당매도수량"],
-    )
-    add_block(
-        "초당순매수비율",
-        ["매수초당매수수량", "매수초당매도수량"],
-        [
-            "초당순매수비율 = (매수초당매수수량 / (매수초당매수수량 + 매수초당매도수량)) * 100 "
-            "if (매수초당매수수량 + 매수초당매도수량) > 0 else 50"
-        ],
-    )
-    # 매수초당거래대금: 틱 엔진에서는 직접 정의됨, 분봉 엔진에서는 분당/60으로 계산
-    add_block(
-        "매수초당거래대금",
-        ["분당거래대금"],
-        try_assign_if_not_defined("매수초당거래대금", "분당거래대금 / 60", "0"),
-    )
+    # === 타임프레임별 변수 블록 분기 (2026-01-07) ===
+    # [핵심 원칙] 분봉 모드에서는 분당* 변수만 사용, 틱 모드에서는 초당* 변수만 사용
+    
+    if timeframe == 'tick':
+        # === TICK MODE: 초당* 변수 사용 (틱 엔진에서 직접 정의됨) ===
+        add_block(
+            "초당매수수량",
+            [],  # 틱 엔진에서 직접 정의되므로 의존성 없음
+            try_assign("초당매수수량", "초당매수수량", "0"),
+        )
+        add_block(
+            "초당매도수량",
+            [],
+            try_assign("초당매도수량", "초당매도수량", "0"),
+        )
+        add_block(
+            "초당매도_매수_비율",
+            ["초당매도수량", "초당매수수량"],
+            ["초당매도_매수_비율 = 초당매도수량 / (초당매수수량 + 1e-6)"],
+        )
+        add_block(
+            "초당매수_매도_비율",
+            ["초당매수수량", "초당매도수량"],
+            ["초당매수_매도_비율 = 초당매수수량 / (초당매도수량 + 1e-6)"],
+        )
+        add_block(
+            "초당순매수수량",
+            ["초당매수수량", "초당매도수량"],
+            ["초당순매수수량 = 초당매수수량 - 초당매도수량"],
+        )
+        add_block(
+            "초당순매수금액",
+            ["초당순매수수량", "현재가"],
+            ["초당순매수금액 = 초당순매수수량 * 현재가 / 1_000_000"],
+        )
+        add_block(
+            "매수초당매수수량",
+            ["초당매수수량"],
+            ["매수초당매수수량 = 초당매수수량"],
+        )
+        add_block(
+            "매수초당매도수량",
+            ["초당매도수량"],
+            ["매수초당매도수량 = 초당매도수량"],
+        )
+        add_block(
+            "초당순매수비율",
+            ["매수초당매수수량", "매수초당매도수량"],
+            [
+                "초당순매수비율 = (매수초당매수수량 / (매수초당매수수량 + 매수초당매도수량)) * 100 "
+                "if (매수초당매수수량 + 매수초당매도수량) > 0 else 50"
+            ],
+        )
+        add_block(
+            "매수초당거래대금",
+            [],  # 틱 엔진에서 직접 정의
+            try_assign("매수초당거래대금", "초당거래대금", "0"),
+        )
+    else:
+        # === MIN MODE: 분당* 변수 사용 (분봉 엔진에서 직접 정의됨) ===
+        # 초당* 변수로의 변환 금지! 분당* 변수를 그대로 사용
+        add_block(
+            "분당매수수량",
+            [],  # 분봉 엔진에서 직접 정의되므로 의존성 없음
+            try_assign("분당매수수량", "분당매수수량", "0"),
+        )
+        add_block(
+            "분당매도수량",
+            [],
+            try_assign("분당매도수량", "분당매도수량", "0"),
+        )
+        add_block(
+            "분당매도_매수_비율",
+            ["분당매도수량", "분당매수수량"],
+            ["분당매도_매수_비율 = 분당매도수량 / (분당매수수량 + 1e-6)"],
+        )
+        add_block(
+            "분당매수_매도_비율",
+            ["분당매수수량", "분당매도수량"],
+            ["분당매수_매도_비율 = 분당매수수량 / (분당매도수량 + 1e-6)"],
+        )
+        add_block(
+            "분당순매수수량",
+            ["분당매수수량", "분당매도수량"],
+            ["분당순매수수량 = 분당매수수량 - 분당매도수량"],
+        )
+        add_block(
+            "분당순매수금액",
+            ["분당순매수수량", "현재가"],
+            ["분당순매수금액 = 분당순매수수량 * 현재가 / 1_000_000"],
+        )
+        add_block(
+            "매수분당매수수량",
+            ["분당매수수량"],
+            ["매수분당매수수량 = 분당매수수량"],
+        )
+        add_block(
+            "매수분당매도수량",
+            ["분당매도수량"],
+            ["매수분당매도수량 = 분당매도수량"],
+        )
+        add_block(
+            "분당순매수비율",
+            ["매수분당매수수량", "매수분당매도수량"],
+            [
+                "분당순매수비율 = (매수분당매수수량 / (매수분당매수수량 + 매수분당매도수량)) * 100 "
+                "if (매수분당매수수량 + 매수분당매도수량) > 0 else 50"
+            ],
+        )
+        add_block(
+            "매수분당거래대금",
+            [],  # 분봉 엔진에서 직접 정의
+            try_assign("매수분당거래대금", "분당거래대금", "0"),
+        )
     add_block(
         "매수스프레드",
         ["매도호가1", "매수호가1"],
@@ -697,11 +767,20 @@ def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
         ["현재가", "고가", "저가"],
         ["현재가_고저범위_위치 = (현재가 - 저가) / (고가 - 저가 + 1e-6) * 100"],
     )
-    add_block(
-        "초당매수수량_매도총잔량_비율",
-        ["초당매수수량", "매도총잔량"],
-        ["초당매수수량_매도총잔량_비율 = (초당매수수량 / (매도총잔량 + 1e-6)) * 100"],
-    )
+    
+    # 타임프레임별 매수수량_매도총잔량_비율 블록 (2026-01-07)
+    if timeframe == 'tick':
+        add_block(
+            "초당매수수량_매도총잔량_비율",
+            ["초당매수수량", "매도총잔량"],
+            ["초당매수수량_매도총잔량_비율 = (초당매수수량 / (매도총잔량 + 1e-6)) * 100"],
+        )
+    else:
+        add_block(
+            "분당매수수량_매도총잔량_비율",
+            ["분당매수수량", "매도총잔량"],
+            ["분당매수수량_매도총잔량_비율 = (분당매수수량 / (매도총잔량 + 1e-6)) * 100"],
+        )
     add_block(
         "당일거래대금_전틱분봉_비율",
         ["당일거래대금"],
@@ -740,21 +819,41 @@ def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
     add_block("매수저가", ["저가"], ["매수저가 = 저가"], group="snapshot")
     add_block("매수고저평균대비등락율", ["고저평균대비등락율"], ["매수고저평균대비등락율 = 고저평균대비등락율"], group="snapshot")
     add_block("매수시가", ["시가"], ["매수시가 = 시가"], group="snapshot")
-    add_block(
-        "매수초당거래대금_당일비중",
-        ["매수초당거래대금", "매수당일거래대금"],
-        [
-            "매수초당거래대금_당일비중 = (매수초당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 "
-            "if 매수당일거래대금 > 0 else 0"
-        ],
-        group="snapshot",
-    )
-    add_block(
-        "초당거래대금_당일비중",
-        ["매수초당거래대금_당일비중"],
-        ["초당거래대금_당일비중 = 매수초당거래대금_당일비중"],
-        group="snapshot",
-    )
+    
+    # 타임프레임별 거래대금_당일비중 블록 (2026-01-07)
+    if timeframe == 'tick':
+        add_block(
+            "매수초당거래대금_당일비중",
+            ["매수초당거래대금", "매수당일거래대금"],
+            [
+                "매수초당거래대금_당일비중 = (매수초당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 "
+                "if 매수당일거래대금 > 0 else 0"
+            ],
+            group="snapshot",
+        )
+        add_block(
+            "초당거래대금_당일비중",
+            ["매수초당거래대금_당일비중"],
+            ["초당거래대금_당일비중 = 매수초당거래대금_당일비중"],
+            group="snapshot",
+        )
+    else:
+        add_block(
+            "매수분당거래대금_당일비중",
+            ["매수분당거래대금", "매수당일거래대금"],
+            [
+                "매수분당거래대금_당일비중 = (매수분당거래대금 / (매수당일거래대금 + 1e-6)) * 10000 "
+                "if 매수당일거래대금 > 0 else 0"
+            ],
+            group="snapshot",
+        )
+        add_block(
+            "분당거래대금_당일비중",
+            ["매수분당거래대금_당일비중"],
+            ["분당거래대금_당일비중 = 매수분당거래대금_당일비중"],
+            group="snapshot",
+        )
+    
     add_block("매수가", ["현재가"], ["매수가 = 현재가"], group="snapshot")
     add_block(
         "매수금액",
@@ -762,12 +861,22 @@ def _get_segment_runtime_blocks() -> List[Dict[str, object]]:
         try_assign("매수금액", "현재가 * 매수수량", "0"),
         group="snapshot",
     )
-    add_block(
-        "매수초당매수수량_매수매도총잔량_비율",
-        ["매수초당매수수량", "매수매도총잔량"],
-        ["매수초당매수수량_매수매도총잔량_비율 = (매수초당매수수량 / (매수매도총잔량 + 1e-6)) * 100"],
-        group="snapshot",
-    )
+    
+    # 타임프레임별 매수수량_매도총잔량_비율 snapshot 블록 (2026-01-07)
+    if timeframe == 'tick':
+        add_block(
+            "매수초당매수수량_매수매도총잔량_비율",
+            ["매수초당매수수량", "매수매도총잔량"],
+            ["매수초당매수수량_매수매도총잔량_비율 = (매수초당매수수량 / (매수매도총잔량 + 1e-6)) * 100"],
+            group="snapshot",
+        )
+    else:
+        add_block(
+            "매수분당매수수량_매수매도총잔량_비율",
+            ["매수분당매수수량", "매수매도총잔량"],
+            ["매수분당매수수량_매수매도총잔량_비율 = (매수분당매수수량 / (매수매도총잔량 + 1e-6)) * 100"],
+            group="snapshot",
+        )
     add_block(
         "매수매도총잔량_매수매수총잔량_비율",
         ["매수매도총잔량", "매수매수총잔량"],
@@ -964,6 +1073,25 @@ def _split_segment_id(segment_id: str) -> Tuple[str, str]:
 # 일반 필터 조건식 생성 함수 (2026-01-06 추가)
 # =============================================================================
 
+def _detect_timeframe_from_name(name: str) -> str:
+    """파일명에서 타임프레임을 감지합니다.
+    
+    Args:
+        name: 파일명 또는 전략명
+    
+    Returns:
+        'tick' 또는 'min'
+    """
+    if not name:
+        return 'tick'
+    name_lower = name.lower()
+    if 'tick' in name_lower or '_t_' in name_lower:
+        return 'tick'
+    elif 'min' in name_lower or '_m_' in name_lower:
+        return 'min'
+    return 'tick'  # 기본값
+
+
 def build_filter_final_code(
     buystg_text: Optional[str],
     sellstg_text: Optional[str],
@@ -971,6 +1099,7 @@ def build_filter_final_code(
     buystg_name: Optional[str] = None,
     sellstg_name: Optional[str] = None,
     save_file_name: Optional[str] = None,
+    timeframe: Optional[str] = None,
 ) -> Tuple[List[str], Dict[str, int]]:
     """
     매수 조건식 + 일반 필터 조건식을 합쳐 바로 사용할 수 있는 최종 코드 블록 생성.
@@ -979,6 +1108,9 @@ def build_filter_final_code(
     - segment_code_final.txt와 유사한 형태로 filter_code_final.txt 생성
     - GenerateFilterCode()의 결과를 매수 조건식에 통합
     - runtime mapping 포함 (모멘텀점수, 위험도점수 등 파생 변수 정의)
+    
+    [2026-01-07 개선]
+    - timeframe 파라미터 추가: 분봉 모드에서는 분당* 변수 직접 사용
 
     Args:
         buystg_text: 원본 매수 조건식 코드
@@ -987,6 +1119,7 @@ def build_filter_final_code(
         buystg_name: 매수 조건식 이름
         sellstg_name: 매도 조건식 이름
         save_file_name: 저장 파일명 (헤더용)
+        timeframe: 'tick' 또는 'min' (None이면 save_file_name에서 자동 감지)
 
     Returns:
         (최종 코드 라인 리스트, 요약 정보)
@@ -996,6 +1129,10 @@ def build_filter_final_code(
         'total_improvement': 0,
         'injected': 0,
     }
+    
+    # 타임프레임 감지 (2026-01-07)
+    if timeframe is None:
+        timeframe = _detect_timeframe_from_name(save_file_name or '')
 
     if not isinstance(generated_code, dict):
         return [], summary
@@ -1053,7 +1190,8 @@ def build_filter_final_code(
     sell_lines = _normalize_code_lines(sellstg_text)
 
     # Runtime mapping 생성 (필터에서 사용된 파생 변수 정의)
-    runtime_preamble = _build_segment_runtime_preamble(used_vars)
+    # 타임프레임별로 올바른 변수 블록 사용 (2026-01-07)
+    runtime_preamble = _build_segment_runtime_preamble(used_vars, timeframe=timeframe)
 
     # 필터 조건 블록 생성
     filter_block = []
