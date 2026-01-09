@@ -415,7 +415,8 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                         segment_analysis_mode: str = 'off',
                         segment_output_dir: str | None = None,
                         segment_optuna: bool = False,
-                        segment_template_compare: bool = False):
+                        segment_template_compare: bool = False,
+                        segment_accurate_mode: bool = False):
     """
     강화된 전체 분석을 실행합니다.
 
@@ -429,6 +430,12 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
     7. 조건식 코드 자동 생성
     8. 강화된 시각화
     9. 세그먼트 분석(Phase2/3) 통합(옵션)
+
+    Args:
+        segment_accurate_mode: 정확한 예측 모드 사용 여부 (기본값: False)
+            - True: 당일 재매수 차단을 시뮬레이션하여 정확한 예측 결과 생성
+            - False: 기존 모드 (각 거래 독립적으로 평가)
+            [2026-01-10 추가] 예측-실제 괴리 문제 해결용
 
     Returns:
         dict: 분석 결과 요약
@@ -1059,6 +1066,7 @@ def RunEnhancedAnalysis(df_tsg, save_file_name, teleQ=None, buystg=None, sellstg
                             code_summary=code_summary,
                             save_file_name=save_file_name,
                             expected_results=expected_results if expected_results else None,
+                            accurate_mode=segment_accurate_mode,
                         )
                         final_path = save_segment_code_final(final_lines, segment_output_base, save_file_name)
 

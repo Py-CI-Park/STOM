@@ -342,6 +342,136 @@ def build_segment_filter_code(
     return lines, summary
 
 
+def build_segment_filter_code_accurate(
+    global_best: Optional[dict],
+    seg_config: Optional[SegmentConfig] = None,
+    runtime_market_cap_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
+    runtime_time_ranges: Optional[Dict[str, Tuple[int, int]]] = None,
+) -> Tuple[List[str], Dict[str, int]]:
+    """
+    정확한 예측 모드용 세그먼트 필터 조건식 코드를 생성합니다.
+
+    [2026-01-10 신규 추가]
+    - 목적: 예측과 실제 백테스팅 결과 일치
+    - 핵심 차이점:
+      * 기존: `매수 = False` 직접 설정
+      * 신규: `_세그먼트통과 = False` 설정 (매수는 나중에 결합)
+
+    생성되는 코드 구조:
+    ```
+    # 세그먼트 필터 평가 결과 저장 (매수를 직접 변경하지 않음)
+    _세그먼트통과 = True
+
+    if 시분초 >= 92900 and 시분초 < 95900:  # T1 시간대
+        if 시가총액 >= 10000:  # 대형주
+            if not ((필터조건1) and (필터조건2)):
+                _세그먼트통과 = False
+        elif 시가총액 >= 5000:  # 중형주
+            if not ((필터조건)):
+                _세그먼트통과 = False
+        # ...
+        else:
+            _세그먼트통과 = False  # 정의되지 않은 시가총액 구간
+    # ...
+    else:
+        _세그먼트통과 = False  # 정의되지 않은 시간대
+    ```
+
+    Args:
+        global_best: 세그먼트별 최적 조합 정보
+        seg_config: 세그먼트 설정 (기본값 사용 가능)
+        runtime_market_cap_ranges: 런타임 시가총액 구간 (동적 분할 시 사용)
+        runtime_time_ranges: 런타임 시간 구간 (동적 분할 시 사용)
+
+    Returns:
+        (조건식 코드 라인 리스트, 요약 정보 딕셔너리)
+    """
+    if not isinstance(global_best, dict):
+        return [], {}
+
+    combo_map = global_best.get('combination')
+    if not isinstance(combo_map, dict) or not combo_map:
+        return [], {}
+
+    seg_config = seg_config or SegmentConfig()
+    cap_ranges = runtime_market_cap_ranges or seg_config.market_cap_ranges
+    time_ranges = runtime_time_ranges or seg_config.time_ranges
+
+    time_cap_structure = _reorganize_segments_by_time_cap(combo_map, cap_ranges, time_ranges)
+
+    lines: List[str] = []
+    lines.append("# 세그먼트 필터 조건식 (자동 생성) - 정확한 예측 모드")
+    lines.append("# [2026-01-10] _세그먼트통과 변수 사용으로 예측-실제 일치")
+    lines.append("# 세그먼트 필터 결과를 변수에 저장 (매수를 직접 변경하지 않음)")
+    lines.append("")
+    lines.append("_세그먼트통과 = True")
+    lines.append("")
+
+    total_filters = 0
+    total_segments = 0
+
+    sorted_time_labels = sorted(time_ranges.keys(), key=lambda k: time_ranges[k][0])
+
+    for time_idx, time_label in enumerate(sorted_time_labels):
+        time_min, time_max = time_ranges[time_label]
+        time_data = time_cap_structure.get(time_label, {})
+
+        time_cond = _build_range_condition('시분초', time_min, time_max)
+        if_keyword = "if" if time_idx == 0 else "elif"
+
+        lines.append(f"# [{time_label}] 시간대")
+        lines.append(f"{if_keyword} {time_cond}:")
+
+        cap_order = ['대형주', '중형주', '소형주', '초소형주']
+        sorted_cap_labels = [c for c in cap_order if c in cap_ranges]
+        for cap_label in cap_ranges.keys():
+            if cap_label not in sorted_cap_labels:
+                sorted_cap_labels.append(cap_label)
+
+        for cap_idx, cap_label in enumerate(sorted_cap_labels):
+            cap_min, cap_max = cap_ranges[cap_label]
+            seg_id = f"{cap_label}_{time_label}"
+            combo = time_data.get(cap_label, {})
+
+            total_segments += 1
+            filters = combo.get('filters') or []
+            total_filters += len(filters)
+
+            cap_cond = _build_range_condition('시가총액', cap_min, cap_max)
+            cap_if_keyword = "if" if cap_idx == 0 else "elif"
+
+            lines.append(f"    # [{cap_label}] - {seg_id}")
+            lines.append(f"    {cap_if_keyword} {cap_cond}:")
+
+            if combo.get('exclude_segment'):
+                lines.append(f"        _세그먼트통과 = False  # 세그먼트 전체 제외")
+            elif filters:
+                conditions = []
+                for flt in filters:
+                    cond = _build_filter_condition(flt)
+                    if cond:
+                        conditions.append(cond)
+
+                if conditions:
+                    combined_cond = " and ".join(conditions)
+                    lines.append(f"        if not ({combined_cond}):")
+                    lines.append(f"            _세그먼트통과 = False")
+
+        lines.append(f"    else:")
+        lines.append(f"        _세그먼트통과 = False  # 정의되지 않은 시가총액 구간")
+        lines.append("")
+
+    lines.append("else:")
+    lines.append("    _세그먼트통과 = False  # 정의되지 않은 시간대 제외")
+    lines.append("")
+
+    summary = {
+        'segments': total_segments,
+        'filters': total_filters,
+    }
+    return lines, summary
+
+
 def _reorganize_segments_by_time_cap(
     combo_map: Dict[str, dict],
     cap_ranges: Dict[str, Tuple[float, float]],
@@ -405,6 +535,7 @@ def build_segment_final_code(
     code_summary: Optional[dict] = None,
     save_file_name: Optional[str] = None,
     expected_results: Optional[dict] = None,
+    accurate_mode: bool = False,
 ) -> Tuple[List[str], Dict[str, int]]:
     """
     매수 조건식 + 세그먼트 필터 조건식을 합쳐 바로 사용할 수 있는 최종 코드 블록 생성.
@@ -416,6 +547,9 @@ def build_segment_final_code(
             - remaining_ratio: 예상 잔여 비율
             - expected_improvement: 예상 개선금액
             - expected_profit: 예상 최종 수익금
+        accurate_mode: True면 정확한 예측 모드 사용 (기본값: False)
+            - 정확한 예측 모드에서는 segment_code_lines가
+              build_segment_filter_code_accurate()로 생성된 코드여야 함
     """
     summary = {
         'segments': int((code_summary or {}).get('segments', 0) or 0),
@@ -474,6 +608,7 @@ def build_segment_final_code(
     combined_buy, injected = _inject_segment_filter_into_buy_lines(
         buy_lines,
         segment_runtime_lines,
+        accurate_mode=accurate_mode,
     )
     summary['injected'] = 1 if injected else 0
 
@@ -509,28 +644,40 @@ def _inject_segment_filter_into_buy_lines(
     buy_lines: List[str],
     segment_code_lines: List[str],
     filter_first: bool = True,
+    accurate_mode: bool = False,
 ) -> Tuple[List[str], bool]:
     """
     매수 조건식에 세그먼트 필터를 삽입합니다.
+
+    [2026-01-10 추가] 정확한 예측 모드 (accurate_mode=True)
+    - 목적: 예측과 실제 백테스팅 결과 일치
+    - 방법: 세그먼트 필터 결과를 _세그먼트통과 변수에 저장
+    - 당일 차단: 원본 조건 통과 시에만 기록
+    - segment_code_lines는 build_segment_filter_code_accurate()로 생성된 코드 사용
 
     [2026-01-08 중요 개선] 세그먼트 필터 우선 적용 (filter_first=True)
     - 문제: 기존 조건에서 이미 매수=False인 거래에는 세그먼트 필터가 효과 없음
     - 해결: 세그먼트 필터를 기존 조건 앞에 배치하여 먼저 평가
     - 동작: 매수 = True 초기화 직후, 기존 조건들 전에 세그먼트 필터 삽입
-    
+
     [2026-01-07 개선] 기존 매수 조건식 패턴과 동일한 형태로 삽입
     - 기존: 필터통과 변수 사용 → 매수 = 매수 and 필터통과
     - 개선: if-elif 체인에 직접 통합 → if not (조건): 매수 = False
-    
+
     [2026-01-06 버그 수정] 세그먼트 필터 중복 삽입 방지
     - 기존 세그먼트 필터가 있으면 먼저 제거 후 새 필터 삽입 (교체)
+
+    동작 방식 (accurate_mode=True):
+    1. buy_lines에 기존 세그먼트 필터가 있으면 제거
+    2. _inject_segment_filter_accurate 사용
+    3. 당일 차단은 원본 조건 통과 시에만 기록
 
     동작 방식 (filter_first=True):
     1. buy_lines에 기존 세그먼트 필터가 있으면 제거
     2. "매수 = True" 라인 찾기
     3. "매수 = True" 직후에 세그먼트 필터 삽입 (기존 조건들 전에)
     4. 기존 조건들은 세그먼트 필터 이후에 실행됨
-    
+
     동작 방식 (filter_first=False, 레거시):
     1. buy_lines에 기존 세그먼트 필터가 있으면 제거
     2. "if 매수:" 라인 찾기
@@ -540,6 +687,7 @@ def _inject_segment_filter_into_buy_lines(
         buy_lines: 매수 조건식 코드 라인 리스트
         segment_code_lines: 삽입할 세그먼트 필터 코드 라인 리스트
         filter_first: True면 세그먼트 필터를 기존 조건 앞에 배치 (기본값: True)
+        accurate_mode: True면 정확한 예측 모드 사용 (기본값: False)
 
     Returns:
         (합쳐진 코드 라인 리스트, 삽입 성공 여부)
@@ -556,10 +704,15 @@ def _inject_segment_filter_into_buy_lines(
             print("[Segment Code Generator] 원본 코드 추출 실패 - 전체 코드 사용")
             working_lines = buy_lines
 
+    # [2026-01-10] 정확한 예측 모드: 세그먼트 필터 결과를 변수에 저장
+    if accurate_mode:
+        print("[Segment Code Generator] 정확한 예측 모드 사용")
+        return _inject_segment_filter_accurate(working_lines, segment_code_lines)
+
     # [2026-01-08] filter_first 모드: 세그먼트 필터를 기존 조건 앞에 배치
     if filter_first:
         return _inject_segment_filter_first(working_lines, segment_code_lines)
-    
+
     # 레거시 모드: 세그먼트 필터를 "if 매수:" 직전에 배치
     return _inject_segment_filter_before_buy_check(working_lines, segment_code_lines)
 
@@ -767,6 +920,220 @@ def _build_daily_block_record() -> List[str]:
     lines.append("    except NameError:")
     lines.append("        self.세그먼트차단종목[(종목코드, _오늘날짜)] = 0")
     return lines
+
+
+def _transform_segment_code_to_accurate_format(segment_code_lines: List[str]) -> List[str]:
+    """
+    기존 형식의 세그먼트 필터 코드를 정확한 예측 모드 형식으로 변환합니다.
+
+    [2026-01-10 신규 추가]
+
+    변환 내용:
+    - 기존 형식: `매수 = False` → 정확한 형식: `_세그먼트통과 = False`
+    - 맨 앞에 `_세그먼트통과 = True` 초기화 추가
+
+    기존 형식 예시:
+    ```
+    if 시분초 >= 92900 and 시분초 < 95900:  # T1 시간대
+        if 시가총액 >= 10000:  # 대형주
+            if not ((필터조건)):
+                매수 = False
+    ```
+
+    변환 후 예시:
+    ```
+    _세그먼트통과 = True
+    if 시분초 >= 92900 and 시분초 < 95900:  # T1 시간대
+        if 시가총액 >= 10000:  # 대형주
+            if not ((필터조건)):
+                _세그먼트통과 = False
+    ```
+
+    Args:
+        segment_code_lines: 기존 형식의 세그먼트 필터 코드 라인
+
+    Returns:
+        정확한 형식으로 변환된 코드 라인
+    """
+    if not segment_code_lines:
+        return ["_세그먼트통과 = True"]
+
+    # 이미 정확한 형식인지 확인
+    code_text = '\n'.join(segment_code_lines)
+    if '_세그먼트통과' in code_text:
+        print("[Segment Code Transform] 이미 정확한 형식의 세그먼트 코드")
+        return segment_code_lines
+
+    print("[Segment Code Transform] 기존 형식 → 정확한 형식으로 변환")
+
+    transformed = []
+    transformed.append("_세그먼트통과 = True")
+    transformed.append("")
+
+    for line in segment_code_lines:
+        # `매수 = False` → `_세그먼트통과 = False` 변환
+        # 들여쓰기 보존하면서 변환
+        if '매수 = False' in line or '매수=False' in line:
+            # 들여쓰기 추출
+            indent = len(line) - len(line.lstrip())
+            indent_str = line[:indent]
+            transformed.append(f"{indent_str}_세그먼트통과 = False")
+        else:
+            transformed.append(line)
+
+    return transformed
+
+
+def _inject_segment_filter_accurate(
+    working_lines: List[str],
+    segment_code_lines: List[str],
+) -> Tuple[List[str], bool]:
+    """
+    정확한 예측 모드용 세그먼트 필터 주입 함수.
+
+    [2026-01-10 신규 추가]
+    - 목적: 예측과 실제 백테스팅 결과 일치
+    - 핵심: 당일 차단을 원본 조건 통과 시에만 기록
+
+    생성되는 코드 구조:
+    ```
+    매수 = True
+
+    # === 당일 차단 체크 ===
+    _오늘날짜 = ...
+    if (종목코드, _오늘날짜) in self.세그먼트차단종목:
+        매수 = False
+
+    # === 세그먼트 필터 평가 (결과를 변수에 저장) ===
+    _세그먼트통과 = True
+    if 시분초 >= ...:
+        if 시가총액 >= ...:
+            if not (...):
+                _세그먼트통과 = False
+        ...
+    else:
+        _세그먼트통과 = False
+
+    # === 원본 조건 ===
+    if condition1:
+        매수 = False
+    ...
+
+    # === 최종 결합 및 당일 차단 기록 ===
+    # 원본 조건 통과(매수=True) + 세그먼트 필터 실패 → 차단 기록
+    if 매수 and not _세그먼트통과:
+        매수 = False
+        self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초
+    ```
+
+    Args:
+        working_lines: 원본 매수 조건식 코드 (세그먼트 필터 제거된 상태)
+        segment_code_lines: 삽입할 세그먼트 필터 코드
+            - 기존 형식 (`매수 = False`) 또는 정확한 형식 (`_세그먼트통과 = False`) 모두 지원
+            - 기존 형식인 경우 자동으로 정확한 형식으로 변환
+
+    Returns:
+        (합쳐진 코드 라인 리스트, 삽입 성공 여부)
+    """
+    # === 세그먼트 필터 코드 형식 변환 ===
+    # 기존 형식: `매수 = False` → 정확한 형식: `_세그먼트통과 = False`
+    transformed_segment_code = _transform_segment_code_to_accurate_format(segment_code_lines)
+
+    # "매수 = True" 라인 찾기
+    buy_true_idx = None
+    for idx, line in enumerate(working_lines):
+        stripped = line.strip()
+        if stripped == '매수 = True':
+            buy_true_idx = idx
+            break
+
+    if buy_true_idx is None:
+        print("[Segment Code Generator Accurate] '매수 = True' 라인을 찾지 못함")
+        fallback = list(working_lines)
+        fallback.append("")
+        fallback.append("# === 세그먼트 필터 (자동 생성 - 정확한 예측 모드) ===")
+        fallback.extend(segment_code_lines)
+        return fallback, False
+
+    # "if 매수:" 라인 찾기 (원본 조건 끝 표시)
+    buy_check_idx = None
+    for idx, line in enumerate(working_lines):
+        if re.match(r'^\s*if\s+매수\s*:', line):
+            buy_check_idx = idx
+
+    # === Part 1: 당일 차단 체크 코드 (세그먼트 필터 전에 실행) ===
+    daily_block_check = []
+    daily_block_check.append("")
+    daily_block_check.append("# === 세그먼트 필터 - 정확한 예측 모드 (2026-01-10) ===")
+    daily_block_check.append("# 당일 차단: 원본 조건 통과 시에만 기록하여 예측-실제 일치")
+    daily_block_check.append("")
+    daily_block_check.append("# 날짜 추출")
+    daily_block_check.append("try:")
+    daily_block_check.append("    _오늘날짜 = int(str(self.index)[:8]) if len(str(self.index)) >= 8 else 0")
+    daily_block_check.append("except (AttributeError, ValueError):")
+    daily_block_check.append("    _오늘날짜 = 0")
+    daily_block_check.append("")
+    daily_block_check.append("# 날짜 변경 시 차단 목록 초기화")
+    daily_block_check.append("if _오늘날짜 != self._세그먼트차단_마지막날짜:")
+    daily_block_check.append("    self.세그먼트차단종목 = {}")
+    daily_block_check.append("    self._세그먼트차단_마지막날짜 = _오늘날짜")
+    daily_block_check.append("")
+    daily_block_check.append("# 이미 당일 차단된 종목인지 확인")
+    daily_block_check.append("if (종목코드, _오늘날짜) in self.세그먼트차단종목:")
+    daily_block_check.append("    매수 = False  # 당일 재매수 차단")
+    daily_block_check.append("")
+
+    # === Part 2: 세그먼트 필터 코드 (_세그먼트통과 변수 사용) ===
+    segment_filter_block = []
+    segment_filter_block.append("# === 세그먼트 필터 평가 ===")
+    segment_filter_block.extend(transformed_segment_code)
+    segment_filter_block.append("")
+
+    # === Part 3: 최종 결합 및 당일 차단 기록 코드 (원본 조건 후에 실행) ===
+    post_condition_code = []
+    post_condition_code.append("")
+    post_condition_code.append("# === 세그먼트 필터 최종 결합 및 당일 차단 기록 ===")
+    post_condition_code.append("# 원본 조건 통과(매수=True) + 세그먼트 필터 실패 → 차단")
+    post_condition_code.append("if 매수 and not _세그먼트통과:")
+    post_condition_code.append("    매수 = False")
+    post_condition_code.append("    if (종목코드, _오늘날짜) not in self.세그먼트차단종목:")
+    post_condition_code.append("        try:")
+    post_condition_code.append("            self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초")
+    post_condition_code.append("        except NameError:")
+    post_condition_code.append("            self.세그먼트차단종목[(종목코드, _오늘날짜)] = 0")
+    post_condition_code.append("")
+
+    # 빈 줄 건너뛰기 (매수 = True 다음)
+    insert_idx = buy_true_idx + 1
+    while insert_idx < len(working_lines) and not working_lines[insert_idx].strip():
+        insert_idx += 1
+
+    # 기존 조건 추출 (세그먼트 필터와 최종 결합 사이에 들어갈 코드)
+    if buy_check_idx is not None:
+        # "if 매수:" 직전까지가 원본 조건
+        original_conditions = working_lines[insert_idx:buy_check_idx]
+        after_buy_check = working_lines[buy_check_idx:]
+    else:
+        original_conditions = working_lines[insert_idx:]
+        after_buy_check = []
+
+    # === 최종 조합 ===
+    new_lines = []
+    # 1. 매수 = True 까지
+    new_lines.extend(working_lines[:buy_true_idx + 1])
+    # 2. 당일 차단 체크
+    new_lines.extend(daily_block_check)
+    # 3. 세그먼트 필터 (_세그먼트통과 변수)
+    new_lines.extend(segment_filter_block)
+    # 4. 원본 조건
+    new_lines.append("# === 원본 조건 평가 ===")
+    new_lines.extend(original_conditions)
+    # 5. 최종 결합 및 당일 차단 기록
+    new_lines.extend(post_condition_code)
+    # 6. "if 매수:" 이후 코드 (있으면)
+    new_lines.extend(after_buy_check)
+
+    return new_lines, True
 
 
 def _inject_segment_filter_before_buy_check(
