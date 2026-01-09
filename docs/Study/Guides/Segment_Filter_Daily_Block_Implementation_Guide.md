@@ -293,14 +293,92 @@ def test_daily_block():
 
 ---
 
-## 8. 향후 개선 방향
+## 8. 실전 거래 동작 원리
 
-### 8.1 단기 개선
+### 8.1 핵심 메커니즘: `exec()` 함수와 `self` 접근
+
+**핵심 질문**: "실전 거래 시 조건식으로만 매수/매도가 되는데, 어떻게 세그먼트 필터 차단 변수가 활성화되는가?"
+
+**답변**: Python의 `exec()` 함수는 현재 스코프의 변수에 접근할 수 있습니다.
+
+```python
+# kiwoom_strategy_min.py:543-548
+if self.buystrategy is not None:
+    try:
+        exec(self.buystrategy)  # 조건식 코드 실행
+    except:
+        ...
+```
+
+- `exec(self.buystrategy)` 호출 시, 현재 메서드의 `locals()`와 `globals()`가 사용됨
+- `Strategy()` 메서드 내부에서 호출되므로 `self`가 `locals()`에 포함됨
+- 따라서 exec된 조건식 코드에서 `self.세그먼트차단종목`에 **읽기/쓰기 모두 가능**
+
+### 8.2 상속 구조에 의한 인프라 공유
+
+```
+KiwoomStrategyTick (부모 클래스)
+│   ├── self.세그먼트차단종목 = {}           # 인프라 변수
+│   └── self._세그먼트차단_마지막날짜 = 0    # 날짜 변경 감지용
+│
+└── KiwoomStrategyMin (자식 클래스)
+        └── Strategy() 메서드에서 exec(self.buystrategy) 호출
+```
+
+- `KiwoomStrategyMin`이 `KiwoomStrategyTick`을 상속
+- 부모 클래스의 `__init__`에서 초기화된 인프라 변수를 자동으로 사용
+
+### 8.3 전체 동작 흐름
+
+```
+[1] 엔진 시작
+    └── KiwoomStrategyTick.__init__()
+        └── self.세그먼트차단종목 = {} 초기화
+
+[2] 시장 데이터 수신
+    └── KiwoomStrategyMin.Strategy(data) 호출
+
+[3] 조건식 실행
+    └── exec(self.buystrategy)
+        ├── [생성된 코드] _오늘날짜 = int(str(self.index)[:8])
+        ├── [생성된 코드] 날짜 변경 시 self.세그먼트차단종목 = {} 초기화
+        ├── [생성된 코드] _이미차단됨 = (종목코드, _오늘날짜) in self.세그먼트차단종목
+        ├── [생성된 코드] if _이미차단됨: 매수 = False
+        ├── [세그먼트 필터] 조건 평가...
+        └── [생성된 코드] if not 매수: self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초
+
+[4] 매수 결정
+    └── 매수 변수 값에 따라 주문 실행 또는 스킵
+```
+
+### 8.4 실전 거래 적용 절차
+
+1. **세그먼트 분석 실행** → `segment_code_final.txt` 생성
+2. **생성된 코드에 당일 차단 로직 포함 확인**
+3. **strategy.db에 조건식 저장** (UI를 통해 또는 SQL)
+4. **실전 거래 시작** → 인프라 변수 자동 초기화
+5. **조건식 실행 시** → 당일 차단 로직 동작
+
+### 8.5 검증 결과
+
+| 항목 | 상태 | 코드 위치 |
+|------|------|----------|
+| 인프라 변수 초기화 | ✅ 완료 | `kiwoom_strategy_tick.py:52-57` |
+| 상속 구조 | ✅ 정상 | `KiwoomStrategyMin(KiwoomStrategyTick)` |
+| exec() 내 self 접근 | ✅ 가능 | Python 기본 동작으로 보장 |
+| 코드 제너레이터 | ✅ 정상 | `code_generator.py:700-769` |
+| 백테스팅 엔진 인프라 | ✅ 완료 | 4개 틱 엔진 |
+
+---
+
+## 9. 향후 개선 방향
+
+### 9.1 단기 개선
 
 - [ ] 차단 통계 로깅 추가
 - [ ] 차단 종목 목록 UI 표시
 
-### 8.2 중장기 개선
+### 9.2 중장기 개선
 
 - [ ] 세그먼트별 차단 정책 세분화
 - [ ] 차단 해제 조건 추가 (예: 급등 시)
@@ -308,7 +386,7 @@ def test_daily_block():
 
 ---
 
-## 9. 관련 문서
+## 10. 관련 문서
 
 - [세그먼트 필터 예측-실제 괴리 분석](../SystemAnalysis/20260108_Segment_Filter_Prediction_vs_Actual_Discrepancy_Analysis.md)
 - [세그먼트 필터 조건식 통합 가이드](Segment_Filter_Condition_Integration_Guide.md)
@@ -316,8 +394,9 @@ def test_daily_block():
 
 ---
 
-## 10. 변경 이력
+## 11. 변경 이력
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
 | 2026-01-09 | 1.0 | 최초 작성 |
+| 2026-01-09 | 1.1 | 실전 거래 동작 원리 상세 섹션 추가 (섹션 8) |
