@@ -567,19 +567,26 @@ def _inject_segment_filter_into_buy_lines(
 def _inject_segment_filter_first(
     working_lines: List[str],
     segment_code_lines: List[str],
+    enable_daily_block: bool = True,
 ) -> Tuple[List[str], bool]:
     """
     세그먼트 필터를 기존 조건 앞에 배치합니다 (방안 B 구현).
-    
+
     [2026-01-08 신규]
     - "매수 = True" 초기화 직후에 세그먼트 필터 삽입
     - 기존 조건들보다 먼저 세그먼트 필터가 평가됨
     - 세그먼트 필터에서 제외된 거래는 기존 조건을 거치지 않음
-    
+
+    [2026-01-09 추가] 당일 재매수 차단 기능
+    - enable_daily_block=True: 세그먼트 필터에서 차단된 종목을 당일 전체 매수 금지
+    - 차단 로직: 종목이 한 번 차단되면 해당 날짜 동안 재매수 시도 자체를 차단
+    - 목적: "대체 매수" 현상 방지 (예측 vs 실제 괴리 해소)
+
     Args:
         working_lines: 원본 매수 조건식 코드 (세그먼트 필터 제거된 상태)
         segment_code_lines: 삽입할 세그먼트 필터 코드
-    
+        enable_daily_block: 당일 재매수 차단 기능 활성화 여부 (기본값: True)
+
     Returns:
         (합쳐진 코드 라인 리스트, 삽입 성공 여부)
     """
@@ -661,19 +668,105 @@ def _inject_segment_filter_first(
     simple_block.append("# === 세그먼트 필터 (자동 생성) ===")
     simple_block.append("# [2026-01-08] 세그먼트 필터 우선 적용")
     simple_block.append("# 세그먼트 필터를 먼저 평가하여, 해당 세그먼트에서 제외할 거래를 먼저 필터링")
+
+    # [2026-01-09 추가] 당일 재매수 차단 인프라 코드 삽입
+    if enable_daily_block:
+        daily_block_preamble = _build_daily_block_preamble()
+        simple_block.extend(daily_block_preamble)
+        simple_block.append("")
+
     simple_block.extend(segment_code_lines)
+
+    # [2026-01-09 추가] 세그먼트 필터에서 차단된 경우, 차단 목록에 추가
+    if enable_daily_block:
+        daily_block_record = _build_daily_block_record()
+        simple_block.append("")
+        simple_block.extend(daily_block_record)
+
     simple_block.append("")
     simple_block.append("# === 세그먼트 필터 통과 후 기존 조건 평가 ===")
     simple_block.append("# 세그먼트 필터에서 매수=False인 경우, 아래 기존 조건은 추가 제외만 할 뿐 영향 없음")
     simple_block.append("")
-    
+
     # 조합: 매수 = True + 세그먼트 필터 + 기존 조건
     new_lines = []
     new_lines.extend(working_lines[:buy_true_idx + 1])  # "매수 = True" 까지
     new_lines.extend(simple_block)
     new_lines.extend(remaining_lines)  # 기존 조건들
-    
+
     return new_lines, True
+
+
+def _build_daily_block_preamble() -> List[str]:
+    """
+    세그먼트 필터 당일 재매수 차단을 위한 전처리 코드를 생성합니다.
+
+    [2026-01-09 추가]
+    - 날짜 변경 시 차단 목록 초기화
+    - 이미 오늘 차단된 종목인지 확인하여 즉시 매수=False 처리
+
+    동작 방식:
+    1. 날짜 추출 (index에서 YYYYMMDD 추출)
+    2. 날짜가 변경되면 차단 목록 초기화
+    3. 이미 차단된 종목이면 매수=False 설정 (세그먼트 필터 평가는 계속 진행되지만 결과는 무시)
+    4. 세그먼트 필터 평가 후, 차단된 종목은 차단 목록에 기록 (후속 코드에서 처리)
+
+    Returns:
+        전처리 코드 라인 리스트
+    """
+    lines = []
+    lines.append("# === 세그먼트 필터 당일 재매수 차단 (2026-01-09) ===")
+    lines.append("# 한 번 차단된 종목은 해당 날짜 동안 재매수 시도 자체를 차단")
+    lines.append("# 목적: '대체 매수' 현상 방지 (예측 vs 실제 괴리 해소)")
+    lines.append("")
+    lines.append("# 날짜 추출 (index에서 YYYYMMDD 부분)")
+    lines.append("try:")
+    lines.append("    _오늘날짜 = int(str(self.index)[:8]) if len(str(self.index)) >= 8 else 0")
+    lines.append("except (AttributeError, ValueError):")
+    lines.append("    _오늘날짜 = 0")
+    lines.append("")
+    lines.append("# 날짜 변경 감지 시 차단 목록 초기화")
+    lines.append("if _오늘날짜 != self._세그먼트차단_마지막날짜:")
+    lines.append("    self.세그먼트차단종목 = {}")
+    lines.append("    self._세그먼트차단_마지막날짜 = _오늘날짜")
+    lines.append("")
+    lines.append("# 이미 오늘 차단된 종목인지 확인 (당일 재매수 차단)")
+    lines.append("_이미차단됨 = (종목코드, _오늘날짜) in self.세그먼트차단종목")
+    lines.append("if _이미차단됨:")
+    lines.append("    매수 = False  # 당일 재매수 차단: 이미 차단된 종목")
+    lines.append("")
+    lines.append("# 아래 세그먼트 필터는 _이미차단됨 여부와 무관하게 평가됨")
+    lines.append("# (차단된 종목도 세그먼트 필터를 거치지만, 이미 매수=False이므로 결과에 영향 없음)")
+    return lines
+
+
+def _build_daily_block_record() -> List[str]:
+    """
+    세그먼트 필터에서 차단된 종목을 차단 목록에 기록하는 코드를 생성합니다.
+
+    [2026-01-09 추가]
+    - 세그먼트 필터에서 매수=False가 된 경우, 해당 종목을 차단 목록에 추가
+    - 다음 번 같은 종목이 매수 조건에 걸릴 때 즉시 차단됨
+
+    생성되는 코드 구조:
+    ```python
+    # 세그먼트 필터에서 차단된 경우, 차단 목록에 기록
+    if not 매수 and (종목코드, _오늘날짜) not in self.세그먼트차단종목:
+        self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초
+    ```
+
+    Returns:
+        차단 기록 코드 라인 리스트
+    """
+    lines = []
+    lines.append("# 세그먼트 필터에서 차단된 경우, 차단 목록에 기록")
+    lines.append("# 다음 번 같은 종목의 매수 시도 시 즉시 차단됨")
+    lines.append("if not 매수 and (종목코드, _오늘날짜) not in self.세그먼트차단종목:")
+    lines.append("    try:")
+    lines.append("        self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초")
+    lines.append("    except NameError:")
+    lines.append("        self.세그먼트차단종목[(종목코드, _오늘날짜)] = 0")
+    return lines
 
 
 def _inject_segment_filter_before_buy_check(

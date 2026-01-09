@@ -73,6 +73,14 @@ class BackEngineKiwoomTick:
         self.tick_calcul      = False
         self.dict_condition   = {}
         self.dict_cond_indexn = {}
+
+        # === 세그먼트 필터 당일 재매수 차단 인프라 (2026-01-09 추가) ===
+        # 세그먼트 필터에서 차단된 종목을 당일 전체 매수 금지하기 위한 저장소
+        # 키: (종목코드, 날짜), 값: 최초 차단 시분초
+        # 조건식 코드에서 self.세그먼트차단종목[(종목코드, 날짜)] 형태로 접근
+        self.세그먼트차단종목 = {}
+        self._세그먼트차단_마지막날짜 = 0
+
         self.SetDictCondition()
 
         self.MainLoop()
