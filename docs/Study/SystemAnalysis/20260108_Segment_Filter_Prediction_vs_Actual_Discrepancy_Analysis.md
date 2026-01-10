@@ -1202,6 +1202,129 @@ result = RunEnhancedAnalysis(
 
 ---
 
+## 13. Solution C 통합 문제 및 해결 (2026-01-10 추가)
+
+### 13.1 문제 발견
+
+Solution C가 구현되었음에도 불구하고 백테스트 결과가 여전히 예측과 불일치:
+- **원본 백테스트**: 5,087건
+- **예측 거래 수**: 1,497건 (70.6% 감소)
+- **실제 필터 적용**: 753건 (85.2% 감소)
+- **괴리**: 744건 (49.6%)
+
+### 13.2 근본 원인 분석
+
+#### 코드 추적 결과
+```
+실행 흐름:
+1. 백테스트 완료 → PltDrawAnalysis() 호출
+2. PltDrawAnalysis() → RunEnhancedAnalysis() 호출 (plotting.py:1469)
+3. RunEnhancedAnalysis() → build_segment_final_code() 호출
+4. build_segment_final_code() → accurate_mode 파라미터 사용
+```
+
+#### 발견된 문제점
+
+**plotting.py (라인 1469-1484)**:
+```python
+# 문제: segment_accurate_mode 파라미터가 전달되지 않음
+enhanced_result = RunEnhancedAnalysis(
+    df_tsg,
+    save_file_name,
+    teleQ,
+    buystg=buystg,
+    segment_analysis_mode=SEGMENT_ANALYSIS_MODE,
+    segment_optuna=SEGMENT_ANALYSIS_OPTUNA,
+    segment_template_compare=SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
+    # segment_accurate_mode 누락! → 기본값 False 사용
+)
+```
+
+**back_static.py**:
+- `SEGMENT_ACCURATE_MODE` 상수가 정의되지 않음
+- 다른 세그먼트 설정은 존재: `SEGMENT_ANALYSIS_MODE`, `SEGMENT_ANALYSIS_OPTUNA` 등
+
+### 13.3 증거: 생성된 코드 분석
+
+**segment_code_final.txt** (2026-01-10 09:05:02 생성):
+```python
+# Option 1 형식 (문제)
+if not 매수 and (종목코드, _오늘날짜) not in self.세그먼트차단종목:
+    self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초
+```
+
+**Solution C 형식 (기대)**:
+```python
+# Solution C 형식 (정확한 예측)
+_세그먼트통과 = True
+if not (필터조건):
+    _세그먼트통과 = False
+
+# 원본 조건 통과 + 세그먼트 실패 시에만 차단 기록
+if 매수 and not _세그먼트통과:
+    매수 = False
+    self.세그먼트차단종목[(종목코드, _오늘날짜)] = 시분초
+```
+
+### 13.4 해결 방법
+
+#### 수정 1: back_static.py
+```python
+# 기존
+SEGMENT_ANALYSIS_MODE = 'phase2+3'
+SEGMENT_ANALYSIS_OPTUNA = False
+SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
+
+# 추가
+SEGMENT_ACCURATE_MODE = True  # [2026-01-10] 정확한 예측 모드 활성화
+```
+
+#### 수정 2: plotting.py
+```python
+# 기존
+from backtester.back_static import (
+    SEGMENT_ANALYSIS_MODE,
+    SEGMENT_ANALYSIS_OPTUNA,
+    SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
+)
+
+# 수정 (SEGMENT_ACCURATE_MODE 추가)
+from backtester.back_static import (
+    SEGMENT_ANALYSIS_MODE,
+    SEGMENT_ANALYSIS_OPTUNA,
+    SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
+    SEGMENT_ACCURATE_MODE,
+)
+
+# 함수 호출에 파라미터 추가
+enhanced_result = RunEnhancedAnalysis(
+    ...
+    segment_accurate_mode=SEGMENT_ACCURATE_MODE,  # 추가
+)
+```
+
+### 13.5 수정된 파일 요약
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `back_static.py` | `SEGMENT_ACCURATE_MODE = True` 상수 추가 |
+| `plotting.py` | `SEGMENT_ACCURATE_MODE` import 및 `segment_accurate_mode` 파라미터 전달 |
+
+### 13.6 문제의 교훈
+
+1. **파라미터 전달 체인 확인**: 새로운 파라미터 추가 시 호출 체인 전체를 확인해야 함
+2. **기본값 의존 주의**: 기본값이 `False`인 경우 명시적 설정이 필요
+3. **생성된 코드 검증**: 실제 생성된 코드를 확인하여 의도한 형식인지 검증 필요
+
+### 13.7 예상 결과
+
+수정 후 다음 백테스트에서:
+- 생성된 코드가 Solution C 형식 사용
+- 예측 거래 수와 실제 거래 수 일치 (753건 ≈ 753건)
+- 괴리율 0%
+
+---
+
 ## 변경 이력
 
 | 버전 | 날짜 | 작성자 | 변경 내용 |
@@ -1209,6 +1332,7 @@ result = RunEnhancedAnalysis(
 | 1.0 | 2026-01-08 | AI Assistant | 최초 작성 |
 | 1.1 | 2026-01-09 | AI Assistant | 문서 대폭 개선: 분석 파일 테이블 추가(2.4), 거래 매칭 분류 상세화(4.1), 세그먼트 필터 의도 vs 구현 명확화(5.3), 해결방안 재구성(Option 1을 권장안으로 변경), 결론 업데이트(10.3) |
 | 1.2 | 2026-01-10 | AI Assistant | **Solution C (정확한 예측 모드) 구현 추가**: Option 1 이후에도 발생한 예측-실제 괴리의 근본 원인 분석, 정확한 예측 모드 설계 및 구현, 구현 함수 및 사용 방법 문서화 |
+| 1.3 | 2026-01-10 | AI Assistant | **Solution C 통합 문제 해결**: `plotting.py`에서 `segment_accurate_mode` 파라미터 누락 문제 발견 및 수정, `back_static.py`에 `SEGMENT_ACCURATE_MODE` 상수 추가 |
 
 ---
 
