@@ -112,14 +112,18 @@ class IterationStorage:
 
         # 기본 경로 설정
         if base_path is None:
-            base_path = Path(config.storage.output_directory)
+            if config.storage.output_dir:
+                base_path = Path(config.storage.output_dir)
+            else:
+                # 기본값: 프로젝트 루트의 _icos_results 디렉토리
+                base_path = Path.cwd() / '_icos_results'
 
         self.base_path = base_path
         self._session_id: Optional[str] = None
         self._metadata: Optional[StorageMetadata] = None
 
         # 디렉토리 생성
-        if config.storage.enabled:
+        if config.storage.save_iterations:
             self._ensure_directories()
 
     def _ensure_directories(self) -> None:
@@ -162,7 +166,7 @@ class IterationStorage:
 
     def _save_config(self) -> None:
         """설정 저장."""
-        if not self.config.storage.enabled:
+        if not self.config.storage.save_iterations:
             return
 
         config_path = self.base_path / 'config.json'
@@ -171,7 +175,7 @@ class IterationStorage:
 
     def _save_metadata(self) -> None:
         """메타데이터 저장."""
-        if not self.config.storage.enabled or self._metadata is None:
+        if not self.config.storage.save_iterations or self._metadata is None:
             return
 
         metadata_path = self.base_path / 'metadata.json'
@@ -202,7 +206,7 @@ class IterationStorage:
         Returns:
             저장된 파일 경로
         """
-        if not self.config.storage.enabled:
+        if not self.config.storage.save_iterations:
             return Path()
 
         # 반복 결과 데이터
@@ -378,7 +382,7 @@ class IterationStorage:
         Returns:
             저장된 파일 경로
         """
-        if not self.config.storage.enabled:
+        if not self.config.storage.save_iterations:
             return Path()
 
         # 최종 조건식 저장
@@ -440,7 +444,7 @@ class IterationStorage:
         Returns:
             저장된 파일 경로
         """
-        if not self.config.storage.enabled:
+        if not self.config.storage.save_iterations:
             return Path()
 
         csv_path = self.base_path / 'filter_history.csv'

@@ -30,7 +30,7 @@ Iterative Condition Optimization System
 브랜치: feature/iterative-condition-optimizer
 """
 
-__version__ = "0.3.0"  # Phase 3 완료
+__version__ = "0.4.0"  # Phase 4 완료
 __author__ = "STOM Development Team"
 
 # 설정 클래스
@@ -89,6 +89,21 @@ from .storage import (
     StorageMetadata,
 )
 
+# 비교기 (Phase 4)
+from .comparator import (
+    ResultComparator,
+    ComparisonResult,
+    MetricComparison,
+    ImprovementDirection,
+)
+
+# 수렴 판정기 (Phase 4)
+from .convergence import (
+    ConvergenceChecker,
+    ConvergenceResult,
+    ConvergenceReason,
+)
+
 # 메인 오케스트레이터
 from .runner import IterativeOptimizer
 
@@ -130,6 +145,15 @@ __all__ = [
     # 저장소 (Phase 3)
     "IterationStorage",
     "StorageMetadata",
+    # 비교기 (Phase 4)
+    "ResultComparator",
+    "ComparisonResult",
+    "MetricComparison",
+    "ImprovementDirection",
+    # 수렴 판정기 (Phase 4)
+    "ConvergenceChecker",
+    "ConvergenceResult",
+    "ConvergenceReason",
     # 프리셋
     "PRESET_CONSERVATIVE",
     "PRESET_AGGRESSIVE",

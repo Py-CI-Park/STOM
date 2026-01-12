@@ -29,6 +29,8 @@ from .analyzer import ResultAnalyzer, AnalysisResult
 from .filter_generator import FilterGenerator
 from .condition_builder import ConditionBuilder, BuildResult
 from .storage import IterationStorage
+from .comparator import ResultComparator, ComparisonResult
+from .convergence import ConvergenceChecker, ConvergenceResult, ConvergenceReason
 
 
 @dataclass
@@ -132,9 +134,9 @@ class IterativeOptimizer:
         self._analyzer = ResultAnalyzer(config)
         self._generator = FilterGenerator(config)
         self._builder = ConditionBuilder(config)
-        self._storage = IterationStorage(config) if config.storage.enabled else None
-        self._comparator = None     # ResultComparator (Phase 4)
-        self._convergence = None    # ConvergenceChecker (Phase 4)
+        self._storage = IterationStorage(config) if config.storage.save_iterations else None
+        self._comparator = ResultComparator(config)
+        self._convergence = ConvergenceChecker(config)
 
         # STOM 패턴: 한국어 상태 변수
         self.현재반복 = 0
@@ -515,8 +517,8 @@ class IterativeOptimizer:
     def _check_convergence(self) -> bool:
         """수렴 판정.
 
-        현재까지의 반복 결과를 바탕으로 수렴 여부를 판정합니다.
-        Phase 4에서 ConvergenceChecker로 구현 예정.
+        ConvergenceChecker를 사용하여 현재까지의 반복 결과를 바탕으로
+        수렴 여부를 판정합니다.
 
         Returns:
             수렴 여부
@@ -525,39 +527,32 @@ class IterativeOptimizer:
         if len(self.반복결과목록) < self.config.convergence.min_iterations:
             return False
 
-        # TODO: Phase 4에서 ConvergenceChecker 구현
-        # 현재는 간단한 로직만 구현
-
         if len(self.반복결과목록) < 2:
             return False
 
-        # 이전 결과와 현재 결과 비교
-        prev_metrics = self.반복결과목록[-2].metrics
-        curr_metrics = self.반복결과목록[-1].metrics
+        # ConvergenceChecker를 사용하여 수렴 판정
+        result = self._convergence.check(self.반복결과목록)
 
-        # 메인 메트릭 기준 개선율 계산
-        target_metric = self.config.filter_generation.target_metric
-        metric_key = self._get_metric_key(target_metric)
+        if result.is_converged:
+            self.수렴사유 = result.reason_description
+            self._log(f"    수렴 판정: {result.reason_description}")
+            self._log(f"    마지막 개선율: {result.last_improvement_rate:.2%}")
+            self._log(f"    총 개선율: {result.total_improvement_rate:.2%}")
+            return True
 
-        prev_value = prev_metrics.get(metric_key, 0)
-        curr_value = curr_metrics.get(metric_key, 0)
-
-        if prev_value == 0:
-            return False
-
-        improvement_rate = abs(curr_value - prev_value) / abs(prev_value)
-
-        if self.config.convergence.method == ConvergenceMethod.IMPROVEMENT_RATE:
-            if improvement_rate < self.config.convergence.threshold:
-                self.수렴사유 = f"개선율 {improvement_rate:.2%} < 임계값 {self.config.convergence.threshold:.2%}"
-                return True
+        # 조기 종료 조건 확인
+        if self._convergence.should_early_stop(self.반복결과목록):
+            self.수렴사유 = "조기 종료: 성과 악화 감지"
+            self._log(f"    조기 종료 조건 충족")
+            return True
 
         return False
 
     def _calculate_total_improvement(self) -> float:
         """전체 개선율 계산.
 
-        초기 결과 대비 최종 결과의 개선율을 계산합니다.
+        ResultComparator를 사용하여 초기 결과 대비 최종 결과의
+        개선율을 계산합니다.
 
         Returns:
             개선율 (0.0 ~ ∞)
@@ -565,19 +560,11 @@ class IterativeOptimizer:
         if len(self.반복결과목록) < 2:
             return 0.0
 
-        initial_metrics = self.반복결과목록[0].metrics
-        final_metrics = self.반복결과목록[-1].metrics
-
-        target_metric = self.config.filter_generation.target_metric
-        metric_key = self._get_metric_key(target_metric)
-
-        initial_value = initial_metrics.get(metric_key, 0)
-        final_value = final_metrics.get(metric_key, 0)
-
-        if initial_value == 0:
-            return 0.0
-
-        return (final_value - initial_value) / abs(initial_value)
+        # ResultComparator를 사용하여 총 개선율 계산
+        return self._comparator.calculate_total_improvement(
+            self.반복결과목록[0],
+            self.반복결과목록[-1],
+        )
 
     def _get_metric_key(self, metric: FilterMetric) -> str:
         """FilterMetric을 실제 메트릭 키로 변환."""
