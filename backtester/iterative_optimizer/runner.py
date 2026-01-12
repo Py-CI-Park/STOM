@@ -27,6 +27,8 @@ from .config import (
 from .data_types import FilterCandidate, IterationResult
 from .analyzer import ResultAnalyzer, AnalysisResult
 from .filter_generator import FilterGenerator
+from .condition_builder import ConditionBuilder, BuildResult
+from .storage import IterationStorage
 
 
 @dataclass
@@ -129,8 +131,8 @@ class IterativeOptimizer:
         # 컴포넌트들 초기화
         self._analyzer = ResultAnalyzer(config)
         self._generator = FilterGenerator(config)
-        self._builder = None        # ConditionBuilder (Phase 3)
-        self._storage = None        # IterationStorage (Phase 3)
+        self._builder = ConditionBuilder(config)
+        self._storage = IterationStorage(config) if config.storage.enabled else None
         self._comparator = None     # ResultComparator (Phase 4)
         self._convergence = None    # ConvergenceChecker (Phase 4)
 
@@ -200,6 +202,11 @@ class IterativeOptimizer:
         current_buystg = buystg
         current_sellstg = sellstg
 
+        # 저장소 세션 초기화
+        if self._storage:
+            session_id = self._storage.initialize_session()
+            self._log(f"저장소 세션 초기화: {session_id}")
+
         try:
             # 반복 루프
             while self.현재반복 < self.config.max_iterations and not self.수렴여부:
@@ -213,6 +220,25 @@ class IterativeOptimizer:
                     params=params,
                 )
                 self.반복결과목록.append(iteration_result)
+
+                # 반복 결과 저장
+                if self._storage:
+                    self._storage.save_iteration(
+                        iteration=self.현재반복,
+                        metrics=iteration_result.metrics,
+                        buystg=iteration_result.buystg,
+                        sellstg=iteration_result.sellstg,
+                        applied_filters=[
+                            {
+                                'condition': f.condition,
+                                'description': f.description,
+                                'source': f.source,
+                                'expected_impact': f.expected_impact,
+                            }
+                            for f in iteration_result.applied_filters
+                        ],
+                        execution_time=iteration_result.execution_time,
+                    )
 
                 # 수렴 판정
                 if self._check_convergence():
@@ -236,6 +262,17 @@ class IterativeOptimizer:
 
             self._log(f"ICOS 완료: {len(self.반복결과목록)}회 반복, 총 {total_execution_time:.1f}초")
             self._log(f"전체 개선율: {total_improvement:.2%}")
+
+            # 최종 결과 저장
+            if self._storage:
+                self._storage.save_final_result(
+                    final_buystg=current_buystg,
+                    final_sellstg=current_sellstg,
+                    total_improvement=total_improvement,
+                    convergence_reason=self.수렴사유,
+                    total_execution_time=total_execution_time,
+                )
+                self._log(f"최종 결과 저장 완료: {self._storage.get_session_path()}")
 
             return IterativeResult(
                 success=True,
@@ -451,7 +488,7 @@ class IterativeOptimizer:
         """새 조건식 빌드.
 
         기존 조건식에 필터를 적용하여 새 조건식을 생성합니다.
-        Phase 3에서 ConditionBuilder로 구현 예정.
+        ConditionBuilder를 사용하여 필터를 조건식에 삽입합니다.
 
         Args:
             buystg: 기존 매수 조건식
@@ -460,10 +497,20 @@ class IterativeOptimizer:
         Returns:
             (새 조건식, 실제 적용된 필터 목록)
         """
-        # TODO: Phase 3에서 ConditionBuilder 구현
-        self._log("    (스켈레톤: 실제 조건식 빌드 미실행)")
+        if not filters:
+            return buystg, []
 
-        return buystg, []
+        # ConditionBuilder를 사용하여 조건식 빌드
+        build_result = self._builder.build(buystg, filters)
+
+        if build_result.success:
+            self._log(f"    조건식 빌드 성공: {len(build_result.applied_filters)}개 필터 적용")
+            if build_result.used_variables:
+                self._log(f"    사용된 변수: {', '.join(sorted(build_result.used_variables))}")
+            return build_result.new_buystg, build_result.applied_filters
+        else:
+            self._log(f"    조건식 빌드 실패: {build_result.error_message}")
+            return buystg, []
 
     def _check_convergence(self) -> bool:
         """수렴 판정.

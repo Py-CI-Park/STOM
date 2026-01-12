@@ -30,7 +30,7 @@ Iterative Condition Optimization System
 브랜치: feature/iterative-condition-optimizer
 """
 
-__version__ = "0.2.0"  # Phase 2 완료
+__version__ = "0.3.0"  # Phase 3 완료
 __author__ = "STOM Development Team"
 
 # 설정 클래스
@@ -77,6 +77,18 @@ from .filter_generator import (
     FilterScore,
 )
 
+# 조건식 빌더 (Phase 3)
+from .condition_builder import (
+    ConditionBuilder,
+    BuildResult,
+)
+
+# 저장소 (Phase 3)
+from .storage import (
+    IterationStorage,
+    StorageMetadata,
+)
+
 # 메인 오케스트레이터
 from .runner import IterativeOptimizer
 
@@ -112,6 +124,12 @@ __all__ = [
     "FilterGenerator",
     "FilterPriority",
     "FilterScore",
+    # 조건식 빌더 (Phase 3)
+    "ConditionBuilder",
+    "BuildResult",
+    # 저장소 (Phase 3)
+    "IterationStorage",
+    "StorageMetadata",
     # 프리셋
     "PRESET_CONSERVATIVE",
     "PRESET_AGGRESSIVE",
