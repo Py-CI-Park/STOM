@@ -24,71 +24,9 @@ from .config import (
     FilterMetric,
     OptimizationMethod,
 )
-
-
-@dataclass
-class FilterCandidate:
-    """필터 후보.
-
-    생성된 필터 조건의 정보를 담는 데이터 클래스입니다.
-
-    Attributes:
-        condition: 필터 조건 문자열 (Python 표현식)
-        description: 필터 설명 (사람이 읽을 수 있는 형태)
-        source: 필터 생성 소스 ('segment_analysis', 'loss_pattern', 등)
-        expected_impact: 예상 영향도 (0.0 ~ 1.0)
-        metadata: 추가 메타데이터
-    """
-    condition: str
-    description: str
-    source: str = "unknown"
-    expected_impact: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class IterationResult:
-    """단일 반복 결과.
-
-    하나의 반복 사이클 결과를 담는 데이터 클래스입니다.
-
-    Attributes:
-        iteration: 반복 번호 (0-indexed)
-        buystg: 사용된 매수 조건식
-        sellstg: 사용된 매도 조건식
-        applied_filters: 적용된 필터 목록
-        metrics: 백테스트 결과 지표
-        df_tsg: 거래 상세 데이터프레임 (옵션)
-        execution_time: 실행 시간 (초)
-        timestamp: 완료 시각
-    """
-    iteration: int
-    buystg: str
-    sellstg: str
-    applied_filters: List[FilterCandidate]
-    metrics: Dict[str, float]
-    df_tsg: Optional[pd.DataFrame] = None
-    execution_time: float = 0.0
-    timestamp: datetime = field(default_factory=datetime.now)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """딕셔너리로 변환 (JSON 직렬화용)."""
-        return {
-            'iteration': self.iteration,
-            'buystg': self.buystg[:200] + '...' if len(self.buystg) > 200 else self.buystg,
-            'sellstg': self.sellstg[:200] + '...' if len(self.sellstg) > 200 else self.sellstg,
-            'applied_filters': [
-                {
-                    'condition': f.condition,
-                    'description': f.description,
-                    'source': f.source,
-                }
-                for f in self.applied_filters
-            ],
-            'metrics': self.metrics,
-            'execution_time': self.execution_time,
-            'timestamp': self.timestamp.isoformat(),
-        }
+from .data_types import FilterCandidate, IterationResult
+from .analyzer import ResultAnalyzer, AnalysisResult
+from .filter_generator import FilterGenerator
 
 
 @dataclass
@@ -188,13 +126,13 @@ class IterativeOptimizer:
         self.qlist = qlist
         self.backtest_params = backtest_params or {}
 
-        # 컴포넌트들 (Phase 2-4에서 구현)
-        self._analyzer = None       # ResultAnalyzer
-        self._generator = None      # FilterGenerator
-        self._builder = None        # ConditionBuilder
-        self._storage = None        # IterationStorage
-        self._comparator = None     # ResultComparator
-        self._convergence = None    # ConvergenceChecker
+        # 컴포넌트들 초기화
+        self._analyzer = ResultAnalyzer(config)
+        self._generator = FilterGenerator(config)
+        self._builder = None        # ConditionBuilder (Phase 3)
+        self._storage = None        # IterationStorage (Phase 3)
+        self._comparator = None     # ResultComparator (Phase 4)
+        self._convergence = None    # ConvergenceChecker (Phase 4)
 
         # STOM 패턴: 한국어 상태 변수
         self.현재반복 = 0
@@ -430,47 +368,80 @@ class IterativeOptimizer:
         self,
         df_tsg: Optional[pd.DataFrame],
         metrics: Dict[str, float],
-    ) -> Dict[str, Any]:
+    ) -> AnalysisResult:
         """결과 분석.
 
         백테스트 결과를 분석하여 필터 생성에 필요한 정보를 추출합니다.
-        Phase 2에서 ResultAnalyzer로 구현 예정.
+        ResultAnalyzer를 사용하여 손실 패턴과 특징 중요도를 분석합니다.
 
         Args:
             df_tsg: 거래 상세 DataFrame
             metrics: 성과 지표
 
         Returns:
-            분석 결과 딕셔너리
+            AnalysisResult: 분석 결과
         """
-        # TODO: Phase 2에서 ResultAnalyzer 구현
-        self._log("    (스켈레톤: 실제 분석 미실행)")
+        if df_tsg is None or df_tsg.empty:
+            self._log("    (df_tsg가 비어있음 - 분석 스킵)")
+            return self._analyzer._empty_result()
 
-        return {
-            'loss_patterns': [],
-            'segment_analysis': None,
-            'feature_importance': {},
-        }
+        # ResultAnalyzer를 사용하여 분석 수행
+        use_enhanced = self.config.filter_generation.use_segment_analysis
+        analysis = self._analyzer.analyze(
+            df_tsg,
+            use_enhanced=use_enhanced,
+            use_ml=False,  # ML은 Phase 5에서 활성화
+        )
+
+        # 분석 결과 로그
+        self._log(f"    분석 완료: 손실패턴 {len(analysis.loss_patterns)}개, "
+                  f"특징 {len(analysis.feature_importances)}개")
+
+        if analysis.loss_patterns:
+            top_pattern = analysis.get_top_patterns(1)[0]
+            self._log(f"    상위 손실패턴: {top_pattern.description} "
+                      f"(손실 {top_pattern.total_loss:,.0f}원)")
+
+        return analysis
 
     def _generate_filters(
         self,
-        analysis: Dict[str, Any],
+        analysis: AnalysisResult,
     ) -> List[FilterCandidate]:
         """필터 생성.
 
         분석 결과를 바탕으로 필터 후보를 생성합니다.
-        Phase 2에서 FilterGenerator로 구현 예정.
+        FilterGenerator를 사용하여 우선순위가 높은 필터를 선택합니다.
 
         Args:
-            analysis: 분석 결과
+            analysis: AnalysisResult 분석 결과
 
         Returns:
             필터 후보 목록
         """
-        # TODO: Phase 2에서 FilterGenerator 구현
-        self._log("    (스켈레톤: 실제 필터 생성 미실행)")
+        # 빈 분석 결과 체크
+        if not analysis.loss_patterns:
+            self._log("    (손실 패턴 없음 - 필터 생성 스킵)")
+            return []
 
-        return []
+        # FilterGenerator를 사용하여 필터 후보 생성
+        filters = self._generator.generate(analysis)
+
+        # 필터 유효성 검증
+        valid_filters: List[FilterCandidate] = []
+        for f in filters:
+            is_valid, error_msg = self._generator.validate_filter(f)
+            if is_valid:
+                valid_filters.append(f)
+            else:
+                self._log(f"    필터 검증 실패: {f.description} - {error_msg}")
+
+        # 결과 로그
+        self._log(f"    필터 생성 완료: {len(valid_filters)}개")
+        for i, f in enumerate(valid_filters[:3]):  # 상위 3개만 로그
+            self._log(f"      [{i+1}] {f.description} (영향도 {f.expected_impact:.2f})")
+
+        return valid_filters
 
     def _build_new_condition(
         self,

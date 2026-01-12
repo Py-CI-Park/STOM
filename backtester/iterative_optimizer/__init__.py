@@ -30,7 +30,7 @@ Iterative Condition Optimization System
 브랜치: feature/iterative-condition-optimizer
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"  # Phase 2 완료
 __author__ = "STOM Development Team"
 
 # 설정 클래스
@@ -50,11 +50,31 @@ from .config import (
     PRESET_QUICK_TEST,
 )
 
-# 데이터 클래스
-from .runner import (
+# 데이터 클래스 (공통)
+from .data_types import (
     FilterCandidate,
     IterationResult,
+)
+
+# 데이터 클래스 (실행 결과)
+from .runner import (
     IterativeResult,
+)
+
+# 분석기 (Phase 2)
+from .analyzer import (
+    ResultAnalyzer,
+    AnalysisResult,
+    LossPattern,
+    LossPatternType,
+    FeatureImportance,
+)
+
+# 필터 생성기 (Phase 2)
+from .filter_generator import (
+    FilterGenerator,
+    FilterPriority,
+    FilterScore,
 )
 
 # 메인 오케스트레이터
@@ -82,6 +102,16 @@ __all__ = [
     "FilterCandidate",
     "IterationResult",
     "IterativeResult",
+    # 분석기 (Phase 2)
+    "ResultAnalyzer",
+    "AnalysisResult",
+    "LossPattern",
+    "LossPatternType",
+    "FeatureImportance",
+    # 필터 생성기 (Phase 2)
+    "FilterGenerator",
+    "FilterPriority",
+    "FilterScore",
     # 프리셋
     "PRESET_CONSERVATIVE",
     "PRESET_AGGRESSIVE",

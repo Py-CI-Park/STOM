@@ -1,0 +1,505 @@
+"""
+반복적 조건식 개선 시스템 (ICOS) - 필터 생성기.
+
+Iterative Condition Optimization System - Filter Generator.
+
+이 모듈은 분석 결과를 기반으로 필터 후보를 생성합니다.
+손실 패턴에서 필터 조건을 추출하고, 우선순위를 결정합니다.
+
+작성일: 2026-01-12
+브랜치: feature/iterative-condition-optimizer
+"""
+
+from dataclasses import dataclass, field
+from typing import List, Optional, Dict, Any, Tuple
+from enum import Enum
+import re
+
+from .config import IterativeConfig, FilterMetric
+from .analyzer import AnalysisResult, LossPattern, LossPatternType, FeatureImportance
+from .data_types import FilterCandidate
+
+
+class FilterPriority(Enum):
+    """필터 우선순위."""
+    CRITICAL = 1    # 즉시 적용 권장
+    HIGH = 2        # 높은 우선순위
+    MEDIUM = 3      # 중간 우선순위
+    LOW = 4         # 낮은 우선순위
+    EXPERIMENTAL = 5  # 실험적 (검증 필요)
+
+
+@dataclass
+class FilterScore:
+    """필터 점수.
+
+    필터의 효과와 신뢰도를 종합한 점수입니다.
+
+    Attributes:
+        improvement_score: 개선 점수 (손실 제거량 기반)
+        confidence_score: 신뢰도 점수
+        stability_score: 안정성 점수
+        coverage_score: 커버리지 점수
+        total_score: 종합 점수
+    """
+    improvement_score: float
+    confidence_score: float
+    stability_score: float
+    coverage_score: float
+
+    @property
+    def total_score(self) -> float:
+        """종합 점수 계산 (가중 평균)."""
+        weights = {
+            'improvement': 0.4,
+            'confidence': 0.3,
+            'stability': 0.2,
+            'coverage': 0.1,
+        }
+        return (
+            self.improvement_score * weights['improvement'] +
+            self.confidence_score * weights['confidence'] +
+            self.stability_score * weights['stability'] +
+            self.coverage_score * weights['coverage']
+        )
+
+
+class FilterGenerator:
+    """필터 생성기.
+
+    분석 결과를 기반으로 조건식에 적용할 필터 후보를 생성합니다.
+
+    Attributes:
+        config: ICOS 설정
+
+    Example:
+        >>> generator = FilterGenerator(config)
+        >>> filters = generator.generate(analysis_result)
+        >>> top_filter = filters[0]
+    """
+
+    def __init__(self, config: IterativeConfig):
+        """FilterGenerator 초기화.
+
+        Args:
+            config: ICOS 설정
+        """
+        self.config = config
+
+    def generate(
+        self,
+        analysis: AnalysisResult,
+        max_filters: Optional[int] = None,
+    ) -> List[FilterCandidate]:
+        """필터 후보 생성.
+
+        분석 결과를 기반으로 필터 후보를 생성하고 우선순위를 결정합니다.
+
+        Args:
+            analysis: 분석 결과
+            max_filters: 최대 생성 필터 수 (None이면 설정값 사용)
+
+        Returns:
+            필터 후보 목록 (우선순위 순)
+        """
+        if not analysis.loss_patterns:
+            return []
+
+        max_count = max_filters or self.config.filter_generation.max_filters_per_iteration
+
+        # 1. 손실 패턴에서 필터 후보 생성
+        candidates = self._generate_from_patterns(analysis.loss_patterns)
+
+        # 2. 기존 분석 도구 결과에서 필터 후보 추가 (있는 경우)
+        if analysis.filter_candidates:
+            candidates.extend(self._generate_from_enhanced(analysis.filter_candidates))
+
+        # 3. 중복 제거
+        candidates = self._deduplicate(candidates)
+
+        # 4. 점수 계산 및 정렬
+        scored_candidates = [
+            (self._calculate_score(c, analysis), c)
+            for c in candidates
+        ]
+        scored_candidates.sort(key=lambda x: x[0].total_score, reverse=True)
+
+        # 5. 상위 N개 선택
+        top_candidates = [c for _, c in scored_candidates[:max_count]]
+
+        return top_candidates
+
+    def _generate_from_patterns(
+        self,
+        patterns: List[LossPattern],
+    ) -> List[FilterCandidate]:
+        """손실 패턴에서 필터 후보 생성."""
+        candidates: List[FilterCandidate] = []
+
+        for pattern in patterns:
+            candidate = self._pattern_to_filter(pattern)
+            if candidate:
+                candidates.append(candidate)
+
+        return candidates
+
+    def _pattern_to_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """손실 패턴을 필터 후보로 변환."""
+        # 패턴 유형에 따른 필터 코드 생성
+        if pattern.pattern_type == LossPatternType.TIME_BASED:
+            return self._create_time_filter(pattern)
+        elif pattern.pattern_type == LossPatternType.THRESHOLD_BELOW:
+            return self._create_threshold_below_filter(pattern)
+        elif pattern.pattern_type == LossPatternType.THRESHOLD_ABOVE:
+            return self._create_threshold_above_filter(pattern)
+        elif pattern.pattern_type == LossPatternType.RANGE_INSIDE:
+            return self._create_range_filter(pattern)
+        elif pattern.pattern_type == LossPatternType.RANGE_OUTSIDE:
+            return self._create_range_filter(pattern)
+
+        return None
+
+    def _create_time_filter(self, pattern: LossPattern) -> FilterCandidate:
+        """시간대 필터 생성."""
+        hour = pattern.metadata.get('hour', 0)
+
+        # 필터 조건: 해당 시간대 제외
+        # buystg에서 사용할 수 있는 변수명으로 변환
+        condition = f"(매수시 != {hour})"
+
+        return FilterCandidate(
+            condition=condition,
+            description=f"시간대 {hour}시 제외 (손실률 {pattern.loss_ratio:.1%})",
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'column': pattern.column,
+                'hour': hour,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _create_threshold_below_filter(self, pattern: LossPattern) -> FilterCandidate:
+        """미만 임계값 필터 생성 (해당 값 미만 제외)."""
+        threshold = pattern.metadata.get('threshold', 0)
+        col = pattern.column
+
+        # 변수명 변환 (df_tsg 컬럼명 -> buystg 변수명)
+        var_name = self._column_to_variable(col)
+
+        # 필터 조건: 미만 제외 -> 이상만 허용
+        condition = f"({var_name} >= {threshold:.4f})"
+
+        return FilterCandidate(
+            condition=condition,
+            description=f"{col} {threshold:.2f} 미만 제외",
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'column': col,
+                'threshold': threshold,
+                'direction': 'below',
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _create_threshold_above_filter(self, pattern: LossPattern) -> FilterCandidate:
+        """이상 임계값 필터 생성 (해당 값 이상 제외)."""
+        threshold = pattern.metadata.get('threshold', 0)
+        col = pattern.column
+
+        var_name = self._column_to_variable(col)
+
+        # 필터 조건: 이상 제외 -> 미만만 허용
+        condition = f"({var_name} < {threshold:.4f})"
+
+        return FilterCandidate(
+            condition=condition,
+            description=f"{col} {threshold:.2f} 이상 제외",
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'column': col,
+                'threshold': threshold,
+                'direction': 'above',
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _create_range_filter(self, pattern: LossPattern) -> FilterCandidate:
+        """범위 필터 생성."""
+        range_tuple = pattern.metadata.get('range', (0, 0))
+        lower, upper = range_tuple
+        col = pattern.column
+
+        var_name = self._column_to_variable(col)
+
+        if pattern.pattern_type == LossPatternType.RANGE_INSIDE:
+            # 범위 내 제외 -> 범위 밖만 허용
+            if upper == float('inf'):
+                condition = f"({var_name} < {lower:.0f})"
+            else:
+                condition = f"(({var_name} < {lower:.0f}) or ({var_name} >= {upper:.0f}))"
+            desc = f"{col} {lower:.0f}~{upper:.0f} 범위 제외"
+        else:
+            # 범위 밖 제외 -> 범위 내만 허용
+            condition = f"(({var_name} >= {lower:.0f}) and ({var_name} < {upper:.0f}))"
+            desc = f"{col} {lower:.0f}~{upper:.0f} 범위만 허용"
+
+        return FilterCandidate(
+            condition=condition,
+            description=desc,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'column': col,
+                'range': range_tuple,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _generate_from_enhanced(
+        self,
+        filter_candidates: List[Dict[str, Any]],
+    ) -> List[FilterCandidate]:
+        """기존 강화 분석 결과에서 필터 후보 생성."""
+        candidates: List[FilterCandidate] = []
+
+        for fc in filter_candidates:
+            # 통계적으로 유의한 필터만
+            if not fc.get('significant', False):
+                continue
+
+            code = fc.get('code', '')
+            if not code:
+                continue
+
+            # 필터 코드 정규화
+            condition = self._normalize_filter_code(code)
+
+            candidates.append(FilterCandidate(
+                condition=condition,
+                description=fc.get('filter_name', ''),
+                source="enhanced_analysis",
+                expected_impact=min(1.0, abs(fc.get('improvement', 0)) / 100000),
+                metadata={
+                    'category': fc.get('category', ''),
+                    'improvement': fc.get('improvement', 0),
+                    'exclusion_ratio': fc.get('exclusion_ratio', 0),
+                    'p_value': fc.get('p_value', 1.0),
+                },
+            ))
+
+        return candidates
+
+    def _column_to_variable(self, column: str) -> str:
+        """DataFrame 컬럼명을 buystg 변수명으로 변환.
+
+        대부분의 경우 동일하지만, 일부 매핑이 필요할 수 있음.
+        """
+        # 매수 시점 스냅샷 컬럼은 '매수' 접두사 제거
+        if column.startswith('매수') and column != '매수시':
+            # 매수등락율 -> 등락율, 매수체결강도 -> 체결강도
+            var_name = column[2:]  # '매수' 제거
+            return var_name
+
+        # 그 외는 그대로
+        return column
+
+    def _normalize_filter_code(self, code: str) -> str:
+        """필터 코드 정규화.
+
+        기존 분석 도구의 코드 형식을 ICOS 형식으로 변환합니다.
+        """
+        # 이미 괄호로 감싸져 있으면 그대로
+        code = code.strip()
+        if not code.startswith('('):
+            code = f"({code})"
+
+        return code
+
+    def _deduplicate(
+        self,
+        candidates: List[FilterCandidate],
+    ) -> List[FilterCandidate]:
+        """중복 필터 제거."""
+        seen_conditions = set()
+        unique_candidates: List[FilterCandidate] = []
+
+        for candidate in candidates:
+            # 조건 정규화 (공백 제거, 소문자)
+            normalized = re.sub(r'\s+', '', candidate.condition.lower())
+
+            if normalized not in seen_conditions:
+                seen_conditions.add(normalized)
+                unique_candidates.append(candidate)
+
+        return unique_candidates
+
+    def _calculate_score(
+        self,
+        candidate: FilterCandidate,
+        analysis: AnalysisResult,
+    ) -> FilterScore:
+        """필터 점수 계산."""
+        # 개선 점수 (예상 영향도 기반)
+        improvement_score = min(1.0, candidate.expected_impact)
+
+        # 신뢰도 점수
+        confidence_score = candidate.expected_impact
+
+        # 안정성 점수 (메타데이터 기반)
+        p_value = candidate.metadata.get('p_value', 1.0)
+        stability_score = 1.0 - min(1.0, p_value)
+
+        # 커버리지 점수
+        loss_count = candidate.metadata.get('loss_count', 0)
+        if analysis.loss_trades > 0:
+            coverage_score = min(1.0, loss_count / analysis.loss_trades)
+        else:
+            coverage_score = 0.0
+
+        return FilterScore(
+            improvement_score=improvement_score,
+            confidence_score=confidence_score,
+            stability_score=stability_score,
+            coverage_score=coverage_score,
+        )
+
+    def prioritize(
+        self,
+        candidates: List[FilterCandidate],
+    ) -> List[Tuple[FilterCandidate, FilterPriority]]:
+        """필터 우선순위 결정.
+
+        Args:
+            candidates: 필터 후보 목록
+
+        Returns:
+            (필터, 우선순위) 튜플 목록
+        """
+        prioritized: List[Tuple[FilterCandidate, FilterPriority]] = []
+
+        for candidate in candidates:
+            priority = self._determine_priority(candidate)
+            prioritized.append((candidate, priority))
+
+        # 우선순위 순 정렬
+        prioritized.sort(key=lambda x: x[1].value)
+
+        return prioritized
+
+    def _determine_priority(self, candidate: FilterCandidate) -> FilterPriority:
+        """필터 우선순위 결정."""
+        impact = candidate.expected_impact
+        source = candidate.source
+
+        # 높은 영향도 + 통계적 유의성 -> CRITICAL
+        if impact >= 0.8 and candidate.metadata.get('p_value', 1.0) < 0.01:
+            return FilterPriority.CRITICAL
+
+        # 높은 영향도 -> HIGH
+        if impact >= 0.6:
+            return FilterPriority.HIGH
+
+        # 중간 영향도 -> MEDIUM
+        if impact >= 0.4:
+            return FilterPriority.MEDIUM
+
+        # 낮은 영향도 but 통계적 유의성 -> LOW
+        if candidate.metadata.get('significant', False):
+            return FilterPriority.LOW
+
+        # 그 외 -> EXPERIMENTAL
+        return FilterPriority.EXPERIMENTAL
+
+    def generate_combined_filter(
+        self,
+        candidates: List[FilterCandidate],
+        max_combine: int = 3,
+    ) -> Optional[FilterCandidate]:
+        """여러 필터를 조합한 복합 필터 생성.
+
+        Args:
+            candidates: 조합할 필터 후보 목록
+            max_combine: 최대 조합 수
+
+        Returns:
+            복합 필터 (None이면 조합 불가)
+        """
+        if not candidates:
+            return None
+
+        # 상위 N개 선택
+        top_candidates = candidates[:max_combine]
+
+        if len(top_candidates) == 1:
+            return top_candidates[0]
+
+        # 조건 조합 (AND)
+        conditions = [c.condition for c in top_candidates]
+        combined_condition = " and ".join(conditions)
+
+        # 설명 조합
+        descriptions = [c.description for c in top_candidates]
+        combined_description = " + ".join(descriptions)
+
+        # 예상 영향도 (최대값 사용, 시너지 고려)
+        impacts = [c.expected_impact for c in top_candidates]
+        combined_impact = min(1.0, max(impacts) * 1.1)  # 10% 시너지 보너스
+
+        return FilterCandidate(
+            condition=combined_condition,
+            description=f"복합 필터: {combined_description}",
+            source="combined",
+            expected_impact=combined_impact,
+            metadata={
+                'combined_count': len(top_candidates),
+                'individual_conditions': [c.condition for c in top_candidates],
+            },
+        )
+
+    def validate_filter(self, candidate: FilterCandidate) -> Tuple[bool, str]:
+        """필터 유효성 검증.
+
+        Args:
+            candidate: 검증할 필터
+
+        Returns:
+            (유효 여부, 오류 메시지)
+        """
+        condition = candidate.condition
+
+        # 빈 조건
+        if not condition or not condition.strip():
+            return False, "빈 조건식"
+
+        # 위험한 키워드 체크
+        dangerous_keywords = ['import', 'exec', 'eval', '__', 'os.', 'sys.']
+        for keyword in dangerous_keywords:
+            if keyword in condition:
+                return False, f"위험한 키워드 포함: {keyword}"
+
+        # 괄호 균형 체크
+        if condition.count('(') != condition.count(')'):
+            return False, "괄호 불균형"
+
+        # 기본 문법 체크 (간단한 검증)
+        try:
+            # 변수를 더미 값으로 대체하여 파싱 테스트
+            test_condition = condition
+            for var in ['등락율', '체결강도', '시가총액', '매수시', '당일거래대금']:
+                test_condition = test_condition.replace(var, '1')
+            compile(test_condition, '<string>', 'eval')
+        except SyntaxError as e:
+            return False, f"문법 오류: {e}"
+
+        return True, ""
