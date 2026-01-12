@@ -49,7 +49,6 @@ SEGMENT_ANALYSIS_MODE = 'phase2+3'
 SEGMENT_ANALYSIS_OUTPUT_DIR = None
 SEGMENT_ANALYSIS_OPTUNA = False
 SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
-SEGMENT_ACCURATE_MODE = True  # [2026-01-10] 정확한 예측 모드 활성화 - 예측-실제 괴리 해결
 
 
 def _convert_bool_ops_to_pandas(expr: str) -> str:

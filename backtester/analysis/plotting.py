@@ -1460,13 +1460,11 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                     SEGMENT_ANALYSIS_MODE,
                     SEGMENT_ANALYSIS_OPTUNA,
                     SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
-                    SEGMENT_ACCURATE_MODE,
                 )
             except Exception:
                 SEGMENT_ANALYSIS_MODE = 'phase2+3'
                 SEGMENT_ANALYSIS_OPTUNA = False
                 SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
-                SEGMENT_ACCURATE_MODE = True  # [2026-01-10] 기본값: 정확한 예측 모드
 
             enhanced_result = RunEnhancedAnalysis(
                 df_tsg,
@@ -1483,7 +1481,6 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 segment_output_dir=str(output_dir),
                 segment_optuna=SEGMENT_ANALYSIS_OPTUNA,
                 segment_template_compare=SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
-                segment_accurate_mode=SEGMENT_ACCURATE_MODE,
             )
 
             try:
