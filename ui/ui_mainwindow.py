@@ -18,6 +18,7 @@ from ui.set_mainmenu import SetMainMenu
 from ui.set_dialog_etc import SetDialogEtc
 from ui.set_dialog_back import SetDialogBack
 from ui.set_dialog_chart import SetDialogChart
+from ui.set_dialog_icos import SetDialogICOS
 
 from ui.ui_etc import *
 from ui.ui_draw_chart import *
@@ -66,6 +67,7 @@ from ui.ui_button_clicked_zoom import *
 from ui.ui_button_clicked_etsj import *
 from ui.ui_button_clicked_ss_cs import *
 from ui.ui_button_clicked_chart import *
+from ui.ui_button_clicked_icos import *
 
 from utility.hoga import *
 from utility.chart import *
@@ -460,6 +462,7 @@ class MainWindow(QMainWindow):
         SetDialogChart(self, self.wc)
         SetDialogEtc(self, self.wc)
         SetDialogBack(self, self.wc)
+        SetDialogICOS(self, self.wc)
 
         con1 = sqlite3.connect(DB_SETTING)
         con2 = sqlite3.connect(DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN)
@@ -552,6 +555,7 @@ class MainWindow(QMainWindow):
         self.proc_strategy_coin    = None
         self.proc_trader_coin      = None
         self.proc_coin_kimp        = None
+        self.proc_icos             = None
 
         self.backdetail_list       = None
         self.backcheckbox_list     = None
@@ -742,6 +746,7 @@ class MainWindow(QMainWindow):
     def ShowJisu(self):          show_jisu(self)
     def ShowDB(self):            show_db(self)
     def ShowBackScheduler(self): show_backscheduler(self)
+    def ShowICOS(self):          show_icos(self)
     def ShowKimp(self):          show_kimp(self)
     def ShowOrder(self):         show_order(self)
     def PutHogaCode(self, coin, code): put_hoga_code(self, coin, code)
@@ -1006,6 +1011,12 @@ class MainWindow(QMainWindow):
     def cvoButtonClicked_02(self): cvo_button_clicked_02(self)
     def cvoButtonClicked_03(self): cvo_button_clicked_03(self)
     def cvoButtonClicked_04(self): cvo_button_clicked_04(self)
+    # =================================================================================================================
+    def icosButtonClicked_01(self): icos_button_clicked_01(self)
+    def icosButtonClicked_02(self): icos_button_clicked_02(self)
+    def icosButtonClicked_03(self): icos_button_clicked_03(self)
+    def icosButtonClicked_04(self): icos_button_clicked_04(self)
+    def icosButtonClicked_05(self): icos_button_clicked_05(self)
     # =================================================================================================================
     def BackTestengineShow(self, gubun):                 backengine_show(self, gubun)
     def StartBacktestEngine(self, gubun):                start_backengine(self, gubun)

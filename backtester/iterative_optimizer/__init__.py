@@ -30,7 +30,7 @@ Iterative Condition Optimization System
 브랜치: feature/iterative-condition-optimizer
 """
 
-__version__ = "0.4.0"  # Phase 4 완료
+__version__ = "0.6.0"  # Phase 6 완료 (UI 통합)
 __author__ = "STOM Development Team"
 
 # 설정 클래스
@@ -104,6 +104,30 @@ from .convergence import (
     ConvergenceReason,
 )
 
+# 최적화 알고리즘 (Phase 5)
+from .optimization import (
+    # Base
+    BaseOptimizer,
+    OptimizationResult,
+    OptimizationTrial,
+    OptimizationStatus,
+    SearchSpace,
+    # Grid Search
+    GridSearchOptimizer,
+    GridSearchConfig,
+    # Genetic Algorithm
+    GeneticOptimizer,
+    GeneticConfig,
+    # Bayesian
+    BayesianOptimizer,
+    BayesianConfig,
+    # Walk-Forward
+    WalkForwardValidator,
+    WalkForwardResult,
+    FoldResult,
+    OverfitLevel,
+)
+
 # 메인 오케스트레이터
 from .runner import IterativeOptimizer
 
@@ -154,6 +178,22 @@ __all__ = [
     "ConvergenceChecker",
     "ConvergenceResult",
     "ConvergenceReason",
+    # 최적화 알고리즘 (Phase 5)
+    "BaseOptimizer",
+    "OptimizationResult",
+    "OptimizationTrial",
+    "OptimizationStatus",
+    "SearchSpace",
+    "GridSearchOptimizer",
+    "GridSearchConfig",
+    "GeneticOptimizer",
+    "GeneticConfig",
+    "BayesianOptimizer",
+    "BayesianConfig",
+    "WalkForwardValidator",
+    "WalkForwardResult",
+    "FoldResult",
+    "OverfitLevel",
     # 프리셋
     "PRESET_CONSERVATIVE",
     "PRESET_AGGRESSIVE",

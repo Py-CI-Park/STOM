@@ -356,6 +356,11 @@ def show_backscheduler(ui):
     ui.dialog_scheduler.show() if not ui.dialog_scheduler.isVisible() else ui.dialog_scheduler.close()
 
 
+def show_icos(ui):
+    """ICOS (반복적 조건식 개선 시스템) 다이얼로그 표시/숨김."""
+    ui.dialog_icos.show() if not ui.dialog_icos.isVisible() else ui.dialog_icos.close()
+
+
 def show_kimp(ui):
     if not ui.dialog_kimp.isVisible():
         ui.dialog_kimp.show()
