@@ -1,20 +1,15 @@
 """
-ICOS (반복적 조건식 개선 시스템) 버튼 클릭 핸들러.
+ICOS & 분석 설정 버튼 클릭 핸들러.
 
-Iterative Condition Optimization System Button Click Handlers.
+백테스팅 결과 분석 및 ICOS 반복 최적화 설정 다이얼로그의 버튼 이벤트를 처리합니다.
 
-ICOS 설정 다이얼로그의 버튼 이벤트를 처리합니다.
-
-개선된 워크플로우:
-1. Alt+I로 ICOS 다이얼로그 열기
-2. "ICOS 활성화" 체크박스 활성화
-3. 필요한 설정 조정
-4. 백테스트 스케줄러에서 조건식 선택
-5. 백테스트 버튼 클릭 → ICOS 모드로 실행
+새로운 구조:
+- 백테스팅 결과 분석: Phase A(필터), ML, Phase C(세그먼트) 개별 설정
+- ICOS 반복 최적화: 미구현 상태 (향후 개발)
 
 작성일: 2026-01-12
 수정일: 2026-01-13
-브랜치: feature/iterative-condition-optimizer
+브랜치: feature/enhanced-buy-condition-generator
 """
 
 import json
@@ -24,30 +19,64 @@ from PyQt5.QtWidgets import QMessageBox
 from utility.setting import ui_num
 
 
-# ICOS 기본값 상수
+# ============================================================================
+# 기본값 상수
+# ============================================================================
+
+# 백테스팅 결과 분석 기본값
+ANALYSIS_DEFAULTS = {
+    'enabled': True,
+
+    # Phase A: 필터 분석
+    'filter_analysis': {
+        'filter_effects': True,           # 필터 효과 분석
+        'optimal_thresholds': True,       # 최적 임계값 탐색
+        'filter_combinations': True,      # 필터 조합 분석
+        'filter_stability': True,         # 필터 안정성 검증
+        'generate_code': True,            # 필터 조건식 생성
+    },
+
+    # ML 분석
+    'ml_analysis': {
+        'risk_prediction': True,          # ML 위험도 예측
+        'feature_importance': True,       # ML 특성 중요도
+        'mode': 'train',                  # 'train' or 'test'
+    },
+
+    # Phase C: 세그먼트 분석
+    'segment_analysis': {
+        'enabled': True,                  # 세그먼트 분석 활성화
+        'optuna': True,                   # Optuna 최적화
+        'template_compare': True,         # 템플릿 비교
+        'auto_save': True,                # 분석 결과 자동 저장
+    },
+
+    # 알림 설정
+    'notification': {
+        'level': 'detailed',              # 'none', 'summary', 'detailed'
+    },
+}
+
+# ICOS 반복 최적화 기본값 (미구현 - 설정값만 저장)
 ICOS_DEFAULTS = {
-    'max_iterations': '5',
-    'convergence_threshold': '5',
-    'optimization_metric': 0,  # 수익금
-    'max_filters_per_iteration': '3',
-    'min_samples': '30',
-    'use_segment_analysis': True,
-    'optimization_method': 0,  # 그리드서치
-    'optimization_trials': '100',
-    'use_walk_forward': False,
-    'walk_forward_folds': '5',
-    'save_iterations': True,
-    'auto_save_final': True,
-    'verbose': False,
+    'enabled': False,
+    'max_iterations': 5,
+    'convergence_threshold': 5,           # %
+    'optimization_metric': 0,             # 0=수익금
+    'optimization_method': 0,             # 0=그리드서치
 }
 
 
+# ============================================================================
+# 버튼 클릭 핸들러
+# ============================================================================
+
 def icos_button_clicked_01(ui):
-    """ICOS 시작 버튼 - 비활성화됨 (새 워크플로우 안내).
+    """ICOS 시작 버튼 - 더 이상 사용 안함.
 
     이 함수는 더 이상 사용되지 않습니다.
-    새 워크플로우에서는 ICOS 활성화 체크박스를 사용하고,
-    백테스트 버튼으로 ICOS 모드를 실행합니다.
+    새 워크플로우에서는 분석 설정을 먼저 지정하고,
+    백테스트 버튼으로 실행합니다.
 
     Args:
         ui: 메인 UI 클래스
@@ -55,20 +84,21 @@ def icos_button_clicked_01(ui):
     # 새 워크플로우 안내
     QMessageBox.information(
         ui.dialog_icos,
-        'ICOS 사용법',
-        '새로운 ICOS 워크플로우:\n\n'
-        '1. "ICOS 활성화" 체크박스를 활성화하세요.\n'
-        '2. 백테스트 스케줄러에서 조건식을 선택하세요.\n'
-        '3. 백테스트 버튼을 클릭하면 ICOS 모드로 실행됩니다.\n\n'
-        'ICOS가 활성화된 상태에서 백테스트를 실행하면\n'
-        '자동으로 반복적 조건식 개선이 적용됩니다.'
+        '사용 안내',
+        '새로운 백테스팅 분석 워크플로우:\n\n'
+        '1. "분석 활성화" 체크박스로 분석 ON/OFF\n'
+        '2. 원하는 분석 옵션을 선택하세요.\n'
+        '3. 백테스트 스케줄러에서 조건식을 선택\n'
+        '4. 백테스트 버튼 클릭으로 실행\n\n'
+        '분석 비활성화 시: 기본 이미지 2개만 전송\n'
+        '분석 활성화 시: 상세 분석 결과 전송'
     )
 
 
 def icos_button_clicked_02(ui):
     """ICOS 중지 버튼 클릭 핸들러.
 
-    실행 중인 ICOS 프로세스를 중지합니다.
+    실행 중인 ICOS 프로세스를 중지합니다. (미구현 상태)
 
     Args:
         ui: 메인 UI 클래스
@@ -78,6 +108,7 @@ def icos_button_clicked_02(ui):
             ui.dialog_icos,
             '알림',
             'ICOS가 실행 중이지 않습니다.\n'
+            '(ICOS 반복 최적화는 아직 미구현 상태입니다.)'
         )
         return
 
@@ -86,7 +117,7 @@ def icos_button_clicked_02(ui):
         QMessageBox.information(
             ui.dialog_icos,
             '알림',
-            'ICOS가 이미 종료되었습니다.\n'
+            'ICOS가 이미 종료되었습니다.'
         )
         return
 
@@ -94,7 +125,7 @@ def icos_button_clicked_02(ui):
     reply = QMessageBox.question(
         ui.dialog_icos,
         'ICOS 중지',
-        'ICOS 실행을 중지하시겠습니까?\n진행 중인 최적화가 취소됩니다.\n',
+        'ICOS 실행을 중지하시겠습니까?\n진행 중인 최적화가 취소됩니다.',
         QMessageBox.Yes | QMessageBox.No,
         QMessageBox.No
     )
@@ -107,48 +138,62 @@ def icos_button_clicked_02(ui):
                 ui.proc_icos.kill()
             ui.proc_icos = None
 
-            ui.icos_textEditxxx_01.append('<font color="#ffa500">ICOS가 사용자에 의해 중지되었습니다.</font>')
+            ui.icos_textEditxxx_01.append(
+                '<font color="#ffa500">ICOS가 사용자에 의해 중지되었습니다.</font>'
+            )
             ui.windowQ.put((ui_num['백테스트'], '<font color=#ffa500>ICOS 중지됨</font>'))
 
         except Exception as e:
             QMessageBox.critical(
                 ui.dialog_icos,
                 '오류',
-                f'ICOS 중지 실패: {str(e)}\n'
+                f'ICOS 중지 실패: {str(e)}'
             )
 
 
 def icos_button_clicked_03(ui):
     """설정 저장 버튼 클릭 핸들러.
 
-    현재 다이얼로그 설정을 파일로 저장합니다.
+    현재 다이얼로그 설정(Analysis + ICOS)을 파일로 저장합니다.
 
     Args:
         ui: 메인 UI 클래스
     """
     try:
-        config_dict = _collect_icos_config(ui)
-        config_dict['_saved_at'] = str(Path.cwd())
+        # 분석 설정 수집
+        analysis_config = _collect_analysis_config(ui)
+
+        # ICOS 설정 수집
+        icos_config = _collect_icos_config(ui)
+
+        # 통합 설정
+        config_dict = {
+            'analysis': analysis_config,
+            'icos': icos_config,
+            '_saved_at': str(Path.cwd()),
+        }
 
         # 설정 파일 저장
-        save_path = Path('./_database/icos_config.json')
+        save_path = Path('./_database/icos_analysis_config.json')
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(save_path, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
 
-        ui.icos_textEditxxx_01.append(f'<font color="#7cfc00">설정 저장 완료: {save_path}</font>')
+        ui.icos_textEditxxx_01.append(
+            f'<font color="#7cfc00">설정 저장 완료: {save_path}</font>'
+        )
         QMessageBox.information(
             ui.dialog_icos,
             '저장 완료',
-            f'ICOS 설정이 저장되었습니다.\n경로: {save_path}\n'
+            f'분석 및 ICOS 설정이 저장되었습니다.\n경로: {save_path}'
         )
 
     except Exception as e:
         QMessageBox.critical(
             ui.dialog_icos,
             '저장 오류',
-            f'설정 저장 실패: {str(e)}\n'
+            f'설정 저장 실패: {str(e)}'
         )
 
 
@@ -160,34 +205,54 @@ def icos_button_clicked_04(ui):
     Args:
         ui: 메인 UI 클래스
     """
-    load_path = Path('./_database/icos_config.json')
+    # 새 경로와 기존 경로 모두 확인
+    load_paths = [
+        Path('./_database/icos_analysis_config.json'),  # 새 파일
+        Path('./_database/icos_config.json'),           # 기존 파일
+    ]
 
-    if not load_path.exists():
+    loaded_path = None
+    for path in load_paths:
+        if path.exists():
+            loaded_path = path
+            break
+
+    if loaded_path is None:
         QMessageBox.warning(
             ui.dialog_icos,
             '로딩 오류',
-            '저장된 설정 파일이 없습니다.\n먼저 설정을 저장하세요.\n'
+            '저장된 설정 파일이 없습니다.\n먼저 설정을 저장하세요.'
         )
         return
 
     try:
-        with open(load_path, 'r', encoding='utf-8') as f:
+        with open(loaded_path, 'r', encoding='utf-8') as f:
             config_dict = json.load(f)
 
-        _apply_icos_config(ui, config_dict)
+        # 새 형식인지 확인
+        if 'analysis' in config_dict:
+            _apply_analysis_config(ui, config_dict.get('analysis', {}))
+            _apply_icos_config(ui, config_dict.get('icos', {}))
+        else:
+            # 기존 형식 (ICOS만)
+            _apply_icos_config(ui, config_dict)
+            # Analysis는 기본값 적용
+            _apply_analysis_config(ui, ANALYSIS_DEFAULTS)
 
-        ui.icos_textEditxxx_01.append(f'<font color="#7cfc00">설정 로딩 완료: {load_path}</font>')
+        ui.icos_textEditxxx_01.append(
+            f'<font color="#7cfc00">설정 로딩 완료: {loaded_path}</font>'
+        )
         QMessageBox.information(
             ui.dialog_icos,
             '로딩 완료',
-            'ICOS 설정이 로딩되었습니다.\n'
+            '설정이 로딩되었습니다.'
         )
 
     except Exception as e:
         QMessageBox.critical(
             ui.dialog_icos,
             '로딩 오류',
-            f'설정 로딩 실패: {str(e)}\n'
+            f'설정 로딩 실패: {str(e)}'
         )
 
 
@@ -202,18 +267,139 @@ def icos_button_clicked_05(ui):
     reply = QMessageBox.question(
         ui.dialog_icos,
         '기본값 복원',
-        '모든 설정을 기본값으로 복원하시겠습니까?\n',
+        '모든 설정을 기본값으로 복원하시겠습니까?',
         QMessageBox.Yes | QMessageBox.No,
         QMessageBox.No
     )
 
     if reply == QMessageBox.Yes:
+        _apply_analysis_config(ui, ANALYSIS_DEFAULTS)
         _apply_icos_config(ui, ICOS_DEFAULTS)
-        ui.icos_textEditxxx_01.append('<font color="#7cfc00">설정이 기본값으로 복원되었습니다.</font>')
+        ui.icos_textEditxxx_01.append(
+            '<font color="#7cfc00">모든 설정이 기본값으로 복원되었습니다.</font>'
+        )
 
 
 # ============================================================================
-# 헬퍼 함수들
+# Analysis 설정 헬퍼 함수
+# ============================================================================
+
+def _collect_analysis_config(ui) -> dict:
+    """다이얼로그에서 분석 설정값 수집.
+
+    Args:
+        ui: 메인 UI 클래스
+
+    Returns:
+        분석 설정값 딕셔너리
+    """
+    # ML 모드 매핑
+    ml_mode_map = {0: 'train', 1: 'test'}
+
+    # 알림 레벨 매핑
+    notification_map = {0: 'detailed', 1: 'summary', 2: 'none'}
+
+    return {
+        'enabled': ui.analysis_checkBoxxx_00.isChecked(),
+
+        # Phase A: 필터 분석
+        'filter_analysis': {
+            'filter_effects': ui.analysis_checkBoxxx_01.isChecked(),
+            'optimal_thresholds': ui.analysis_checkBoxxx_02.isChecked(),
+            'filter_combinations': ui.analysis_checkBoxxx_03.isChecked(),
+            'filter_stability': ui.analysis_checkBoxxx_04.isChecked(),
+            'generate_code': ui.analysis_checkBoxxx_05.isChecked(),
+        },
+
+        # ML 분석
+        'ml_analysis': {
+            'risk_prediction': ui.analysis_checkBoxxx_06.isChecked(),
+            'feature_importance': ui.analysis_checkBoxxx_07.isChecked(),
+            'mode': ml_mode_map.get(ui.analysis_comboBoxxx_01.currentIndex(), 'train'),
+        },
+
+        # Phase C: 세그먼트 분석
+        'segment_analysis': {
+            'enabled': ui.analysis_checkBoxxx_08.isChecked(),
+            'optuna': ui.analysis_checkBoxxx_09.isChecked(),
+            'template_compare': ui.analysis_checkBoxxx_10.isChecked(),
+            'auto_save': ui.analysis_checkBoxxx_11.isChecked(),
+        },
+
+        # 알림 설정
+        'notification': {
+            'level': notification_map.get(ui.analysis_comboBoxxx_02.currentIndex(), 'detailed'),
+        },
+    }
+
+
+def _apply_analysis_config(ui, config: dict):
+    """분석 설정값을 다이얼로그에 적용.
+
+    Args:
+        ui: 메인 UI 클래스
+        config: 분석 설정값 딕셔너리
+    """
+    # 기본값과 병합
+    merged = {**ANALYSIS_DEFAULTS}
+    if config:
+        merged.update(config)
+        if 'filter_analysis' in config:
+            merged['filter_analysis'] = {
+                **ANALYSIS_DEFAULTS['filter_analysis'],
+                **config.get('filter_analysis', {})
+            }
+        if 'ml_analysis' in config:
+            merged['ml_analysis'] = {
+                **ANALYSIS_DEFAULTS['ml_analysis'],
+                **config.get('ml_analysis', {})
+            }
+        if 'segment_analysis' in config:
+            merged['segment_analysis'] = {
+                **ANALYSIS_DEFAULTS['segment_analysis'],
+                **config.get('segment_analysis', {})
+            }
+        if 'notification' in config:
+            merged['notification'] = {
+                **ANALYSIS_DEFAULTS['notification'],
+                **config.get('notification', {})
+            }
+
+    # 메인 활성화
+    ui.analysis_checkBoxxx_00.setChecked(merged.get('enabled', True))
+
+    # Phase A: 필터 분석
+    fa = merged.get('filter_analysis', ANALYSIS_DEFAULTS['filter_analysis'])
+    ui.analysis_checkBoxxx_01.setChecked(fa.get('filter_effects', True))
+    ui.analysis_checkBoxxx_02.setChecked(fa.get('optimal_thresholds', True))
+    ui.analysis_checkBoxxx_03.setChecked(fa.get('filter_combinations', True))
+    ui.analysis_checkBoxxx_04.setChecked(fa.get('filter_stability', True))
+    ui.analysis_checkBoxxx_05.setChecked(fa.get('generate_code', True))
+
+    # ML 분석
+    ml = merged.get('ml_analysis', ANALYSIS_DEFAULTS['ml_analysis'])
+    ui.analysis_checkBoxxx_06.setChecked(ml.get('risk_prediction', True))
+    ui.analysis_checkBoxxx_07.setChecked(ml.get('feature_importance', True))
+    ml_mode = ml.get('mode', 'train')
+    ml_mode_idx = {'train': 0, 'test': 1}.get(ml_mode, 0)
+    ui.analysis_comboBoxxx_01.setCurrentIndex(ml_mode_idx)
+
+    # Phase C: 세그먼트 분석
+    sg = merged.get('segment_analysis', ANALYSIS_DEFAULTS['segment_analysis'])
+    ui.analysis_checkBoxxx_08.setChecked(sg.get('enabled', True))
+    ui.analysis_checkBoxxx_09.setChecked(sg.get('optuna', True))
+    ui.analysis_checkBoxxx_10.setChecked(sg.get('template_compare', True))
+    ui.analysis_checkBoxxx_11.setChecked(sg.get('auto_save', True))
+
+    # 알림 설정
+    nt = merged.get('notification', ANALYSIS_DEFAULTS['notification'])
+    level = nt.get('level', 'detailed')
+    level_idx = {'detailed': 0, 'summary': 1, 'none': 2}.get(level, 0)
+    ui.analysis_comboBoxxx_02.setCurrentIndex(level_idx)
+
+
+# ============================================================================
+# ICOS 설정 헬퍼 함수 (축소된 형태)
 # ============================================================================
 
 def _collect_icos_config(ui) -> dict:
@@ -223,52 +409,21 @@ def _collect_icos_config(ui) -> dict:
         ui: 메인 UI 클래스
 
     Returns:
-        설정값 딕셔너리
-
-    Raises:
-        ValueError: 설정값이 유효하지 않은 경우
+        ICOS 설정값 딕셔너리
     """
     try:
         max_iterations = int(ui.icos_lineEdittt_01.text())
         if max_iterations < 1 or max_iterations > 20:
-            raise ValueError('최대 반복 횟수는 1-20 사이여야 합니다.')
+            max_iterations = 5
     except (ValueError, TypeError):
-        raise ValueError('최대 반복 횟수는 유효한 정수여야 합니다.')
+        max_iterations = 5
 
     try:
-        convergence_threshold = float(ui.icos_lineEdittt_02.text())
-        if convergence_threshold < 0 or convergence_threshold > 100:
-            raise ValueError('수렴 기준값은 0-100 사이여야 합니다.')
+        convergence = float(ui.icos_lineEdittt_02.text())
+        if convergence < 0 or convergence > 100:
+            convergence = 5
     except (ValueError, TypeError):
-        raise ValueError('수렴 기준값은 유효한 숫자여야 합니다.')
-
-    try:
-        max_filters = int(ui.icos_lineEdittt_03.text())
-        if max_filters < 1 or max_filters > 10:
-            raise ValueError('최대 필터 수는 1-10 사이여야 합니다.')
-    except (ValueError, TypeError):
-        raise ValueError('최대 필터 수는 유효한 정수여야 합니다.')
-
-    try:
-        min_samples = int(ui.icos_lineEdittt_04.text())
-        if min_samples < 10:
-            raise ValueError('최소 샘플 수는 10 이상이어야 합니다.')
-    except (ValueError, TypeError):
-        raise ValueError('최소 샘플 수는 유효한 정수여야 합니다.')
-
-    try:
-        n_trials = int(ui.icos_lineEdittt_05.text())
-        if n_trials < 10 or n_trials > 1000:
-            raise ValueError('최적화 시도 횟수는 10-1000 사이여야 합니다.')
-    except (ValueError, TypeError):
-        raise ValueError('최적화 시도 횟수는 유효한 정수여야 합니다.')
-
-    try:
-        wf_folds = int(ui.icos_lineEdittt_06.text())
-        if wf_folds < 2 or wf_folds > 20:
-            raise ValueError('W-F 폴드 수는 2-20 사이여야 합니다.')
-    except (ValueError, TypeError):
-        raise ValueError('W-F 폴드 수는 유효한 정수여야 합니다.')
+        convergence = 5
 
     # 최적화 메트릭 매핑
     metric_map = {
@@ -288,103 +443,89 @@ def _collect_icos_config(ui) -> dict:
     }
 
     return {
-        'enabled': True,
+        'enabled': ui.icos_checkBoxxx_00.isChecked(),
         'max_iterations': max_iterations,
-        'convergence': {
-            'threshold': convergence_threshold / 100.0,  # % to ratio
-        },
-        'filter_generation': {
-            'max_filters_per_iteration': max_filters,
-            'min_samples': min_samples,
-            'use_segment_analysis': ui.icos_checkBoxxx_01.isChecked(),
-        },
-        'optimization': {
-            'enabled': True,
-            'method': method_map.get(ui.icos_comboBoxxx_02.currentIndex(), 'grid_search'),
-            'n_trials': n_trials,
-            'metric': metric_map.get(ui.icos_comboBoxxx_01.currentIndex(), 'profit'),
-        },
-        'validation': {
-            'use_walk_forward': ui.icos_checkBoxxx_02.isChecked(),
-            'n_folds': wf_folds,
-        },
-        'storage': {
-            'save_iterations': ui.icos_checkBoxxx_03.isChecked(),
-            'save_final_condition': ui.icos_checkBoxxx_04.isChecked(),
-        },
-        'verbose': ui.icos_checkBoxxx_05.isChecked(),
+        'convergence_threshold': convergence,
+        'optimization_metric': metric_map.get(
+            ui.icos_comboBoxxx_01.currentIndex(), 'profit'
+        ),
+        'optimization_method': method_map.get(
+            ui.icos_comboBoxxx_02.currentIndex(), 'grid_search'
+        ),
     }
 
 
 def _apply_icos_config(ui, config: dict):
-    """설정값을 다이얼로그에 적용.
+    """ICOS 설정값을 다이얼로그에 적용.
 
     Args:
         ui: 메인 UI 클래스
-        config: 설정값 딕셔너리
+        config: ICOS 설정값 딕셔너리
     """
     # 기본값과 병합
-    merged = {**ICOS_DEFAULTS, **config}
+    merged = {**ICOS_DEFAULTS}
+    if config:
+        merged.update(config)
 
-    # 기본 설정
-    ui.icos_lineEdittt_01.setText(str(merged.get('max_iterations', ICOS_DEFAULTS['max_iterations'])))
+    # ICOS 활성화
+    ui.icos_checkBoxxx_00.setChecked(merged.get('enabled', False))
 
-    # 수렴 설정
-    if 'convergence' in merged and isinstance(merged['convergence'], dict):
-        threshold = merged['convergence'].get('threshold', 0.05) * 100
+    # 최대 반복 횟수
+    ui.icos_lineEdittt_01.setText(str(merged.get('max_iterations', 5)))
+
+    # 수렴 기준값
+    ui.icos_lineEdittt_02.setText(str(merged.get('convergence_threshold', 5)))
+
+    # 최적화 기준
+    metric = merged.get('optimization_metric', 'profit')
+    if isinstance(metric, int):
+        metric_idx = metric
     else:
-        threshold = float(merged.get('convergence_threshold', ICOS_DEFAULTS['convergence_threshold']))
-    ui.icos_lineEdittt_02.setText(str(int(threshold)))
+        metric_idx = {
+            'profit': 0, 'win_rate': 1, 'profit_factor': 2,
+            'sharpe_ratio': 3, 'mdd': 4, 'composite': 5
+        }.get(metric, 0)
+    ui.icos_comboBoxxx_01.setCurrentIndex(metric_idx)
 
-    # 최적화 메트릭
-    ui.icos_comboBoxxx_01.setCurrentIndex(merged.get('optimization_metric', 0))
-
-    # 필터 생성 설정
-    if 'filter_generation' in merged and isinstance(merged['filter_generation'], dict):
-        fg = merged['filter_generation']
-        ui.icos_lineEdittt_03.setText(str(fg.get('max_filters_per_iteration', 3)))
-        ui.icos_lineEdittt_04.setText(str(fg.get('min_samples', 30)))
-        ui.icos_checkBoxxx_01.setChecked(fg.get('use_segment_analysis', True))
+    # 최적화 방법
+    method = merged.get('optimization_method', 'grid_search')
+    if isinstance(method, int):
+        method_idx = method
     else:
-        ui.icos_lineEdittt_03.setText(str(merged.get('max_filters_per_iteration', ICOS_DEFAULTS['max_filters_per_iteration'])))
-        ui.icos_lineEdittt_04.setText(str(merged.get('min_samples', ICOS_DEFAULTS['min_samples'])))
-        ui.icos_checkBoxxx_01.setChecked(merged.get('use_segment_analysis', ICOS_DEFAULTS['use_segment_analysis']))
+        method_idx = {
+            'grid_search': 0, 'genetic': 1, 'bayesian': 2
+        }.get(method, 0)
+    ui.icos_comboBoxxx_02.setCurrentIndex(method_idx)
 
-    # 최적화 알고리즘 설정
-    if 'optimization' in merged and isinstance(merged['optimization'], dict):
-        opt = merged['optimization']
-        method = opt.get('method', 'grid_search')
-        method_idx = {'grid_search': 0, 'genetic': 1, 'bayesian': 2}.get(method, 0)
-        ui.icos_comboBoxxx_02.setCurrentIndex(method_idx)
-        ui.icos_lineEdittt_05.setText(str(opt.get('n_trials', 100)))
 
-        metric = opt.get('metric', 'profit')
-        metric_idx = {'profit': 0, 'win_rate': 1, 'profit_factor': 2, 'sharpe_ratio': 3, 'mdd': 4, 'composite': 5}.get(metric, 0)
-        ui.icos_comboBoxxx_01.setCurrentIndex(metric_idx)
-    else:
-        ui.icos_comboBoxxx_02.setCurrentIndex(merged.get('optimization_method', ICOS_DEFAULTS['optimization_method']))
-        ui.icos_lineEdittt_05.setText(str(merged.get('optimization_trials', ICOS_DEFAULTS['optimization_trials'])))
+# ============================================================================
+# 백테스트 연동 헬퍼 함수
+# ============================================================================
 
-    # 검증 설정
-    if 'validation' in merged and isinstance(merged['validation'], dict):
-        val = merged['validation']
-        ui.icos_checkBoxxx_02.setChecked(val.get('use_walk_forward', False))
-        ui.icos_lineEdittt_06.setText(str(val.get('n_folds', 5)))
-    else:
-        ui.icos_checkBoxxx_02.setChecked(merged.get('use_walk_forward', ICOS_DEFAULTS['use_walk_forward']))
-        ui.icos_lineEdittt_06.setText(str(merged.get('walk_forward_folds', ICOS_DEFAULTS['walk_forward_folds'])))
+def get_analysis_config(ui) -> dict:
+    """현재 분석 설정을 반환하는 외부 호출용 함수.
 
-    # 저장 설정
-    if 'storage' in merged and isinstance(merged['storage'], dict):
-        st = merged['storage']
-        ui.icos_checkBoxxx_03.setChecked(st.get('save_iterations', True))
-        ui.icos_checkBoxxx_04.setChecked(st.get('save_final_condition', True))
-    else:
-        ui.icos_checkBoxxx_03.setChecked(merged.get('save_iterations', ICOS_DEFAULTS['save_iterations']))
-        ui.icos_checkBoxxx_04.setChecked(merged.get('auto_save_final', ICOS_DEFAULTS['auto_save_final']))
+    백테스트 실행 시 이 함수를 호출하여 설정값을 가져옵니다.
 
-    # 상세 로그
-    ui.icos_checkBoxxx_05.setChecked(merged.get('verbose', ICOS_DEFAULTS['verbose']))
+    Args:
+        ui: 메인 UI 클래스
+
+    Returns:
+        분석 설정 딕셔너리
+    """
+    return _collect_analysis_config(ui)
+
+
+def get_icos_config(ui) -> dict:
+    """현재 ICOS 설정을 반환하는 외부 호출용 함수.
+
+    Args:
+        ui: 메인 UI 클래스
+
+    Returns:
+        ICOS 설정 딕셔너리
+    """
+    return _collect_icos_config(ui)
 
 
 def _get_current_buystg(ui) -> str:
@@ -442,10 +583,12 @@ def _collect_backtest_params(ui) -> dict:
     return {}
 
 
-def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str, sellstg: str, backtest_params: dict):
+def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
+                      sellstg: str, backtest_params: dict):
     """ICOS 백그라운드 프로세스 실행 함수.
 
     별도 프로세스에서 실행되어 ICOS 최적화를 수행합니다.
+    (미구현 상태 - 향후 개발)
 
     Args:
         windowQ: 윈도우 메시지 큐
@@ -458,7 +601,8 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str, sellstg: s
     from backtester.iterative_optimizer import IterativeOptimizer, IterativeConfig
 
     try:
-        windowQ.put((ui_num['백테스트'], '<font color=#45cdf7>[ICOS] 초기화 중...</font>'))
+        windowQ.put((ui_num['백테스트'],
+            '<font color=#45cdf7>[ICOS] 초기화 중...</font>'))
 
         config = IterativeConfig.from_dict(config_dict)
         optimizer = IterativeOptimizer(
@@ -467,7 +611,8 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str, sellstg: s
             backtest_params=backtest_params
         )
 
-        windowQ.put((ui_num['백테스트'], f'<font color=#7cfc00>[ICOS] 최적화 시작 (최대 {config.max_iterations}회 반복)</font>'))
+        windowQ.put((ui_num['백테스트'],
+            f'<font color=#7cfc00>[ICOS] 최적화 시작 (최대 {config.max_iterations}회 반복)</font>'))
 
         result = optimizer.run(buystg, sellstg, backtest_params)
 
@@ -484,4 +629,5 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str, sellstg: s
             ))
 
     except Exception as e:
-        windowQ.put((ui_num['백테스트'], f'<font color=#ff0000>[ICOS] 오류 발생: {str(e)}</font>'))
+        windowQ.put((ui_num['백테스트'],
+            f'<font color=#ff0000>[ICOS] 오류 발생: {str(e)}</font>'))

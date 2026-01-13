@@ -1,7 +1,9 @@
+import json
 import math
 import random
 import re
 from datetime import datetime
+from pathlib import Path
 from traceback import print_exc
 import numpy as np
 import pandas as pd
@@ -21,6 +23,63 @@ try:
     ENHANCED_ANALYSIS_AVAILABLE = True
 except ImportError:
     ENHANCED_ANALYSIS_AVAILABLE = False
+
+
+# ============================================================================
+# 분석 설정 로드 (Alt+I 다이얼로그에서 설정한 값)
+# ============================================================================
+
+def _load_analysis_config() -> dict:
+    """Alt+I 다이얼로그에서 저장한 분석 설정을 로드합니다.
+
+    설정 파일이 없거나 읽기 실패 시 기본값(활성화)을 반환합니다.
+
+    Returns:
+        분석 설정 딕셔너리
+    """
+    default_config = {
+        'enabled': True,
+        'filter_analysis': {
+            'filter_effects': True,
+            'optimal_thresholds': True,
+            'filter_combinations': True,
+            'filter_stability': True,
+            'generate_code': True,
+        },
+        'ml_analysis': {
+            'risk_prediction': True,
+            'feature_importance': True,
+            'mode': 'train',
+        },
+        'segment_analysis': {
+            'enabled': True,
+            'optuna': True,
+            'template_compare': True,
+            'auto_save': True,
+        },
+        'notification': {
+            'level': 'detailed',
+        },
+    }
+
+    config_paths = [
+        Path('./_database/icos_analysis_config.json'),
+        Path('_database/icos_analysis_config.json'),
+    ]
+
+    for config_path in config_paths:
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                # 새 형식 (analysis 키가 있는 경우)
+                if 'analysis' in data:
+                    return data['analysis']
+                return default_config
+            except Exception:
+                pass
+
+    return default_config
 
 
 def _parse_number(text):
@@ -1443,9 +1502,21 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
     )
 
     # [2025-12-10] 강화된 분석 실행 (14개 ML/통계 분석 차트)
+    # [2026-01-13] Alt+I 다이얼로그 설정 기반 분석 활성화/비활성화
     enhanced_result = None
     enhanced_error = None
     enhanced_available = ENHANCED_ANALYSIS_AVAILABLE
+
+    # 분석 설정 로드 (Alt+I 다이얼로그에서 저장한 설정)
+    analysis_config = _load_analysis_config()
+    analysis_enabled = analysis_config.get('enabled', True)
+
+    if not analysis_enabled:
+        # 분석 비활성화 시 메시지 전송 후 건너뛰기
+        if teleQ is not None:
+            teleQ.put("백테스팅 결과 분석: 비활성화됨 (Alt+I 설정에서 활성화 가능)")
+        enhanced_available = False
+
     if enhanced_available:
         try:
             from backtester.back_analysis_enhanced import RunEnhancedAnalysis
@@ -1455,16 +1526,29 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
 
     if enhanced_available:
         try:
-            try:
-                from backtester.back_static import (
-                    SEGMENT_ANALYSIS_MODE,
-                    SEGMENT_ANALYSIS_OPTUNA,
-                    SEGMENT_ANALYSIS_TEMPLATE_COMPARE,
+            # 설정에서 세그먼트 분석 옵션 가져오기
+            segment_config = analysis_config.get('segment_analysis', {})
+            segment_enabled = segment_config.get('enabled', True)
+            SEGMENT_ANALYSIS_MODE = 'phase2+3' if segment_enabled else 'off'
+            SEGMENT_ANALYSIS_OPTUNA = segment_config.get('optuna', True)
+            SEGMENT_ANALYSIS_TEMPLATE_COMPARE = segment_config.get('template_compare', True)
+
+            # ML 분석 설정
+            ml_config = analysis_config.get('ml_analysis', {})
+            ml_train_mode_from_config = ml_config.get('mode', 'train')
+
+            # 알림 레벨 확인
+            notification_config = analysis_config.get('notification', {})
+            notification_level = notification_config.get('level', 'detailed')
+
+            # 상세 알림 시 설정 정보 전송
+            if teleQ is not None and notification_level == 'detailed':
+                teleQ.put(
+                    f"분석 설정 (Alt+I):\n"
+                    f"- 세그먼트 분석: {'활성화' if segment_enabled else '비활성화'}\n"
+                    f"- Optuna 최적화: {'활성화' if SEGMENT_ANALYSIS_OPTUNA else '비활성화'}\n"
+                    f"- ML 모드: {ml_train_mode_from_config}"
                 )
-            except Exception:
-                SEGMENT_ANALYSIS_MODE = 'phase2+3'
-                SEGMENT_ANALYSIS_OPTUNA = False
-                SEGMENT_ANALYSIS_TEMPLATE_COMPARE = True
 
             enhanced_result = RunEnhancedAnalysis(
                 df_tsg,
@@ -1475,7 +1559,7 @@ def PltShow(gubun, teleQ, df_tsg, df_bct, dict_cn, seed, mdd, startday, endday, 
                 buystg_name=buystg_name,
                 sellstg_name=sellstg_name,
                 backname=backname,
-                ml_train_mode=ml_train_mode,
+                ml_train_mode=ml_train_mode_from_config if ml_train_mode == 'train' else ml_train_mode,
                 send_condition_summary=False,
                 segment_analysis_mode=SEGMENT_ANALYSIS_MODE,
                 segment_output_dir=str(output_dir),
