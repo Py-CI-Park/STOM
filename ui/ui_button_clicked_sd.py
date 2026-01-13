@@ -13,6 +13,113 @@ from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from ui.set_text import famous_saying
 from utility.setting import DB_STRATEGY, ui_num
 from utility.static import qtest_qwait
+from ui.ui_button_clicked_icos import (
+    _collect_icos_config,
+    _run_icos_process
+)
+
+
+def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime):
+    """ICOS 모드 백테스트 실행.
+
+    ICOS가 활성화된 상태에서 백테스트 버튼 클릭 시 호출됩니다.
+    스케줄러의 설정을 사용하여 ICOS 반복 최적화를 실행합니다.
+
+    Args:
+        ui: 메인 UI 클래스
+        bt_gubun: '주식' 또는 '코인'
+        buystg: 매수 조건식
+        sellstg: 매도 조건식
+        startday: 시작일 (YYYYMMDD)
+        endday: 종료일 (YYYYMMDD)
+        starttime: 시작시간 (HHMM)
+        endtime: 종료시간 (HHMM)
+        betting: 베팅금액
+        avgtime: 평균값틱수
+    """
+    # 이미 ICOS가 실행 중인지 확인
+    if hasattr(ui, 'proc_icos') and ui.proc_icos is not None and ui.proc_icos.is_alive():
+        QMessageBox.warning(
+            ui.dialog_scheduler,
+            '알림',
+            'ICOS가 이미 실행 중입니다.\n'
+        )
+        return
+
+    # ICOS 설정값 수집
+    try:
+        config_dict = _collect_icos_config(ui)
+    except ValueError as e:
+        QMessageBox.critical(
+            ui.dialog_scheduler,
+            'ICOS 설정 오류',
+            f'ICOS 설정값 오류: {str(e)}\nAlt+I로 설정을 확인하세요.\n'
+        )
+        return
+
+    # 백테스트 파라미터
+    backtest_params = {
+        'startday': startday,
+        'endday': endday,
+        'starttime': starttime,
+        'endtime': endtime,
+        'betting': betting,
+        'avgtime': avgtime,
+        'gubun': 'S' if bt_gubun == '주식' else ('C' if ui.dict_set['거래소'] == '업비트' else 'CF'),
+        'bt_gubun': bt_gubun,
+    }
+
+    # ICOS 로그 초기화
+    if hasattr(ui, 'icos_textEditxxx_01'):
+        ui.icos_textEditxxx_01.clear()
+        ui.icos_textEditxxx_01.append('<font color="#45cdf7">ICOS 모드 백테스트 시작...</font>')
+        ui.icos_textEditxxx_01.append(f'<font color="#cccccc">조건식: {buystg} / {sellstg}</font>')
+        ui.icos_textEditxxx_01.append(f'<font color="#cccccc">기간: {startday} ~ {endday}</font>')
+        if hasattr(ui, 'icos_progressBar_01'):
+            ui.icos_progressBar_01.setValue(0)
+
+    # 백테 유형 설정
+    for q in ui.back_eques:
+        q.put(('백테유형', 'ICOS'))
+
+    # ICOS 프로세스 시작
+    try:
+        ui.proc_icos = Process(
+            target=_run_icos_process,
+            args=(ui.windowQ, ui.backQ, config_dict, buystg, sellstg, backtest_params)
+        )
+        ui.proc_icos.start()
+
+        # UI 업데이트
+        ui.windowQ.put((ui_num['백테스트'],
+            f'<font color=#45cdf7>[ICOS] 반복적 조건식 개선 시스템 시작 (PID: {ui.proc_icos.pid})</font>'))
+
+        if hasattr(ui, 'icos_textEditxxx_01'):
+            ui.icos_textEditxxx_01.append(
+                f'<font color="#7cfc00">ICOS 프로세스 시작됨 (PID: {ui.proc_icos.pid})</font>')
+
+        # 상태 업데이트
+        if bt_gubun == '주식':
+            ui.svjButtonClicked_07()
+            ui.ss_progressBar_01.setValue(0)
+            ui.ssicon_alert = True
+        else:
+            ui.cvjButtonClicked_07()
+            ui.cs_progressBar_01.setValue(0)
+            ui.csicon_alert = True
+
+        # 스케줄 진행 표시
+        ui.list_progressBarrr[ui.back_scount].setValue(0)
+        ui.back_schedul = True
+
+    except Exception as e:
+        QMessageBox.critical(
+            ui.dialog_scheduler,
+            'ICOS 실행 오류',
+            f'ICOS 시작 실패: {str(e)}\n'
+        )
+        if hasattr(ui, 'icos_textEditxxx_01'):
+            ui.icos_textEditxxx_01.append(f'<font color="#ff0000">오류: {str(e)}</font>')
 
 
 def bebutton_clicked_01(ui):
@@ -120,6 +227,11 @@ def sdbutton_clicked_02(ui):
                     ui.StopScheduler()
                     QMessageBox.critical(ui.dialog_scheduler, '오류 알림',
                                          '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
+                    return
+
+                # ICOS 모드 확인 - 활성화된 경우 ICOS 프로세스로 실행
+                if hasattr(ui, 'icos_enabled') and ui.icos_enabled:
+                    _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime)
                     return
 
                 for q in ui.back_eques:

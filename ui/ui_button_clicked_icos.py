@@ -5,7 +5,15 @@ Iterative Condition Optimization System Button Click Handlers.
 
 ICOS 설정 다이얼로그의 버튼 이벤트를 처리합니다.
 
+개선된 워크플로우:
+1. Alt+I로 ICOS 다이얼로그 열기
+2. "ICOS 활성화" 체크박스 활성화
+3. 필요한 설정 조정
+4. 백테스트 스케줄러에서 조건식 선택
+5. 백테스트 버튼 클릭 → ICOS 모드로 실행
+
 작성일: 2026-01-12
+수정일: 2026-01-13
 브랜치: feature/iterative-condition-optimizer
 """
 
@@ -35,94 +43,26 @@ ICOS_DEFAULTS = {
 
 
 def icos_button_clicked_01(ui):
-    """ICOS 시작 버튼 클릭 핸들러.
+    """ICOS 시작 버튼 - 비활성화됨 (새 워크플로우 안내).
 
-    현재 다이얼로그 설정을 바탕으로 ICOS를 실행합니다.
+    이 함수는 더 이상 사용되지 않습니다.
+    새 워크플로우에서는 ICOS 활성화 체크박스를 사용하고,
+    백테스트 버튼으로 ICOS 모드를 실행합니다.
 
     Args:
         ui: 메인 UI 클래스
     """
-    # 백테스트 엔진 확인
-    if not ui.backtest_engine:
-        QMessageBox.critical(
-            ui.dialog_icos,
-            '오류 알림',
-            '백테스트 엔진이 구동중이지 않습니다.\n먼저 백테엔진을 시작하세요.\n'
-        )
-        return
-
-    # 이미 ICOS가 실행 중인지 확인
-    if hasattr(ui, 'proc_icos') and ui.proc_icos is not None and ui.proc_icos.is_alive():
-        QMessageBox.warning(
-            ui.dialog_icos,
-            '알림',
-            'ICOS가 이미 실행 중입니다.\n'
-        )
-        return
-
-    # 백테스트가 실행 중인지 확인
-    if ui.BacktestProcessAlive():
-        QMessageBox.critical(
-            ui.dialog_icos,
-            '오류 알림',
-            '현재 백테스트가 실행 중입니다.\n중복 실행할 수 없습니다.\n'
-        )
-        return
-
-    # 설정값 수집
-    try:
-        config_dict = _collect_icos_config(ui)
-    except ValueError as e:
-        QMessageBox.critical(
-            ui.dialog_icos,
-            '설정 오류',
-            f'설정값 오류: {str(e)}\n'
-        )
-        return
-
-    # 조건식 확인
-    buystg = _get_current_buystg(ui)
-    sellstg = _get_current_sellstg(ui)
-
-    if not buystg or not sellstg:
-        QMessageBox.critical(
-            ui.dialog_icos,
-            '오류 알림',
-            '매수/매도 조건식이 설정되지 않았습니다.\n스케줄러에서 조건식을 선택하세요.\n'
-        )
-        return
-
-    # ICOS 프로세스 시작
-    ui.icos_textEditxxx_01.clear()
-    ui.icos_textEditxxx_01.append('<font color="#45cdf7">ICOS 시작 중...</font>')
-    ui.icos_progressBar_01.setValue(0)
-
-    # 백테스트 파라미터 수집
-    backtest_params = _collect_backtest_params(ui)
-
-    # ICOS 실행 (백그라운드 프로세스)
-    from backtester.iterative_optimizer import IterativeOptimizer, IterativeConfig
-
-    try:
-        config = IterativeConfig.from_dict(config_dict)
-        config.enabled = True  # 반드시 활성화
-
-        ui.proc_icos = Process(
-            target=_run_icos_process,
-            args=(ui.windowQ, ui.backQ, config.to_dict(), buystg, sellstg, backtest_params)
-        )
-        ui.proc_icos.start()
-
-        ui.icos_textEditxxx_01.append(f'<font color="#7cfc00">ICOS 프로세스 시작됨 (PID: {ui.proc_icos.pid})</font>')
-        ui.windowQ.put((ui_num['백테스트'], '<font color=#45cdf7>ICOS 반복적 조건식 개선 시스템 시작...</font>'))
-
-    except Exception as e:
-        QMessageBox.critical(
-            ui.dialog_icos,
-            '실행 오류',
-            f'ICOS 시작 실패: {str(e)}\n'
-        )
-        ui.icos_textEditxxx_01.append(f'<font color="#ff0000">오류: {str(e)}</font>')
+    # 새 워크플로우 안내
+    QMessageBox.information(
+        ui.dialog_icos,
+        'ICOS 사용법',
+        '새로운 ICOS 워크플로우:\n\n'
+        '1. "ICOS 활성화" 체크박스를 활성화하세요.\n'
+        '2. 백테스트 스케줄러에서 조건식을 선택하세요.\n'
+        '3. 백테스트 버튼을 클릭하면 ICOS 모드로 실행됩니다.\n\n'
+        'ICOS가 활성화된 상태에서 백테스트를 실행하면\n'
+        '자동으로 반복적 조건식 개선이 적용됩니다.'
+    )
 
 
 def icos_button_clicked_02(ui):
