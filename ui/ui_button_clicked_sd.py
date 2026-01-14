@@ -308,6 +308,20 @@ def sdbutton_clicked_02(ui):
 
         if ui.back_scount < 16:
             back_name = ui.list_gcomboBoxxxxx[ui.back_scount].currentText()
+
+            # ICOS 상태 로그 출력 (모든 백테스트 유형에서)
+            icos_enabled = _check_icos_enabled(ui)
+            if icos_enabled:
+                if back_name == '백테스트':
+                    ui.windowQ.put((ui_num['백테스트'],
+                        '<font color=#7cfc00>[ICOS] ICOS 모드 활성화됨 - 반복적 조건식 개선이 실행됩니다.</font>'))
+                else:
+                    ui.windowQ.put((ui_num['백테스트'],
+                        f'<font color=#ffa500>[ICOS] ICOS가 활성화되어 있지만, "{back_name}" 유형은 ICOS와 호환되지 않습니다.</font>'))
+                    ui.windowQ.put((ui_num['백테스트'],
+                        '<font color=#888888>[ICOS] ICOS는 "백테스트" 유형에서만 작동합니다. '
+                        '현재 유형은 기존 방식으로 실행됩니다.</font>'))
+
             if back_name == '백테스트':
                 startday  = ui.list_sdateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
                 endday    = ui.list_edateEdittttt[ui.back_scount].date().toString('yyyyMMdd')
@@ -325,9 +339,7 @@ def sdbutton_clicked_02(ui):
                                          '백테엔진 시작 시 포함되지 않은 평균값틱수를 사용하였습니다.\n현재의 틱수로 백테스팅하려면 백테엔진을 다시 시작하십시오.\n')
                     return
 
-                # ICOS 모드 확인 - 활성화된 경우 ICOS 프로세스로 실행
-                # 다이얼로그가 열리지 않은 경우에도 설정 파일에서 확인
-                icos_enabled = _check_icos_enabled(ui)
+                # ICOS 모드 - 위에서 이미 확인된 icos_enabled 사용
                 if icos_enabled:
                     _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime)
                     return

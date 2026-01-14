@@ -367,11 +367,11 @@ class SetDialogICOS:
 
         # ICOS 안내 라벨
         self.ui.icos_labellllll_00 = QLabel(
-            '* 활성화 시 백테스트 실행 후 조건식 자동 개선\n'
-            '* 수렴 기준 도달 시 자동 종료',
+            '* "백테스트" 유형에서만 작동 (그리드/베이지안/GA/조건최적화 제외)\n'
+            '* 활성화 시 백테스트 실행 후 조건식 자동 개선',
             self.ui.icos_groupBoxxxx_00
         )
-        self.ui.icos_labellllll_00.setStyleSheet('color: #87ceeb;')
+        self.ui.icos_labellllll_00.setStyleSheet('color: #ffa500;')  # 주의 색상
 
         # 상태 표시 라벨
         self.ui.icos_statusLabel = QLabel('상태: 비활성', self.ui.icos_groupBoxxxx_00)
