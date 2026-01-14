@@ -15,6 +15,7 @@ from utility.setting import DB_STRATEGY, ui_num
 from utility.static import qtest_qwait
 from ui.ui_button_clicked_icos import (
     _collect_icos_config,
+    _collect_analysis_config,
     _run_icos_process
 )
 
@@ -46,9 +47,17 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         )
         return
 
-    # ICOS 설정값 수집
+    # ICOS 설정값 수집 (분석 설정 포함)
     try:
-        config_dict = _collect_icos_config(ui)
+        icos_config = _collect_icos_config(ui)
+        analysis_config = _collect_analysis_config(ui)
+
+        # 통합 config_dict 생성
+        # ICOS는 분석 설정과 독립적으로 작동하지만, 필요한 분석 설정을 포함
+        config_dict = {
+            **icos_config,
+            'analysis': analysis_config,  # 분석 설정 포함
+        }
     except ValueError as e:
         QMessageBox.critical(
             ui.dialog_scheduler,
@@ -94,6 +103,13 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         ui.icos_textEditxxx_01.append('<font color="#45cdf7">ICOS 모드 백테스트 시작...</font>')
         ui.icos_textEditxxx_01.append(f'<font color="#cccccc">조건식: {buystg} / {sellstg}</font>')
         ui.icos_textEditxxx_01.append(f'<font color="#cccccc">기간: {startday} ~ {endday}</font>')
+
+        # 분석 설정 상태 표시
+        analysis_status = '활성' if analysis_config.get('enabled', True) else '비활성'
+        ui.icos_textEditxxx_01.append(
+            f'<font color="#888888">분석 기능: {analysis_status} (ICOS와 독립 실행)</font>'
+        )
+
         if hasattr(ui, 'icos_progressBar_01'):
             ui.icos_progressBar_01.setValue(0)
 

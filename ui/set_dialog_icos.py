@@ -5,20 +5,129 @@ ICOS (Iterative Condition Optimization System) 및 백테스팅 결과 분석 �
 
 개선된 구조:
 1. 백테스팅 결과 분석: Phase A(필터 분석), ML 분석, Phase C(세그먼트 분석) 개별 설정
-2. ICOS 반복 최적화: 미구현 상태로 표시 (향후 개발)
+2. ICOS 반복 최적화: 분석과 독립적으로 실행 가능
 
 워크플로우:
 - 분석 비활성화: 기본 백테스트 → 이미지 2개 텔레그램 전송
 - 분석 활성화: 상세 분석 → 단계별 결과 텔레그램 전송
+- ICOS 활성화: 반복적 조건식 개선 → 분석 설정과 독립적으로 실행
 
 작성일: 2026-01-12
-수정일: 2026-01-13
-브랜치: feature/enhanced-buy-condition-generator
+수정일: 2026-01-14
+브랜치: feature/iterative-condition-optimizer
 """
 
 from PyQt5.QtWidgets import QGroupBox, QLabel
 from PyQt5.QtGui import QFont
 from ui.set_style import style_ck_bx, style_bc_dk
+
+
+# ============================================================================
+# 툴팁 정의 (한글 설명)
+# ============================================================================
+
+TOOLTIPS = {
+    # 분석 섹션
+    'analysis_enabled': (
+        '백테스팅 결과 분석 기능 ON/OFF\n'
+        '• 활성화: 상세 분석 후 텔레그램 알림\n'
+        '• 비활성화: 기본 이미지 2개만 전송'
+    ),
+    'filter_effects': (
+        '필터 효과 분석 (통계적 유의성 검정)\n'
+        '• 각 필터가 수익률에 미치는 영향 분석\n'
+        '• T-검정, 카이제곱 검정 사용'
+    ),
+    'optimal_thresholds': (
+        '최적 임계값 탐색\n'
+        '• 각 필터의 최적 임계값 자동 탐색\n'
+        '• 그리드 서치 방식 사용'
+    ),
+    'filter_combinations': (
+        '필터 조합 분석\n'
+        '• 필터들의 상호작용 효과 분석\n'
+        '• 최적 필터 조합 도출'
+    ),
+    'filter_stability': (
+        '필터 안정성 검증\n'
+        '• 시간대별 필터 효과 일관성 확인\n'
+        '• 과적합 여부 진단'
+    ),
+    'generate_code': (
+        '필터 조건식 자동 생성\n'
+        '• 분석 결과를 Python 조건식으로 변환\n'
+        '• 복사하여 바로 사용 가능'
+    ),
+    'ml_risk': (
+        'ML 위험도 예측\n'
+        '• 머신러닝으로 거래 위험도 예측\n'
+        '• XGBoost 모델 사용'
+    ),
+    'ml_importance': (
+        'ML 특성 중요도\n'
+        '• 변수별 중요도 순위 표시\n'
+        '• 핵심 변수 파악에 유용'
+    ),
+    'ml_mode': (
+        'ML 모드 선택\n'
+        '• 학습: 새 모델 학습\n'
+        '• 테스트: 기존 모델로 예측'
+    ),
+    'segment_enabled': (
+        '세그먼트 분석 활성화\n'
+        '• 시간대/요일/가격대별 성과 분석\n'
+        '• 최적 거래 구간 파악'
+    ),
+    'segment_optuna': (
+        'Optuna 최적화 사용\n'
+        '• 베이지안 최적화로 파라미터 탐색\n'
+        '• 더 정확하지만 시간 소요'
+    ),
+    'segment_template': (
+        '템플릿 비교\n'
+        '• 기존 조건식 템플릿과 비교 분석\n'
+        '• 개선점 도출'
+    ),
+    'segment_autosave': (
+        '분석 결과 자동 저장\n'
+        '• 결과를 파일로 자동 저장\n'
+        '• 나중에 다시 확인 가능'
+    ),
+    'notification_level': (
+        '텔레그램 알림 레벨\n'
+        '• 상세: 모든 분석 결과 전송\n'
+        '• 요약: 핵심 결과만 전송\n'
+        '• 없음: 알림 비활성화'
+    ),
+    # ICOS 섹션
+    'icos_enabled': (
+        'ICOS 활성화 (분석과 독립)\n'
+        '• 활성화 시 백테스트 후 자동 조건식 개선\n'
+        '• 분석 비활성화 상태에서도 실행 가능'
+    ),
+    'icos_max_iterations': (
+        '최대 반복 횟수 (1~20)\n'
+        '• 권장: 3~5회\n'
+        '• 많을수록 시간 소요'
+    ),
+    'icos_convergence': (
+        '수렴 기준 (%)\n'
+        '• 개선율이 이 값 이하면 종료\n'
+        '• 낮을수록 더 많이 최적화'
+    ),
+    'icos_metric': (
+        '최적화 기준 선택\n'
+        '• 수익금: 총 수익 최대화\n'
+        '• 승률: 거래 성공률 최대화\n'
+        '• 복합점수: 균형잡힌 최적화'
+    ),
+    'icos_method': (
+        '최적화 방법 선택\n'
+        '• 그리드서치: 전수 탐색 (안정적)\n'
+        '• 유전알고리즘: 진화 탐색 (빠름)\n'
+        '• 베이지안: 지능형 탐색 (효율적)'
+    ),
+}
 
 
 class SetDialogICOS:
@@ -66,6 +175,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_00.setToolTip(TOOLTIPS['analysis_enabled'])
         self.ui.analysis_checkBoxxx_00.stateChanged.connect(
             self._on_analysis_enabled_changed
         )
@@ -95,6 +205,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_01.setToolTip(TOOLTIPS['filter_effects'])
 
         # 최적 임계값 탐색
         self.ui.analysis_checkBoxxx_02 = self.wc.setCheckBox(
@@ -103,6 +214,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_02.setToolTip(TOOLTIPS['optimal_thresholds'])
 
         # 필터 조합 분석
         self.ui.analysis_checkBoxxx_03 = self.wc.setCheckBox(
@@ -111,6 +223,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_03.setToolTip(TOOLTIPS['filter_combinations'])
 
         # 필터 안정성 검증
         self.ui.analysis_checkBoxxx_04 = self.wc.setCheckBox(
@@ -119,6 +232,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_04.setToolTip(TOOLTIPS['filter_stability'])
 
         # 필터 조건식 자동 생성
         self.ui.analysis_checkBoxxx_05 = self.wc.setCheckBox(
@@ -127,6 +241,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_05.setToolTip(TOOLTIPS['generate_code'])
 
         # -----------------------------------------------------------------
         # ML 분석 옵션
@@ -145,6 +260,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_06.setToolTip(TOOLTIPS['ml_risk'])
 
         # ML 특성 중요도 분석
         self.ui.analysis_checkBoxxx_07 = self.wc.setCheckBox(
@@ -153,6 +269,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_07.setToolTip(TOOLTIPS['ml_importance'])
 
         # ML 모드 선택 (train/test)
         self.ui.analysis_labelllll_03 = QLabel(
@@ -162,6 +279,7 @@ class SetDialogICOS:
             self.ui.analysis_groupBoxxxx_00,
             items=['학습(train)', '테스트(test)']
         )
+        self.ui.analysis_comboBoxxx_01.setToolTip(TOOLTIPS['ml_mode'])
 
         # -----------------------------------------------------------------
         # Phase C: 세그먼트 분석 옵션
@@ -180,6 +298,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_08.setToolTip(TOOLTIPS['segment_enabled'])
 
         # Optuna 최적화 사용
         self.ui.analysis_checkBoxxx_09 = self.wc.setCheckBox(
@@ -188,6 +307,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_09.setToolTip(TOOLTIPS['segment_optuna'])
 
         # 템플릿 비교
         self.ui.analysis_checkBoxxx_10 = self.wc.setCheckBox(
@@ -196,6 +316,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_10.setToolTip(TOOLTIPS['segment_template'])
 
         # 분석 결과 자동 저장
         self.ui.analysis_checkBoxxx_11 = self.wc.setCheckBox(
@@ -204,6 +325,7 @@ class SetDialogICOS:
             checked=True,
             style=style_ck_bx
         )
+        self.ui.analysis_checkBoxxx_11.setToolTip(TOOLTIPS['segment_autosave'])
 
         # -----------------------------------------------------------------
         # 알림 설정
@@ -222,6 +344,7 @@ class SetDialogICOS:
             self.ui.analysis_groupBoxxxx_00,
             items=['상세', '요약', '없음']
         )
+        self.ui.analysis_comboBoxxx_02.setToolTip(TOOLTIPS['notification_level'])
 
         # =====================================================================
         # 섹션 2: ICOS 반복 최적화
@@ -237,6 +360,7 @@ class SetDialogICOS:
             checked=False,
             style=style_ck_bx
         )
+        self.ui.icos_checkBoxxx_00.setToolTip(TOOLTIPS['icos_enabled'])
         self.ui.icos_checkBoxxx_00.stateChanged.connect(
             self._on_icos_enabled_changed
         )
@@ -265,6 +389,7 @@ class SetDialogICOS:
             ltext='5',
             style=style_bc_dk
         )
+        self.ui.icos_lineEdittt_01.setToolTip(TOOLTIPS['icos_max_iterations'])
 
         # 수렴 기준값
         self.ui.icos_labellllll_03 = QLabel(
@@ -275,6 +400,7 @@ class SetDialogICOS:
             ltext='5',
             style=style_bc_dk
         )
+        self.ui.icos_lineEdittt_02.setToolTip(TOOLTIPS['icos_convergence'])
 
         # 최적화 기준
         self.ui.icos_labellllll_04 = QLabel(
@@ -284,6 +410,7 @@ class SetDialogICOS:
             self.ui.icos_groupBoxxxx_00,
             items=['수익금', '승률', '수익팩터', '샤프비율', 'MDD', '복합점수']
         )
+        self.ui.icos_comboBoxxx_01.setToolTip(TOOLTIPS['icos_metric'])
 
         # 최적화 방법
         self.ui.icos_labellllll_07 = QLabel(
@@ -293,6 +420,7 @@ class SetDialogICOS:
             self.ui.icos_groupBoxxxx_00,
             items=['그리드서치', '유전알고리즘', '베이지안(Optuna)']
         )
+        self.ui.icos_comboBoxxx_02.setToolTip(TOOLTIPS['icos_method'])
 
         # =====================================================================
         # 버튼들 (설정 관리용)
@@ -496,14 +624,14 @@ class SetDialogICOS:
         self.ui.icos_pushButton_06.setGeometry(group_width - 90, button_y, 100, 32)
 
         # =====================================================================
-        # 결과 표시 영역
+        # 결과 표시 영역 (로그 영역 확대: 130px → 200px)
         # =====================================================================
         log_y = button_y + 42
-        self.ui.icos_groupBoxxxx_05.setGeometry(margin, log_y, group_width, 130)
-        self.ui.icos_textEditxxx_01.setGeometry(10, 20, group_width - 20, 100)
+        self.ui.icos_groupBoxxxx_05.setGeometry(margin, log_y, group_width, 200)
+        self.ui.icos_textEditxxx_01.setGeometry(10, 20, group_width - 20, 170)
 
-        # 진행률 바
-        progress_y = log_y + 140
+        # 진행률 바 (로그 영역 확대에 따라 위치 조정)
+        progress_y = log_y + 210
         self.ui.icos_progressBar_01.setGeometry(margin, progress_y, group_width, 25)
 
         # 다이얼로그 크기 설정

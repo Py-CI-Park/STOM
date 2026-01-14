@@ -155,10 +155,13 @@ def icos_button_clicked_03(ui):
     """설정 저장 버튼 클릭 핸들러.
 
     현재 다이얼로그 설정(Analysis + ICOS)을 파일로 저장합니다.
+    설정은 단일 파일(icos_analysis_config.json)에 통합 저장됩니다.
 
     Args:
         ui: 메인 UI 클래스
     """
+    from datetime import datetime
+
     try:
         # 분석 설정 수집
         analysis_config = _collect_analysis_config(ui)
@@ -170,15 +173,24 @@ def icos_button_clicked_03(ui):
         config_dict = {
             'analysis': analysis_config,
             'icos': icos_config,
-            '_saved_at': str(Path.cwd()),
+            '_version': '2.0',  # 통합 버전
+            '_saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
 
-        # 설정 파일 저장
+        # 통합 설정 파일 저장 (단일 파일로 관리)
         save_path = Path('./_database/icos_analysis_config.json')
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(save_path, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
+
+        # 레거시 파일이 존재하면 삭제 (통합 완료)
+        legacy_path = Path('./_database/icos_config.json')
+        if legacy_path.exists():
+            legacy_path.unlink()
+            ui.icos_textEditxxx_01.append(
+                '<font color="#888888">레거시 설정 파일 정리 완료</font>'
+            )
 
         ui.icos_textEditxxx_01.append(
             f'<font color="#7cfc00">설정 저장 완료: {save_path}</font>'
@@ -201,21 +213,23 @@ def icos_button_clicked_04(ui):
     """설정 로딩 버튼 클릭 핸들러.
 
     저장된 설정을 불러와 다이얼로그에 적용합니다.
+    레거시 파일(icos_config.json)을 발견하면 마이그레이션 후 삭제합니다.
 
     Args:
         ui: 메인 UI 클래스
     """
-    # 새 경로와 기존 경로 모두 확인
-    load_paths = [
-        Path('./_database/icos_analysis_config.json'),  # 새 파일
-        Path('./_database/icos_config.json'),           # 기존 파일
-    ]
+    # 통합 설정 파일 경로
+    main_path = Path('./_database/icos_analysis_config.json')
+    legacy_path = Path('./_database/icos_config.json')
 
     loaded_path = None
-    for path in load_paths:
-        if path.exists():
-            loaded_path = path
-            break
+    migrated = False
+
+    if main_path.exists():
+        loaded_path = main_path
+    elif legacy_path.exists():
+        loaded_path = legacy_path
+        migrated = True  # 마이그레이션 필요 표시
 
     if loaded_path is None:
         QMessageBox.warning(
@@ -234,14 +248,21 @@ def icos_button_clicked_04(ui):
             _apply_analysis_config(ui, config_dict.get('analysis', {}))
             _apply_icos_config(ui, config_dict.get('icos', {}))
         else:
-            # 기존 형식 (ICOS만)
+            # 기존 형식 (ICOS만) - 마이그레이션
             _apply_icos_config(ui, config_dict)
-            # Analysis는 기본값 적용
             _apply_analysis_config(ui, ANALYSIS_DEFAULTS)
 
         ui.icos_textEditxxx_01.append(
             f'<font color="#7cfc00">설정 로딩 완료: {loaded_path}</font>'
         )
+
+        # 레거시 파일 마이그레이션 안내
+        if migrated:
+            ui.icos_textEditxxx_01.append(
+                '<font color="#ffa500">레거시 설정 파일 감지. '
+                '"설정 저장"을 클릭하면 새 형식으로 마이그레이션됩니다.</font>'
+            )
+
         QMessageBox.information(
             ui.dialog_icos,
             '로딩 완료',
@@ -698,6 +719,10 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
 def _convert_ui_config_to_icos_config(ui_config: dict) -> dict:
     """UI에서 전달받은 설정을 IterativeConfig 형식으로 변환.
 
+    ICOS는 분석 설정과 독립적으로 작동합니다.
+    - 분석 비활성화: ICOS만 단독 실행
+    - 분석 활성화: ICOS + 분석 결과 병행 (필요한 분석 정보만 ICOS에서 사용)
+
     Args:
         ui_config: UI에서 수집된 ICOS 설정
             - enabled: bool
@@ -705,6 +730,7 @@ def _convert_ui_config_to_icos_config(ui_config: dict) -> dict:
             - convergence_threshold: float (%)
             - optimization_metric: str
             - optimization_method: str
+            - analysis: dict (분석 설정, 선택적)
 
     Returns:
         IterativeConfig.from_dict()가 이해할 수 있는 딕셔너리
@@ -726,7 +752,11 @@ def _convert_ui_config_to_icos_config(ui_config: dict) -> dict:
         'bayesian': 'bayesian',
     }
 
-    return {
+    # 분석 설정 추출 (ICOS에서 필요한 정보만)
+    analysis_config = ui_config.get('analysis', {})
+
+    # 기본 ICOS 설정
+    icos_dict = {
         'enabled': ui_config.get('enabled', True),
         'max_iterations': ui_config.get('max_iterations', 5),
         'convergence': {
@@ -747,3 +777,9 @@ def _convert_ui_config_to_icos_config(ui_config: dict) -> dict:
         'verbose': True,
         'telegram_notify': False,
     }
+
+    # 분석 설정 포함 (ICOS에서 참조용)
+    if analysis_config:
+        icos_dict['analysis'] = analysis_config
+
+    return icos_dict
