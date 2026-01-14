@@ -639,24 +639,53 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
 
         result = optimizer.run(buystg, sellstg, backtest_params)
 
+        # 결과 로그는 runner.py에서 이미 상세히 전송됨
+        # 여기서는 최종 요약만 추가
         if result.success:
-            windowQ.put((ui_num['백테스트'],
-                f'<font color=#7cfc00>[ICOS] 최적화 완료! '
-                f'{result.num_iterations}회 반복, '
-                f'개선율: {result.total_improvement:.2%}, '
-                f'소요시간: {result.total_execution_time:.1f}초</font>'
-            ))
-
-            # 최종 조건식 출력
+            # 최종 조건식 변경 여부 안내
             if result.final_buystg != buystg:
+                # 조건식 변경 내역 요약
+                added_filters = 0
+                for iter_result in result.iterations:
+                    added_filters += len(iter_result.applied_filters)
+                if added_filters > 0:
+                    windowQ.put((ui_num['백테스트'],
+                        f'<font color=#87ceeb>[ICOS] 총 {added_filters}개 필터가 조건식에 추가되었습니다.</font>'
+                    ))
+            else:
                 windowQ.put((ui_num['백테스트'],
-                    f'<font color=#87ceeb>[ICOS] 조건식이 개선되었습니다.</font>'
+                    f'<font color=#ffa500>[ICOS] 개선할 수 있는 필터가 발견되지 않았습니다.</font>'
+                ))
+
+            # 최종 성과 메트릭 비교 (초기 vs 최종)
+            if result.num_iterations >= 2 and result.initial_metrics and result.final_metrics:
+                initial = result.initial_metrics
+                final = result.final_metrics
+
+                profit_diff = final.get('total_profit', 0) - initial.get('total_profit', 0)
+                wr_diff = final.get('win_rate', 0) - initial.get('win_rate', 0)
+                mdd_diff = final.get('max_drawdown', 0) - initial.get('max_drawdown', 0)
+
+                profit_sign = '+' if profit_diff >= 0 else ''
+                wr_sign = '+' if wr_diff >= 0 else ''
+                mdd_sign = '+' if mdd_diff >= 0 else ''
+
+                windowQ.put((ui_num['백테스트'],
+                    f'<font color=#00ffff>[ICOS] 최종 변화: '
+                    f'수익금 {profit_sign}{profit_diff:,.0f}원 | '
+                    f'승률 {wr_sign}{wr_diff:.1f}%p | '
+                    f'MDD {mdd_sign}{mdd_diff:.1f}%p</font>'
                 ))
 
         else:
+            # 실패/조기종료 시 사유 로그
             windowQ.put((ui_num['백테스트'],
                 f'<font color=#ffa500>[ICOS] 종료: {result.convergence_reason}</font>'
             ))
+            if result.error_message:
+                windowQ.put((ui_num['백테스트'],
+                    f'<font color=#ff0000>[ICOS] 에러: {result.error_message[:100]}</font>'
+                ))
 
     except Exception as e:
         error_trace = traceback.format_exc()

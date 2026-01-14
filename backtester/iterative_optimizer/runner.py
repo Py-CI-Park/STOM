@@ -17,6 +17,7 @@ from pathlib import Path
 import json
 import pandas as pd
 import numpy as np
+import time
 
 from .config import (
     IterativeConfig,
@@ -32,6 +33,15 @@ from .storage import IterationStorage
 from .comparator import ResultComparator, ComparisonResult
 from .convergence import ConvergenceChecker, ConvergenceResult, ConvergenceReason
 from .backtest_sync import SyncBacktestRunner
+
+# STOM UI 색상 코드
+UI_COLOR_INFO = '#45cdf7'      # 청록색 - 정보
+UI_COLOR_SUCCESS = '#6eff6e'   # 녹색 - 성공
+UI_COLOR_WARNING = '#f78645'   # 주황색 - 경고
+UI_COLOR_ERROR = '#ff0000'     # 빨간색 - 에러
+UI_COLOR_GRAY = '#cccccc'      # 회색 - 일반
+UI_COLOR_YELLOW = '#ffff00'    # 노란색 - 강조
+UI_COLOR_HIGHLIGHT = '#00ffff' # 시안 - 하이라이트
 
 
 @dataclass
@@ -148,13 +158,161 @@ class IterativeOptimizer:
         # 로깅
         self._logs: List[str] = []
 
-    def _log(self, message: str) -> None:
-        """로그 메시지 추가."""
+        # UI 연동 (STOM 패턴)
+        self._ui_gubun = 'S'  # 기본값: 주식
+        self._start_time: Optional[float] = None
+        self._total_steps = 0
+        self._current_step = 0
+
+    def _get_ui_num(self, key: str) -> float:
+        """UI 번호 가져오기.
+
+        Args:
+            key: '백테스트' 또는 '백테바'
+
+        Returns:
+            해당 UI 번호
+        """
+        ui_num_map = {
+            ('S', '백테스트'): 6,
+            ('C', '백테스트'): 7,
+            ('S', '백테바'): 8,
+            ('C', '백테바'): 9,
+        }
+        return ui_num_map.get((self._ui_gubun, key), 6)
+
+    def _send_ui_log(self, message: str, color: str = UI_COLOR_INFO) -> None:
+        """UI 로그 전송 (windowQ 사용).
+
+        Args:
+            message: 로그 메시지
+            color: HTML 색상 코드
+        """
+        if self.qlist and len(self.qlist) > 0:
+            windowQ = self.qlist[0]
+            ui_num = self._get_ui_num('백테스트')
+            formatted_msg = f'<font color={color}>[ICOS] {message}</font>'
+            windowQ.put((ui_num, formatted_msg))
+
+    def _update_progress_bar(self, current: int, total: int) -> None:
+        """진행률 바 업데이트.
+
+        Args:
+            current: 현재 진행 단계
+            total: 전체 단계 수
+        """
+        if self.qlist and len(self.qlist) > 0:
+            windowQ = self.qlist[0]
+            ui_num = self._get_ui_num('백테바')
+            windowQ.put((ui_num, current, total, self._start_time))
+
+    def _format_metrics(self, metrics: Dict[str, float], prefix: str = '') -> str:
+        """메트릭을 STOM 형식 문자열로 변환.
+
+        STOM 형식: TC[n] ATC[n] MH[n] WR[%] MDD[%] CAGR[n] TPI[n] TG[n]
+
+        Args:
+            metrics: 메트릭 딕셔너리
+            prefix: 접두어 (선택)
+
+        Returns:
+            포맷된 문자열
+        """
+        tc = metrics.get('trade_count', 0)
+        atc = metrics.get('avg_trade_count', 0)
+        mh = metrics.get('max_hold_count', 0)
+        wr = metrics.get('win_rate', 0)
+        mdd = metrics.get('max_drawdown', 0)
+        cagr = metrics.get('cagr', 0)
+        tpi = metrics.get('tpi', 0)
+        tg = metrics.get('total_profit', 0)
+
+        result = f"TC[{tc}] ATC[{atc:.1f}] MH[{mh}] WR[{wr:.1f}%] MDD[{mdd:.1f}%] TG[{tg:,.0f}]"
+        if prefix:
+            result = f"{prefix} {result}"
+        return result
+
+    def _format_metrics_comparison(
+        self,
+        prev_metrics: Dict[str, float],
+        curr_metrics: Dict[str, float]
+    ) -> str:
+        """두 메트릭 간 비교 문자열 생성.
+
+        Args:
+            prev_metrics: 이전 메트릭
+            curr_metrics: 현재 메트릭
+
+        Returns:
+            비교 문자열 (개선/악화 표시)
+        """
+        comparisons = []
+
+        # 수익금 비교
+        prev_profit = prev_metrics.get('total_profit', 0)
+        curr_profit = curr_metrics.get('total_profit', 0)
+        diff_profit = curr_profit - prev_profit
+        sign = '+' if diff_profit >= 0 else ''
+        comparisons.append(f"수익금:{sign}{diff_profit:,.0f}")
+
+        # 승률 비교
+        prev_wr = prev_metrics.get('win_rate', 0)
+        curr_wr = curr_metrics.get('win_rate', 0)
+        diff_wr = curr_wr - prev_wr
+        sign = '+' if diff_wr >= 0 else ''
+        comparisons.append(f"승률:{sign}{diff_wr:.1f}%p")
+
+        # MDD 비교 (낮을수록 좋음)
+        prev_mdd = prev_metrics.get('max_drawdown', 0)
+        curr_mdd = curr_metrics.get('max_drawdown', 0)
+        diff_mdd = curr_mdd - prev_mdd
+        sign = '+' if diff_mdd >= 0 else ''  # MDD는 낮을수록 좋으므로 부호 반대로 표시
+        comparisons.append(f"MDD:{sign}{diff_mdd:.1f}%p")
+
+        return " | ".join(comparisons)
+
+    def _calculate_eta(self, current_iteration: int, total_iterations: int) -> str:
+        """예상 완료 시간(ETA) 계산.
+
+        Args:
+            current_iteration: 현재 반복 번호 (0-based)
+            total_iterations: 총 반복 횟수
+
+        Returns:
+            ETA 문자열
+        """
+        if self._start_time is None or current_iteration == 0:
+            return "계산 중..."
+
+        elapsed = time.time() - self._start_time
+        avg_time_per_iteration = elapsed / (current_iteration + 1)
+        remaining_iterations = total_iterations - current_iteration - 1
+        eta_seconds = avg_time_per_iteration * remaining_iterations
+
+        if eta_seconds < 60:
+            return f"{eta_seconds:.0f}초"
+        elif eta_seconds < 3600:
+            return f"{eta_seconds / 60:.1f}분"
+        else:
+            return f"{eta_seconds / 3600:.1f}시간"
+
+    def _log(self, message: str, color: str = UI_COLOR_GRAY, send_to_ui: bool = True) -> None:
+        """로그 메시지 추가 및 UI 전송.
+
+        Args:
+            message: 로그 메시지
+            color: UI 색상 (기본: 회색)
+            send_to_ui: UI로 전송 여부
+        """
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         log_entry = f"[{timestamp}] {message}"
         self._logs.append(log_entry)
         if self.config.verbose:
             print(log_entry)
+
+        # UI로 로그 전송
+        if send_to_ui:
+            self._send_ui_log(message, color)
 
     def run(
         self,
@@ -193,8 +351,17 @@ class IterativeOptimizer:
         params = {**self.backtest_params, **(backtest_params or {})}
         start_time = datetime.now()
 
-        self._log(f"ICOS 시작: max_iterations={self.config.max_iterations}")
-        self._log(f"초기 buystg 길이: {len(buystg)} 문자")
+        # UI 구분 설정 (S=주식, C=코인)
+        self._ui_gubun = params.get('ui_gubun', 'S')
+        self._start_time = time.time()
+        self._total_steps = self.config.max_iterations * 4  # 4단계/반복
+
+        # 시작 로그 (강조)
+        self._log(
+            f"═══ ICOS 시작 ═══ 최대 {self.config.max_iterations}회 반복",
+            UI_COLOR_HIGHLIGHT
+        )
+        self._log(f"초기 buystg 길이: {len(buystg)} 문자", UI_COLOR_GRAY)
 
         # 상태 초기화
         self.현재반복 = 0
@@ -213,7 +380,16 @@ class IterativeOptimizer:
         try:
             # 반복 루프
             while self.현재반복 < self.config.max_iterations and not self.수렴여부:
-                self._log(f"=== 반복 {self.현재반복 + 1}/{self.config.max_iterations} 시작 ===")
+                # ETA 계산 및 표시
+                eta = self._calculate_eta(self.현재반복, self.config.max_iterations)
+                self._log(
+                    f"━━━ 반복 {self.현재반복 + 1}/{self.config.max_iterations} 시작 ━━━ (ETA: {eta})",
+                    UI_COLOR_INFO
+                )
+
+                # 진행률 바 업데이트 (반복 시작)
+                progress_base = self.현재반복 * 4
+                self._update_progress_bar(progress_base, self._total_steps)
 
                 # 단일 반복 실행
                 iteration_result = self._run_single_iteration(
@@ -223,6 +399,20 @@ class IterativeOptimizer:
                     params=params,
                 )
                 self.반복결과목록.append(iteration_result)
+
+                # 반복 결과 메트릭 로그 (성과 요약)
+                metrics_str = self._format_metrics(iteration_result.metrics)
+                self._log(f"  ▶ 성과: {metrics_str}", UI_COLOR_SUCCESS)
+
+                # 이전 반복과 비교 (2번째 반복부터)
+                if len(self.반복결과목록) >= 2:
+                    prev_metrics = self.반복결과목록[-2].metrics
+                    curr_metrics = iteration_result.metrics
+                    comparison_str = self._format_metrics_comparison(prev_metrics, curr_metrics)
+                    # 개선 여부에 따라 색상 결정
+                    is_improved = curr_metrics.get('total_profit', 0) >= prev_metrics.get('total_profit', 0)
+                    color = UI_COLOR_SUCCESS if is_improved else UI_COLOR_WARNING
+                    self._log(f"  ▷ 변화: {comparison_str}", color)
 
                 # 반복 결과 저장
                 if self._storage:
@@ -246,7 +436,7 @@ class IterativeOptimizer:
                 # 수렴 판정
                 if self._check_convergence():
                     self.수렴여부 = True
-                    self._log(f"수렴 조건 충족: {self.수렴사유}")
+                    self._log(f"★ 수렴 조건 충족: {self.수렴사유}", UI_COLOR_YELLOW)
                     break
 
                 # 다음 반복을 위한 조건식 업데이트
@@ -256,6 +446,7 @@ class IterativeOptimizer:
             # 최대 반복 도달
             if not self.수렴여부:
                 self.수렴사유 = f"최대 반복 횟수 도달 ({self.config.max_iterations})"
+                self._log(f"최대 반복 횟수({self.config.max_iterations})에 도달", UI_COLOR_WARNING)
 
             # 전체 개선율 계산
             total_improvement = self._calculate_total_improvement()
@@ -263,8 +454,27 @@ class IterativeOptimizer:
             end_time = datetime.now()
             total_execution_time = (end_time - start_time).total_seconds()
 
-            self._log(f"ICOS 완료: {len(self.반복결과목록)}회 반복, 총 {total_execution_time:.1f}초")
-            self._log(f"전체 개선율: {total_improvement:.2%}")
+            # 완료 로그 (강조)
+            self._log(
+                f"═══ ICOS 완료 ═══ {len(self.반복결과목록)}회 반복, 총 {total_execution_time:.1f}초",
+                UI_COLOR_HIGHLIGHT
+            )
+
+            # 전체 개선율 표시 (색상 분기)
+            improvement_color = UI_COLOR_SUCCESS if total_improvement >= 0 else UI_COLOR_ERROR
+            self._log(f"전체 개선율: {total_improvement:.2%}", improvement_color)
+
+            # 초기 vs 최종 메트릭 비교
+            if len(self.반복결과목록) >= 2:
+                initial_metrics = self.반복결과목록[0].metrics
+                final_metrics = self.반복결과목록[-1].metrics
+                self._log(f"  초기: {self._format_metrics(initial_metrics)}", UI_COLOR_GRAY)
+                self._log(f"  최종: {self._format_metrics(final_metrics)}", UI_COLOR_SUCCESS)
+                comparison = self._format_metrics_comparison(initial_metrics, final_metrics)
+                self._log(f"  총변화: {comparison}", improvement_color)
+
+            # 진행률 바 완료
+            self._update_progress_bar(self._total_steps, self._total_steps)
 
             # 최종 결과 저장
             if self._storage:
@@ -289,8 +499,10 @@ class IterativeOptimizer:
             )
 
         except Exception as e:
-            self._log(f"ICOS 오류 발생: {e}")
+            self._log(f"✖ ICOS 오류 발생: {e}", UI_COLOR_ERROR)
             end_time = datetime.now()
+            # 진행률 바 리셋
+            self._update_progress_bar(0, 1)
             return IterativeResult(
                 success=False,
                 final_buystg=current_buystg,
@@ -326,37 +538,51 @@ class IterativeOptimizer:
         Returns:
             IterationResult: 반복 결과
         """
-        start_time = datetime.now()
+        iter_start_time = datetime.now()
         applied_filters: List[FilterCandidate] = []
 
+        # 진행률 계산 기준
+        progress_base = iteration * 4
+
         # Step 1: 백테스트 실행
-        self._log(f"  [1/4] 백테스트 실행 중...")
+        self._log(f"  [1/4] 백테스트 실행 중...", UI_COLOR_GRAY, send_to_ui=True)
+        self._update_progress_bar(progress_base + 1, self._total_steps)
         backtest_result = self._execute_backtest(buystg, sellstg, params)
         metrics = backtest_result.get('metrics', {})
         df_tsg = backtest_result.get('df_tsg')
 
-        self._log(f"  백테스트 완료: 거래 {len(df_tsg) if df_tsg is not None else 0}건")
+        trade_count = len(df_tsg) if df_tsg is not None and not df_tsg.empty else 0
+        self._log(f"  백테스트 완료: 거래 {trade_count}건", UI_COLOR_GRAY, send_to_ui=False)
 
-        # Step 2: 결과 분석 (Phase 2에서 구현)
-        self._log(f"  [2/4] 결과 분석 중...")
+        # Step 2: 결과 분석
+        self._log(f"  [2/4] 결과 분석 중...", UI_COLOR_GRAY, send_to_ui=True)
+        self._update_progress_bar(progress_base + 2, self._total_steps)
         analysis = self._analyze_result(df_tsg, metrics)
 
-        # Step 3: 필터 생성 (Phase 2에서 구현)
-        self._log(f"  [3/4] 필터 생성 중...")
+        # Step 3: 필터 생성
+        self._log(f"  [3/4] 필터 생성 중...", UI_COLOR_GRAY, send_to_ui=True)
+        self._update_progress_bar(progress_base + 3, self._total_steps)
         filter_candidates = self._generate_filters(analysis)
 
-        # Step 4: 새 조건식 빌드 (Phase 3에서 구현)
+        # Step 4: 새 조건식 빌드
+        self._update_progress_bar(progress_base + 4, self._total_steps)
         if filter_candidates and iteration < self.config.max_iterations - 1:
-            self._log(f"  [4/4] 조건식 빌드 중...")
+            self._log(f"  [4/4] 조건식 빌드 중...", UI_COLOR_GRAY, send_to_ui=True)
             new_buystg, applied = self._build_new_condition(buystg, filter_candidates)
             applied_filters = applied
         else:
+            self._log(f"  [4/4] 조건식 빌드 스킵 (최종 반복)", UI_COLOR_GRAY, send_to_ui=True)
             new_buystg = buystg
 
         end_time = datetime.now()
-        execution_time = (end_time - start_time).total_seconds()
+        execution_time = (end_time - iter_start_time).total_seconds()
 
-        self._log(f"  반복 {iteration + 1} 완료: {execution_time:.1f}초, 필터 {len(applied_filters)}개 적용")
+        # 반복 완료 로그
+        filter_msg = f"필터 {len(applied_filters)}개 적용" if applied_filters else "필터 없음"
+        self._log(
+            f"  반복 {iteration + 1} 완료: {execution_time:.1f}초, {filter_msg}",
+            UI_COLOR_INFO
+        )
 
         return IterationResult(
             iteration=iteration,
