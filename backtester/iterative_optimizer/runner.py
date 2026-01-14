@@ -31,6 +31,7 @@ from .condition_builder import ConditionBuilder, BuildResult
 from .storage import IterationStorage
 from .comparator import ResultComparator, ComparisonResult
 from .convergence import ConvergenceChecker, ConvergenceResult, ConvergenceReason
+from .backtest_sync import SyncBacktestRunner
 
 
 @dataclass
@@ -375,33 +376,82 @@ class IterativeOptimizer:
     ) -> Dict[str, Any]:
         """백테스트 실행.
 
-        기존 백테스팅 시스템을 활용하여 백테스트를 실행합니다.
-        Phase 2에서 실제 연동 구현 예정.
+        SyncBacktestRunner를 사용하여 동기식 백테스트를 실행합니다.
 
         Args:
             buystg: 매수 조건식
             sellstg: 매도 조건식
             params: 백테스트 파라미터
+                - betting: 배팅금액
+                - startday: 시작일 (YYYYMMDD)
+                - endday: 종료일 (YYYYMMDD)
+                - starttime: 시작시간 (HHMMSS)
+                - endtime: 종료시간 (HHMMSS)
+                - avgtime: 평균값 계산 틱수
+                - code_list: 종목코드 리스트
+                - dict_cn: 종목코드-종목명 딕셔너리
 
         Returns:
             백테스트 결과 딕셔너리:
             - 'df_tsg': 거래 상세 DataFrame
             - 'metrics': 성과 지표 딕셔너리
+            - 'execution_time': 실행 시간 (초)
         """
-        # TODO: Phase 2에서 기존 백테스팅 시스템과 연동 구현
-        # 현재는 스켈레톤 - 빈 결과 반환
-        self._log("    (스켈레톤: 실제 백테스트 미실행)")
+        # UI 구분 결정 (params에서 가져오거나 기본값 사용)
+        ui_gubun = params.get('ui_gubun', 'S')
+        timeframe = params.get('timeframe', 'tick')
 
-        return {
-            'df_tsg': pd.DataFrame(),
-            'metrics': {
-                'total_profit': 0.0,
-                'win_rate': 0.0,
-                'trade_count': 0,
-                'profit_factor': 0.0,
-                'max_drawdown': 0.0,
-            },
-        }
+        # SyncBacktestRunner 생성 및 실행
+        runner = SyncBacktestRunner(
+            ui_gubun=ui_gubun,
+            timeframe=timeframe,
+            dict_cn=params.get('dict_cn', {}),
+            verbose=self.config.verbose,
+        )
+
+        self._log(f"    백테스트 실행 중...")
+
+        try:
+            result = runner.run(buystg, sellstg, params)
+
+            if result['df_tsg'].empty:
+                self._log("    백테스트 결과: 거래 없음")
+            else:
+                metrics = result['metrics']
+                self._log(
+                    f"    백테스트 완료: 거래 {metrics.get('trade_count', 0)}건, "
+                    f"수익금 {metrics.get('total_profit', 0):,.0f}원, "
+                    f"승률 {metrics.get('win_rate', 0):.1f}%, "
+                    f"실행시간 {result.get('execution_time', 0):.1f}초"
+                )
+
+            return result
+
+        except Exception as e:
+            self._log(f"    백테스트 실행 오류: {str(e)}")
+            return {
+                'df_tsg': pd.DataFrame(),
+                'df_bct': pd.DataFrame(),
+                'metrics': {
+                    'total_profit': 0.0,
+                    'win_rate': 0.0,
+                    'trade_count': 0,
+                    'avg_trade_count': 0.0,
+                    'profit_count': 0,
+                    'loss_count': 0,
+                    'profit_factor': 0.0,
+                    'max_drawdown': 0.0,
+                    'avg_profit_rate': 0.0,
+                    'total_profit_rate': 0.0,
+                    'avg_hold_time': 0.0,
+                    'max_hold_count': 0,
+                    'required_seed': 0.0,
+                    'cagr': 0.0,
+                    'tpi': 0.0,
+                    'day_count': 0,
+                },
+                'execution_time': 0.0,
+            }
 
     def _analyze_result(
         self,

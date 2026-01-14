@@ -30,7 +30,7 @@ Iterative Condition Optimization System
 브랜치: feature/iterative-condition-optimizer
 """
 
-__version__ = "0.6.0"  # Phase 6 완료 (UI 통합)
+__version__ = "0.7.0"  # Phase 7: SyncBacktestRunner 통합
 __author__ = "STOM Development Team"
 
 # 설정 클래스
@@ -128,6 +128,11 @@ from .optimization import (
     OverfitLevel,
 )
 
+# 동기식 백테스트 러너 (Phase 7)
+from .backtest_sync import (
+    SyncBacktestRunner,
+)
+
 # 메인 오케스트레이터
 from .runner import IterativeOptimizer
 
@@ -198,4 +203,6 @@ __all__ = [
     "PRESET_CONSERVATIVE",
     "PRESET_AGGRESSIVE",
     "PRESET_QUICK_TEST",
+    # 동기식 백테스트 러너 (Phase 7)
+    "SyncBacktestRunner",
 ]
