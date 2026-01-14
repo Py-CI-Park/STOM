@@ -58,15 +58,34 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         return
 
     # 백테스트 파라미터
+    # dict_cn과 code_list 포함 (SyncBacktestRunner에서 필요)
+    gubun = 'S' if bt_gubun == '주식' else ('C' if ui.dict_set['거래소'] == '업비트' else 'CF')
+
+    # dict_cn 검증 - 백테엔진이 시작되어 있어야 함
+    if not hasattr(ui, 'dict_cn') or not ui.dict_cn:
+        QMessageBox.critical(
+            ui.dialog_scheduler,
+            'ICOS 오류',
+            '백테엔진이 시작되지 않았습니다.\n\n'
+            'ICOS를 실행하려면 먼저 백테엔진을 시작해야 합니다.\n'
+            '(백테스트 버튼 클릭 또는 Ctrl+백테스트)\n'
+        )
+        return
+
     backtest_params = {
-        'startday': startday,
-        'endday': endday,
-        'starttime': starttime,
-        'endtime': endtime,
-        'betting': betting,
-        'avgtime': avgtime,
-        'gubun': 'S' if bt_gubun == '주식' else ('C' if ui.dict_set['거래소'] == '업비트' else 'CF'),
+        'startday': int(startday),
+        'endday': int(endday),
+        'starttime': int(starttime),
+        'endtime': int(endtime),
+        'betting': int(betting),
+        'avgtime': int(avgtime),
+        'gubun': gubun,
+        'ui_gubun': gubun,
         'bt_gubun': bt_gubun,
+        'dict_cn': ui.dict_cn,
+        'code_list': list(ui.dict_cn.keys()),
+        'avg_list': ui.avg_list if hasattr(ui, 'avg_list') else [int(avgtime)],
+        'timeframe': 'tick',  # 기본 틱 모드
     }
 
     # ICOS 로그 초기화

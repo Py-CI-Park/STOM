@@ -605,6 +605,23 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
         windowQ.put((ui_num['백테스트'],
             '<font color=#45cdf7>[ICOS] 초기화 중...</font>'))
 
+        # 필수 파라미터 검증
+        code_list = backtest_params.get('code_list', [])
+        dict_cn = backtest_params.get('dict_cn', {})
+
+        if not code_list and not dict_cn:
+            windowQ.put((ui_num['백테스트'],
+                '<font color=#ff0000>[ICOS] 오류: 백테엔진이 시작되지 않았습니다. '
+                '먼저 백테엔진을 시작해주세요 (dict_cn 누락).</font>'))
+            return
+
+        if not code_list:
+            code_list = list(dict_cn.keys())
+            backtest_params['code_list'] = code_list
+
+        windowQ.put((ui_num['백테스트'],
+            f'<font color=#cccccc>[ICOS] 종목 {len(code_list)}개 대상으로 실행</font>'))
+
         # UI에서 전달받은 설정을 IterativeConfig 형식으로 변환
         icos_config = _convert_ui_config_to_icos_config(config_dict)
 
