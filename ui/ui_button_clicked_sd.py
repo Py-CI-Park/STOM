@@ -20,6 +20,56 @@ from ui.ui_button_clicked_icos import (
 )
 
 
+def _check_icos_enabled(ui) -> bool:
+    """ICOS 활성화 상태 확인.
+
+    UI 속성을 먼저 확인하고, 없으면 설정 파일에서 확인합니다.
+    이렇게 하면 다이얼로그를 열지 않아도 ICOS 상태를 확인할 수 있습니다.
+
+    Args:
+        ui: 메인 UI 클래스
+
+    Returns:
+        ICOS 활성화 여부 (True/False)
+    """
+    # 1. UI 속성 확인 (다이얼로그가 이미 열린 경우)
+    if hasattr(ui, 'icos_enabled'):
+        return ui.icos_enabled
+
+    # 2. 설정 파일에서 확인 (다이얼로그를 열지 않은 경우)
+    import json
+    from pathlib import Path
+
+    main_path = Path('./_database/icos_analysis_config.json')
+    legacy_path = Path('./_database/icos_config.json')
+
+    if main_path.exists():
+        try:
+            with open(main_path, 'r', encoding='utf-8') as f:
+                config_dict = json.load(f)
+            # 새 형식에서 icos.enabled 확인
+            icos_config = config_dict.get('icos', {})
+            enabled = icos_config.get('enabled', False)
+            # UI 속성에도 설정
+            ui.icos_enabled = enabled
+            return enabled
+        except Exception:
+            pass
+    elif legacy_path.exists():
+        try:
+            with open(legacy_path, 'r', encoding='utf-8') as f:
+                config_dict = json.load(f)
+            enabled = config_dict.get('enabled', False)
+            ui.icos_enabled = enabled
+            return enabled
+        except Exception:
+            pass
+
+    # 기본값: 비활성화
+    ui.icos_enabled = False
+    return False
+
+
 def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime):
     """ICOS 모드 백테스트 실행.
 
@@ -265,7 +315,9 @@ def sdbutton_clicked_02(ui):
                     return
 
                 # ICOS 모드 확인 - 활성화된 경우 ICOS 프로세스로 실행
-                if hasattr(ui, 'icos_enabled') and ui.icos_enabled:
+                # 다이얼로그가 열리지 않은 경우에도 설정 파일에서 확인
+                icos_enabled = _check_icos_enabled(ui)
+                if icos_enabled:
                     _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime)
                     return
 

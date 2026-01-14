@@ -461,13 +461,22 @@ class SetDialogICOS:
         # 레이아웃 설정
         self._set_layout()
 
+        # 저장된 설정 자동 로드
+        self._auto_load_config()
+
         # 초기 로그 메시지
-        self.ui.icos_textEditxxx_01.append(
-            '<font color="#87ceeb">백테스팅 결과 분석 설정이 로드되었습니다.</font>'
-        )
-        self.ui.icos_textEditxxx_01.append(
-            '<font color="#888888">분석 옵션을 설정한 후 백테스트를 실행하세요.</font>'
-        )
+        if self.ui.icos_enabled:
+            self.ui.icos_textEditxxx_01.append(
+                '<font color="#7cfc00">ICOS 모드가 활성화되어 있습니다. '
+                '백테스트 실행 시 자동 조건식 개선이 수행됩니다.</font>'
+            )
+        else:
+            self.ui.icos_textEditxxx_01.append(
+                '<font color="#87ceeb">백테스팅 결과 분석 설정이 로드되었습니다.</font>'
+            )
+            self.ui.icos_textEditxxx_01.append(
+                '<font color="#888888">분석 옵션을 설정한 후 백테스트를 실행하세요.</font>'
+            )
 
     def _on_analysis_enabled_changed(self, state):
         """분석 활성화 체크박스 상태 변경 핸들러."""
@@ -545,6 +554,68 @@ class SetDialogICOS:
         ]
         for widget in widgets:
             widget.setEnabled(enabled)
+
+    def _auto_load_config(self):
+        """다이얼로그 초기화 시 저장된 설정 자동 로드.
+
+        저장된 설정 파일이 있으면 자동으로 로드하여 이전 상태를 복원합니다.
+        설정 파일이 없으면 기본값을 유지합니다.
+        """
+        import json
+        from pathlib import Path
+        from ui.ui_button_clicked_icos import (
+            _apply_analysis_config,
+            _apply_icos_config,
+            ANALYSIS_DEFAULTS,
+        )
+
+        # 통합 설정 파일 경로
+        main_path = Path('./_database/icos_analysis_config.json')
+        legacy_path = Path('./_database/icos_config.json')
+
+        loaded_path = None
+        if main_path.exists():
+            loaded_path = main_path
+        elif legacy_path.exists():
+            loaded_path = legacy_path
+
+        if loaded_path is None:
+            # 설정 파일 없음 - 기본값 유지
+            return
+
+        try:
+            with open(loaded_path, 'r', encoding='utf-8') as f:
+                config_dict = json.load(f)
+
+            # 새 형식인지 확인
+            if 'analysis' in config_dict:
+                _apply_analysis_config(self.ui, config_dict.get('analysis', {}))
+                _apply_icos_config(self.ui, config_dict.get('icos', {}))
+            else:
+                # 기존 형식 (ICOS만)
+                _apply_icos_config(self.ui, config_dict)
+                _apply_analysis_config(self.ui, ANALYSIS_DEFAULTS)
+
+            # 상태 업데이트 (체크박스 상태 동기화)
+            self.ui.icos_enabled = self.ui.icos_checkBoxxx_00.isChecked()
+            self.ui.analysis_enabled = self.ui.analysis_checkBoxxx_00.isChecked()
+
+            # ICOS 옵션 활성화 상태 업데이트
+            self._set_icos_options_enabled(self.ui.icos_enabled)
+
+            # 상태 라벨 업데이트
+            if self.ui.icos_enabled:
+                self.ui.icos_statusLabel.setText('상태: 활성화됨')
+                self.ui.icos_statusLabel.setStyleSheet(
+                    'color: #00ff00; font-weight: bold;'
+                )
+            else:
+                self.ui.icos_statusLabel.setText('상태: 비활성')
+                self.ui.icos_statusLabel.setStyleSheet('color: #888888;')
+
+        except Exception:
+            # 설정 로드 실패 시 기본값 유지
+            pass
 
     def _set_layout(self):
         """위젯 레이아웃 설정."""
