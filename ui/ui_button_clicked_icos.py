@@ -588,7 +588,7 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
     """ICOS 백그라운드 프로세스 실행 함수.
 
     별도 프로세스에서 실행되어 ICOS 최적화를 수행합니다.
-    (미구현 상태 - 향후 개발)
+    SyncBacktestRunner를 사용하여 반복적 조건식 개선을 수행합니다.
 
     Args:
         windowQ: 윈도우 메시지 큐
@@ -598,13 +598,17 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
         sellstg: 매도 조건식
         backtest_params: 백테스트 파라미터
     """
+    import traceback
     from backtester.iterative_optimizer import IterativeOptimizer, IterativeConfig
 
     try:
         windowQ.put((ui_num['백테스트'],
             '<font color=#45cdf7>[ICOS] 초기화 중...</font>'))
 
-        config = IterativeConfig.from_dict(config_dict)
+        # UI에서 전달받은 설정을 IterativeConfig 형식으로 변환
+        icos_config = _convert_ui_config_to_icos_config(config_dict)
+
+        config = IterativeConfig.from_dict(icos_config)
         optimizer = IterativeOptimizer(
             config=config,
             qlist=[windowQ, backQ],
@@ -613,6 +617,8 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
 
         windowQ.put((ui_num['백테스트'],
             f'<font color=#7cfc00>[ICOS] 최적화 시작 (최대 {config.max_iterations}회 반복)</font>'))
+        windowQ.put((ui_num['백테스트'],
+            f'<font color=#cccccc>[ICOS] 수렴 기준: {config.convergence.threshold * 100:.1f}% 이하</font>'))
 
         result = optimizer.run(buystg, sellstg, backtest_params)
 
@@ -623,11 +629,75 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
                 f'개선율: {result.total_improvement:.2%}, '
                 f'소요시간: {result.total_execution_time:.1f}초</font>'
             ))
+
+            # 최종 조건식 출력
+            if result.final_buystg != buystg:
+                windowQ.put((ui_num['백테스트'],
+                    f'<font color=#87ceeb>[ICOS] 조건식이 개선되었습니다.</font>'
+                ))
+
         else:
             windowQ.put((ui_num['백테스트'],
                 f'<font color=#ffa500>[ICOS] 종료: {result.convergence_reason}</font>'
             ))
 
     except Exception as e:
+        error_trace = traceback.format_exc()
         windowQ.put((ui_num['백테스트'],
             f'<font color=#ff0000>[ICOS] 오류 발생: {str(e)}</font>'))
+        windowQ.put((ui_num['백테스트'],
+            f'<font color=#888888>[ICOS] 상세: {error_trace[:200]}</font>'))
+
+
+def _convert_ui_config_to_icos_config(ui_config: dict) -> dict:
+    """UI에서 전달받은 설정을 IterativeConfig 형식으로 변환.
+
+    Args:
+        ui_config: UI에서 수집된 ICOS 설정
+            - enabled: bool
+            - max_iterations: int
+            - convergence_threshold: float (%)
+            - optimization_metric: str
+            - optimization_method: str
+
+    Returns:
+        IterativeConfig.from_dict()가 이해할 수 있는 딕셔너리
+    """
+    # 최적화 메트릭 매핑
+    metric_map = {
+        'profit': 'profit',
+        'win_rate': 'win_rate',
+        'profit_factor': 'profit_factor',
+        'sharpe_ratio': 'sharpe',
+        'mdd': 'mdd',
+        'composite': 'combined',
+    }
+
+    # 최적화 방법 매핑
+    method_map = {
+        'grid_search': 'grid_search',
+        'genetic': 'genetic',
+        'bayesian': 'bayesian',
+    }
+
+    return {
+        'enabled': ui_config.get('enabled', True),
+        'max_iterations': ui_config.get('max_iterations', 5),
+        'convergence': {
+            'method': 'improvement_rate',
+            'threshold': ui_config.get('convergence_threshold', 5) / 100,  # % → 비율
+            'min_iterations': 2,
+        },
+        'filter_generation': {
+            'target_metric': metric_map.get(
+                ui_config.get('optimization_metric', 'profit'), 'combined'
+            ),
+        },
+        'optimization': {
+            'method': method_map.get(
+                ui_config.get('optimization_method', 'grid_search'), 'none'
+            ),
+        },
+        'verbose': True,
+        'telegram_notify': False,
+    }

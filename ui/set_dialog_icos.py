@@ -224,10 +224,10 @@ class SetDialogICOS:
         )
 
         # =====================================================================
-        # 섹션 2: ICOS 반복 최적화 (미구현)
+        # 섹션 2: ICOS 반복 최적화
         # =====================================================================
         self.ui.icos_groupBoxxxx_00 = QGroupBox(
-            'ICOS 반복 최적화 (미구현)', self.ui.dialog_icos
+            'ICOS 반복 최적화 (Iterative Condition Optimization)', self.ui.dialog_icos
         )
 
         # ICOS 활성화 체크박스
@@ -241,13 +241,13 @@ class SetDialogICOS:
             self._on_icos_enabled_changed
         )
 
-        # 미구현 안내 라벨
+        # ICOS 안내 라벨
         self.ui.icos_labellllll_00 = QLabel(
-            '* 향후 구현 예정 - 백테스트 반복 실행 연동 필요\n'
-            '* 현재는 설정값만 저장됩니다.',
+            '* 활성화 시 백테스트 실행 후 조건식 자동 개선\n'
+            '* 수렴 기준 도달 시 자동 종료',
             self.ui.icos_groupBoxxxx_00
         )
-        self.ui.icos_labellllll_00.setStyleSheet('color: #ffcc00;')
+        self.ui.icos_labellllll_00.setStyleSheet('color: #87ceeb;')
 
         # 상태 표시 라벨
         self.ui.icos_statusLabel = QLabel('상태: 비활성', self.ui.icos_groupBoxxxx_00)
@@ -390,18 +390,33 @@ class SetDialogICOS:
         """ICOS 활성화 체크박스 상태 변경 핸들러."""
         self.ui.icos_enabled = (state == 2)  # Qt.Checked = 2
         if self.ui.icos_enabled:
-            self.ui.icos_statusLabel.setText('상태: 활성화됨 (미구현)')
-            self.ui.icos_statusLabel.setStyleSheet('color: #ffcc00; font-weight: bold;')
+            self.ui.icos_statusLabel.setText('상태: 활성화됨')
+            self.ui.icos_statusLabel.setStyleSheet('color: #00ff00; font-weight: bold;')
             self.ui.icos_textEditxxx_01.append(
-                '<font color="#ffcc00">ICOS 모드 활성화됨. '
-                '(주의: 백테스트 반복 실행은 아직 미구현)</font>'
+                '<font color="#7cfc00">ICOS 모드 활성화됨. '
+                '백테스트 실행 시 조건식 자동 개선이 수행됩니다.</font>'
             )
+            # ICOS 하위 옵션들 활성화
+            self._set_icos_options_enabled(True)
         else:
             self.ui.icos_statusLabel.setText('상태: 비활성')
             self.ui.icos_statusLabel.setStyleSheet('color: #888888;')
             self.ui.icos_textEditxxx_01.append(
                 '<font color="#888888">ICOS 모드 비활성화됨.</font>'
             )
+            # ICOS 하위 옵션들 비활성화
+            self._set_icos_options_enabled(False)
+
+    def _set_icos_options_enabled(self, enabled: bool):
+        """ICOS 하위 옵션들의 활성화 상태 설정."""
+        widgets = [
+            self.ui.icos_lineEdittt_01,
+            self.ui.icos_lineEdittt_02,
+            self.ui.icos_comboBoxxx_01,
+            self.ui.icos_comboBoxxx_02,
+        ]
+        for widget in widgets:
+            widget.setEnabled(enabled)
 
     def _set_layout(self):
         """위젯 레이아웃 설정."""
