@@ -488,8 +488,15 @@ def _apply_icos_config(ui, config: dict):
     if config:
         merged.update(config)
 
-    # ICOS 활성화
-    ui.icos_checkBoxxx_00.setChecked(merged.get('enabled', False))
+    # ICOS 활성화 (체크박스 + UI 속성 모두 설정)
+    enabled = merged.get('enabled', False)
+    ui.icos_checkBoxxx_00.setChecked(enabled)
+    ui.icos_enabled = enabled  # UI 속성도 직접 설정
+    # 디버그: 로그에 적용된 값 표시
+    if hasattr(ui, 'icos_textEditxxx_01'):
+        ui.icos_textEditxxx_01.append(
+            f'<font color="#888888">[DEBUG] _apply_icos_config: enabled={enabled}</font>'
+        )
 
     # 최대 반복 횟수
     ui.icos_lineEdittt_01.setText(str(merged.get('max_iterations', 5)))

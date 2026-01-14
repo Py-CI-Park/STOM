@@ -613,9 +613,20 @@ class SetDialogICOS:
                 self.ui.icos_statusLabel.setText('상태: 비활성')
                 self.ui.icos_statusLabel.setStyleSheet('color: #888888;')
 
-        except Exception:
+            # 디버그: 로드된 설정 로그
+            if hasattr(self.ui, 'icos_textEditxxx_01'):
+                self.ui.icos_textEditxxx_01.append(
+                    f'<font color="#888888">[DEBUG] _auto_load_config 완료: '
+                    f'icos_enabled={self.ui.icos_enabled}, '
+                    f'analysis_enabled={self.ui.analysis_enabled}</font>'
+                )
+
+        except Exception as e:
             # 설정 로드 실패 시 기본값 유지
-            pass
+            if hasattr(self.ui, 'icos_textEditxxx_01'):
+                self.ui.icos_textEditxxx_01.append(
+                    f'<font color="#ff8800">[DEBUG] _auto_load_config 오류: {e}</font>'
+                )
 
     def _set_layout(self):
         """위젯 레이아웃 설정."""

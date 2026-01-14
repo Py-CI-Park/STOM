@@ -23,8 +23,8 @@ from ui.ui_button_clicked_icos import (
 def _check_icos_enabled(ui) -> bool:
     """ICOS 활성화 상태 확인.
 
-    UI 속성을 먼저 확인하고, 없으면 설정 파일에서 확인합니다.
-    이렇게 하면 다이얼로그를 열지 않아도 ICOS 상태를 확인할 수 있습니다.
+    설정 파일을 우선 확인하여 UI 속성과 동기화합니다.
+    다이얼로그를 열지 않아도 ICOS 상태를 확인할 수 있습니다.
 
     Args:
         ui: 메인 UI 클래스
@@ -32,14 +32,10 @@ def _check_icos_enabled(ui) -> bool:
     Returns:
         ICOS 활성화 여부 (True/False)
     """
-    # 1. UI 속성 확인 (다이얼로그가 이미 열린 경우)
-    if hasattr(ui, 'icos_enabled'):
-        return ui.icos_enabled
-
-    # 2. 설정 파일에서 확인 (다이얼로그를 열지 않은 경우)
     import json
     from pathlib import Path
 
+    # 1. 설정 파일에서 확인 (가장 신뢰할 수 있는 소스)
     main_path = Path('./_database/icos_analysis_config.json')
     legacy_path = Path('./_database/icos_config.json')
 
@@ -50,23 +46,38 @@ def _check_icos_enabled(ui) -> bool:
             # 새 형식에서 icos.enabled 확인
             icos_config = config_dict.get('icos', {})
             enabled = icos_config.get('enabled', False)
-            # UI 속성에도 설정
+            # UI 속성과 동기화
             ui.icos_enabled = enabled
+            # 디버그 로그
+            ui.windowQ.put((ui_num['백테스트'],
+                f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (설정파일)</font>'))
             return enabled
-        except Exception:
-            pass
+        except Exception as e:
+            ui.windowQ.put((ui_num['백테스트'],
+                f'<font color=#ff8800>[DEBUG] 설정파일 로드 오류: {e}</font>'))
     elif legacy_path.exists():
         try:
             with open(legacy_path, 'r', encoding='utf-8') as f:
                 config_dict = json.load(f)
             enabled = config_dict.get('enabled', False)
             ui.icos_enabled = enabled
+            ui.windowQ.put((ui_num['백테스트'],
+                f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (레거시)</font>'))
             return enabled
-        except Exception:
-            pass
+        except Exception as e:
+            ui.windowQ.put((ui_num['백테스트'],
+                f'<font color=#ff8800>[DEBUG] 레거시 파일 로드 오류: {e}</font>'))
+
+    # 2. 설정 파일이 없는 경우 UI 속성 확인
+    if hasattr(ui, 'icos_enabled'):
+        ui.windowQ.put((ui_num['백테스트'],
+            f'<font color=#888888>[DEBUG] ICOS 설정: enabled={ui.icos_enabled} (UI속성)</font>'))
+        return ui.icos_enabled
 
     # 기본값: 비활성화
     ui.icos_enabled = False
+    ui.windowQ.put((ui_num['백테스트'],
+        '<font color=#888888>[DEBUG] ICOS 설정: enabled=False (기본값)</font>'))
     return False
 
 
