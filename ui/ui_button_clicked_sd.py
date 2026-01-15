@@ -329,16 +329,37 @@ def sdbutton_clicked_01(ui):
 
 
 def sdbutton_clicked_02(ui):
+    # 함수 진입 즉시 로그 출력 (조건문 이전)
+    bt_gubun_initial = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '알수없음'
+    log_target_initial = ui_num.get('S백테스트' if bt_gubun_initial == '주식' else 'C백테스트', 6)
+    ui.windowQ.put((log_target_initial,
+        f'<font color=#ff00ff>★★★ [TRACE] sdbutton_clicked_02() 함수 진입! bt_gubun={bt_gubun_initial} ★★★</font>'))
+
     if ui.BacktestProcessAlive():
+        ui.windowQ.put((log_target_initial,
+            '<font color=#ff8800>[TRACE] 백테스트 이미 실행 중 - 중단</font>'))
         QMessageBox.critical(ui.dialog_scheduler, '오류 알림', '현재 백테스트가 실행중입니다.\n중복 실행할 수 없습니다.\n')
     else:
+        ui.windowQ.put((log_target_initial,
+            '<font color=#00ff00>[TRACE] 백테스트 실행 가능 - 계속 진행</font>'))
         if ui.back_engining:
+            ui.windowQ.put((log_target_initial,
+                '<font color=#ff8800>[TRACE] 백테엔진 구동 중 - 중단</font>'))
             QMessageBox.critical(ui.dialog_backengine, '오류 알림', '백테엔진 구동 중...\n')
             return
+
+        ui.windowQ.put((log_target_initial,
+            f'<font color=#00ffff>[TRACE] backtest_engine={ui.backtest_engine}</font>'))
+
         bt_gubun = ui.sd_pushButtonnn_01.text()
         if not ui.backtest_engine or (QApplication.keyboardModifiers() & Qt.ControlModifier):
+            ui.windowQ.put((log_target_initial,
+                '<font color=#ff8800>[TRACE] 백테엔진 미구동 또는 Ctrl 키 - 백테엔진 창 열고 중단</font>'))
             ui.BackTestengineShow(bt_gubun)
             return
+
+        ui.windowQ.put((log_target_initial,
+            '<font color=#00ff00>[TRACE] 백테엔진 구동됨 - 백테스트 실행 진행</font>'))
 
         if bt_gubun == '주식' and ui.main_btn != 2:
             ui.mnButtonClicked_01(2)
@@ -352,8 +373,14 @@ def sdbutton_clicked_02(ui):
             for progressBar in ui.list_progressBarrr:
                 progressBar.setValue(0)
 
+        ui.windowQ.put((log_target_initial,
+            f'<font color=#00ffff>[TRACE] back_scount={ui.back_scount}, back_schedul={ui.back_schedul}</font>'))
+
         while ui.back_scount < 16 and not ui.list_checkBoxxxxxx[ui.back_scount].isChecked():
             ui.back_scount += 1
+
+        ui.windowQ.put((log_target_initial,
+            f'<font color=#00ffff>[TRACE] 체크박스 검색 후 back_scount={ui.back_scount}</font>'))
 
         if ui.back_scount < 16:
             back_name = ui.list_gcomboBoxxxxx[ui.back_scount].currentText()
@@ -782,6 +809,8 @@ def sdbutton_clicked_02(ui):
             ui.list_progressBarrr[ui.back_scount].setValue(0)
             ui.back_schedul = True
         else:
+            ui.windowQ.put((log_target_initial,
+                f'<font color=#ff0000>[TRACE] back_scount >= 16 ({ui.back_scount}) - 스케줄러 중지</font>'))
             StopScheduler(ui, True)
 
 
