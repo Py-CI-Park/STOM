@@ -33,60 +33,88 @@ def _check_icos_enabled(ui) -> bool:
         ICOS 활성화 여부 (True/False)
     """
     import json
+    import traceback
     from pathlib import Path
 
-    # bt_gubun에 따른 로그 출력 대상 결정
-    bt_gubun = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '주식'
-    log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+    # 기본 로그 타겟 (예외 발생 시에도 로깅 가능하도록)
+    log_target = 6  # 기본값: S백테스트
 
-    # 프로젝트 루트 디렉토리 기준 절대 경로 생성
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    db_path = os.path.join(project_root, '_database')
+    try:
+        # bt_gubun에 따른 로그 출력 대상 결정
+        bt_gubun = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '주식'
+        log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
 
-    # 1. 설정 파일에서 확인 (가장 신뢰할 수 있는 소스)
-    main_path = Path(os.path.join(db_path, 'icos_analysis_config.json'))
-    legacy_path = Path(os.path.join(db_path, 'icos_config.json'))
-
-    if main_path.exists():
-        try:
-            with open(main_path, 'r', encoding='utf-8') as f:
-                config_dict = json.load(f)
-            # 새 형식에서 icos.enabled 확인
-            icos_config = config_dict.get('icos', {})
-            enabled = icos_config.get('enabled', False)
-            # UI 속성과 동기화
-            ui.icos_enabled = enabled
-            # 디버그 로그
-            ui.windowQ.put((log_target,
-                f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (설정파일)</font>'))
-            return enabled
-        except Exception as e:
-            ui.windowQ.put((log_target,
-                f'<font color=#ff8800>[DEBUG] 설정파일 로드 오류: {e}</font>'))
-    elif legacy_path.exists():
-        try:
-            with open(legacy_path, 'r', encoding='utf-8') as f:
-                config_dict = json.load(f)
-            enabled = config_dict.get('enabled', False)
-            ui.icos_enabled = enabled
-            ui.windowQ.put((log_target,
-                f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (레거시)</font>'))
-            return enabled
-        except Exception as e:
-            ui.windowQ.put((log_target,
-                f'<font color=#ff8800>[DEBUG] 레거시 파일 로드 오류: {e}</font>'))
-
-    # 2. 설정 파일이 없는 경우 UI 속성 확인
-    if hasattr(ui, 'icos_enabled'):
+        # 함수 진입 로그 (디버깅용)
         ui.windowQ.put((log_target,
-            f'<font color=#888888>[DEBUG] ICOS 설정: enabled={ui.icos_enabled} (UI속성)</font>'))
-        return ui.icos_enabled
+            '<font color=#888888>[DEBUG] _check_icos_enabled() 함수 진입</font>'))
 
-    # 기본값: 비활성화
-    ui.icos_enabled = False
-    ui.windowQ.put((log_target,
-        '<font color=#888888>[DEBUG] ICOS 설정: enabled=False (기본값)</font>'))
-    return False
+        # 프로젝트 루트 디렉토리 기준 절대 경로 생성
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        db_path = os.path.join(project_root, '_database')
+
+        ui.windowQ.put((log_target,
+            f'<font color=#888888>[DEBUG] 설정 파일 경로: {db_path}</font>'))
+
+        # 1. 설정 파일에서 확인 (가장 신뢰할 수 있는 소스)
+        main_path = Path(os.path.join(db_path, 'icos_analysis_config.json'))
+        legacy_path = Path(os.path.join(db_path, 'icos_config.json'))
+
+        ui.windowQ.put((log_target,
+            f'<font color=#888888>[DEBUG] main_path 존재여부: {main_path.exists()}</font>'))
+
+        if main_path.exists():
+            try:
+                with open(main_path, 'r', encoding='utf-8') as f:
+                    config_dict = json.load(f)
+                # 새 형식에서 icos.enabled 확인
+                icos_config = config_dict.get('icos', {})
+                enabled = icos_config.get('enabled', False)
+                # UI 속성과 동기화
+                ui.icos_enabled = enabled
+                # 디버그 로그
+                ui.windowQ.put((log_target,
+                    f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (설정파일)</font>'))
+                return enabled
+            except Exception as e:
+                ui.windowQ.put((log_target,
+                    f'<font color=#ff8800>[DEBUG] 설정파일 로드 오류: {e}</font>'))
+        elif legacy_path.exists():
+            try:
+                with open(legacy_path, 'r', encoding='utf-8') as f:
+                    config_dict = json.load(f)
+                enabled = config_dict.get('enabled', False)
+                ui.icos_enabled = enabled
+                ui.windowQ.put((log_target,
+                    f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (레거시)</font>'))
+                return enabled
+            except Exception as e:
+                ui.windowQ.put((log_target,
+                    f'<font color=#ff8800>[DEBUG] 레거시 파일 로드 오류: {e}</font>'))
+
+        # 2. 설정 파일이 없는 경우 UI 속성 확인
+        if hasattr(ui, 'icos_enabled'):
+            ui.windowQ.put((log_target,
+                f'<font color=#888888>[DEBUG] ICOS 설정: enabled={ui.icos_enabled} (UI속성)</font>'))
+            return ui.icos_enabled
+
+        # 기본값: 비활성화
+        ui.icos_enabled = False
+        ui.windowQ.put((log_target,
+            '<font color=#888888>[DEBUG] ICOS 설정: enabled=False (기본값)</font>'))
+        return False
+
+    except Exception as e:
+        # 모든 예외를 잡아서 로깅
+        error_msg = f'[ICOS 오류] _check_icos_enabled 예외: {type(e).__name__}: {e}'
+        try:
+            ui.windowQ.put((log_target,
+                f'<font color=#ff0000>{error_msg}</font>'))
+            ui.windowQ.put((log_target,
+                f'<font color=#ff0000>[ICOS 오류] 스택: {traceback.format_exc()}</font>'))
+        except:
+            print(error_msg)
+            traceback.print_exc()
+        return False
 
 
 def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime):
@@ -330,8 +358,18 @@ def sdbutton_clicked_02(ui):
         if ui.back_scount < 16:
             back_name = ui.list_gcomboBoxxxxx[ui.back_scount].currentText()
 
+            # 디버그: sdbutton_clicked_02 진입 로그
+            _debug_log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+            ui.windowQ.put((_debug_log_target,
+                f'<font color=#00ffff>[DEBUG] sdbutton_clicked_02: back_name={back_name}, bt_gubun={bt_gubun}</font>'))
+
             # ICOS 상태 로그 출력 (모든 백테스트 유형에서)
+            ui.windowQ.put((_debug_log_target,
+                '<font color=#00ffff>[DEBUG] _check_icos_enabled() 호출 전</font>'))
             icos_enabled = _check_icos_enabled(ui)
+            ui.windowQ.put((_debug_log_target,
+                f'<font color=#00ffff>[DEBUG] _check_icos_enabled() 반환값: {icos_enabled}</font>'))
+
             bt_gubun_check = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '주식'
             icos_log_target = ui_num.get('S백테스트' if bt_gubun_check == '주식' else 'C백테스트', 6)
             if icos_enabled:
