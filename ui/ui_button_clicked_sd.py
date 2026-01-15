@@ -35,9 +35,17 @@ def _check_icos_enabled(ui) -> bool:
     import json
     from pathlib import Path
 
+    # bt_gubun에 따른 로그 출력 대상 결정
+    bt_gubun = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '주식'
+    log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+
+    # 프로젝트 루트 디렉토리 기준 절대 경로 생성
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_path = os.path.join(project_root, '_database')
+
     # 1. 설정 파일에서 확인 (가장 신뢰할 수 있는 소스)
-    main_path = Path('./_database/icos_analysis_config.json')
-    legacy_path = Path('./_database/icos_config.json')
+    main_path = Path(os.path.join(db_path, 'icos_analysis_config.json'))
+    legacy_path = Path(os.path.join(db_path, 'icos_config.json'))
 
     if main_path.exists():
         try:
@@ -49,11 +57,11 @@ def _check_icos_enabled(ui) -> bool:
             # UI 속성과 동기화
             ui.icos_enabled = enabled
             # 디버그 로그
-            ui.windowQ.put((ui_num['백테스트'],
+            ui.windowQ.put((log_target,
                 f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (설정파일)</font>'))
             return enabled
         except Exception as e:
-            ui.windowQ.put((ui_num['백테스트'],
+            ui.windowQ.put((log_target,
                 f'<font color=#ff8800>[DEBUG] 설정파일 로드 오류: {e}</font>'))
     elif legacy_path.exists():
         try:
@@ -61,22 +69,22 @@ def _check_icos_enabled(ui) -> bool:
                 config_dict = json.load(f)
             enabled = config_dict.get('enabled', False)
             ui.icos_enabled = enabled
-            ui.windowQ.put((ui_num['백테스트'],
+            ui.windowQ.put((log_target,
                 f'<font color=#888888>[DEBUG] ICOS 설정: enabled={enabled} (레거시)</font>'))
             return enabled
         except Exception as e:
-            ui.windowQ.put((ui_num['백테스트'],
+            ui.windowQ.put((log_target,
                 f'<font color=#ff8800>[DEBUG] 레거시 파일 로드 오류: {e}</font>'))
 
     # 2. 설정 파일이 없는 경우 UI 속성 확인
     if hasattr(ui, 'icos_enabled'):
-        ui.windowQ.put((ui_num['백테스트'],
+        ui.windowQ.put((log_target,
             f'<font color=#888888>[DEBUG] ICOS 설정: enabled={ui.icos_enabled} (UI속성)</font>'))
         return ui.icos_enabled
 
     # 기본값: 비활성화
     ui.icos_enabled = False
-    ui.windowQ.put((ui_num['백테스트'],
+    ui.windowQ.put((log_target,
         '<font color=#888888>[DEBUG] ICOS 설정: enabled=False (기본값)</font>'))
     return False
 
@@ -121,7 +129,8 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         }
 
         # 디버그: 수집된 설정 로그
-        ui.windowQ.put((ui_num['백테스트'],
+        log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+        ui.windowQ.put((log_target,
             f'<font color=#888888>[DEBUG] ICOS config: enabled={icos_config.get("enabled")}, '
             f'max_iter={icos_config.get("max_iterations")}</font>'))
 
@@ -133,7 +142,8 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         )
         return
     except Exception as e:
-        ui.windowQ.put((ui_num['백테스트'],
+        err_log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+        ui.windowQ.put((err_log_target,
             f'<font color=#ff0000>[ICOS 오류] 설정 수집 실패: {type(e).__name__}: {e}</font>'))
         return
 
@@ -197,7 +207,8 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         ui.proc_icos.start()
 
         # UI 업데이트
-        ui.windowQ.put((ui_num['백테스트'],
+        start_log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+        ui.windowQ.put((start_log_target,
             f'<font color=#45cdf7>[ICOS] 반복적 조건식 개선 시스템 시작 (PID: {ui.proc_icos.pid})</font>'))
 
         if hasattr(ui, 'icos_textEditxxx_01'):
@@ -321,14 +332,16 @@ def sdbutton_clicked_02(ui):
 
             # ICOS 상태 로그 출력 (모든 백테스트 유형에서)
             icos_enabled = _check_icos_enabled(ui)
+            bt_gubun_check = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '주식'
+            icos_log_target = ui_num.get('S백테스트' if bt_gubun_check == '주식' else 'C백테스트', 6)
             if icos_enabled:
                 if back_name == '백테스트':
-                    ui.windowQ.put((ui_num['백테스트'],
+                    ui.windowQ.put((icos_log_target,
                         '<font color=#7cfc00>[ICOS] ICOS 모드 활성화됨 - 반복적 조건식 개선이 실행됩니다.</font>'))
                 else:
-                    ui.windowQ.put((ui_num['백테스트'],
+                    ui.windowQ.put((icos_log_target,
                         f'<font color=#ffa500>[ICOS] ICOS가 활성화되어 있지만, "{back_name}" 유형은 ICOS와 호환되지 않습니다.</font>'))
-                    ui.windowQ.put((ui_num['백테스트'],
+                    ui.windowQ.put((icos_log_target,
                         '<font color=#888888>[ICOS] ICOS는 "백테스트" 유형에서만 작동합니다. '
                         '현재 유형은 기존 방식으로 실행됩니다.</font>'))
 

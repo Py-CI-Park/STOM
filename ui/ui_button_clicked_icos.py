@@ -141,7 +141,10 @@ def icos_button_clicked_02(ui):
             ui.icos_textEditxxx_01.append(
                 '<font color="#ffa500">ICOS가 사용자에 의해 중지되었습니다.</font>'
             )
-            ui.windowQ.put((ui_num['백테스트'], '<font color=#ffa500>ICOS 중지됨</font>'))
+            # bt_gubun에 따른 로그 타겟 결정
+            bt_gubun = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '주식'
+            stop_log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+            ui.windowQ.put((stop_log_target, '<font color=#ffa500>ICOS 중지됨</font>'))
 
         except Exception as e:
             QMessageBox.critical(
@@ -436,11 +439,16 @@ def _collect_icos_config(ui) -> dict:
         ICOS 설정값 딕셔너리
     """
     import json
+    import os
     from pathlib import Path
+
+    # 프로젝트 루트 디렉토리 기준 절대 경로 생성
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_path = os.path.join(project_root, '_database')
 
     # 1. 설정 파일에서 먼저 읽기 (가장 신뢰할 수 있는 소스)
     config_from_file = {}
-    main_path = Path('./_database/icos_analysis_config.json')
+    main_path = Path(os.path.join(db_path, 'icos_analysis_config.json'))
     if main_path.exists():
         try:
             with open(main_path, 'r', encoding='utf-8') as f:
@@ -665,18 +673,37 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
         backtest_params: 백테스트 파라미터
     """
     import traceback
-    from backtester.iterative_optimizer import IterativeOptimizer, IterativeConfig
+
+    # bt_gubun에 따른 로그 타겟 결정 (함수 전체에서 사용) - import 전에 설정
+    bt_gubun = backtest_params.get('bt_gubun', '주식')
+    log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
+
+    # 프로세스 시작 로그 (import 전)
+    windowQ.put((log_target,
+        '<font color=#45cdf7>[ICOS 프로세스] 시작됨 - 모듈 로딩 중...</font>'))
+
+    # ICOS 모듈 import (별도 try-except로 감싸서 오류 확인)
+    try:
+        from backtester.iterative_optimizer import IterativeOptimizer, IterativeConfig
+    except ImportError as e:
+        windowQ.put((log_target,
+            f'<font color=#ff0000>[ICOS] 모듈 import 오류: {e}</font>'))
+        return
+    except Exception as e:
+        windowQ.put((log_target,
+            f'<font color=#ff0000>[ICOS] 모듈 로딩 오류: {type(e).__name__}: {e}</font>'))
+        return
 
     try:
-        windowQ.put((ui_num['백테스트'],
-            '<font color=#45cdf7>[ICOS] 초기화 중...</font>'))
+        windowQ.put((log_target,
+            '<font color=#45cdf7>[ICOS] 모듈 로딩 완료 - 초기화 중...</font>'))
 
         # 필수 파라미터 검증
         code_list = backtest_params.get('code_list', [])
         dict_cn = backtest_params.get('dict_cn', {})
 
         if not code_list and not dict_cn:
-            windowQ.put((ui_num['백테스트'],
+            windowQ.put((log_target,
                 '<font color=#ff0000>[ICOS] 오류: 백테엔진이 시작되지 않았습니다. '
                 '먼저 백테엔진을 시작해주세요 (dict_cn 누락).</font>'))
             return
@@ -685,7 +712,7 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
             code_list = list(dict_cn.keys())
             backtest_params['code_list'] = code_list
 
-        windowQ.put((ui_num['백테스트'],
+        windowQ.put((log_target,
             f'<font color=#cccccc>[ICOS] 종목 {len(code_list)}개 대상으로 실행</font>'))
 
         # UI에서 전달받은 설정을 IterativeConfig 형식으로 변환
@@ -698,9 +725,9 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
             backtest_params=backtest_params
         )
 
-        windowQ.put((ui_num['백테스트'],
+        windowQ.put((log_target,
             f'<font color=#7cfc00>[ICOS] 최적화 시작 (최대 {config.max_iterations}회 반복)</font>'))
-        windowQ.put((ui_num['백테스트'],
+        windowQ.put((log_target,
             f'<font color=#cccccc>[ICOS] 수렴 기준: {config.convergence.threshold * 100:.1f}% 이하</font>'))
 
         result = optimizer.run(buystg, sellstg, backtest_params)
@@ -715,11 +742,11 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
                 for iter_result in result.iterations:
                     added_filters += len(iter_result.applied_filters)
                 if added_filters > 0:
-                    windowQ.put((ui_num['백테스트'],
+                    windowQ.put((log_target,
                         f'<font color=#87ceeb>[ICOS] 총 {added_filters}개 필터가 조건식에 추가되었습니다.</font>'
                     ))
             else:
-                windowQ.put((ui_num['백테스트'],
+                windowQ.put((log_target,
                     f'<font color=#ffa500>[ICOS] 개선할 수 있는 필터가 발견되지 않았습니다.</font>'
                 ))
 
@@ -736,7 +763,7 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
                 wr_sign = '+' if wr_diff >= 0 else ''
                 mdd_sign = '+' if mdd_diff >= 0 else ''
 
-                windowQ.put((ui_num['백테스트'],
+                windowQ.put((log_target,
                     f'<font color=#00ffff>[ICOS] 최종 변화: '
                     f'수익금 {profit_sign}{profit_diff:,.0f}원 | '
                     f'승률 {wr_sign}{wr_diff:.1f}%p | '
@@ -745,19 +772,19 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
 
         else:
             # 실패/조기종료 시 사유 로그
-            windowQ.put((ui_num['백테스트'],
+            windowQ.put((log_target,
                 f'<font color=#ffa500>[ICOS] 종료: {result.convergence_reason}</font>'
             ))
             if result.error_message:
-                windowQ.put((ui_num['백테스트'],
+                windowQ.put((log_target,
                     f'<font color=#ff0000>[ICOS] 에러: {result.error_message[:100]}</font>'
                 ))
 
     except Exception as e:
         error_trace = traceback.format_exc()
-        windowQ.put((ui_num['백테스트'],
+        windowQ.put((log_target,
             f'<font color=#ff0000>[ICOS] 오류 발생: {str(e)}</font>'))
-        windowQ.put((ui_num['백테스트'],
+        windowQ.put((log_target,
             f'<font color=#888888>[ICOS] 상세: {error_trace[:200]}</font>'))
 
 
