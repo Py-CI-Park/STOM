@@ -119,12 +119,22 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
             **icos_config,
             'analysis': analysis_config,  # 분석 설정 포함
         }
+
+        # 디버그: 수집된 설정 로그
+        ui.windowQ.put((ui_num['백테스트'],
+            f'<font color=#888888>[DEBUG] ICOS config: enabled={icos_config.get("enabled")}, '
+            f'max_iter={icos_config.get("max_iterations")}</font>'))
+
     except ValueError as e:
         QMessageBox.critical(
             ui.dialog_scheduler,
             'ICOS 설정 오류',
             f'ICOS 설정값 오류: {str(e)}\nAlt+I로 설정을 확인하세요.\n'
         )
+        return
+    except Exception as e:
+        ui.windowQ.put((ui_num['백테스트'],
+            f'<font color=#ff0000>[ICOS 오류] 설정 수집 실패: {type(e).__name__}: {e}</font>'))
         return
 
     # 백테스트 파라미터

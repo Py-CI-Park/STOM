@@ -426,25 +426,43 @@ def _apply_analysis_config(ui, config: dict):
 def _collect_icos_config(ui) -> dict:
     """다이얼로그에서 ICOS 설정값 수집.
 
+    설정 파일을 우선 참조하고, UI 위젯 값으로 보완합니다.
+    다이얼로그가 열리지 않아도 설정 파일의 값을 사용할 수 있습니다.
+
     Args:
         ui: 메인 UI 클래스
 
     Returns:
         ICOS 설정값 딕셔너리
     """
+    import json
+    from pathlib import Path
+
+    # 1. 설정 파일에서 먼저 읽기 (가장 신뢰할 수 있는 소스)
+    config_from_file = {}
+    main_path = Path('./_database/icos_analysis_config.json')
+    if main_path.exists():
+        try:
+            with open(main_path, 'r', encoding='utf-8') as f:
+                config_dict = json.load(f)
+            config_from_file = config_dict.get('icos', {})
+        except Exception:
+            pass
+
+    # 2. UI 위젯에서 값 수집 (다이얼로그가 초기화된 경우)
     try:
         max_iterations = int(ui.icos_lineEdittt_01.text())
         if max_iterations < 1 or max_iterations > 20:
-            max_iterations = 5
-    except (ValueError, TypeError):
-        max_iterations = 5
+            max_iterations = config_from_file.get('max_iterations', 5)
+    except (ValueError, TypeError, AttributeError):
+        max_iterations = config_from_file.get('max_iterations', 5)
 
     try:
         convergence = float(ui.icos_lineEdittt_02.text())
         if convergence < 0 or convergence > 100:
-            convergence = 5
-    except (ValueError, TypeError):
-        convergence = 5
+            convergence = config_from_file.get('convergence_threshold', 5)
+    except (ValueError, TypeError, AttributeError):
+        convergence = config_from_file.get('convergence_threshold', 5)
 
     # 최적화 메트릭 매핑
     metric_map = {
@@ -463,16 +481,36 @@ def _collect_icos_config(ui) -> dict:
         2: 'bayesian',      # 베이지안(Optuna)
     }
 
+    # 3. enabled 값은 설정 파일 우선, UI 속성 fallback
+    try:
+        enabled_from_ui = ui.icos_checkBoxxx_00.isChecked()
+    except AttributeError:
+        enabled_from_ui = False
+
+    # 설정 파일 값 우선, 없으면 UI 값 또는 ui.icos_enabled 사용
+    enabled = config_from_file.get('enabled', enabled_from_ui)
+    if not enabled and hasattr(ui, 'icos_enabled'):
+        enabled = ui.icos_enabled
+
+    # 4. 메트릭과 메서드도 설정 파일 우선
+    try:
+        metric_idx = ui.icos_comboBoxxx_01.currentIndex()
+        metric = metric_map.get(metric_idx, 'profit')
+    except AttributeError:
+        metric = config_from_file.get('optimization_metric', 'profit')
+
+    try:
+        method_idx = ui.icos_comboBoxxx_02.currentIndex()
+        method = method_map.get(method_idx, 'grid_search')
+    except AttributeError:
+        method = config_from_file.get('optimization_method', 'grid_search')
+
     return {
-        'enabled': ui.icos_checkBoxxx_00.isChecked(),
+        'enabled': enabled,
         'max_iterations': max_iterations,
         'convergence_threshold': convergence,
-        'optimization_metric': metric_map.get(
-            ui.icos_comboBoxxx_01.currentIndex(), 'profit'
-        ),
-        'optimization_method': method_map.get(
-            ui.icos_comboBoxxx_02.currentIndex(), 'grid_search'
-        ),
+        'optimization_metric': metric,
+        'optimization_method': method,
     }
 
 
