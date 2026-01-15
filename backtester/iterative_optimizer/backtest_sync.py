@@ -448,6 +448,111 @@ class SyncBacktestRunner:
         def 체결강도N(pre):
             return Parameter_Previous(7, pre)
 
+        # === 추가 지표 함수들 (BackEngine 호환) ===
+        def 거래대금증감N(pre):
+            return Parameter_Previous(8, pre)
+
+        def 전일비N(pre):
+            return Parameter_Previous(9, pre)
+
+        def 회전율N(pre):
+            return Parameter_Previous(10, pre)
+
+        def 전일동시간비N(pre):
+            return Parameter_Previous(11, pre)
+
+        def 시가총액N(pre):
+            return Parameter_Previous(12, pre)
+
+        def 라운드피겨위5호가이내N(pre):
+            return Parameter_Previous(13, pre)
+
+        def 초당매수수량N(pre):
+            return Parameter_Previous(14, pre)
+
+        def 초당매도수량N(pre):
+            return Parameter_Previous(15, pre)
+
+        def 초당거래대금N(pre):
+            return Parameter_Previous(19, pre)
+
+        def 고저평균대비등락율N(pre):
+            return Parameter_Previous(20, pre)
+
+        def 매도총잔량N(pre):
+            return Parameter_Previous(21, pre)
+
+        def 매수총잔량N(pre):
+            return Parameter_Previous(22, pre)
+
+        # 5단계 호가
+        def 매도호가5N(pre):
+            return Parameter_Previous(23, pre)
+
+        def 매도호가4N(pre):
+            return Parameter_Previous(24, pre)
+
+        def 매도호가3N(pre):
+            return Parameter_Previous(25, pre)
+
+        def 매도호가2N(pre):
+            return Parameter_Previous(26, pre)
+
+        def 매도호가1N(pre):
+            return Parameter_Previous(27, pre)
+
+        def 매수호가1N(pre):
+            return Parameter_Previous(28, pre)
+
+        def 매수호가2N(pre):
+            return Parameter_Previous(29, pre)
+
+        def 매수호가3N(pre):
+            return Parameter_Previous(30, pre)
+
+        def 매수호가4N(pre):
+            return Parameter_Previous(31, pre)
+
+        def 매수호가5N(pre):
+            return Parameter_Previous(32, pre)
+
+        # 5단계 잔량
+        def 매도잔량5N(pre):
+            return Parameter_Previous(33, pre)
+
+        def 매도잔량4N(pre):
+            return Parameter_Previous(34, pre)
+
+        def 매도잔량3N(pre):
+            return Parameter_Previous(35, pre)
+
+        def 매도잔량2N(pre):
+            return Parameter_Previous(36, pre)
+
+        def 매도잔량1N(pre):
+            return Parameter_Previous(37, pre)
+
+        def 매수잔량1N(pre):
+            return Parameter_Previous(38, pre)
+
+        def 매수잔량2N(pre):
+            return Parameter_Previous(39, pre)
+
+        def 매수잔량3N(pre):
+            return Parameter_Previous(40, pre)
+
+        def 매수잔량4N(pre):
+            return Parameter_Previous(41, pre)
+
+        def 매수잔량5N(pre):
+            return Parameter_Previous(42, pre)
+
+        def 매도수5호가잔량합N(pre):
+            return Parameter_Previous(43, pre)
+
+        def 관심종목N(pre):
+            return Parameter_Previous(44, pre)
+
         def 이동평균(tick, pre=0):
             if tick + pre <= 데이터길이:
                 sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
@@ -484,6 +589,86 @@ class SyncBacktestRunner:
                 dmp_gap = self.arry_data[eindex, 6] - self.arry_data[sindex, 6]
                 return round(math.atan2(dmp_gap * 0.01, tick) / (2 * math.pi) * 360, 2)
             return 0
+
+        # === 고급 분석 함수들 ===
+        def 체결강도평균(tick, pre=0):
+            """기간 내 체결강도 평균."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return round(self.arry_data[sindex:eindex, 7].mean(), 3)
+            return 0
+
+        def 최고체결강도(tick, pre=0):
+            """기간 내 최고 체결강도."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return self.arry_data[sindex:eindex, 7].max()
+            return 0
+
+        def 최저체결강도(tick, pre=0):
+            """기간 내 최저 체결강도."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return self.arry_data[sindex:eindex, 7].min()
+            return 0
+
+        def 전일비각도(tick, pre=0):
+            """전일비 기울기 각도."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn - pre - tick + 1) if pre != -1 else self.indexb - tick + 1
+                eindex = (self.indexn - pre) if pre != -1 else self.indexb
+                dmp_gap = self.arry_data[eindex, 9] - self.arry_data[sindex, 9]
+                return round(math.atan2(dmp_gap * 5, tick) / (2 * math.pi) * 360, 2)
+            return 0
+
+        def 최고초당매수수량(tick, pre=0):
+            """기간 내 최고 초당매수수량."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return self.arry_data[sindex:eindex, 14].max()
+            return 0
+
+        def 최고초당매도수량(tick, pre=0):
+            """기간 내 최고 초당매도수량."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return self.arry_data[sindex:eindex, 15].max()
+            return 0
+
+        def 누적초당매수수량(tick, pre=0):
+            """기간 내 누적 초당매수수량."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return self.arry_data[sindex:eindex, 14].sum()
+            return 0
+
+        def 누적초당매도수량(tick, pre=0):
+            """기간 내 누적 초당매도수량."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return self.arry_data[sindex:eindex, 15].sum()
+            return 0
+
+        def 초당거래대금평균(tick, pre=0):
+            """기간 내 초당거래대금 평균."""
+            if tick + pre <= 데이터길이:
+                sindex = (self.indexn + 1 - pre - tick) if pre != -1 else self.indexb + 1 - tick
+                eindex = (self.indexn + 1 - pre) if pre != -1 else self.indexb + 1
+                return round(self.arry_data[sindex:eindex, 19].mean(), 3)
+            return 0
+
+        def 경과틱수(cond_name):
+            """조건 발생 후 경과 틱수."""
+            if cond_name in self.dict_cond_indexn:
+                return self.indexn - self.dict_cond_indexn[cond_name]
+            return 9999999
 
         # 데이터 추출
         종목명, 종목코드, 데이터길이, 시분초 = self.name, self.code, self.tick_count, int(str(self.index)[8:])
@@ -546,14 +731,36 @@ class SyncBacktestRunner:
             if 관심종목:
                 try:
                     exec(self.buystg)
-                except:
-                    pass
+                except NameError as e:
+                    # 미지원 지표 함수 사용 시 로깅
+                    if not hasattr(self, '_logged_buy_errors'):
+                        self._logged_buy_errors = set()
+                    error_msg = str(e)
+                    if error_msg not in self._logged_buy_errors:
+                        self._logged_buy_errors.add(error_msg)
+                        if self.verbose:
+                            print(f"[ICOS 경고] 매수조건 미지원 함수: {error_msg}")
+                except Exception as e:
+                    if self.verbose and not hasattr(self, '_logged_buy_exception'):
+                        self._logged_buy_exception = True
+                        print(f"[ICOS 오류] 매수조건 실행 오류: {type(e).__name__}: {e}")
         else:
             # 매도 조건 실행
             try:
                 exec(self.sellstg)
-            except:
-                pass
+            except NameError as e:
+                # 미지원 지표 함수 사용 시 로깅
+                if not hasattr(self, '_logged_sell_errors'):
+                    self._logged_sell_errors = set()
+                error_msg = str(e)
+                if error_msg not in self._logged_sell_errors:
+                    self._logged_sell_errors.add(error_msg)
+                    if self.verbose:
+                        print(f"[ICOS 경고] 매도조건 미지원 함수: {error_msg}")
+            except Exception as e:
+                if self.verbose and not hasattr(self, '_logged_sell_exception'):
+                    self._logged_sell_exception = True
+                    print(f"[ICOS 오류] 매도조건 실행 오류: {type(e).__name__}: {e}")
 
     def Buy(self, vturn=0, vkey=0):
         """매수 실행."""

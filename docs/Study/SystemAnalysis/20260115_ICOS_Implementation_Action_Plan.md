@@ -1,6 +1,7 @@
 # ICOS 구현 실행 계획
 
 > **작성일**: 2026-01-15
+> **브랜치**: feature/iterative-condition-optimizer
 > **목적**: ICOS 핵심 문제 해결 및 구현 완성을 위한 실행 계획
 > **참조 문서**: 20260115_ICOS_Pipeline_Analysis_and_Integration_Plan.md
 
@@ -8,546 +9,188 @@
 
 ## 1. 핵심 문제 요약
 
-### 1.1 현재 상태
+### 1.1 현재 상태 분석
 
-**ICOS가 작동하지 않는 이유**:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ★ 핵심 병목 지점 ★                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  IterativeOptimizer._execute_backtest()                        │
-│  파일: backtester/iterative_optimizer/runner.py:370-404        │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ 현재 구현:                                               │   │
-│  │   return {                                              │   │
-│  │       'df_tsg': pd.DataFrame(),  # 빈 DataFrame        │   │
-│  │       'metrics': {...0값들...},  # 모두 0               │   │
-│  │   }                                                     │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  결과: ICOS가 실행되어도 실제 백테스트가 수행되지 않음         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 1.2 영향 체인
-
-```
-빈 df_tsg 반환
-      │
-      ▼
-ResultAnalyzer.analyze() → 빈 데이터 분석 → 무의미한 결과
-      │
-      ▼
-FilterGenerator.generate() → 필터 생성 실패 또는 잘못된 필터
-      │
-      ▼
-ConditionBuilder.build() → 조건식 개선 없음
-      │
-      ▼
-★ ICOS 목표 달성 불가 ★
-```
-
----
-
-## 2. 해결 방안: SyncBacktestRunner 구현
-
-### 2.1 구현 범위
+**SyncBacktestRunner 구현 현황 (680줄)**:
 
 ```
 backtester/iterative_optimizer/backtest_sync.py
-├─ SyncBacktestRunner 클래스
-│  ├─ __init__(params, windowQ)
-│  ├─ run(buystg, sellstg) → dict
-│  ├─ _compile_conditions() - 조건식 컴파일
-│  ├─ _load_market_data() - 시장 데이터 로드
-│  ├─ _simulate_trades() - 거래 시뮬레이션 ★ 핵심
-│  ├─ _create_result_dataframe() - 결과 DataFrame 생성
-│  └─ _calculate_metrics() - 성과 지표 계산
+├── SyncBacktestRunner 클래스
+│   ├── __init__() - 초기화 (52-96줄) ✅ 구현완료
+│   ├── run() - 백테스트 실행 (194-334줄) ✅ 구현완료
+│   ├── _load_period_data() - 데이터 로드 (111-166줄) ✅ 구현완료
+│   ├── _run_backengine_sync() - 백엔진 동기 실행 (336-405줄) ✅ 구현완료
+│   ├── _strategy() - 전략 실행 (415-556줄) ⚠️ 지표 함수 부족
+│   ├── Buy() - 매수 실행 (558-571줄) ✅ 구현완료
+│   ├── Sell() - 매도 실행 (573-576줄) ✅ 구현완료
+│   └── _calculation_eyun() - 수익 계산 (578-616줄) ✅ 구현완료
 ```
 
-### 2.2 재사용할 기존 코드
+### 1.2 ICOS가 작동하지 않는 원인
 
-| 기능 | 기존 파일 | 함수/클래스 |
-|------|----------|------------|
-| 조건식 컴파일 | backtester/back_static.py | GetBuyStg(), GetSellStg() |
-| 데이터 쿼리 | backtester/back_static.py | GetMoneytopQuery() |
-| 결과 DataFrame | backtester/back_static.py | GetResultDataframe() |
-| 성과 지표 | backtester/back_static.py | GetBackResult() |
-| 거래 시뮬레이션 | backtester/backengine_*.py | CodeLoop() 로직 참조 |
-
-### 2.3 구현 순서
+**SyncBacktestRunner의 지표 함수 부족**으로 조건식 실행 실패:
 
 ```
-Step 1: 조건식 컴파일 연동 (0.5일)
-────────────────────────────────────
-├─ GetBuyStg() 호출
-├─ GetSellStg() 호출
-└─ indistg 처리
-
-Step 2: 데이터 로드 (0.5일)
-────────────────────────────────────
-├─ GetMoneytopQuery() 호출
-├─ pd.read_sql() 실행
-└─ 틱/분봉 데이터 구조 맞추기
-
-Step 3: 거래 시뮬레이션 (2-3일) ★ 핵심
-────────────────────────────────────
-├─ BackEngine.CodeLoop() 분석
-├─ 단일 프로세스 버전 구현
-├─ 조건식 평가 로직
-├─ 매수/매도 시뮬레이션
-└─ 거래 목록 생성
-
-Step 4: 결과 집계 (0.5일)
-────────────────────────────────────
-├─ GetResultDataframe() 호출
-├─ GetBackResult() 호출
-└─ metrics 구조 맞추기
-
-Step 5: runner.py 연동 (0.5일)
-────────────────────────────────────
-├─ _execute_backtest() 수정
-├─ SyncBacktestRunner 호출
-└─ 예외 처리
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ★ 실제 문제점 ★                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  SyncBacktestRunner._strategy() 지표 함수 현황                             │
+│                                                                             │
+│  BackEngine (44개+):              SyncBacktestRunner (15개):               │
+│  ─────────────────                ──────────────────────                   │
+│  ✓ 현재가N ~ 체결강도N            ✓ 현재가N ~ 체결강도N                    │
+│  ✓ 거래대금증감N                  ✗ 미구현                                 │
+│  ✓ 전일비N, 회전율N               ✗ 미구현                                 │
+│  ✓ 시가총액N                      ✗ 미구현                                 │
+│  ✓ 매도호가1~5N, 매수호가1~5N     ✗ 1단계만 구현                           │
+│  ✓ 매도잔량1~5N, 매수잔량1~5N     ✗ 1단계만 구현                           │
+│  ✓ 이동평균, 최고/최저현재가       ✓ 구현됨                                │
+│  ... (30개+ 추가 지표)            ✗ 미구현                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### 1.3 영향 체인
 
-## 3. 상세 구현 가이드
-
-### 3.1 SyncBacktestRunner 클래스 골격
-
-```python
-# backtester/iterative_optimizer/backtest_sync.py
-
-"""ICOS용 동기식 백테스트 러너.
-
-기존 멀티프로세스 백테스팅 시스템을 단일 프로세스로 실행하여
-ICOS 반복 최적화에서 빠른 피드백을 제공합니다.
-
-작성일: 2026-01-15
-브랜치: feature/iterative-condition-optimizer
-"""
-
-import time
-import pandas as pd
-from typing import Dict, Optional, Tuple, List
-
-# 기존 모듈 재사용
-from backtester.back_static import (
-    GetBuyStg,
-    GetSellStg,
-    GetMoneytopQuery,
-    GetResultDataframe,
-    GetBackResult,
-)
-
-
-class SyncBacktestRunner:
-    """ICOS용 동기식 백테스트 러너.
-
-    Attributes:
-        params: 백테스트 파라미터
-        windowQ: UI 메시지 큐 (선택)
-
-    Example:
-        >>> runner = SyncBacktestRunner(params, windowQ)
-        >>> result = runner.run(buystg, sellstg)
-        >>> df_tsg = result['df_tsg']
-        >>> metrics = result['metrics']
-    """
-
-    def __init__(self, params: dict, windowQ=None):
-        """초기화.
-
-        Args:
-            params: 백테스트 파라미터
-                - gubun: 'S'(주식) or 'C'(업비트) or 'CF'(바이낸스)
-                - startday, endday: 시작/종료일 (int, YYYYMMDD)
-                - starttime, endtime: 시작/종료시간 (int, HHMM)
-                - betting: 베팅금액 (int)
-                - avgtime: 평균값틱수 (int)
-                - dict_cn: 종목코드 → 종목명 맵 (dict)
-                - code_list: 종목코드 리스트 (list)
-            windowQ: UI 메시지 큐 (선택)
-        """
-        self.params = params
-        self.windowQ = windowQ
-
-        # 내부 상태
-        self.buystg_code = None
-        self.sellstg_code = None
-        self.indistg_code = None
-        self.df_market = None
-
-    def run(self, buystg: str, sellstg: str) -> dict:
-        """백테스트 실행.
-
-        Args:
-            buystg: 매수 조건식 (조건식 이름 또는 코드)
-            sellstg: 매도 조건식 (조건식 이름 또는 코드)
-
-        Returns:
-            {
-                'df_tsg': DataFrame,  # 거래 상세
-                'metrics': {
-                    'total_profit': float,
-                    'win_rate': float,
-                    'trade_count': int,
-                    'profit_factor': float,
-                    'max_drawdown': float,
-                },
-                'execution_time': float,
-                'error': Optional[str],
-            }
-        """
-        start_time = time.time()
-
-        try:
-            # 1. 조건식 컴파일
-            self._compile_conditions(buystg, sellstg)
-
-            # 2. 시장 데이터 로드
-            self._load_market_data()
-
-            # 3. 거래 시뮬레이션
-            list_tsg = self._simulate_trades()
-
-            # 4. 결과 DataFrame 생성
-            df_tsg = self._create_result_dataframe(list_tsg)
-
-            # 5. 성과 지표 계산
-            metrics = self._calculate_metrics(df_tsg)
-
-            return {
-                'df_tsg': df_tsg,
-                'metrics': metrics,
-                'execution_time': time.time() - start_time,
-                'error': None,
-            }
-
-        except Exception as e:
-            return {
-                'df_tsg': pd.DataFrame(),
-                'metrics': {
-                    'total_profit': 0,
-                    'win_rate': 0,
-                    'trade_count': 0,
-                    'profit_factor': 0,
-                    'max_drawdown': 0,
-                },
-                'execution_time': time.time() - start_time,
-                'error': str(e),
-            }
-
-    def _compile_conditions(self, buystg: str, sellstg: str):
-        """조건식 컴파일.
-
-        기존 GetBuyStg, GetSellStg 함수를 활용합니다.
-        """
-        gubun = self.params['gubun']
-        avgtime = self.params['avgtime']
-
-        # 매수 조건식 컴파일
-        self.buystg_code, self.indistg_code = GetBuyStg(
-            buystg, gubun, avgtime, 'backtest'
-        )
-
-        # 매도 조건식 컴파일
-        self.sellstg_code = GetSellStg(
-            sellstg, gubun, avgtime, 'backtest'
-        )
-
-    def _load_market_data(self):
-        """시장 데이터 로드.
-
-        기존 GetMoneytopQuery 함수를 활용합니다.
-        """
-        # TODO: 구현
-        pass
-
-    def _simulate_trades(self) -> List[tuple]:
-        """거래 시뮬레이션.
-
-        BackEngine의 CodeLoop 로직을 단일 프로세스로 실행합니다.
-
-        Returns:
-            거래 목록 (list of tuples)
-        """
-        # TODO: 구현 - BackEngine.CodeLoop() 참조
-        list_tsg = []
-        return list_tsg
-
-    def _create_result_dataframe(self, list_tsg: List[tuple]) -> pd.DataFrame:
-        """결과 DataFrame 생성.
-
-        기존 GetResultDataframe 함수를 활용합니다.
-        """
-        # TODO: 구현
-        return pd.DataFrame()
-
-    def _calculate_metrics(self, df_tsg: pd.DataFrame) -> dict:
-        """성과 지표 계산.
-
-        기존 GetBackResult 함수를 활용합니다.
-        """
-        if df_tsg.empty:
-            return {
-                'total_profit': 0,
-                'win_rate': 0,
-                'trade_count': 0,
-                'profit_factor': 0,
-                'max_drawdown': 0,
-            }
-
-        # TODO: GetBackResult 호출 및 결과 변환
-        return {
-            'total_profit': 0,
-            'win_rate': 0,
-            'trade_count': 0,
-            'profit_factor': 0,
-            'max_drawdown': 0,
-        }
 ```
-
-### 3.2 runner.py 수정 내용
-
-```python
-# backtester/iterative_optimizer/runner.py
-
-# 기존 _execute_backtest() 수정
-
-def _execute_backtest(self, buystg: str, sellstg: str, params: dict) -> dict:
-    """백테스트 실행.
-
-    SyncBacktestRunner를 사용하여 단일 프로세스로 백테스트를 실행합니다.
-
-    Args:
-        buystg: 매수 조건식
-        sellstg: 매도 조건식
-        params: 백테스트 파라미터
-
-    Returns:
-        {
-            'df_tsg': DataFrame,
-            'metrics': dict,
-            'execution_time': float,
-        }
-    """
-    try:
-        from .backtest_sync import SyncBacktestRunner
-
-        self._log(f'백테스트 시작: {buystg[:50]}...')
-
-        runner = SyncBacktestRunner(
-            params=self.backtest_params,
-            windowQ=self.windowQ,
-        )
-
-        result = runner.run(buystg, sellstg)
-
-        if result.get('error'):
-            self._log(f'백테스트 오류: {result["error"]}', level='error')
-        else:
-            self._log(
-                f'백테스트 완료: {result["metrics"]["trade_count"]}건, '
-                f'수익: {result["metrics"]["total_profit"]:,.0f}원, '
-                f'{result["execution_time"]:.1f}초'
-            )
-
-        return result
-
-    except Exception as e:
-        self._log(f'백테스트 실행 실패: {str(e)}', level='error')
-        return {
-            'df_tsg': pd.DataFrame(),
-            'metrics': {
-                'total_profit': 0,
-                'win_rate': 0,
-                'trade_count': 0,
-                'profit_factor': 0,
-                'max_drawdown': 0,
-            },
-            'execution_time': 0,
-            'error': str(e),
-        }
+사용자 조건식에 미구현 지표 포함 (예: 거래대금증감N, 전일비N)
+      │
+      ▼
+SyncBacktestRunner._strategy() 실행 중 NameError 발생
+      │
+      ▼
+try-except에서 조용히 무시됨 (backtest_sync.py:548-550)
+      │
+      ▼
+매수 조건이 항상 실패 → 거래 0건 → 빈 결과
+      │
+      ▼
+★ ICOS가 빈 결과로 동작 → 의미 있는 개선 불가 ★
 ```
 
 ---
 
-## 4. 검증 계획
+## 2. 해결 방안: SyncBacktestRunner 지표 함수 완성
 
-### 4.1 단계별 검증
+### 2.1 추가할 지표 함수 목록
 
-```
-Step 1 검증: 조건식 컴파일
-─────────────────────────────
-테스트 코드:
-    buystg_code, indistg = GetBuyStg('test', 'S', 10, 'backtest')
-    assert buystg_code is not None
-    assert callable(buystg_code)  # 또는 컴파일된 코드 확인
+**BackEngine에서 추출한 전체 지표 함수 목록 (44개)**:
 
-Step 2 검증: 데이터 로드
-─────────────────────────────
-테스트 코드:
-    df = runner._load_market_data()
-    assert not df.empty
-    assert '종목코드' in df.columns
+| 함수명 | 인덱스 | 설명 | 구현상태 |
+|--------|--------|------|---------|
+| `현재가N` | 1 | 현재가 | ✅ |
+| `시가N` | 2 | 시가 | ✅ |
+| `고가N` | 3 | 고가 | ✅ |
+| `저가N` | 4 | 저가 | ✅ |
+| `등락율N` | 5 | 등락율 | ✅ |
+| `당일거래대금N` | 6 | 당일 거래대금 | ✅ |
+| `체결강도N` | 7 | 체결강도 | ✅ |
+| `거래대금증감N` | 8 | 거래대금 증감 | ❌ **추가 필요** |
+| `전일비N` | 9 | 전일 비 | ❌ **추가 필요** |
+| `회전율N` | 10 | 회전율 | ❌ **추가 필요** |
+| `전일동시간비N` | 11 | 전일 동시간비 | ❌ **추가 필요** |
+| `시가총액N` | 12 | 시가총액 | ❌ **추가 필요** |
+| `라운드피겨위5호가이내N` | 13 | 라운드피겨 위 5호가 이내 | ❌ **추가 필요** |
+| `초당매수수량N` | 14 | 초당 매수수량 | ❌ **추가 필요** |
+| `초당매도수량N` | 15 | 초당 매도수량 | ❌ **추가 필요** |
+| `초당거래대금N` | 19 | 초당 거래대금 | ❌ **추가 필요** |
+| `고저평균대비등락율N` | 20 | 고저평균 대비 등락율 | ❌ **추가 필요** |
+| `매도총잔량N` | 21 | 매도총 잔량 | ❌ **추가 필요** |
+| `매수총잔량N` | 22 | 매수총 잔량 | ❌ **추가 필요** |
+| `매도호가5N` | 23 | 매도호가 5단계 | ❌ **추가 필요** |
+| `매도호가4N` | 24 | 매도호가 4단계 | ❌ **추가 필요** |
+| `매도호가3N` | 25 | 매도호가 3단계 | ❌ **추가 필요** |
+| `매도호가2N` | 26 | 매도호가 2단계 | ❌ **추가 필요** |
+| `매도호가1N` | 27 | 매도호가 1단계 | ✅ |
+| `매수호가1N` | 28 | 매수호가 1단계 | ✅ |
+| `매수호가2N` | 29 | 매수호가 2단계 | ❌ **추가 필요** |
+| `매수호가3N` | 30 | 매수호가 3단계 | ❌ **추가 필요** |
+| `매수호가4N` | 31 | 매수호가 4단계 | ❌ **추가 필요** |
+| `매수호가5N` | 32 | 매수호가 5단계 | ❌ **추가 필요** |
+| `매도잔량5N` | 33 | 매도잔량 5단계 | ❌ **추가 필요** |
+| `매도잔량4N` | 34 | 매도잔량 4단계 | ❌ **추가 필요** |
+| `매도잔량3N` | 35 | 매도잔량 3단계 | ❌ **추가 필요** |
+| `매도잔량2N` | 36 | 매도잔량 2단계 | ❌ **추가 필요** |
+| `매도잔량1N` | 37 | 매도잔량 1단계 | ✅ |
+| `매수잔량1N` | 38 | 매수잔량 1단계 | ✅ |
+| `매수잔량2N` | 39 | 매수잔량 2단계 | ❌ **추가 필요** |
+| `매수잔량3N` | 40 | 매수잔량 3단계 | ❌ **추가 필요** |
+| `매수잔량4N` | 41 | 매수잔량 4단계 | ❌ **추가 필요** |
+| `매수잔량5N` | 42 | 매수잔량 5단계 | ❌ **추가 필요** |
+| `매도수5호가잔량합N` | 43 | 매도수 5호가 잔량합 | ❌ **추가 필요** |
+| `관심종목N` | 44 | 관심종목 | ⚠️ 부분 구현 |
 
-Step 3 검증: 거래 시뮬레이션
-─────────────────────────────
-테스트 코드:
-    list_tsg = runner._simulate_trades()
-    assert isinstance(list_tsg, list)
-    # 기존 BackTest 결과와 비교
+**고급 분석 함수**:
 
-Step 4 검증: 결과 일치
-─────────────────────────────
-테스트 코드:
-    # 동일 조건으로 기존 BackTest 실행
-    # SyncBacktestRunner 결과와 비교
-    # 오차율 1% 이내 확인
-```
+| 함수명 | 파라미터 | 설명 | 구현상태 |
+|--------|---------|------|---------|
+| `이동평균` | `(tick, pre=0)` | 이동평균 계산 | ✅ |
+| `최고현재가` | `(tick, pre=0)` | 기간 내 최고 현재가 | ✅ |
+| `최저현재가` | `(tick, pre=0)` | 기간 내 최저 현재가 | ✅ |
+| `체결강도평균` | `(tick, pre=0)` | 체결강도 평균 | ❌ **추가 필요** |
+| `최고체결강도` | `(tick, pre=0)` | 최고 체결강도 | ❌ **추가 필요** |
+| `최저체결강도` | `(tick, pre=0)` | 최저 체결강도 | ❌ **추가 필요** |
+| `등락율각도` | `(tick, pre=0)` | 등락율 각도 | ✅ |
+| `당일거래대금각도` | `(tick, pre=0)` | 거래대금 각도 | ✅ |
+| `전일비각도` | `(tick, pre=0)` | 전일비 각도 | ❌ **추가 필요** |
+| `경과틱수` | `(조건명)` | 조건 발생 후 경과 틱수 | ❌ **추가 필요** |
 
-### 4.2 통합 테스트
-
-```python
-# tests/test_icos_integration.py
-
-def test_icos_full_cycle():
-    """ICOS 전체 사이클 테스트."""
-    from backtester.iterative_optimizer import (
-        IterativeOptimizer,
-        IterativeConfig,
-    )
-
-    # 설정
-    config = IterativeConfig(
-        enabled=True,
-        max_iterations=3,
-        convergence_threshold=5.0,
-    )
-
-    # 파라미터
-    backtest_params = {
-        'gubun': 'S',
-        'startday': 20240101,
-        'endday': 20240131,
-        # ...
-    }
-
-    # 실행
-    optimizer = IterativeOptimizer(config, backtest_params=backtest_params)
-    result = optimizer.run(
-        buystg='테스트조건',
-        sellstg='테스트매도',
-        backtest_params=backtest_params
-    )
-
-    # 검증
-    assert result.success or result.error_message
-    assert result.num_iterations >= 1
-    assert result.final_buystg is not None
-```
-
----
-
-## 5. 예상 일정
-
-| 단계 | 작업 | 예상 소요 | 산출물 |
-|------|------|----------|--------|
-| 1 | 조건식 컴파일 연동 | 0.5일 | _compile_conditions() |
-| 2 | 데이터 로드 연동 | 0.5일 | _load_market_data() |
-| 3 | 거래 시뮬레이션 | 2-3일 | _simulate_trades() |
-| 4 | 결과 집계 | 0.5일 | _create_result_dataframe(), _calculate_metrics() |
-| 5 | runner.py 연동 | 0.5일 | _execute_backtest() 수정 |
-| 6 | 통합 테스트 | 1일 | 테스트 코드 |
-| **합계** | | **5-6일** | |
-
----
-
-## 6. 리스크 및 완화 방안
-
-### 6.1 기술적 리스크
-
-| 리스크 | 영향 | 완화 방안 |
-|--------|------|----------|
-| BackEngine 로직 복잡성 | 구현 지연 | 핵심 로직만 추출, 단순화 |
-| 데이터 구조 불일치 | 결과 오류 | 기존 함수 최대 재사용 |
-| 메모리 사용량 | 성능 저하 | 데이터 청킹, 불필요한 복사 제거 |
-| 기존 시스템과 결과 차이 | 신뢰성 문제 | 철저한 비교 테스트 |
-
-### 6.2 완화 전략
+### 2.2 구현 계획
 
 ```
-1. 점진적 구현
-   - 각 단계별로 검증 후 다음 단계 진행
-   - 문제 발생 시 빠른 롤백 가능
+Phase 1: 기본 지표 함수 추가 (30개)
+─────────────────────────────────────
+├─ 거래대금증감N, 전일비N, 회전율N, 전일동시간비N
+├─ 시가총액N, 라운드피겨위5호가이내N
+├─ 초당매수수량N, 초당매도수량N, 초당거래대금N
+├─ 고저평균대비등락율N
+├─ 매도총잔량N, 매수총잔량N
+├─ 매도호가2~5N, 매수호가2~5N
+├─ 매도잔량2~5N, 매수잔량2~5N
+└─ 매도수5호가잔량합N
 
-2. 기존 코드 최대 활용
-   - GetBuyStg, GetSellStg 등 검증된 함수 재사용
-   - 새로운 로직은 최소화
+Phase 2: 고급 분석 함수 추가 (10개)
+─────────────────────────────────────
+├─ 체결강도평균, 최고체결강도, 최저체결강도
+├─ 최고초당매수수량, 최고초당매도수량
+├─ 누적초당매수수량, 누적초당매도수량
+├─ 초당거래대금평균
+├─ 전일비각도
+└─ 경과틱수
 
-3. 비교 테스트 자동화
-   - 동일 조건에서 기존 BackTest와 결과 비교
-   - CI/CD에 통합
+Phase 3: 예외 처리 개선
+─────────────────────────────────────
+├─ NameError 감지 및 로깅
+├─ 지원 지표 목록 안내 메시지
+└─ verbose 모드 상세 출력
 ```
 
 ---
 
-## 7. 성공 기준
+## 3. 성공 기준
 
-### 7.1 기능적 기준
+### 3.1 기능적 기준
 
-- [ ] ICOS 활성화 시 실제 백테스트 실행됨
-- [ ] df_tsg가 유효한 거래 데이터를 포함함
-- [ ] metrics가 정확한 성과 지표를 반환함
-- [ ] 반복마다 조건식이 개선됨
-- [ ] 수렴 조건 도달 시 정상 종료됨
+- [ ] 기본 지표만 사용하는 조건식으로 ICOS 정상 실행
+- [ ] 거래가 1건 이상 발생하는 것 확인
+- [ ] 반복 사이클에서 조건식 개선 관찰
+- [ ] 모든 BackEngine 지표가 SyncBacktestRunner에서 지원됨
 
-### 7.2 품질 기준
+### 3.2 품질 기준
 
-- [ ] 기존 BackTest 결과와 1% 이내 오차
-- [ ] 메모리 사용량 기존 대비 50% 이하
-- [ ] 단일 반복 실행 시간 30초 이내
-- [ ] 예외 발생 시 적절한 에러 메시지
-
-### 7.3 사용성 기준
-
-- [ ] Alt+I에서 ICOS 활성화 후 백테스트 버튼 클릭으로 실행
-- [ ] 로그 창에 ICOS 진행 상황 표시
-- [ ] 완료 후 최종 조건식 저장/표시
+- [ ] 동일 조건식에서 BackEngine과 SyncBacktestRunner 결과 비교
+- [ ] 오차율 5% 이내 (허용 오차: 부동소수점 차이)
+- [ ] 예외 발생 시 명확한 에러 메시지 출력
 
 ---
 
-## 8. 다음 단계 (구현 시작)
+## 4. 구현 체크리스트
 
-### 8.1 즉시 실행 작업
-
-```bash
-# 1. backtest_sync.py 파일 생성/업데이트
-# 2. SyncBacktestRunner 클래스 구현 시작
-# 3. 조건식 컴파일 연동부터 진행
-```
-
-### 8.2 첫 번째 커밋 목표
-
-```
-feat(icos): SyncBacktestRunner 조건식 컴파일 연동
-
-## 구현 내용
-- SyncBacktestRunner 클래스 기본 구조
-- _compile_conditions() 메서드 구현
-- GetBuyStg, GetSellStg 연동
-
-## 다음 단계
-- _load_market_data() 구현
-- _simulate_trades() 구현
-```
+- [ ] Phase 1: 기본 지표 함수 30개 추가
+- [ ] Phase 2: 고급 분석 함수 10개 추가
+- [ ] Phase 3: 예외 처리 개선
+- [ ] Phase 4: 통합 테스트
 
 ---
 
