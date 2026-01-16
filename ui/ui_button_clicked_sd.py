@@ -329,11 +329,47 @@ def sdbutton_clicked_01(ui):
 
 
 def sdbutton_clicked_02(ui):
+    # === 파일 무결성 검증: 이 메시지가 보이면 최신 코드가 실행 중 ===
+    import datetime
+    import os
+
+    # 파일 로그 강제 쓰기 (UI 큐와 무관하게 작동)
+    log_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            '_log', 'icos_debug.txt')
+    try:
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(f"\n{'='*80}\n")
+            f.write(f"[{datetime.datetime.now()}] sdbutton_clicked_02() 호출됨!\n")
+            f.write(f"파일 위치: {__file__}\n")
+            f.write(f"함수 버전: a250e76_VERIFICATION\n")
+            f.write(f"{'='*80}\n")
+    except Exception as e:
+        pass  # 로그 실패해도 계속 진행
+
     # 함수 진입 즉시 로그 출력 (조건문 이전)
     bt_gubun_initial = ui.sd_pushButtonnn_01.text() if hasattr(ui, 'sd_pushButtonnn_01') else '알수없음'
     log_target_initial = ui_num.get('S백테스트' if bt_gubun_initial == '주식' else 'C백테스트', 6)
-    ui.windowQ.put((log_target_initial,
-        f'<font color=#ff00ff>★★★ [TRACE] sdbutton_clicked_02() 함수 진입! bt_gubun={bt_gubun_initial} ★★★</font>'))
+
+    # UI 큐 로그 (3개 방법 동시 시도)
+    try:
+        ui.windowQ.put((log_target_initial,
+            f'<font color=#ff00ff>★★★ [TRACE] sdbutton_clicked_02() 함수 진입! bt_gubun={bt_gubun_initial} ★★★</font>'))
+    except:
+        pass
+
+    try:
+        ui.windowQ.put((log_target_initial,
+            f'<font color=#ff0000>!!! FILE VERIFICATION: a250e76_VERIFICATION !!!</font>'))
+    except:
+        pass
+
+    # 강제 print (콘솔 출력)
+    print(f"\n{'='*80}")
+    print(f"[ICOS DEBUG] sdbutton_clicked_02() CALLED at {datetime.datetime.now()}")
+    print(f"[ICOS DEBUG] File: {__file__}")
+    print(f"[ICOS DEBUG] Version: a250e76_VERIFICATION")
+    print(f"{'='*80}\n")
 
     if ui.BacktestProcessAlive():
         ui.windowQ.put((log_target_initial,

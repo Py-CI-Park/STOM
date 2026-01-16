@@ -97,7 +97,12 @@ class UpdateTextedit:
                     self.ui.ssicon_alert = False
                     self.ui.main_btn_list[2].setIcon(self.ui.icon_stocks)
                     if self.ui.back_schedul:
+                        # 스케줄러 자동 실행 로그
+                        print(f"\n[SCHEDULER] 주식 백테스트 완료 → 3초 후 자동 실행 (back_schedul={self.ui.back_schedul})")
+                        self.ui.windowQ.put((ui_num['S백테스트'],
+                            f'<font color=#ffff00>[SCHEDULER] 3초 후 다음 백테스트 자동 실행...</font>'))
                         qtest_qwait(3)
+                        print(f"[SCHEDULER] sdButtonClicked_02() 호출!")
                         self.ui.sdButtonClicked_02()
             elif data[0] in (ui_num['C백테스트'], ui_num['CF백테스트']):
                 if '배팅금액' in data[1] or 'OUT' in data[1] or '결과' in data[1] or '최적값' in data[1] or \
@@ -135,7 +140,12 @@ class UpdateTextedit:
                     self.ui.csicon_alert = False
                     self.ui.main_btn_list[3].setIcon(self.ui.icon_coins)
                     if self.ui.back_schedul:
+                        # 스케줄러 자동 실행 로그
+                        print(f"\n[SCHEDULER] 코인 백테스트 완료 → 3초 후 자동 실행 (back_schedul={self.ui.back_schedul})")
+                        self.ui.windowQ.put((ui_num['C백테스트'],
+                            f'<font color=#ffff00>[SCHEDULER] 3초 후 다음 백테스트 자동 실행...</font>'))
                         qtest_qwait(3)
+                        print(f"[SCHEDULER] sdButtonClicked_02() 호출!")
                         self.ui.sdButtonClicked_02()
             elif data[0] == ui_num['기업개요']:
                 self.ui.gg_textEdittttt_01.clear()
