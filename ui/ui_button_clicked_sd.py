@@ -429,6 +429,14 @@ def sdbutton_clicked_02(ui):
 
                 # ICOS 모드 - 위에서 이미 확인된 icos_enabled 사용
                 if icos_enabled:
+                    # ICOS는 단일 조건식에 대한 반복 최적화이므로 스케줄러를 비활성화
+                    # 스케줄러가 활성화되어 있으면 ICOS 완료 후 다음 백테스트가 자동 실행됨
+                    original_schedul = ui.back_schedul
+                    ui.back_schedul = False  # 스케줄러 임시 비활성화
+
+                    ui.windowQ.put((_debug_log_target,
+                        f'<font color=#00ff00>[ICOS] 스케줄러 비활성화 (원래: {original_schedul})</font>'))
+
                     _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime)
                     return
 
