@@ -178,6 +178,11 @@ class SyncBacktestRunner:
 
         Returns:
             (매수 조건식, 매도 조건식) 튜플
+
+        Note:
+            DB에 저장된 전략 코드 형식은 "조건식이름\\nif 매수:\\n..." 또는
+            "조건식이름if 매수:\\n..." 형태일 수 있음.
+            실제 실행 가능한 코드는 "if 매수:\\n..." 형식이어야 함.
         """
         gubun = 'stock' if self.ui_gubun == 'S' else 'coin'
 
@@ -189,7 +194,61 @@ class SyncBacktestRunner:
         buystg = dfb['전략코드'].get(buystg_name)
         sellstg = dfs['전략코드'].get(sellstg_name)
 
+        # 조건식 이름 제거 (SyntaxError 방지)
+        # DB에 저장된 형식: "조건식이름\nif 매수:\n    ..." 또는 "조건식이름if 매수:\n..."
+        # 필요한 형식: "if 매수:\n    ..."
+        buystg = self._strip_condition_name(buystg, 'if 매수:')
+        sellstg = self._strip_condition_name(sellstg, 'if 매도:')
+
         return buystg, sellstg
+
+    def _strip_condition_name(self, strategy_code: Optional[str], marker: str) -> Optional[str]:
+        """전략 코드에서 조건식 이름 제거.
+
+        DB에 저장된 전략 코드에서 조건식 이름 접두사를 제거하여
+        실행 가능한 Python 코드로 변환합니다.
+
+        Args:
+            strategy_code: 원본 전략 코드
+            marker: 조건식 시작 마커 ('if 매수:' 또는 'if 매도:')
+
+        Returns:
+            조건식 이름이 제거된 전략 코드
+        """
+        if not strategy_code:
+            return strategy_code
+
+        # marker가 코드에 없으면 원본 반환
+        if marker not in strategy_code:
+            return strategy_code
+
+        # marker 이전 텍스트 확인
+        before_marker = strategy_code.split(marker)[0]
+
+        # 1. marker 이전에 줄바꿈이 없는 경우: "조건식이름if 매수:..."
+        #    -> 이름만 있고 줄바꿈 없음 (예: "Min_B_Study_251227if 매수:")
+        if '\n' not in before_marker:
+            # 이름 부분 제거
+            stripped = before_marker.strip()
+            if stripped:
+                # 조건식 이름 제거하고 marker부터 시작
+                return strategy_code[len(before_marker):]
+            return strategy_code
+
+        # 2. marker 이전에 줄바꿈이 있는 경우: "조건식이름\nif 매수:..."
+        #    -> 첫 번째 줄이 조건식 이름
+        lines = strategy_code.split('\n')
+        first_line = lines[0].strip()
+
+        # 첫 줄이 조건식 이름인지 확인 (if/elif/else 등 Python 키워드가 없음)
+        python_keywords = ['if ', 'elif ', 'else:', 'for ', 'while ', 'def ', 'class ', '#', 'import ', 'from ']
+        is_name_line = first_line and not any(first_line.startswith(kw) for kw in python_keywords)
+
+        if is_name_line:
+            # 첫 줄 제거
+            return '\n'.join(lines[1:])
+
+        return strategy_code
 
     def run(
         self,

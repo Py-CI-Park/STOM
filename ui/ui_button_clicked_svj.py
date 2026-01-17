@@ -9,6 +9,7 @@ from backtester.rolling_walk_forward_test import RollingWalkForwardTest
 from backtester.optimiz_genetic_algorithm import OptimizeGeneticAlgorithm
 from ui.set_style import style_bc_by, style_bc_dk, style_bc_bs, style_bc_bd
 from ui.set_text import testtext, rwfttext, gaoptext, vedittxt, optitext, condtext, cedittxt, example_finder
+from utility.setting import ui_num
 
 
 def svj_button_clicked_01(ui):
@@ -668,6 +669,39 @@ def svj_button_clicked_11(ui):
             QMessageBox.critical(ui, '오류 알림', '전략을 저장하고 콤보박스에서 선택하십시오.\n')
             return
 
+        # ICOS 활성화 확인
+        from ui.ui_button_clicked_sd import _check_icos_enabled, _run_icos_backtest
+        icos_enabled = _check_icos_enabled(ui)
+
+        if icos_enabled:
+            # ICOS 모드로 실행
+            ui.windowQ.put((ui_num['S백테스트'],
+                '<font color=#7cfc00>[ICOS] ICOS 모드 활성화됨 - 반복적 조건식 개선이 실행됩니다.</font>'))
+
+            # 스케줄러 비활성화 (ICOS는 단일 조건식 최적화)
+            original_schedul = getattr(ui, 'back_schedul', False)
+            ui.back_schedul = False
+
+            # ICOS 실행
+            _run_icos_backtest(
+                ui=ui,
+                bt_gubun='주식',
+                buystg=buystg,
+                sellstg=sellstg,
+                startday=startday,
+                endday=endday,
+                starttime=starttime,
+                endtime=endtime,
+                betting=betting,
+                avgtime=avgtime
+            )
+
+            # 스케줄러 상태 복원
+            ui.back_schedul = original_schedul
+
+            return  # ICOS 실행 후 종료
+
+        # 일반 백테스트 실행
         ui.ClearBacktestQ()
         for q in ui.back_eques:
             q.put(('백테유형', '백테스트'))
