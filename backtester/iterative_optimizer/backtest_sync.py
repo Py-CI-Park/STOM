@@ -154,9 +154,8 @@ class SyncBacktestRunner:
                     df = AddAvgData(df, 3, is_tick, avg_list)
                     dict_arry[code] = np.array(df)
                     self._log(f"  {code}: {len(df)}건 로드")
-            except Exception as e:
-                self._log(f"  {code}: 로드 실패 - {e}")
-                continue
+            except:
+                pass
 
         con.close()
 
