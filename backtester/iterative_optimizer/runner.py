@@ -160,7 +160,7 @@ class IterativeOptimizer:
 
         # UI 연동 (STOM 패턴)
         self._ui_gubun = 'S'  # 기본값: 주식
-        self._start_time: Optional[float] = None
+        self._start_time: Optional[datetime] = None  # datetime 객체로 변경 (UI 호환성)
         self._total_steps = 0
         self._current_step = 0
 
@@ -284,7 +284,8 @@ class IterativeOptimizer:
         if self._start_time is None or current_iteration == 0:
             return "계산 중..."
 
-        elapsed = time.time() - self._start_time
+        # datetime 객체에서 경과 시간 계산
+        elapsed = (datetime.now() - self._start_time).total_seconds()
         avg_time_per_iteration = elapsed / (current_iteration + 1)
         remaining_iterations = total_iterations - current_iteration - 1
         eta_seconds = avg_time_per_iteration * remaining_iterations
@@ -353,7 +354,7 @@ class IterativeOptimizer:
 
         # UI 구분 설정 (S=주식, C=코인)
         self._ui_gubun = params.get('ui_gubun', 'S')
-        self._start_time = time.time()
+        self._start_time = start_time  # datetime 객체 사용 (UI 진행률 바 호환)
         self._total_steps = self.config.max_iterations * 4  # 4단계/반복
 
         # 시작 로그 (강조)
@@ -552,7 +553,8 @@ class IterativeOptimizer:
         df_tsg = backtest_result.get('df_tsg')
 
         trade_count = len(df_tsg) if df_tsg is not None and not df_tsg.empty else 0
-        self._log(f"  백테스트 완료: 거래 {trade_count}건", UI_COLOR_GRAY, send_to_ui=False)
+        exec_time = backtest_result.get('execution_time', 0)
+        self._log(f"  백테스트 완료: 거래 {trade_count}건, {exec_time:.1f}초", UI_COLOR_GRAY, send_to_ui=True)
 
         # Step 2: 결과 분석
         self._log(f"  [2/4] 결과 분석 중...", UI_COLOR_GRAY, send_to_ui=True)
@@ -627,12 +629,16 @@ class IterativeOptimizer:
         ui_gubun = params.get('ui_gubun', 'S')
         timeframe = params.get('timeframe', 'tick')
 
+        # windowQ 추출 (UI 로그 전송용)
+        windowQ = self.qlist[0] if self.qlist and len(self.qlist) > 0 else None
+
         # SyncBacktestRunner 생성 및 실행
         runner = SyncBacktestRunner(
             ui_gubun=ui_gubun,
             timeframe=timeframe,
             dict_cn=params.get('dict_cn', {}),
             verbose=self.config.verbose,
+            windowQ=windowQ,  # UI 로그 전송용
         )
 
         self._log(f"    백테스트 실행 중...")

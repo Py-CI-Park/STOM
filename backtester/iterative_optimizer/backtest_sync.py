@@ -55,6 +55,7 @@ class SyncBacktestRunner:
         timeframe: str = 'tick',
         dict_cn: Optional[Dict[str, str]] = None,
         verbose: bool = False,
+        windowQ=None,
     ):
         """초기화.
 
@@ -63,11 +64,13 @@ class SyncBacktestRunner:
             timeframe: 타임프레임 ('tick' 또는 'min')
             dict_cn: 종목코드-종목명 딕셔너리
             verbose: 상세 로그 출력 여부
+            windowQ: UI 로그 전송용 큐 (선택)
         """
         self.ui_gubun = ui_gubun
         self.timeframe = timeframe
         self.dict_cn = dict_cn or {}
         self.verbose = verbose
+        self.windowQ = windowQ  # UI 로그 전송용
         self.dict_set = DICT_SET.copy()
 
         # STOM 패턴: 한국어 상태 변수
@@ -94,11 +97,22 @@ class SyncBacktestRunner:
         self.bhogainfo = []
         self.shogainfo = []
 
-    def _log(self, message: str) -> None:
-        """로그 출력."""
+    def _log(self, message: str, send_to_ui: bool = False) -> None:
+        """로그 출력.
+
+        Args:
+            message: 로그 메시지
+            send_to_ui: UI로도 전송할지 여부
+        """
         if self.verbose:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             print(f"[{timestamp}] [SyncBacktest] {message}")
+
+        # UI 로그 전송 (windowQ가 있고, send_to_ui가 True인 경우)
+        if send_to_ui and self.windowQ is not None:
+            ui_num = 6 if self.ui_gubun == 'S' else 7  # S백테스트=6, C백테스트=7
+            formatted_msg = f'<font color=#cccccc>[ICOS] {message}</font>'
+            self.windowQ.put((ui_num, formatted_msg))
 
     def _get_db_path(self) -> str:
         """백테스트 데이터베이스 경로 반환."""
@@ -131,14 +145,16 @@ class SyncBacktestRunner:
             종목코드별 데이터 배열 딕셔너리
         """
         db = self._get_db_path()
-        self._log(f"데이터 로드: {db}")
+        self._log(f"데이터 로드 시작: {len(code_list)}종목", send_to_ui=True)
 
         dict_arry = {}
         is_tick = self.timeframe == 'tick'
+        total_codes = len(code_list)
+        loaded_count = 0
 
         con = sqlite3.connect(db)
 
-        for code in code_list:
+        for idx, code in enumerate(code_list):
             try:
                 # 기본 쿼리: 날짜 및 시간 범위 필터링
                 query = f"""
@@ -153,14 +169,24 @@ class SyncBacktestRunner:
                     # 평균 데이터 추가
                     df = AddAvgData(df, 3, is_tick, avg_list)
                     dict_arry[code] = np.array(df)
+                    loaded_count += 1
                     self._log(f"  {code}: {len(df)}건 로드")
             except:
                 pass
 
+            # 진행률 로그 (25%, 50%, 75% 시점에서 UI로 전송)
+            progress = (idx + 1) / total_codes * 100
+            if progress >= 25 and (idx == 0 or ((idx) / total_codes * 100) < 25):
+                self._log(f"데이터 로드 25%... ({loaded_count}종목)", send_to_ui=True)
+            elif progress >= 50 and (idx == 0 or ((idx) / total_codes * 100) < 50):
+                self._log(f"데이터 로드 50%... ({loaded_count}종목)", send_to_ui=True)
+            elif progress >= 75 and (idx == 0 or ((idx) / total_codes * 100) < 75):
+                self._log(f"데이터 로드 75%... ({loaded_count}종목)", send_to_ui=True)
+
         con.close()
 
         total_count = sum(len(arr) for arr in dict_arry.values())
-        self._log(f"데이터 로드 완료: {len(dict_arry)}종목, {total_count}건")
+        self._log(f"데이터 로드 완료: {len(dict_arry)}종목, {total_count:,}건", send_to_ui=True)
 
         return dict_arry
 
@@ -321,7 +347,7 @@ class SyncBacktestRunner:
         self.arry_bct = np.zeros((total_ticks, 3), dtype='float64')
 
         # 3. 백엔진 실행 (동기식)
-        self._log("백엔진 실행 중...")
+        self._log(f"백엔진 실행 중... ({len(dict_arry)}종목, {total_ticks:,}틱)", send_to_ui=True)
         self.list_tsg = []
 
         self._run_backengine_sync(
@@ -335,10 +361,10 @@ class SyncBacktestRunner:
         )
 
         if not self.list_tsg:
-            self._log("거래 없음 - 빈 결과 반환")
+            self._log("거래 없음 - 빈 결과 반환", send_to_ui=True)
             return self._empty_result()
 
-        self._log(f"백엔진 완료: {len(self.list_tsg)}건 거래")
+        self._log(f"백엔진 완료: {len(self.list_tsg)}건 거래", send_to_ui=True)
 
         # 4. 결과 처리
         df_tsg, df_bct = GetResultDataframe(self.ui_gubun, self.list_tsg, self.arry_bct)
