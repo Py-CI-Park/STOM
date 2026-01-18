@@ -190,12 +190,20 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         )
         return
 
+    # 배팅금액 단위 변환 (기본 백테스트와 동일: backtest.py:283-286)
+    # UI에서 입력받은 값은 "백만원" 단위 (예: 20 = 2천만원)
+    # 바이낸스(CF)는 단위 변환 없음
+    if gubun != 'CF':
+        betting_value = float(betting) * 1000000
+    else:
+        betting_value = float(betting)
+
     backtest_params = {
         'startday': int(startday),
         'endday': int(endday),
         'starttime': int(starttime),
         'endtime': int(endtime),
-        'betting': int(betting),
+        'betting': int(betting_value),
         'avgtime': int(avgtime),
         'gubun': gubun,
         'ui_gubun': gubun,
