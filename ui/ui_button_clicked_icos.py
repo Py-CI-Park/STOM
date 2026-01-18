@@ -664,15 +664,23 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
     별도 프로세스에서 실행되어 ICOS 최적화를 수행합니다.
     SyncBacktestRunner를 사용하여 반복적 조건식 개선을 수행합니다.
 
+    Note:
+        buystg, sellstg는 UI에서 전달받은 **조건식 이름**입니다.
+        일반 백테스트(backtest.py:BackTest.Start)와 동일하게
+        DB에서 실제 전략 코드를 조회하여 사용합니다.
+
     Args:
         windowQ: 윈도우 메시지 큐
         backQ: 백테스트 큐
         config_dict: ICOS 설정 딕셔너리
-        buystg: 매수 조건식
-        sellstg: 매도 조건식
+        buystg: 매수 조건식 이름 (DB에서 코드 조회 필요)
+        sellstg: 매도 조건식 이름 (DB에서 코드 조회 필요)
         backtest_params: 백테스트 파라미터
     """
+    import sqlite3
     import traceback
+    import pandas as pd
+    from utility.setting import DB_STRATEGY
 
     # bt_gubun에 따른 로그 타겟 결정 (함수 전체에서 사용) - import 전에 설정
     bt_gubun = backtest_params.get('bt_gubun', '주식')
@@ -715,6 +723,42 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
         windowQ.put((log_target,
             f'<font color=#cccccc>[ICOS] 종목 {len(code_list)}개 대상으로 실행</font>'))
 
+        # ===== DB에서 전략 코드 로드 (일반 백테스트와 동일한 방식) =====
+        # 참조: backtest.py:BackTest.Start() Line 328-333
+        # UI에서 전달받은 buystg, sellstg는 "조건식 이름"이므로
+        # DB에서 실제 "전략 코드"를 조회해야 합니다.
+        buystg_name = buystg
+        sellstg_name = sellstg
+        gubun = 'stock' if bt_gubun == '주식' else 'coin'
+
+        try:
+            con = sqlite3.connect(DB_STRATEGY)
+            dfb = pd.read_sql(f'SELECT * FROM {gubun}buy', con).set_index('index')
+            dfs = pd.read_sql(f'SELECT * FROM {gubun}sell', con).set_index('index')
+            con.close()
+
+            # 조건식 이름 → 실제 전략 코드
+            if buystg_name not in dfb.index:
+                windowQ.put((log_target,
+                    f'<font color=#ff0000>[ICOS] 오류: 매수 조건식 "{buystg_name}"을 찾을 수 없습니다.</font>'))
+                return
+            if sellstg_name not in dfs.index:
+                windowQ.put((log_target,
+                    f'<font color=#ff0000>[ICOS] 오류: 매도 조건식 "{sellstg_name}"을 찾을 수 없습니다.</font>'))
+                return
+
+            buystg_code = dfb['전략코드'][buystg_name]
+            sellstg_code = dfs['전략코드'][sellstg_name]
+
+            windowQ.put((log_target,
+                f'<font color=#cccccc>[ICOS] 전략 로드 완료: {buystg_name} / {sellstg_name}</font>'))
+
+        except Exception as e:
+            windowQ.put((log_target,
+                f'<font color=#ff0000>[ICOS] 전략 로드 오류: {type(e).__name__}: {e}</font>'))
+            return
+        # ===== DB 조회 끝 =====
+
         # UI에서 전달받은 설정을 IterativeConfig 형식으로 변환
         icos_config = _convert_ui_config_to_icos_config(config_dict)
 
@@ -730,7 +774,8 @@ def _run_icos_process(windowQ, backQ, config_dict: dict, buystg: str,
         windowQ.put((log_target,
             f'<font color=#cccccc>[ICOS] 수렴 기준: {config.convergence.threshold * 100:.1f}% 이하</font>'))
 
-        result = optimizer.run(buystg, sellstg, backtest_params)
+        # 실제 전략 코드로 ICOS 실행 (기존: buystg, sellstg → 변경: buystg_code, sellstg_code)
+        result = optimizer.run(buystg_code, sellstg_code, backtest_params)
 
         # 결과 로그는 runner.py에서 이미 상세히 전송됨
         # 여기서는 최종 요약만 추가
