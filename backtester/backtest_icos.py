@@ -347,9 +347,9 @@ class ICOSBackTest:
         self.config = IterativeConfig.from_dict(icos_config)
         self.analyzer = ResultAnalyzer(self.config)
         self.filter_gen = FilterGenerator(self.config)
-        self.condition_builder = ConditionBuilder()
+        self.condition_builder = ConditionBuilder(self.config)
         self.convergence_checker = ConvergenceChecker(self.config)
-        self.storage = IterationStorage()
+        self.storage = IterationStorage(self.config)
 
         # 상태 변수
         self.current_iteration = 0
