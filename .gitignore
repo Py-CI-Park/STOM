@@ -94,3 +94,10 @@ STOM V1 venv.lnk
 
 backtester/graph/
 nul
+
+# ICOS outputs (iterative optimization results)
+_icos_results/
+
+# Claude Code plugin state
+.sisyphus/
+tmpclaude-*
