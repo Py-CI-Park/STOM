@@ -389,7 +389,49 @@ class ICOSBackTest:
         self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 0, 100, 0))
         start_time = now()
 
+        # === ICOS 시작 안내 ===
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#45cdf7>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#45cdf7>🚀 ICOS (Iterative Condition Optimization System) 시작</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#45cdf7>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#888888>[ICOS 단계 안내]</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#888888>  1️⃣ 초기화: 파라미터 수신 및 전략 로드</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#888888>  2️⃣ 반복 최적화: 백테스트 → 분석 → 필터 생성 → 조건식 개선</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#888888>  3️⃣ 수렴 검사: 개선율 기준 수렴 여부 판단</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#888888>  4️⃣ 최종 백테스트: 최적화된 조건식으로 결과 생성</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#45cdf7>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
+        ))
+
         # === 1. backQ에서 파라미터 수신 ===
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#ffa500>[ICOS] 📥 1단계: 파라미터 수신 중...</font>'
+        ))
         data = self.bq.get()
         if not self._parse_backq_data(data):
             self._sys_exit(True)
@@ -397,7 +439,7 @@ class ICOSBackTest:
 
         self.wq.put((
             ui_num[f'{self.ui_gubun}백테스트'],
-            f'<font color=#45cdf7>[ICOS] 반복적 조건식 개선 시작 '
+            f'<font color=#7cfc00>[ICOS] ✅ 1단계 완료: 반복적 조건식 개선 준비됨 '
             f'(최대 {self.max_iterations}회)</font>'
         ))
 
@@ -406,20 +448,34 @@ class ICOSBackTest:
         self.initial_sellstg = self.current_sellstg
 
         # === 2. 반복 루프 ===
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#ffa500>[ICOS] 🔄 2단계: 반복 최적화 시작</font>'
+        ))
+
         while self.current_iteration < self.max_iterations and not self.converged:
             iter_start = now()
+
+            # 진행률 계산 및 업데이트
+            progress = int((self.current_iteration / self.max_iterations) * 80)  # 최대 80%까지
+            self.wq.put((ui_num[f'{self.ui_gubun}백테바'], progress, 100, start_time))
+
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
-                f'<font color=#7cfc00>[ICOS] 반복 {self.current_iteration + 1}/'
-                f'{self.max_iterations} 시작</font>'
+                f'<font color=#7cfc00>[ICOS] ━━━ 반복 {self.current_iteration + 1}/'
+                f'{self.max_iterations} 시작 ({progress}%) ━━━</font>'
             ))
 
             # === 2.1 백테스트 실행 ===
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [2.1] 백테스트 실행 중...</font>'
+            ))
             result = self._run_backtest_iteration()
             if result is None or result.get('status') != 'completed':
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    '<font color=#ff0000>[ICOS] 백테스트 실패 - 루프 종료</font>'
+                    '<font color=#ff0000>[ICOS] ❌ 백테스트 실패 - 루프 종료</font>'
                 ))
                 break
 
@@ -435,26 +491,38 @@ class ICOSBackTest:
             })
 
             # === 2.2 결과 분석 ===
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [2.2] 결과 분석 중...</font>'
+            ))
             analysis = self.analyzer.analyze(df_tsg)
             if not analysis.loss_patterns:
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    '<font color=#ffa500>[ICOS] 분석할 손실 패턴 없음 - 수렴</font>'
+                    '<font color=#ffa500>[ICOS] ⚠️ 분석할 손실 패턴 없음 - 수렴</font>'
                 ))
                 self.converged = True
                 break
 
             # === 2.3 필터 생성 ===
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [2.3] 필터 생성 중...</font>'
+            ))
             filter_candidates = self.filter_gen.generate(analysis)
             if not filter_candidates:
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    '<font color=#ffa500>[ICOS] 생성할 필터 없음 - 수렴</font>'
+                    '<font color=#ffa500>[ICOS] ⚠️ 생성할 필터 없음 - 수렴</font>'
                 ))
                 self.converged = True
                 break
 
             # === 2.4 조건식 개선 ===
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [2.4] 조건식 개선 중...</font>'
+            ))
             build_result = self.condition_builder.build(
                 self.current_buystg, filter_candidates
             )
@@ -464,23 +532,27 @@ class ICOSBackTest:
             if not applied_filters:
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    '<font color=#ffa500>[ICOS] 적용할 필터 없음 - 수렴</font>'
+                    '<font color=#ffa500>[ICOS] ⚠️ 적용할 필터 없음 - 수렴</font>'
                 ))
                 self.converged = True
                 break
 
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
-                f'<font color=#cccccc>[ICOS] {len(applied_filters)}개 필터 적용됨</font>'
+                f'<font color=#cccccc>  [ICOS] ✅ {len(applied_filters)}개 필터 적용됨</font>'
             ))
 
             # === 2.5 수렴 체크 ===
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [2.5] 수렴 검사 중...</font>'
+            ))
             if len(self.iteration_results) >= 2:
                 prev_metrics = self.iteration_results[-2]['metrics']
                 improvement = self._calculate_improvement(prev_metrics, metrics)
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    f'<font color=#cccccc>[ICOS] 개선율: {improvement:.1f}%</font>'
+                    f'<font color=#cccccc>  [ICOS] 📊 개선율: {improvement:+.1f}%</font>'
                 ))
 
                 if self.convergence_checker.check(
@@ -488,7 +560,7 @@ class ICOSBackTest:
                 ):
                     self.wq.put((
                         ui_num[f'{self.ui_gubun}백테스트'],
-                        f'<font color=#7cfc00>[ICOS] 수렴 조건 달성!</font>'
+                        f'<font color=#7cfc00>[ICOS] 🎉 3단계: 수렴 조건 달성!</font>'
                     ))
                     self.converged = True
                     break
@@ -505,14 +577,31 @@ class ICOSBackTest:
             ))
 
         # === 3. 최종 백테스트 실행 ===
+        # 진행률 90%로 업데이트
+        self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 90, 100, start_time))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#ffa500>[ICOS] 🎯 4단계: 최종 백테스트 실행 (90%)</font>'
+        ))
         self._run_final_backtest()
 
         # === 4. 결과 저장 및 종료 ===
+        # 진행률 100% 완료
+        self.wq.put((ui_num[f'{self.ui_gubun}백테바'], 100, 100, start_time))
+
         total_duration = now() - start_time
         self.wq.put((
             ui_num[f'{self.ui_gubun}백테스트'],
-            f'<font color=#45cdf7>[ICOS] 완료 - 총 {self.current_iteration}회 반복, '
+            '<font color=#45cdf7>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            f'<font color=#45cdf7>🏁 ICOS 완료 - 총 {self.current_iteration}회 반복, '
             f'소요시간 {total_duration}</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#45cdf7>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
         ))
 
         # 개선된 조건식 DB 저장 옵션
@@ -682,14 +771,31 @@ class ICOSBackTest:
 
         optimiz.py:569-571 패턴 적용:
         최적화 완료 후 최종 조건으로 기존 백테스트 자동 실행
+
+        Note:
+            그래프 옵션은 dict_set['그래프띄우지않기']를 참조합니다.
+            back_club=False로 설정하여 일반 백테스트와 동일하게 처리합니다.
         """
         self.wq.put((
             ui_num[f'{self.ui_gubun}백테스트'],
-            '<font color=#7cfc00>[ICOS] 최적화된 조건식으로 최종 백테스트 실행</font>'
+            '<font color=#7cfc00>[ICOS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#7cfc00>[ICOS] 🎯 최종 단계: 최적화된 조건식으로 백테스트 실행</font>'
+        ))
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            '<font color=#7cfc00>[ICOS] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</font>'
         ))
 
-        # 최종 백테스트는 일반 모드로 실행 (icos_mode=False)
-        # 이렇게 하면 Report()에서 DB 저장, 그래프 생성 등 모든 기능 실행
+        # 그래프 옵션 로그
+        show_graph = not self.dict_set.get('그래프띄우지않기', False)
+        save_graph = not self.dict_set.get('그래프저장하지않기', False)
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            f'<font color=#888888>[ICOS] 그래프 옵션: 표시={show_graph}, 저장={save_graph}</font>'
+        ))
 
         if self.ui_gubun == 'S':
             db = DB_STOCK_BACK_TICK if self.dict_set['주식타임프레임'] else DB_STOCK_BACK_MIN
@@ -730,13 +836,15 @@ class ICOSBackTest:
         for q in self.bstq_list:
             q.put(data)
 
+        # back_club=False로 설정하여 dict_set['그래프띄우지않기'] 옵션 적용
+        # back_club=True면 그래프 옵션 무시하고 항상 표시됨
         self.tq.put((
             '백테정보', self.betting, self.avgtime, self.startday, self.endday,
             self.starttime, self.endtime,
             f'{self.buystg_name}_ICOS', self.sellstg_name,
             self.current_buystg, self.current_sellstg, self.dict_cn,
             self.back_count, day_count, self.bl, False,
-            self.df_kp, self.df_kd, True  # back_club=True로 상세 리포트
+            self.df_kp, self.df_kd, False  # back_club=False로 변경 (그래프 옵션 적용)
         ))
 
         time.sleep(0.5)
@@ -755,12 +863,12 @@ class ICOSBackTest:
             result = mq.get(timeout=600)
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
-                f'<font color=#7cfc00>[ICOS] 최종 백테스트 완료</font>'
+                f'<font color=#7cfc00>[ICOS] ✅ 최종 백테스트 완료</font>'
             ))
         except:
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
-                '<font color=#ff0000>[ICOS] 최종 백테스트 타임아웃</font>'
+                '<font color=#ff0000>[ICOS] ❌ 최종 백테스트 타임아웃</font>'
             ))
 
         total_proc.join(timeout=10)
