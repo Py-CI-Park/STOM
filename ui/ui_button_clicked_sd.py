@@ -16,7 +16,8 @@ from utility.static import qtest_qwait
 from ui.ui_button_clicked_icos import (
     _collect_icos_config,
     _collect_analysis_config,
-    _run_icos_process
+    # Note: _run_icos_process는 더 이상 사용하지 않음 (2026-01-19)
+    # 새로운 ICOSBackTest 클래스가 기존 백테스트 엔진을 완전 통합
 )
 
 
@@ -118,16 +119,22 @@ def _check_icos_enabled(ui) -> bool:
 
 
 def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttime, endtime, betting, avgtime):
-    """ICOS 모드 백테스트 실행.
+    """ICOS 모드 백테스트 실행 (완전 통합 방식).
 
-    ICOS가 활성화된 상태에서 백테스트 버튼 클릭 시 호출됩니다.
-    스케줄러의 설정을 사용하여 ICOS 반복 최적화를 실행합니다.
+    기존 BackTest 엔진(back_eques 멀티프로세스)을 완전히 재활용하면서
+    반복적 조건식 최적화를 수행합니다.
+
+    변경사항 (2026-01-19):
+    - 기존 SyncBacktestRunner 대신 ICOSBackTest 클래스 사용
+    - backQ 큐를 통한 기존 백테스트 엔진 재활용
+    - back_eques 멀티프로세스 분산 처리 활용
+    - optimiz.py 패턴 적용: 최적화 완료 후 최종 백테스트 자동 실행
 
     Args:
         ui: 메인 UI 클래스
         bt_gubun: '주식' 또는 '코인'
-        buystg: 매수 조건식
-        sellstg: 매도 조건식
+        buystg: 매수 조건식 이름
+        sellstg: 매도 조건식 이름
         startday: 시작일 (YYYYMMDD)
         endday: 종료일 (YYYYMMDD)
         starttime: 시작시간 (HHMM)
@@ -135,6 +142,8 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         betting: 베팅금액
         avgtime: 평균값틱수
     """
+    from backtester.backtest_icos import ICOSBackTest
+
     # 이미 ICOS가 실행 중인지 확인
     if hasattr(ui, 'proc_icos') and ui.proc_icos is not None and ui.proc_icos.is_alive():
         QMessageBox.warning(
@@ -144,23 +153,22 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         )
         return
 
-    # ICOS 설정값 수집 (분석 설정 포함)
+    # ICOS 설정값 수집
     try:
         icos_config = _collect_icos_config(ui)
         analysis_config = _collect_analysis_config(ui)
 
         # 통합 config_dict 생성
-        # ICOS는 분석 설정과 독립적으로 작동하지만, 필요한 분석 설정을 포함
         config_dict = {
             **icos_config,
-            'analysis': analysis_config,  # 분석 설정 포함
+            'analysis': analysis_config,
         }
 
-        # 디버그: 수집된 설정 로그
+        # 디버그 로그
         log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
         ui.windowQ.put((log_target,
-            f'<font color=#888888>[DEBUG] ICOS config: enabled={icos_config.get("enabled")}, '
-            f'max_iter={icos_config.get("max_iterations")}</font>'))
+            f'<font color=#888888>[ICOS] 설정: max_iter={icos_config.get("max_iterations")}, '
+            f'threshold={icos_config.get("convergence_threshold")}%</font>'))
 
     except ValueError as e:
         QMessageBox.critical(
@@ -175,11 +183,10 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
             f'<font color=#ff0000>[ICOS 오류] 설정 수집 실패: {type(e).__name__}: {e}</font>'))
         return
 
-    # 백테스트 파라미터
-    # dict_cn과 code_list 포함 (SyncBacktestRunner에서 필요)
+    # gubun 결정
     gubun = 'S' if bt_gubun == '주식' else ('C' if ui.dict_set['거래소'] == '업비트' else 'CF')
 
-    # dict_cn 검증 - 백테엔진이 시작되어 있어야 함
+    # 백테엔진 시작 여부 확인
     if not hasattr(ui, 'dict_cn') or not ui.dict_cn:
         QMessageBox.critical(
             ui.dialog_scheduler,
@@ -190,68 +197,75 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
         )
         return
 
-    # 배팅금액 단위 변환 (기본 백테스트와 동일: backtest.py:283-286)
-    # UI에서 입력받은 값은 "백만원" 단위 (예: 20 = 2천만원)
-    # 바이낸스(CF)는 단위 변환 없음
-    if gubun != 'CF':
-        betting_value = float(betting) * 1000000
-    else:
-        betting_value = float(betting)
-
-    backtest_params = {
-        'startday': int(startday),
-        'endday': int(endday),
-        'starttime': int(starttime),
-        'endtime': int(endtime),
-        'betting': int(betting_value),
-        'avgtime': int(avgtime),
-        'gubun': gubun,
-        'ui_gubun': gubun,
-        'bt_gubun': bt_gubun,
-        'dict_cn': ui.dict_cn,
-        'code_list': list(ui.dict_cn.keys()),
-        'avg_list': ui.avg_list if hasattr(ui, 'avg_list') else [int(avgtime)],
-        'timeframe': 'tick',  # 기본 틱 모드
-    }
-
     # ICOS 로그 초기화
     if hasattr(ui, 'icos_textEditxxx_01'):
         ui.icos_textEditxxx_01.clear()
-        ui.icos_textEditxxx_01.append('<font color="#45cdf7">ICOS 모드 백테스트 시작...</font>')
+        ui.icos_textEditxxx_01.append('<font color="#45cdf7">ICOS 완전 통합 모드 시작</font>')
         ui.icos_textEditxxx_01.append(f'<font color="#cccccc">조건식: {buystg} / {sellstg}</font>')
         ui.icos_textEditxxx_01.append(f'<font color="#cccccc">기간: {startday} ~ {endday}</font>')
-
-        # 분석 설정 상태 표시
-        analysis_status = '활성' if analysis_config.get('enabled', True) else '비활성'
         ui.icos_textEditxxx_01.append(
-            f'<font color="#888888">분석 기능: {analysis_status} (ICOS와 독립 실행)</font>'
-        )
+            '<font color="#888888">기존 백테스트 엔진(멀티프로세스) 활용</font>')
 
         if hasattr(ui, 'icos_progressBar_01'):
             ui.icos_progressBar_01.setValue(0)
 
-    # 백테 유형 설정
+    # 블랙리스트 설정
+    bl = True if ui.dict_set['블랙리스트추가'] else False
+
+    # 백테 유형 설정 (기존 백테스트와 동일)
     for q in ui.back_eques:
         q.put(('백테유형', 'ICOS'))
 
-    # ICOS 프로세스 시작
+    # backQ에 파라미터 전달 (기존 백테스트와 동일한 형식!)
+    # BackTest.Start()에서 수신하는 것과 동일한 튜플
+    ui.backQ.put((
+        betting,      # [0] 배팅금액 (백만원 단위)
+        avgtime,      # [1] 평균값틱수
+        startday,     # [2] 시작일
+        endday,       # [3] 종료일
+        starttime,    # [4] 시작시간
+        endtime,      # [5] 종료시간
+        buystg,       # [6] 매수 조건식 이름 (ICOSBackTest에서 DB 조회)
+        sellstg,      # [7] 매도 조건식 이름
+        ui.dict_cn,   # [8] 종목코드-종목명
+        ui.back_count, # [9] 총 틱 수
+        bl,           # [10] 블랙리스트
+        True,         # [11] 주식=True (스케줄 플래그)
+        ui.df_kp,     # [12] 코스피 지수
+        ui.df_kd,     # [13] 코스닥 지수
+        False         # [14] 플래그
+    ))
+
+    # ICOSBackTest 프로세스 시작
     try:
         ui.proc_icos = Process(
-            target=_run_icos_process,
-            args=(ui.windowQ, ui.backQ, config_dict, buystg, sellstg, backtest_params)
+            target=ICOSBackTest,
+            args=(
+                ui.windowQ,     # wq
+                ui.backQ,       # bq
+                ui.soundQ,      # sq
+                ui.totalQ,      # tq
+                ui.liveQ,       # lq
+                ui.teleQ,       # teleQ
+                ui.back_eques,  # beq_list
+                ui.back_sques,  # bstq_list
+                'ICOS',         # backname
+                gubun,          # ui_gubun
+                config_dict,    # icos_config
+            )
         )
         ui.proc_icos.start()
 
         # UI 업데이트
         start_log_target = ui_num.get('S백테스트' if bt_gubun == '주식' else 'C백테스트', 6)
         ui.windowQ.put((start_log_target,
-            f'<font color=#45cdf7>[ICOS] 반복적 조건식 개선 시스템 시작 (PID: {ui.proc_icos.pid})</font>'))
+            f'<font color=#45cdf7>[ICOS] 기존 백테스트 엔진 통합 모드 시작 (PID: {ui.proc_icos.pid})</font>'))
 
         if hasattr(ui, 'icos_textEditxxx_01'):
             ui.icos_textEditxxx_01.append(
-                f'<font color="#7cfc00">ICOS 프로세스 시작됨 (PID: {ui.proc_icos.pid})</font>')
+                f'<font color="#7cfc00">ICOSBackTest 프로세스 시작 (PID: {ui.proc_icos.pid})</font>')
 
-        # 상태 업데이트
+        # 상태 업데이트 (기존 백테스트와 동일)
         if bt_gubun == '주식':
             ui.svjButtonClicked_07()
             ui.ss_progressBar_01.setValue(0)
