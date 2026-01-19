@@ -212,9 +212,10 @@ def _run_icos_backtest(ui, bt_gubun, buystg, sellstg, startday, endday, starttim
     # 블랙리스트 설정
     bl = True if ui.dict_set['블랙리스트추가'] else False
 
-    # 백테 유형 설정 (기존 백테스트와 동일)
+    # 백테 유형 설정 - '백테스트' 유형 사용 (백엔진에 'ICOS' 분기가 없음)
+    # ICOS의 개별 백테스트는 기본 백테스트와 동일하므로 '백테스트' 유형 재사용
     for q in ui.back_eques:
-        q.put(('백테유형', 'ICOS'))
+        q.put(('백테유형', '백테스트'))
 
     # backQ에 파라미터 전달 (기존 백테스트와 동일한 형식!)
     # BackTest.Start()에서 수신하는 것과 동일한 튜플
