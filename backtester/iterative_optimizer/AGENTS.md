@@ -183,29 +183,56 @@ ICOS와 기존 백테스팅 분석 파이프라인은 **서로 다른 목적**�
 ## Key Files
 
 ### Core System (Phase 1-7)
-- `__init__.py` - Package API and version (v0.7.0)
+- `__init__.py` - Package API and version (v0.8.0)
 - `config.py` - Configuration classes and presets (conservative, aggressive, quick)
 - `data_types.py` - Common data structures (FilterCandidate, IterationResult)
-- `runner.py` - Main orchestrator (IterativeOptimizer, IterativeResult) - **866 lines**
+- `runner.py` - Main orchestrator (IterativeOptimizer, IterativeResult) - **~1,100 lines**
+  - Walk-Forward 검증 자동화 (Phase 4)
+  - 일시정지/재개/중지 기능 (Phase 5)
+  - UI 진행상황 업데이트 (Phase 5)
+  - 텔레그램 상세 알림 (Phase 6)
 
-### Analysis & Generation (Phase 2)
-- `analyzer.py` - ResultAnalyzer for loss pattern detection - **750 lines**
+### Analysis & Generation (Phase 2-3)
+- `analyzer.py` - ResultAnalyzer for loss pattern detection - **~950 lines**
   - ICOS 전용 분석기 (Alt-I 설정과 무관)
   - ANALYSIS_COLUMNS는 columns_bt와 일치해야 함
   - 선택적으로 analysis_enhanced 모듈 연동 가능
-- `filter_generator.py` - FilterGenerator with priority scoring - **506 lines**
+  - **Phase 3 추가**: 5분 단위 세분화, 요일별 분석, 복합 패턴 탐지
+  - **Phase 3 추가**: 카이제곱 검정, Cohen's h 효과 크기
+- `filter_generator.py` - FilterGenerator with priority scoring - **~650 lines**
   - 손실 패턴 → FilterCandidate 변환
   - 4가지 점수 기반 우선순위 산정
+  - **Phase 3 추가**: 상관관계 기반 중복 제거, 시너지 분석
 
 ### Condition Building (Phase 3)
-- `condition_builder.py` - ConditionBuilder for strategy code generation - **522 lines**
+- `condition_builder.py` - ConditionBuilder for strategy code generation - **~700 lines**
   - 필터 마커로 중복 삽입 방지
   - "if 매수:" 직전에 필터 블록 주입
+  - **Phase 3 추가**: AND/OR 조합 최적화, 임계값 자동 조정, 충돌 감지
 - `storage.py` - IterationStorage for persistence
 
 ### Comparison & Convergence (Phase 4)
 - `comparator.py` - ResultComparator for metric comparison
 - `convergence.py` - ConvergenceChecker for stopping criteria
+- `overfitting_guard.py` - **신규 (Phase 4)** - 과적합 감지/방지 - **~200 lines**
+  - Train/Test 성능 차이 모니터링
+  - 조기 종료 권고
+
+### Optimization (Phase 4)
+- `optimization/` 디렉토리
+  - `base.py` - BaseOptimizer abstract class
+  - `grid_search.py` - GridSearchOptimizer
+  - `genetic.py` - GeneticOptimizer
+  - `bayesian.py` - BayesianOptimizer
+  - `walk_forward.py` - WalkForwardValidator
+  - `integrated_optimizer.py` - **신규 (Phase 4)** - 통합 최적화기 - **~300 lines**
+  - `__init__.py` - Exports all optimizers
+
+### Scheduling (Phase 6)
+- `scheduler.py` - **신규 (Phase 6)** - ICOS 자동 스케줄링 - **~150 lines**
+  - 주기적 ICOS 실행
+  - 조건 기반 트리거
+  - 배치 실행 지원
 
 ### Synchronous Execution (Phase 7)
 - `backtest_sync.py` - SyncBacktestRunner for multicore backtest integration - **971 lines**
@@ -335,41 +362,75 @@ Three presets available:
 - [x] 분석 결과 디버그 로깅 추가
 - [x] 진행상황 실시간 UI 업데이트
 
-### Phase 3: Analysis Improvement (In Progress)
-- [ ] 손실 패턴 탐지 알고리즘 고도화
-  - [ ] 시간대별 패턴 분석 강화
-  - [ ] 다중 조건 복합 패턴 탐지
-  - [ ] 패턴 신뢰도 스코어링 개선
-- [ ] 필터 후보 생성 로직 개선
-  - [ ] 우선순위 기반 필터 선택
-  - [ ] 상관관계 기반 중복 필터 제거
-- [ ] 조건식 빌더 강화
-  - [ ] AND/OR 조합 최적화
-  - [ ] 파라미터 범위 자동 조정
+### Phase 3: Analysis Improvement (In Progress - 2026-01-20)
+**목표**: 손실 패턴 탐지 정확도 80% 이상, 필터 개선 효과 10% 이상
 
-### Phase 4: Advanced Optimization (Planned)
-- [ ] 유전 알고리즘 파라미터 튜닝 연동
-- [ ] 베이지안 최적화 통합 강화
-- [ ] Walk-Forward 검증 자동화
-- [ ] 과적합 방지 메커니즘
+- [x] 손실 패턴 탐지 알고리즘 고도화
+  - [x] `_analyze_time_patterns_advanced()` - 5분 단위 세분화, 요일별 분석
+  - [x] `_analyze_compound_patterns()` - 시간+가격, 거래량+체결강도 복합 패턴
+  - [x] `_calculate_pattern_confidence_advanced()` - 카이제곱 검정, Cohen's h 효과 크기
+- [x] 필터 후보 생성 로직 개선
+  - [x] `_remove_correlated_filters()` - 상관관계 기반 중복 필터 제거
+  - [x] `_analyze_filter_synergy()` - 필터 조합 시너지 분석
+  - [x] `_select_by_priority()` - CRITICAL > HIGH > MEDIUM > LOW 우선순위
+- [x] 조건식 빌더 강화
+  - [x] `build_optimized_combinations()` - AND/OR 조합 최적화 (greedy/exhaustive/genetic)
+  - [x] `_auto_adjust_threshold()` - ±30% 범위 내 최적 임계값 탐색
+  - [x] `_detect_filter_conflicts()` - 상반된 조건 감지
 
-### Phase 5: UI/UX Enhancement (Planned)
-- [ ] Alt-I 메뉴 개선
-  - [ ] 분석 결과 시각화 (차트/그래프)
-  - [ ] 반복별 개선율 추이 그래프
-  - [ ] 필터 효과 히트맵
-- [ ] 실시간 진행상황 모니터링
-  - [ ] 예상 완료 시간 표시
-  - [ ] 중간 중단/재개 기능
-- [ ] 결과 내보내기
-  - [ ] Excel/CSV 내보내기
-  - [ ] 조건문서 자동 업데이트
+**파일 변경**:
+- `analyzer.py`: 750줄 → ~950줄 (+200줄)
+- `filter_generator.py`: 506줄 → ~650줄 (+144줄)
+- `condition_builder.py`: 522줄 → ~700줄 (+178줄)
 
-### Phase 6: Integration & Automation (Future)
-- [ ] 스케줄러 연동 (자동 ICOS 실행)
-- [ ] 텔레그램 상세 알림 통합
-- [ ] 이전 ICOS 결과 비교 분석
-- [ ] 전략 버전 관리 시스템
+### Phase 4: Advanced Optimization (In Progress - 2026-01-20)
+**목표**: 과적합 방지, 통합 최적화기 제공
+
+- [x] `overfitting_guard.py` 신규 생성 (~200줄)
+  - [x] `OverfitMetrics` - Train/Test 성능 차이 데이터 클래스
+  - [x] `OverfittingGuard.check()` - 과적합 여부 확인
+  - [x] `OverfittingGuard.should_stop_early()` - 조기 종료 권고
+- [x] `optimization/integrated_optimizer.py` 신규 생성 (~300줄)
+  - [x] `IntegratedOptimizer` - Grid/Genetic/Bayesian 통합 관리
+  - [x] `optimize()` - 필터 파라미터 자동 튜닝
+  - [x] `get_optimal_combination()` - 최적 필터 조합 탐색
+- [x] `runner.py` Walk-Forward 검증 통합
+  - [x] `_run_with_walk_forward_validation()` - n_folds 분할 검증
+  - [x] `_check_overfitting()` - OverfittingGuard 연동
+
+### Phase 5: UI/UX Enhancement (In Progress - 2026-01-20)
+**목표**: 실시간 모니터링, 제어 기능 제공
+
+- [x] `set_dialog_icos.py` UI 컴포넌트 추가
+  - [x] `icos_progress_chart` - pyqtgraph 기반 실시간 차트
+  - [x] `icos_filter_table` - 필터 효과 테이블
+  - [x] `icos_pause_button` / `icos_resume_button` - 일시정지/재개
+  - [x] `icos_eta_label` - 예상 완료 시간 표시
+- [x] `runner.py` 제어 기능 추가
+  - [x] `request_pause()` / `resume()` - 일시정지/재개
+  - [x] `request_stop()` - 중지 요청
+  - [x] `_save_checkpoint()` - 체크포인트 저장
+  - [x] `_update_ui_progress()` - 차트/테이블 업데이트
+
+**파일 변경**:
+- `set_dialog_icos.py`: 722줄 → ~900줄 (+178줄)
+- `runner.py`: 866줄 → ~1,100줄 (+234줄)
+
+### Phase 6: Integration & Automation (In Progress - 2026-01-20)
+**목표**: 자동화된 ICOS 실행, 상세 알림
+
+- [x] `scheduler.py` 신규 생성 (~150줄)
+  - [x] `ScheduleConfig` - 스케줄 설정 데이터 클래스
+  - [x] `ICOSScheduler` - 주기적/조건부 ICOS 실행
+  - [x] `add_schedule()` / `remove_schedule()` - 스케줄 관리
+- [x] 텔레그램 알림 강화 (`runner.py`)
+  - [x] `_send_telegram_summary()` - 상세 완료 알림
+  - [x] `_format_telegram_message()` - 성과 변화 포맷팅
+
+**신규 파일**:
+- `scheduler.py`: ~150줄
+- `overfitting_guard.py`: ~200줄
+- `optimization/integrated_optimizer.py`: ~300줄
 
 ## Alt-I Menu Configuration
 
@@ -400,8 +461,14 @@ Three presets available:
 5. **조건문서 연동**: ICOS 결과를 /docs/Condition/ 문서에 자동 반영
 
 ## Branch Information
-- Development branch: `feature/icos-complete-implementation`
-- Current version: 0.7.1
+- Development branch: `feature/icos-phase3-6-improvements`
+- Parent branch: `feature/icos-complete-implementation`
+- Current version: 0.8.0
 - Author: STOM Development Team
 - Created: 2026-01-12
 - Last Updated: 2026-01-20
+
+## Related Documentation
+- [Phase 3-6 Master Plan](../../docs/Study/Development/20260120_ICOS_Phase3-6_Master_Plan.md)
+- [ICOS Complete Implementation Plan](../../docs/Study/Development/20260114_ICOS_Complete_Implementation_Plan.md)
+- [ICOS Dialog Enhancement Plan](../../docs/Study/Development/20260113_ICOS_Dialog_Enhancement_Plan.md)

@@ -396,6 +396,73 @@ qlist = [
 - `backtester/optimiz.py` - 그리드 서치 최적화
 - `backtester/optimiz_genetic_algorithm.py` - 유전 알고리즘 최적화
 
+## ICOS (Iterative Condition Optimization System)
+
+ICOS는 트레이딩 전략의 손실 패턴을 분석하고 자동으로 필터 조건을 생성하여 전략을 개선하는 반복적 최적화 시스템입니다.
+
+### 핵심 개념
+
+**ICOS 파이프라인:**
+```
+백테스트 실행 → 손실 패턴 분석 → 필터 후보 생성 → 조건식 빌드 → 검증 백테스트 → 반복
+```
+
+**주요 구성요소 (`backtester/iterative_optimizer/`):**
+- `runner.py` (866줄) - ICOS 오케스트레이터, 반복 실행 제어
+- `analyzer.py` (750줄) - 손실 패턴 탐지 및 분석
+- `filter_generator.py` (506줄) - 분석 결과 기반 필터 후보 생성
+- `condition_builder.py` (522줄) - 필터를 실제 조건식으로 변환
+- `config.py` - ICOS 설정 및 임계값
+- `data_types.py` - 데이터 구조 정의 (IterationResult, LossPattern 등)
+
+### 사용 방법
+
+**UI를 통한 실행:**
+1. 메인 윈도우에서 `Alt + I` 단축키 또는 설정 메뉴
+2. ICOS 설정 다이얼로그 (`ui/set_dialog_icos.py`)
+3. 전략, 반복 횟수, 임계값 설정 후 실행
+
+**직접 실행:**
+```python
+from backtester.iterative_optimizer.runner import ICOSRunner
+from backtester.iterative_optimizer.config import ICOSConfig
+
+config = ICOSConfig(max_iterations=5, min_improvement_pct=1.0)
+runner = ICOSRunner(config)
+result = runner.run(buystg="전략명", sellstg="전략명", ...)
+```
+
+### 분석 기능
+
+**패턴 탐지 유형:**
+- **시간대 패턴**: 특정 시간대의 손실 집중 분석
+- **가격 범위 패턴**: 특정 가격대에서의 손실 패턴
+- **거래량 패턴**: 거래량 조건과 손실 상관관계
+- **기술적 지표 패턴**: RSI, MACD 등 지표 기반 손실 패턴
+
+**필터 생성 로직:**
+1. 손실 거래의 공통 특성 추출
+2. 통계적 유의성 검증 (카이제곱 검정)
+3. 필터 우선순위 결정 (CRITICAL/HIGH/MEDIUM/LOW)
+4. 중복 및 상충 필터 제거
+
+### 개발 로드맵
+
+**현재 버전: 0.8.0 (feature/icos-complete-implementation)**
+
+| Phase | 상태 | 설명 |
+|-------|------|------|
+| Phase 1 | ✅ 완료 | 핵심 안정성 - 타입 힌트, 에러 핸들링 |
+| Phase 2 | ✅ 완료 | 로깅 강화 - 단계별 로그, 진행바 |
+| Phase 3 | 🔄 진행중 | 분석 고도화 - 패턴 분석 개선 |
+| Phase 4 | 📋 계획 | 고급 최적화 - 과적합 방지, Walk-Forward |
+| Phase 5 | 📋 계획 | UI/UX 개선 - 진행 차트, 일시정지/재개 |
+| Phase 6 | 📋 계획 | 자동화 - 스케줄링, 텔레그램 알림 강화 |
+
+**참조 문서:**
+- `backtester/iterative_optimizer/AGENTS.md` - 상세 모듈 문서
+- `docs/Study/Development/20260120_ICOS_Phase3-6_Master_Plan.md` - 개발 마스터 플랜
+
 ## AI 어시스턴트를 위한 중요 규칙
 
 ### 코드 수정 시

@@ -353,7 +353,7 @@ class ResultAnalyzer:
             print(f"[ICOS Analyzer] 분석 가능 컬럼: {len(available_cols)}/{len(self.ANALYSIS_COLUMNS)}")
             print(f"[ICOS Analyzer] 시간 컬럼: {available_time_cols}")
 
-        # 1. 시간대별 손실 패턴
+        # 1. 시간대별 손실 패턴 (기본)
         time_patterns = self._analyze_time_patterns(df_tsg, loss_mask, total_loss_count)
         patterns.extend(time_patterns)
         if self.config.verbose:
@@ -370,6 +370,18 @@ class ResultAnalyzer:
         patterns.extend(range_patterns)
         if self.config.verbose:
             print(f"[ICOS Analyzer] 범위 패턴: {len(range_patterns)}개 발견")
+
+        # 4. Phase 3: 고급 시간대 패턴 (5분 단위, 요일별, 세션별)
+        advanced_time_patterns = self._analyze_time_patterns_advanced(df_tsg, loss_mask, total_loss_count)
+        patterns.extend(advanced_time_patterns)
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 고급 시간 패턴: {len(advanced_time_patterns)}개 발견")
+
+        # 5. Phase 3: 복합 조건 패턴 (시간+가격, 거래량+체결강도 등)
+        compound_patterns = self._analyze_compound_patterns(df_tsg, loss_mask, total_loss_count)
+        patterns.extend(compound_patterns)
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 복합 패턴: {len(compound_patterns)}개 발견")
 
         # 신뢰도 기준 필터링 및 정렬
         # 최소 신뢰도를 0.2로 낮춤 (기존 0.3) - 더 많은 패턴 발견 허용
@@ -720,6 +732,600 @@ class ResultAnalyzer:
             pass
 
         return None
+
+    # ==================== Phase 3: Advanced Analysis Methods ====================
+
+    def _analyze_time_patterns_advanced(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+    ) -> List[LossPattern]:
+        """고급 시간대 패턴 분석.
+
+        Phase 3 Enhancement: 5분 단위 세분화, 요일별 패턴, 장 시작/종료 세션 분석
+
+        Args:
+            df_tsg: 거래 상세 DataFrame
+            loss_mask: 손실 거래 마스크
+            total_loss_count: 전체 손실 거래 수
+
+        Returns:
+            고급 시간 패턴 목록
+        """
+        patterns: List[LossPattern] = []
+        overall_loss_ratio = loss_mask.mean()
+
+        # 1. 5분 단위 세분화 분석
+        if '매수시' in df_tsg.columns and '매수분' in df_tsg.columns:
+            patterns.extend(self._analyze_5min_intervals(
+                df_tsg, loss_mask, total_loss_count, overall_loss_ratio
+            ))
+
+        # 2. 요일별 패턴 분석
+        if '매수일자' in df_tsg.columns:
+            patterns.extend(self._analyze_weekday_patterns(
+                df_tsg, loss_mask, total_loss_count, overall_loss_ratio
+            ))
+
+        # 3. 장 시작/종료 세션 분석
+        if '매수시' in df_tsg.columns and '매수분' in df_tsg.columns:
+            patterns.extend(self._analyze_market_sessions(
+                df_tsg, loss_mask, total_loss_count, overall_loss_ratio
+            ))
+
+        return patterns
+
+    def _analyze_5min_intervals(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+        overall_loss_ratio: float,
+    ) -> List[LossPattern]:
+        """5분 단위 시간대 분석."""
+        patterns: List[LossPattern] = []
+
+        # 5분 단위로 구간 생성 (ex: 9시 5분 → 905, 9시 10분 → 910)
+        df_tsg = df_tsg.copy()
+        df_tsg['_time_5min'] = df_tsg['매수시'] * 100 + (df_tsg['매수분'] // 5) * 5
+
+        for interval in sorted(df_tsg['_time_5min'].unique()):
+            interval_mask = df_tsg['_time_5min'] == interval
+            interval_trades = interval_mask.sum()
+
+            if interval_trades < self.config.filter_generation.min_sample_size:
+                continue
+
+            interval_loss_mask = interval_mask & loss_mask
+            interval_loss_count = interval_loss_mask.sum()
+            interval_loss_amount = df_tsg.loc[interval_loss_mask, '수익금'].sum()
+            interval_loss_ratio = interval_loss_count / interval_trades if interval_trades > 0 else 0
+
+            if interval_loss_ratio <= overall_loss_ratio * 1.1:
+                continue
+
+            coverage = interval_loss_count / total_loss_count if total_loss_count > 0 else 0
+            confidence = self._calculate_pattern_confidence_advanced(
+                interval_loss_ratio, overall_loss_ratio, interval_trades, total_loss_count
+            )
+
+            if confidence < 0.25:
+                continue
+
+            hour = interval // 100
+            minute = interval % 100
+
+            patterns.append(LossPattern(
+                pattern_type=LossPatternType.TIME_BASED,
+                column='매수시분',
+                condition=f"(df_tsg['매수시'] == {hour}) & (df_tsg['매수분'] >= {minute}) & (df_tsg['매수분'] < {minute + 5})",
+                description=f"시간대 {hour}:{minute:02d}~{minute+5:02d} (손실률 {interval_loss_ratio:.1%})",
+                loss_count=interval_loss_count,
+                total_loss=interval_loss_amount,
+                loss_ratio=interval_loss_ratio,
+                coverage=coverage,
+                confidence=confidence,
+                metadata={
+                    'hour': hour,
+                    'minute_start': minute,
+                    'minute_end': minute + 5,
+                    'interval_trades': interval_trades,
+                    'analysis_type': '5min_interval'
+                },
+            ))
+
+        return patterns
+
+    def _analyze_weekday_patterns(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+        overall_loss_ratio: float,
+    ) -> List[LossPattern]:
+        """요일별 패턴 분석."""
+        patterns: List[LossPattern] = []
+
+        df_tsg = df_tsg.copy()
+        try:
+            # 매수일자를 datetime으로 변환하여 요일 추출
+            df_tsg['_weekday'] = pd.to_datetime(df_tsg['매수일자'].astype(str)).dt.dayofweek
+            weekday_names = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일']
+        except Exception:
+            return patterns
+
+        for weekday in sorted(df_tsg['_weekday'].unique()):
+            weekday_mask = df_tsg['_weekday'] == weekday
+            weekday_trades = weekday_mask.sum()
+
+            if weekday_trades < self.config.filter_generation.min_sample_size:
+                continue
+
+            weekday_loss_mask = weekday_mask & loss_mask
+            weekday_loss_count = weekday_loss_mask.sum()
+            weekday_loss_amount = df_tsg.loc[weekday_loss_mask, '수익금'].sum()
+            weekday_loss_ratio = weekday_loss_count / weekday_trades if weekday_trades > 0 else 0
+
+            if weekday_loss_ratio <= overall_loss_ratio * 1.1:
+                continue
+
+            coverage = weekday_loss_count / total_loss_count if total_loss_count > 0 else 0
+            confidence = self._calculate_pattern_confidence_advanced(
+                weekday_loss_ratio, overall_loss_ratio, weekday_trades, total_loss_count
+            )
+
+            if confidence < 0.25:
+                continue
+
+            weekday_name = weekday_names[weekday] if weekday < len(weekday_names) else f"요일{weekday}"
+
+            patterns.append(LossPattern(
+                pattern_type=LossPatternType.TIME_BASED,
+                column='요일',
+                condition=f"pd.to_datetime(df_tsg['매수일자'].astype(str)).dt.dayofweek == {weekday}",
+                description=f"{weekday_name} (손실률 {weekday_loss_ratio:.1%})",
+                loss_count=weekday_loss_count,
+                total_loss=weekday_loss_amount,
+                loss_ratio=weekday_loss_ratio,
+                coverage=coverage,
+                confidence=confidence,
+                metadata={
+                    'weekday': weekday,
+                    'weekday_name': weekday_name,
+                    'weekday_trades': weekday_trades,
+                    'analysis_type': 'weekday'
+                },
+            ))
+
+        return patterns
+
+    def _analyze_market_sessions(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+        overall_loss_ratio: float,
+    ) -> List[LossPattern]:
+        """장 시작/종료 세션 분석 (09:00-09:30, 15:00-15:30)."""
+        patterns: List[LossPattern] = []
+
+        sessions = [
+            {'name': '장시작(09:00-09:30)', 'hour_start': 9, 'min_start': 0, 'hour_end': 9, 'min_end': 30},
+            {'name': '오전초반(09:30-10:00)', 'hour_start': 9, 'min_start': 30, 'hour_end': 10, 'min_end': 0},
+            {'name': '점심(11:30-13:00)', 'hour_start': 11, 'min_start': 30, 'hour_end': 13, 'min_end': 0},
+            {'name': '오후초반(13:00-14:00)', 'hour_start': 13, 'min_start': 0, 'hour_end': 14, 'min_end': 0},
+            {'name': '장마감전(15:00-15:30)', 'hour_start': 15, 'min_start': 0, 'hour_end': 15, 'min_end': 30},
+        ]
+
+        df_tsg = df_tsg.copy()
+        df_tsg['_time_mins'] = df_tsg['매수시'] * 60 + df_tsg['매수분']
+
+        for session in sessions:
+            start_mins = session['hour_start'] * 60 + session['min_start']
+            end_mins = session['hour_end'] * 60 + session['min_end']
+
+            session_mask = (df_tsg['_time_mins'] >= start_mins) & (df_tsg['_time_mins'] < end_mins)
+            session_trades = session_mask.sum()
+
+            if session_trades < self.config.filter_generation.min_sample_size:
+                continue
+
+            session_loss_mask = session_mask & loss_mask
+            session_loss_count = session_loss_mask.sum()
+            session_loss_amount = df_tsg.loc[session_loss_mask, '수익금'].sum()
+            session_loss_ratio = session_loss_count / session_trades if session_trades > 0 else 0
+
+            if session_loss_ratio <= overall_loss_ratio * 1.1:
+                continue
+
+            coverage = session_loss_count / total_loss_count if total_loss_count > 0 else 0
+            confidence = self._calculate_pattern_confidence_advanced(
+                session_loss_ratio, overall_loss_ratio, session_trades, total_loss_count
+            )
+
+            if confidence < 0.25:
+                continue
+
+            patterns.append(LossPattern(
+                pattern_type=LossPatternType.TIME_BASED,
+                column='세션',
+                condition=f"((df_tsg['매수시'] * 60 + df_tsg['매수분']) >= {start_mins}) & ((df_tsg['매수시'] * 60 + df_tsg['매수분']) < {end_mins})",
+                description=f"세션 {session['name']} (손실률 {session_loss_ratio:.1%})",
+                loss_count=session_loss_count,
+                total_loss=session_loss_amount,
+                loss_ratio=session_loss_ratio,
+                coverage=coverage,
+                confidence=confidence,
+                metadata={
+                    'session_name': session['name'],
+                    'start_time': f"{session['hour_start']:02d}:{session['min_start']:02d}",
+                    'end_time': f"{session['hour_end']:02d}:{session['min_end']:02d}",
+                    'session_trades': session_trades,
+                    'analysis_type': 'market_session'
+                },
+            ))
+
+        return patterns
+
+    def _analyze_compound_patterns(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+    ) -> List[LossPattern]:
+        """복합 조건 패턴 탐지.
+
+        Phase 3 Enhancement: 시간+가격, 거래량+체결강도 등 복합 패턴 분석
+
+        Args:
+            df_tsg: 거래 상세 DataFrame
+            loss_mask: 손실 거래 마스크
+            total_loss_count: 전체 손실 거래 수
+
+        Returns:
+            복합 패턴 목록
+        """
+        patterns: List[LossPattern] = []
+        overall_loss_ratio = loss_mask.mean()
+
+        # 1. 시간 + 등락율 복합 패턴
+        patterns.extend(self._analyze_time_price_compound(
+            df_tsg, loss_mask, total_loss_count, overall_loss_ratio
+        ))
+
+        # 2. 거래량 + 체결강도 복합 패턴
+        patterns.extend(self._analyze_volume_strength_compound(
+            df_tsg, loss_mask, total_loss_count, overall_loss_ratio
+        ))
+
+        # 3. 시가총액 + 거래량 복합 패턴
+        patterns.extend(self._analyze_cap_volume_compound(
+            df_tsg, loss_mask, total_loss_count, overall_loss_ratio
+        ))
+
+        return patterns
+
+    def _analyze_time_price_compound(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+        overall_loss_ratio: float,
+    ) -> List[LossPattern]:
+        """시간 + 등락율 복합 패턴."""
+        patterns: List[LossPattern] = []
+
+        if '매수시' not in df_tsg.columns or '매수등락율' not in df_tsg.columns:
+            return patterns
+
+        # 등락율 구간 정의
+        price_thresholds = [
+            ('급등(20%↑)', 20, float('inf')),
+            ('상승(10~20%)', 10, 20),
+            ('하락(~-5%)', float('-inf'), -5),
+        ]
+
+        for hour in [9, 10, 14, 15]:  # 주요 시간대만
+            hour_mask = df_tsg['매수시'] == hour
+
+            for price_name, price_min, price_max in price_thresholds:
+                if price_max == float('inf'):
+                    price_mask = df_tsg['매수등락율'] >= price_min
+                    price_cond = f"df_tsg['매수등락율'] >= {price_min}"
+                elif price_min == float('-inf'):
+                    price_mask = df_tsg['매수등락율'] < price_max
+                    price_cond = f"df_tsg['매수등락율'] < {price_max}"
+                else:
+                    price_mask = (df_tsg['매수등락율'] >= price_min) & (df_tsg['매수등락율'] < price_max)
+                    price_cond = f"(df_tsg['매수등락율'] >= {price_min}) & (df_tsg['매수등락율'] < {price_max})"
+
+                compound_mask = hour_mask & price_mask
+                compound_trades = compound_mask.sum()
+
+                if compound_trades < self.config.filter_generation.min_sample_size:
+                    continue
+
+                compound_loss_mask = compound_mask & loss_mask
+                compound_loss_count = compound_loss_mask.sum()
+                compound_loss_amount = df_tsg.loc[compound_loss_mask, '수익금'].sum()
+                compound_loss_ratio = compound_loss_count / compound_trades if compound_trades > 0 else 0
+
+                # 복합 패턴은 더 높은 손실률 기준 적용
+                if compound_loss_ratio <= overall_loss_ratio * 1.2:
+                    continue
+
+                coverage = compound_loss_count / total_loss_count if total_loss_count > 0 else 0
+                confidence = self._calculate_pattern_confidence_advanced(
+                    compound_loss_ratio, overall_loss_ratio, compound_trades, total_loss_count
+                )
+
+                if confidence < 0.3:
+                    continue
+
+                patterns.append(LossPattern(
+                    pattern_type=LossPatternType.SEGMENT,
+                    column='시간_등락율',
+                    condition=f"(df_tsg['매수시'] == {hour}) & ({price_cond})",
+                    description=f"{hour}시 + {price_name} (손실률 {compound_loss_ratio:.1%})",
+                    loss_count=compound_loss_count,
+                    total_loss=compound_loss_amount,
+                    loss_ratio=compound_loss_ratio,
+                    coverage=coverage,
+                    confidence=confidence,
+                    metadata={
+                        'hour': hour,
+                        'price_range': price_name,
+                        'compound_trades': compound_trades,
+                        'analysis_type': 'time_price_compound'
+                    },
+                ))
+
+        return patterns
+
+    def _analyze_volume_strength_compound(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+        overall_loss_ratio: float,
+    ) -> List[LossPattern]:
+        """거래량 + 체결강도 복합 패턴."""
+        patterns: List[LossPattern] = []
+
+        vol_col = '매수전일비' if '매수전일비' in df_tsg.columns else None
+        strength_col = '매수체결강도' if '매수체결강도' in df_tsg.columns else None
+
+        if vol_col is None or strength_col is None:
+            return patterns
+
+        # 거래량과 체결강도의 분위수 계산
+        try:
+            vol_q33 = df_tsg[vol_col].quantile(0.33)
+            vol_q67 = df_tsg[vol_col].quantile(0.67)
+            str_q33 = df_tsg[strength_col].quantile(0.33)
+            str_q67 = df_tsg[strength_col].quantile(0.67)
+        except Exception:
+            return patterns
+
+        # 조합 분석 (저거래량+저체결강도, 고거래량+저체결강도 등)
+        combinations = [
+            ('저거래량_저체결', vol_col, '<', vol_q33, strength_col, '<', str_q33),
+            ('고거래량_저체결', vol_col, '>', vol_q67, strength_col, '<', str_q33),
+            ('저거래량_고체결', vol_col, '<', vol_q33, strength_col, '>', str_q67),
+        ]
+
+        for combo_name, col1, op1, val1, col2, op2, val2 in combinations:
+            if op1 == '<':
+                mask1 = df_tsg[col1] < val1
+                cond1 = f"df_tsg['{col1}'] < {val1:.4f}"
+            else:
+                mask1 = df_tsg[col1] > val1
+                cond1 = f"df_tsg['{col1}'] > {val1:.4f}"
+
+            if op2 == '<':
+                mask2 = df_tsg[col2] < val2
+                cond2 = f"df_tsg['{col2}'] < {val2:.4f}"
+            else:
+                mask2 = df_tsg[col2] > val2
+                cond2 = f"df_tsg['{col2}'] > {val2:.4f}"
+
+            compound_mask = mask1 & mask2
+            compound_trades = compound_mask.sum()
+
+            if compound_trades < self.config.filter_generation.min_sample_size:
+                continue
+
+            compound_loss_mask = compound_mask & loss_mask
+            compound_loss_count = compound_loss_mask.sum()
+            compound_loss_amount = df_tsg.loc[compound_loss_mask, '수익금'].sum()
+            compound_loss_ratio = compound_loss_count / compound_trades if compound_trades > 0 else 0
+
+            if compound_loss_ratio <= overall_loss_ratio * 1.2:
+                continue
+
+            coverage = compound_loss_count / total_loss_count if total_loss_count > 0 else 0
+            confidence = self._calculate_pattern_confidence_advanced(
+                compound_loss_ratio, overall_loss_ratio, compound_trades, total_loss_count
+            )
+
+            if confidence < 0.3:
+                continue
+
+            patterns.append(LossPattern(
+                pattern_type=LossPatternType.SEGMENT,
+                column='거래량_체결강도',
+                condition=f"({cond1}) & ({cond2})",
+                description=f"{combo_name} (손실률 {compound_loss_ratio:.1%})",
+                loss_count=compound_loss_count,
+                total_loss=compound_loss_amount,
+                loss_ratio=compound_loss_ratio,
+                coverage=coverage,
+                confidence=confidence,
+                metadata={
+                    'combination': combo_name,
+                    'compound_trades': compound_trades,
+                    'analysis_type': 'volume_strength_compound'
+                },
+            ))
+
+        return patterns
+
+    def _analyze_cap_volume_compound(
+        self,
+        df_tsg: pd.DataFrame,
+        loss_mask: pd.Series,
+        total_loss_count: int,
+        overall_loss_ratio: float,
+    ) -> List[LossPattern]:
+        """시가총액 + 거래량 복합 패턴."""
+        patterns: List[LossPattern] = []
+
+        if '시가총액' not in df_tsg.columns:
+            return patterns
+
+        vol_col = '매수당일거래대금' if '매수당일거래대금' in df_tsg.columns else None
+        if vol_col is None:
+            return patterns
+
+        # 시가총액 구간
+        cap_ranges = [
+            ('소형', 0, 5000),
+            ('중형', 5000, 30000),
+            ('대형', 30000, float('inf')),
+        ]
+
+        # 거래대금 분위수
+        try:
+            vol_q50 = df_tsg[vol_col].quantile(0.50)
+        except Exception:
+            return patterns
+
+        for cap_name, cap_min, cap_max in cap_ranges:
+            if cap_max == float('inf'):
+                cap_mask = df_tsg['시가총액'] >= cap_min
+            else:
+                cap_mask = (df_tsg['시가총액'] >= cap_min) & (df_tsg['시가총액'] < cap_max)
+
+            # 저거래대금 조건
+            vol_mask = df_tsg[vol_col] < vol_q50
+
+            compound_mask = cap_mask & vol_mask
+            compound_trades = compound_mask.sum()
+
+            if compound_trades < self.config.filter_generation.min_sample_size:
+                continue
+
+            compound_loss_mask = compound_mask & loss_mask
+            compound_loss_count = compound_loss_mask.sum()
+            compound_loss_amount = df_tsg.loc[compound_loss_mask, '수익금'].sum()
+            compound_loss_ratio = compound_loss_count / compound_trades if compound_trades > 0 else 0
+
+            if compound_loss_ratio <= overall_loss_ratio * 1.2:
+                continue
+
+            coverage = compound_loss_count / total_loss_count if total_loss_count > 0 else 0
+            confidence = self._calculate_pattern_confidence_advanced(
+                compound_loss_ratio, overall_loss_ratio, compound_trades, total_loss_count
+            )
+
+            if confidence < 0.3:
+                continue
+
+            if cap_max == float('inf'):
+                cap_cond = f"df_tsg['시가총액'] >= {cap_min}"
+            else:
+                cap_cond = f"(df_tsg['시가총액'] >= {cap_min}) & (df_tsg['시가총액'] < {cap_max})"
+
+            patterns.append(LossPattern(
+                pattern_type=LossPatternType.SEGMENT,
+                column='시총_거래대금',
+                condition=f"({cap_cond}) & (df_tsg['{vol_col}'] < {vol_q50:.4f})",
+                description=f"{cap_name}주 + 저거래대금 (손실률 {compound_loss_ratio:.1%})",
+                loss_count=compound_loss_count,
+                total_loss=compound_loss_amount,
+                loss_ratio=compound_loss_ratio,
+                coverage=coverage,
+                confidence=confidence,
+                metadata={
+                    'cap_range': cap_name,
+                    'compound_trades': compound_trades,
+                    'analysis_type': 'cap_volume_compound'
+                },
+            ))
+
+        return patterns
+
+    def _calculate_pattern_confidence_advanced(
+        self,
+        pattern_loss_ratio: float,
+        overall_loss_ratio: float,
+        pattern_sample_size: int,
+        total_loss_count: int,
+    ) -> float:
+        """고급 신뢰도 계산.
+
+        Phase 3 Enhancement: 카이제곱 검정 기반 통계적 유의성, Cohen's h 효과 크기
+
+        Args:
+            pattern_loss_ratio: 패턴의 손실률
+            overall_loss_ratio: 전체 손실률
+            pattern_sample_size: 패턴 샘플 수
+            total_loss_count: 전체 손실 거래 수
+
+        Returns:
+            신뢰도 점수 (0.0 ~ 1.0)
+        """
+        if pattern_sample_size == 0 or overall_loss_ratio == 0:
+            return 0.0
+
+        # 1. 손실률 차이 기반 기본 점수
+        loss_ratio_diff = pattern_loss_ratio - overall_loss_ratio
+        if loss_ratio_diff <= 0:
+            return 0.0
+
+        # 2. Cohen's h 효과 크기 계산 (비율 차이의 효과 크기)
+        # Cohen's h = 2 * (arcsin(sqrt(p1)) - arcsin(sqrt(p2)))
+        import math
+        try:
+            h1 = math.asin(math.sqrt(min(1.0, max(0.0, pattern_loss_ratio))))
+            h2 = math.asin(math.sqrt(min(1.0, max(0.0, overall_loss_ratio))))
+            cohens_h = abs(2 * (h1 - h2))
+        except (ValueError, ZeroDivisionError):
+            cohens_h = 0.0
+
+        # 3. 표본 적정성 점수 (100건 기준)
+        sample_adequacy = min(1.0, pattern_sample_size / 100)
+
+        # 4. 커버리지 보정 (너무 작은 커버리지는 패널티)
+        pattern_loss_count = int(pattern_loss_ratio * pattern_sample_size)
+        coverage = pattern_loss_count / total_loss_count if total_loss_count > 0 else 0
+        coverage_factor = min(1.0, coverage * 10)  # 10% 커버리지면 1.0
+
+        # 5. 카이제곱 검정 기반 유의성 (간단한 근사)
+        # 기대값: pattern_sample_size * overall_loss_ratio
+        # 관측값: pattern_sample_size * pattern_loss_ratio
+        expected = pattern_sample_size * overall_loss_ratio
+        observed = pattern_sample_size * pattern_loss_ratio
+
+        if expected > 0:
+            chi_sq_approx = ((observed - expected) ** 2) / expected
+            # p-value 근사 (chi_sq > 3.84 이면 p < 0.05)
+            significance_factor = min(1.0, chi_sq_approx / 10)  # 10 이상이면 매우 유의
+        else:
+            significance_factor = 0.0
+
+        # 6. 최종 신뢰도 계산 (가중 평균)
+        confidence = (
+            cohens_h * 0.30 +           # 효과 크기 30%
+            sample_adequacy * 0.25 +     # 표본 적정성 25%
+            coverage_factor * 0.15 +     # 커버리지 15%
+            significance_factor * 0.30   # 통계적 유의성 30%
+        )
+
+        return min(1.0, max(0.0, confidence))
+
+    # ==================== End Phase 3: Advanced Analysis Methods ====================
 
     def get_loss_summary(self, df_tsg: pd.DataFrame) -> Dict[str, Any]:
         """손실 거래 요약 정보 반환.

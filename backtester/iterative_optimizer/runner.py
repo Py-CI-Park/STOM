@@ -863,3 +863,569 @@ class IterativeOptimizer:
     def get_logs(self) -> List[str]:
         """실행 로그 반환."""
         return self._logs.copy()
+
+
+# ============================================================================
+# Phase 4-5: Walk-Forward 검증, 일시정지/재개, 과적합 감지 통합
+# ============================================================================
+
+
+@dataclass
+class CheckpointData:
+    """체크포인트 데이터.
+
+    일시정지 시 저장되는 상태 데이터입니다.
+
+    Attributes:
+        iteration: 현재 반복 번호
+        buystg: 현재 매수 조건식
+        sellstg: 매도 조건식
+        iteration_results: 이전 반복 결과들
+        start_time: 시작 시간
+        config: 설정
+        params: 백테스트 파라미터
+        timestamp: 체크포인트 생성 시각
+    """
+    iteration: int
+    buystg: str
+    sellstg: str
+    iteration_results: List[IterationResult]
+    start_time: datetime
+    config: IterativeConfig
+    params: Dict[str, Any]
+    timestamp: datetime = field(default_factory=datetime.now)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """딕셔너리로 변환."""
+        return {
+            'iteration': self.iteration,
+            'buystg': self.buystg[:500] + '...' if len(self.buystg) > 500 else self.buystg,
+            'sellstg': self.sellstg[:500] + '...' if len(self.sellstg) > 500 else self.sellstg,
+            'iteration_count': len(self.iteration_results),
+            'start_time': self.start_time.isoformat(),
+            'timestamp': self.timestamp.isoformat(),
+        }
+
+    def save(self, path: Path) -> None:
+        """체크포인트 저장."""
+        data = {
+            'iteration': self.iteration,
+            'buystg': self.buystg,
+            'sellstg': self.sellstg,
+            'iteration_results': [r.to_dict() for r in self.iteration_results],
+            'start_time': self.start_time.isoformat(),
+            'config': self.config.to_dict(),
+            'params': {k: str(v) if isinstance(v, (list, dict)) else v
+                       for k, v in self.params.items()},
+            'timestamp': self.timestamp.isoformat(),
+        }
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+@dataclass
+class WalkForwardResult:
+    """Walk-Forward 검증 결과.
+
+    Attributes:
+        is_valid: 검증 통과 여부
+        in_sample_score: In-Sample 점수
+        out_of_sample_score: Out-of-Sample 점수
+        robustness_ratio: 견고성 비율 (OOS/IS)
+        fold_results: 각 폴드 결과
+        overfitting_detected: 과적합 감지 여부
+        recommendation: 권장 조치
+    """
+    is_valid: bool = False
+    in_sample_score: float = 0.0
+    out_of_sample_score: float = 0.0
+    robustness_ratio: float = 0.0
+    fold_results: List[Dict[str, Any]] = field(default_factory=list)
+    overfitting_detected: bool = False
+    recommendation: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """딕셔너리로 변환."""
+        return {
+            'is_valid': self.is_valid,
+            'in_sample_score': self.in_sample_score,
+            'out_of_sample_score': self.out_of_sample_score,
+            'robustness_ratio': self.robustness_ratio,
+            'fold_results': self.fold_results,
+            'overfitting_detected': self.overfitting_detected,
+            'recommendation': self.recommendation,
+        }
+
+
+class IterativeOptimizerEnhanced(IterativeOptimizer):
+    """향상된 반복적 조건식 개선 오케스트레이터.
+
+    Phase 4-5 기능:
+    - Walk-Forward 검증 자동화
+    - 일시정지/재개 기능
+    - 과적합 감지 통합
+    - UI 진행상황 차트 데이터
+
+    Attributes:
+        overfitting_guard: 과적합 감지기
+        is_paused: 일시정지 상태
+        is_stopped: 중지 요청 상태
+        checkpoint: 체크포인트 데이터
+    """
+
+    def __init__(
+        self,
+        config: IterativeConfig,
+        qlist: Optional[list] = None,
+        backtest_params: Optional[Dict[str, Any]] = None,
+        enable_walk_forward: bool = True,
+        enable_overfitting_guard: bool = True,
+    ):
+        """초기화.
+
+        Args:
+            config: ICOS 설정
+            qlist: 프로세스 간 통신 큐 리스트
+            backtest_params: 백테스트 파라미터
+            enable_walk_forward: Walk-Forward 검증 활성화
+            enable_overfitting_guard: 과적합 감지 활성화
+        """
+        super().__init__(config, qlist, backtest_params)
+
+        self.enable_walk_forward = enable_walk_forward
+        self.enable_overfitting_guard = enable_overfitting_guard
+
+        # 과적합 감지기 (Phase 4)
+        if enable_overfitting_guard:
+            from .overfitting_guard import OverfittingGuard
+            self._overfitting_guard = OverfittingGuard()
+        else:
+            self._overfitting_guard = None
+
+        # 일시정지/재개 상태
+        self._is_paused = False
+        self._is_stopped = False
+        self._pause_event = None  # threading.Event 사용 가능
+
+        # 체크포인트
+        self._checkpoint: Optional[CheckpointData] = None
+        self._checkpoint_path: Optional[Path] = None
+
+        # UI 진행상황 데이터 (Phase 5)
+        self._progress_data: List[Dict[str, Any]] = []
+        self._filter_effect_data: List[Dict[str, Any]] = []
+
+    # ==========================================================================
+    # 일시정지/재개 기능
+    # ==========================================================================
+
+    def request_pause(self) -> None:
+        """일시정지 요청.
+
+        다음 반복이 시작되기 전에 일시정지됩니다.
+        """
+        self._is_paused = True
+        self._log("일시정지 요청됨 - 현재 반복 완료 후 정지합니다.", UI_COLOR_WARNING)
+
+    def request_stop(self) -> None:
+        """중지 요청.
+
+        현재 반복을 완료한 후 ICOS를 종료합니다.
+        """
+        self._is_stopped = True
+        self._log("중지 요청됨 - 현재 반복 완료 후 종료합니다.", UI_COLOR_WARNING)
+
+    def resume(self) -> None:
+        """일시정지에서 재개."""
+        self._is_paused = False
+        self._log("재개됨", UI_COLOR_INFO)
+
+    def is_paused(self) -> bool:
+        """일시정지 상태 확인."""
+        return self._is_paused
+
+    def is_stopped(self) -> bool:
+        """중지 상태 확인."""
+        return self._is_stopped
+
+    def _save_checkpoint(self, iteration: int, buystg: str, sellstg: str,
+                         params: Dict[str, Any]) -> None:
+        """체크포인트 저장.
+
+        Args:
+            iteration: 현재 반복 번호
+            buystg: 현재 매수 조건식
+            sellstg: 매도 조건식
+            params: 백테스트 파라미터
+        """
+        self._checkpoint = CheckpointData(
+            iteration=iteration,
+            buystg=buystg,
+            sellstg=sellstg,
+            iteration_results=self.반복결과목록.copy(),
+            start_time=self._start_time,
+            config=self.config,
+            params=params,
+        )
+
+        if self._checkpoint_path:
+            self._checkpoint.save(self._checkpoint_path)
+            self._log(f"체크포인트 저장: {self._checkpoint_path}", UI_COLOR_GRAY)
+
+    def get_checkpoint(self) -> Optional[CheckpointData]:
+        """현재 체크포인트 반환."""
+        return self._checkpoint
+
+    def run_from_checkpoint(
+        self,
+        checkpoint: CheckpointData,
+    ) -> IterativeResult:
+        """체크포인트에서 실행 재개.
+
+        Args:
+            checkpoint: 체크포인트 데이터
+
+        Returns:
+            IterativeResult: 최적화 결과
+        """
+        self._log(f"체크포인트에서 재개: 반복 {checkpoint.iteration + 1}부터", UI_COLOR_INFO)
+
+        # 상태 복원
+        self.현재반복 = checkpoint.iteration
+        self.반복결과목록 = checkpoint.iteration_results
+        self._start_time = checkpoint.start_time
+        self._is_paused = False
+        self._is_stopped = False
+
+        # 실행 재개
+        return self.run(
+            buystg=checkpoint.buystg,
+            sellstg=checkpoint.sellstg,
+            backtest_params=checkpoint.params,
+        )
+
+    # ==========================================================================
+    # Walk-Forward 검증
+    # ==========================================================================
+
+    def run_with_walk_forward_validation(
+        self,
+        buystg: str,
+        sellstg: str,
+        backtest_params: Optional[Dict[str, Any]] = None,
+        n_folds: int = 5,
+        validation_ratio: float = 0.2,
+    ) -> Tuple[IterativeResult, WalkForwardResult]:
+        """Walk-Forward 검증과 함께 실행.
+
+        ICOS 완료 후 Walk-Forward 검증을 자동 수행합니다.
+
+        Args:
+            buystg: 초기 매수 조건식
+            sellstg: 매도 조건식
+            backtest_params: 백테스트 파라미터
+            n_folds: 폴드 수
+            validation_ratio: 검증 데이터 비율
+
+        Returns:
+            (ICOS 결과, Walk-Forward 검증 결과)
+        """
+        # 1. ICOS 실행
+        icos_result = self.run(buystg, sellstg, backtest_params)
+
+        if not icos_result.success:
+            return icos_result, WalkForwardResult(
+                is_valid=False,
+                recommendation="ICOS 실행 실패로 Walk-Forward 검증 스킵"
+            )
+
+        # 2. Walk-Forward 검증
+        self._log("═══ Walk-Forward 검증 시작 ═══", UI_COLOR_HIGHLIGHT)
+
+        wf_result = self._run_walk_forward_validation(
+            buystg=icos_result.final_buystg,
+            sellstg=icos_result.final_sellstg,
+            params=backtest_params or self.backtest_params,
+            n_folds=n_folds,
+            validation_ratio=validation_ratio,
+        )
+
+        # 3. 결과 로그
+        if wf_result.is_valid:
+            self._log(
+                f"Walk-Forward 검증 통과 (견고성: {wf_result.robustness_ratio:.1%})",
+                UI_COLOR_SUCCESS
+            )
+        else:
+            self._log(
+                f"Walk-Forward 검증 실패 - {wf_result.recommendation}",
+                UI_COLOR_WARNING
+            )
+
+        return icos_result, wf_result
+
+    def _run_walk_forward_validation(
+        self,
+        buystg: str,
+        sellstg: str,
+        params: Dict[str, Any],
+        n_folds: int = 5,
+        validation_ratio: float = 0.2,
+    ) -> WalkForwardResult:
+        """Walk-Forward 검증 실행.
+
+        Args:
+            buystg: 매수 조건식
+            sellstg: 매도 조건식
+            params: 백테스트 파라미터
+            n_folds: 폴드 수
+            validation_ratio: 검증 비율
+
+        Returns:
+            WalkForwardResult
+        """
+        # 날짜 범위 추출
+        start_day = params.get('startday', '20230101')
+        end_day = params.get('endday', '20241231')
+
+        try:
+            start_dt = datetime.strptime(start_day, '%Y%m%d')
+            end_dt = datetime.strptime(end_day, '%Y%m%d')
+        except ValueError:
+            return WalkForwardResult(
+                is_valid=False,
+                recommendation="날짜 형식 오류"
+            )
+
+        total_days = (end_dt - start_dt).days
+        if total_days < n_folds * 30:  # 최소 30일/폴드
+            return WalkForwardResult(
+                is_valid=False,
+                recommendation=f"데이터 기간 부족 (최소 {n_folds * 30}일 필요)"
+            )
+
+        # 폴드 생성
+        fold_size = total_days // n_folds
+        fold_results = []
+        is_scores = []
+        oos_scores = []
+
+        for fold in range(n_folds):
+            fold_start = start_dt + pd.Timedelta(days=fold * fold_size)
+            fold_end = fold_start + pd.Timedelta(days=fold_size)
+
+            # In-Sample / Out-of-Sample 분할
+            val_days = int(fold_size * validation_ratio)
+            is_end = fold_end - pd.Timedelta(days=val_days)
+
+            # In-Sample 백테스트
+            is_params = params.copy()
+            is_params['startday'] = fold_start.strftime('%Y%m%d')
+            is_params['endday'] = is_end.strftime('%Y%m%d')
+
+            is_result = self._execute_backtest(buystg, sellstg, is_params)
+            is_profit = is_result['metrics'].get('total_profit', 0)
+            is_scores.append(is_profit)
+
+            # Out-of-Sample 백테스트
+            oos_params = params.copy()
+            oos_params['startday'] = is_end.strftime('%Y%m%d')
+            oos_params['endday'] = fold_end.strftime('%Y%m%d')
+
+            oos_result = self._execute_backtest(buystg, sellstg, oos_params)
+            oos_profit = oos_result['metrics'].get('total_profit', 0)
+            oos_scores.append(oos_profit)
+
+            fold_results.append({
+                'fold': fold + 1,
+                'is_start': fold_start.strftime('%Y%m%d'),
+                'is_end': is_end.strftime('%Y%m%d'),
+                'oos_start': is_end.strftime('%Y%m%d'),
+                'oos_end': fold_end.strftime('%Y%m%d'),
+                'is_profit': is_profit,
+                'oos_profit': oos_profit,
+            })
+
+            self._log(
+                f"  폴드 {fold + 1}/{n_folds}: IS={is_profit:,.0f}, OOS={oos_profit:,.0f}",
+                UI_COLOR_GRAY
+            )
+
+        # 결과 분석
+        avg_is = np.mean(is_scores) if is_scores else 0
+        avg_oos = np.mean(oos_scores) if oos_scores else 0
+        robustness = avg_oos / avg_is if avg_is > 0 else 0
+
+        # 과적합 판정
+        overfitting_detected = robustness < 0.5 or avg_oos < 0
+
+        # 권장 조치 결정
+        if overfitting_detected:
+            recommendation = "과적합 감지 - 필터 수를 줄이거나 더 긴 기간으로 최적화하세요."
+        elif robustness < 0.7:
+            recommendation = "견고성 낮음 - 추가 검증 권장"
+        else:
+            recommendation = "검증 통과"
+
+        return WalkForwardResult(
+            is_valid=not overfitting_detected and robustness >= 0.5,
+            in_sample_score=avg_is,
+            out_of_sample_score=avg_oos,
+            robustness_ratio=robustness,
+            fold_results=fold_results,
+            overfitting_detected=overfitting_detected,
+            recommendation=recommendation,
+        )
+
+    # ==========================================================================
+    # 과적합 감지 통합
+    # ==========================================================================
+
+    def _check_overfitting(self, iteration_result: IterationResult) -> Optional[Dict[str, Any]]:
+        """과적합 여부 체크.
+
+        Args:
+            iteration_result: 현재 반복 결과
+
+        Returns:
+            과적합 감지 결과 (None이면 과적합 아님)
+        """
+        if not self._overfitting_guard:
+            return None
+
+        # 이전 반복 메트릭 수집
+        iteration_history = [r.metrics for r in self.반복결과목록]
+
+        # 복잡도 계산
+        condition_complexity = len(iteration_result.buystg)
+        applied_filters = len(iteration_result.applied_filters)
+
+        # 과적합 체크
+        result = self._overfitting_guard.check(
+            train_metrics=iteration_result.metrics,
+            validation_metrics=None,  # 별도 검증 데이터 없음
+            condition_complexity=condition_complexity,
+            applied_filters=applied_filters,
+            iteration_history=iteration_history,
+        )
+
+        if result.is_overfitting:
+            self._log(
+                f"⚠️ 과적합 감지: {result.severity.value} ({result.confidence:.1%} 신뢰도)",
+                UI_COLOR_WARNING
+            )
+            for warning in result.warnings[:2]:  # 상위 2개 경고만
+                self._log(f"   • {warning}", UI_COLOR_WARNING)
+
+            if result.should_stop:
+                self._log("   → 즉시 중단 권장", UI_COLOR_ERROR)
+
+            return result.to_dict()
+
+        return None
+
+    # ==========================================================================
+    # UI 진행상황 데이터 (Phase 5)
+    # ==========================================================================
+
+    def _update_ui_progress(self, iteration_result: IterationResult) -> None:
+        """UI 진행상황 데이터 업데이트.
+
+        Args:
+            iteration_result: 반복 결과
+        """
+        # 진행상황 데이터 추가
+        progress_entry = {
+            'iteration': iteration_result.iteration + 1,
+            'profit': iteration_result.metrics.get('total_profit', 0),
+            'win_rate': iteration_result.metrics.get('win_rate', 0),
+            'trade_count': iteration_result.metrics.get('trade_count', 0),
+            'filter_count': len(iteration_result.applied_filters),
+            'execution_time': iteration_result.execution_time,
+            'timestamp': datetime.now().isoformat(),
+        }
+        self._progress_data.append(progress_entry)
+
+        # 필터 효과 데이터 추가
+        for f in iteration_result.applied_filters:
+            filter_entry = {
+                'iteration': iteration_result.iteration + 1,
+                'filter_description': f.description,
+                'expected_impact': f.expected_impact,
+                'source': f.source,
+            }
+            self._filter_effect_data.append(filter_entry)
+
+        # UI 업데이트 메시지 전송 (chartQ 사용)
+        if self.qlist and len(self.qlist) > 4:
+            chartQ = self.qlist[4]
+            chartQ.put(('icos_progress', self._progress_data.copy()))
+
+    def get_progress_data(self) -> List[Dict[str, Any]]:
+        """진행상황 데이터 반환."""
+        return self._progress_data.copy()
+
+    def get_filter_effect_data(self) -> List[Dict[str, Any]]:
+        """필터 효과 데이터 반환."""
+        return self._filter_effect_data.copy()
+
+    def _estimate_remaining_time(self) -> str:
+        """남은 예상 시간 계산.
+
+        Returns:
+            예상 시간 문자열
+        """
+        if not self._progress_data:
+            return "계산 중..."
+
+        # 평균 실행 시간
+        avg_time = np.mean([p['execution_time'] for p in self._progress_data])
+        remaining_iterations = self.config.max_iterations - self.현재반복 - 1
+
+        remaining_seconds = avg_time * remaining_iterations
+
+        if remaining_seconds < 60:
+            return f"{remaining_seconds:.0f}초"
+        elif remaining_seconds < 3600:
+            return f"{remaining_seconds / 60:.1f}분"
+        else:
+            return f"{remaining_seconds / 3600:.1f}시간"
+
+    # ==========================================================================
+    # 텔레그램 알림 (Phase 6)
+    # ==========================================================================
+
+    def _send_telegram_summary(self, result: IterativeResult) -> None:
+        """텔레그램으로 ICOS 완료 요약 전송.
+
+        Args:
+            result: ICOS 결과
+        """
+        if not self.qlist or len(self.qlist) <= 3:
+            return
+
+        teleQ = self.qlist[3]
+
+        # 요약 메시지 생성
+        if result.success:
+            status = "✅ 성공"
+        else:
+            status = "❌ 실패"
+
+        initial_profit = result.iterations[0].metrics.get('total_profit', 0) if result.iterations else 0
+        final_profit = result.iterations[-1].metrics.get('total_profit', 0) if result.iterations else 0
+
+        message = f"""
+═══ ICOS 완료 알림 ═══
+상태: {status}
+반복: {result.num_iterations}회
+시간: {result.total_execution_time:.1f}초
+
+📊 성과 변화
+초기 수익금: {initial_profit:,.0f}원
+최종 수익금: {final_profit:,.0f}원
+개선율: {result.total_improvement:.1%}
+
+종료 사유: {result.convergence_reason}
+"""
+        teleQ.put(('telegram', message.strip()))

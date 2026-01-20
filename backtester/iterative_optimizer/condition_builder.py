@@ -519,3 +519,497 @@ class ConditionBuilder:
             lines.append(f"      영향도: {f.expected_impact:.2f}")
 
         return '\n'.join(lines)
+
+    # ==================== Phase 3: Advanced Condition Building ====================
+
+    def build_optimized_combinations(
+        self,
+        buystg: str,
+        filters: List[FilterCandidate],
+        strategy: str = 'greedy',
+        max_combinations: int = 5,
+    ) -> List[BuildResult]:
+        """AND/OR 조합 최적화.
+
+        Phase 3 Enhancement: greedy, exhaustive, genetic 전략 지원
+
+        Args:
+            buystg: 기존 매수 조건식
+            filters: 적용할 필터 후보 목록
+            strategy: 최적화 전략 ('greedy', 'exhaustive', 'genetic')
+            max_combinations: 최대 조합 수
+
+        Returns:
+            빌드 결과 목록 (최적 조합순)
+        """
+        if not filters:
+            return [self.build(buystg, [])]
+
+        if strategy == 'greedy':
+            return self._build_greedy_combinations(buystg, filters, max_combinations)
+        elif strategy == 'exhaustive':
+            return self._build_exhaustive_combinations(buystg, filters, max_combinations)
+        elif strategy == 'genetic':
+            return self._build_genetic_combinations(buystg, filters, max_combinations)
+        else:
+            # 기본: greedy
+            return self._build_greedy_combinations(buystg, filters, max_combinations)
+
+    def _build_greedy_combinations(
+        self,
+        buystg: str,
+        filters: List[FilterCandidate],
+        max_combinations: int,
+    ) -> List[BuildResult]:
+        """Greedy 방식 조합 생성.
+
+        영향도 순으로 필터를 하나씩 추가하며 조합 생성
+
+        Args:
+            buystg: 기존 매수 조건식
+            filters: 필터 목록
+            max_combinations: 최대 조합 수
+
+        Returns:
+            빌드 결과 목록
+        """
+        results: List[BuildResult] = []
+
+        # 영향도 순 정렬
+        sorted_filters = sorted(filters, key=lambda x: x.expected_impact, reverse=True)
+
+        # 점진적으로 필터 추가
+        for i in range(1, min(len(sorted_filters) + 1, max_combinations + 1)):
+            selected = sorted_filters[:i]
+
+            # 충돌 검사
+            conflicts = self._detect_filter_conflicts(selected)
+            if conflicts:
+                if self.config.verbose:
+                    print(f"[ICOS Builder] 필터 충돌 감지: {conflicts}")
+                continue
+
+            result = self.build(buystg, selected)
+            if result.success:
+                result.metadata = {'strategy': 'greedy', 'filter_count': i}
+                results.append(result)
+
+        return results
+
+    def _build_exhaustive_combinations(
+        self,
+        buystg: str,
+        filters: List[FilterCandidate],
+        max_combinations: int,
+    ) -> List[BuildResult]:
+        """Exhaustive 방식 조합 생성.
+
+        모든 가능한 조합을 평가 (필터 수 제한 적용)
+
+        Args:
+            buystg: 기존 매수 조건식
+            filters: 필터 목록
+            max_combinations: 최대 조합 수
+
+        Returns:
+            빌드 결과 목록
+        """
+        from itertools import combinations
+
+        results: List[BuildResult] = []
+
+        # 최대 3개 필터로 조합 제한 (조합 폭발 방지)
+        max_filter_count = min(3, len(filters))
+
+        for size in range(1, max_filter_count + 1):
+            for combo in combinations(filters, size):
+                combo_list = list(combo)
+
+                # 충돌 검사
+                conflicts = self._detect_filter_conflicts(combo_list)
+                if conflicts:
+                    continue
+
+                result = self.build(buystg, combo_list)
+                if result.success:
+                    # 조합 점수 계산
+                    total_impact = sum(f.expected_impact for f in combo_list)
+                    result.metadata = {
+                        'strategy': 'exhaustive',
+                        'filter_count': size,
+                        'total_impact': total_impact,
+                    }
+                    results.append(result)
+
+                if len(results) >= max_combinations * 2:
+                    break
+
+            if len(results) >= max_combinations * 2:
+                break
+
+        # 점수순 정렬 후 상위 반환
+        results.sort(key=lambda x: x.metadata.get('total_impact', 0), reverse=True)
+        return results[:max_combinations]
+
+    def _build_genetic_combinations(
+        self,
+        buystg: str,
+        filters: List[FilterCandidate],
+        max_combinations: int,
+    ) -> List[BuildResult]:
+        """Genetic Algorithm 방식 조합 생성.
+
+        유전 알고리즘으로 최적 조합 탐색
+
+        Args:
+            buystg: 기존 매수 조건식
+            filters: 필터 목록
+            max_combinations: 최대 조합 수
+
+        Returns:
+            빌드 결과 목록
+        """
+        import random
+
+        if len(filters) <= 3:
+            # 필터가 적으면 exhaustive로 대체
+            return self._build_exhaustive_combinations(buystg, filters, max_combinations)
+
+        # GA 파라미터
+        population_size = min(20, len(filters) * 2)
+        generations = 10
+        mutation_rate = 0.2
+
+        # 개체: 필터 인덱스의 바이너리 마스크
+        def create_individual():
+            # 1~3개 필터 선택
+            count = random.randint(1, min(3, len(filters)))
+            indices = random.sample(range(len(filters)), count)
+            mask = [i in indices for i in range(len(filters))]
+            return mask
+
+        def evaluate(mask):
+            selected = [f for i, f in enumerate(filters) if mask[i]]
+            if not selected:
+                return 0
+            conflicts = self._detect_filter_conflicts(selected)
+            if conflicts:
+                return 0
+            return sum(f.expected_impact for f in selected)
+
+        def crossover(parent1, parent2):
+            # 단순 교차
+            point = random.randint(1, len(parent1) - 1)
+            child = parent1[:point] + parent2[point:]
+            return child
+
+        def mutate(individual):
+            individual = individual.copy()
+            for i in range(len(individual)):
+                if random.random() < mutation_rate:
+                    individual[i] = not individual[i]
+            return individual
+
+        # 초기 개체군 생성
+        population = [create_individual() for _ in range(population_size)]
+
+        # 진화
+        for _ in range(generations):
+            # 평가
+            scored = [(evaluate(ind), ind) for ind in population]
+            scored.sort(key=lambda x: x[0], reverse=True)
+
+            # 엘리트 선택
+            elites = [ind for _, ind in scored[:population_size // 2]]
+
+            # 다음 세대 생성
+            new_population = elites.copy()
+            while len(new_population) < population_size:
+                parent1, parent2 = random.sample(elites, 2)
+                child = crossover(parent1, parent2)
+                child = mutate(child)
+                new_population.append(child)
+
+            population = new_population
+
+        # 최종 평가
+        final_scored = [(evaluate(ind), ind) for ind in population]
+        final_scored.sort(key=lambda x: x[0], reverse=True)
+
+        # 상위 조합으로 결과 생성
+        results: List[BuildResult] = []
+        seen_combinations = set()
+
+        for score, mask in final_scored:
+            if score <= 0:
+                continue
+
+            selected = [f for i, f in enumerate(filters) if mask[i]]
+            combo_key = tuple(sorted(f.condition for f in selected))
+
+            if combo_key in seen_combinations:
+                continue
+            seen_combinations.add(combo_key)
+
+            result = self.build(buystg, selected)
+            if result.success:
+                result.metadata = {
+                    'strategy': 'genetic',
+                    'filter_count': len(selected),
+                    'ga_score': score,
+                }
+                results.append(result)
+
+            if len(results) >= max_combinations:
+                break
+
+        return results
+
+    def _detect_filter_conflicts(
+        self,
+        filters: List[FilterCandidate],
+    ) -> List[Tuple[int, int, str]]:
+        """필터 충돌 감지.
+
+        Phase 3 Enhancement: 상충되는 필터 조합 탐지
+
+        Args:
+            filters: 검사할 필터 목록
+
+        Returns:
+            충돌 목록: [(인덱스1, 인덱스2, 충돌유형), ...]
+        """
+        conflicts: List[Tuple[int, int, str]] = []
+
+        for i in range(len(filters)):
+            for j in range(i + 1, len(filters)):
+                conflict_type = self._check_conflict(filters[i], filters[j])
+                if conflict_type:
+                    conflicts.append((i, j, conflict_type))
+
+        return conflicts
+
+    def _check_conflict(
+        self,
+        filter1: FilterCandidate,
+        filter2: FilterCandidate,
+    ) -> Optional[str]:
+        """두 필터 간 충돌 검사.
+
+        Args:
+            filter1: 첫 번째 필터
+            filter2: 두 번째 필터
+
+        Returns:
+            충돌 유형 (None이면 충돌 없음)
+        """
+        col1 = filter1.metadata.get('column', '')
+        col2 = filter2.metadata.get('column', '')
+
+        # 같은 컬럼에 대한 상반된 조건
+        if col1 == col2 and col1:
+            dir1 = filter1.metadata.get('direction', '')
+            dir2 = filter2.metadata.get('direction', '')
+
+            # 같은 컬럼에 대해 '미만' + '이상' 조건이 있으면 모든 값 제외 가능
+            if (dir1 == 'below' and dir2 == 'above') or (dir1 == 'above' and dir2 == 'below'):
+                th1 = filter1.metadata.get('threshold', 0)
+                th2 = filter2.metadata.get('threshold', 0)
+
+                # 범위 겹침 검사
+                if dir1 == 'below' and dir2 == 'above':
+                    # filter1: < th1, filter2: >= th2
+                    if th1 <= th2:
+                        return 'empty_range'  # 빈 범위
+                elif dir1 == 'above' and dir2 == 'below':
+                    # filter1: >= th1, filter2: < th2
+                    if th2 <= th1:
+                        return 'empty_range'
+
+        # 시간대 필터 충돌 (너무 많은 시간대 제외)
+        if col1 == '매수시' and col2 == '매수시':
+            hour1 = filter1.metadata.get('hour')
+            hour2 = filter2.metadata.get('hour')
+            # 2개 이상의 시간대 제외는 경고 (충돌로 처리하지는 않음)
+            pass
+
+        return None
+
+    def _auto_adjust_threshold(
+        self,
+        df_tsg,
+        column: str,
+        initial_threshold: float,
+        direction: str,
+        adjustment_range: float = 0.3,
+        steps: int = 7,
+    ) -> Tuple[float, float]:
+        """임계값 자동 조정.
+
+        Phase 3 Enhancement: ±30% 범위 내 최적 임계값 탐색
+
+        Args:
+            df_tsg: 거래 데이터 DataFrame
+            column: 대상 컬럼
+            initial_threshold: 초기 임계값
+            direction: 조건 방향 ('below' 또는 'above')
+            adjustment_range: 조정 범위 비율 (0.3 = ±30%)
+            steps: 탐색 단계 수
+
+        Returns:
+            (최적 임계값, 예상 개선율)
+        """
+        import numpy as np
+        import pandas as pd
+
+        if df_tsg is None or column not in df_tsg.columns:
+            return initial_threshold, 0.0
+
+        loss_mask = df_tsg['수익금'] <= 0
+        overall_loss_ratio = loss_mask.mean()
+
+        if overall_loss_ratio == 0:
+            return initial_threshold, 0.0
+
+        # 탐색 범위 설정
+        min_th = initial_threshold * (1 - adjustment_range)
+        max_th = initial_threshold * (1 + adjustment_range)
+        thresholds = np.linspace(min_th, max_th, steps)
+
+        best_threshold = initial_threshold
+        best_improvement = 0.0
+
+        for th in thresholds:
+            # 조건 적용
+            if direction == 'below':
+                # 미만 제외: >= th 만 허용
+                mask = df_tsg[column] >= th
+            else:
+                # 이상 제외: < th 만 허용
+                mask = df_tsg[column] < th
+
+            remaining = mask.sum()
+            if remaining < 10:  # 최소 샘플 수
+                continue
+
+            # 조건 적용 후 손실률
+            remaining_losses = (mask & loss_mask).sum()
+            new_loss_ratio = remaining_losses / remaining if remaining > 0 else 0
+
+            # 개선율 계산
+            improvement = (overall_loss_ratio - new_loss_ratio) / overall_loss_ratio if overall_loss_ratio > 0 else 0
+
+            # 제외율 패널티 (너무 많이 제외하면 패널티)
+            exclusion_rate = 1 - (remaining / len(df_tsg))
+            penalized_improvement = improvement * (1 - exclusion_rate * 0.5)
+
+            if penalized_improvement > best_improvement:
+                best_improvement = penalized_improvement
+                best_threshold = th
+
+        return best_threshold, best_improvement
+
+    def build_with_or_conditions(
+        self,
+        buystg: str,
+        filter_groups: List[List[FilterCandidate]],
+    ) -> BuildResult:
+        """OR 조건을 포함한 빌드.
+
+        Phase 3 Enhancement: 필터 그룹을 OR로 연결
+
+        Args:
+            buystg: 기존 매수 조건식
+            filter_groups: 필터 그룹 목록 (각 그룹 내는 AND, 그룹 간은 OR)
+
+        Returns:
+            빌드 결과
+        """
+        if not filter_groups:
+            return self.build(buystg, [])
+
+        # 각 그룹의 조건을 AND로 결합
+        group_conditions = []
+        all_filters: List[FilterCandidate] = []
+
+        for group in filter_groups:
+            if not group:
+                continue
+
+            conditions = [f.condition for f in group]
+            combined = self.combine_conditions(conditions, 'and')
+            group_conditions.append(combined)
+            all_filters.extend(group)
+
+        if not group_conditions:
+            return self.build(buystg, [])
+
+        # 그룹들을 OR로 결합
+        final_condition = self.combine_conditions(group_conditions, 'or')
+
+        # 결합된 조건으로 단일 FilterCandidate 생성
+        combined_filter = FilterCandidate(
+            condition=final_condition,
+            description=f"OR 조합: {len(filter_groups)}개 그룹",
+            source="or_combination",
+            expected_impact=max(f.expected_impact for f in all_filters) if all_filters else 0,
+            metadata={
+                'group_count': len(filter_groups),
+                'total_filters': len(all_filters),
+            },
+        )
+
+        return self.build(buystg, [combined_filter])
+
+    def refine_filter_threshold(
+        self,
+        filter_candidate: FilterCandidate,
+        df_tsg,
+    ) -> FilterCandidate:
+        """필터 임계값 정제.
+
+        Phase 3 Enhancement: 데이터 기반 임계값 최적화
+
+        Args:
+            filter_candidate: 정제할 필터
+            df_tsg: 거래 데이터 DataFrame
+
+        Returns:
+            정제된 FilterCandidate
+        """
+        threshold = filter_candidate.metadata.get('threshold')
+        column = filter_candidate.metadata.get('column')
+        direction = filter_candidate.metadata.get('direction')
+
+        if threshold is None or column is None or direction is None:
+            return filter_candidate
+
+        # 최적 임계값 탐색
+        optimal_threshold, improvement = self._auto_adjust_threshold(
+            df_tsg, column, threshold, direction
+        )
+
+        # 개선이 있는 경우에만 업데이트
+        if improvement > 0.05:  # 5% 이상 개선
+            # 새 조건 생성
+            if direction == 'below':
+                new_condition = f"({column} >= {optimal_threshold:.4f})"
+            else:
+                new_condition = f"({column} < {optimal_threshold:.4f})"
+
+            return FilterCandidate(
+                condition=new_condition,
+                description=f"{filter_candidate.description} (임계값 조정: {threshold:.2f} → {optimal_threshold:.2f})",
+                source=filter_candidate.source,
+                expected_impact=filter_candidate.expected_impact * (1 + improvement),
+                metadata={
+                    **filter_candidate.metadata,
+                    'original_threshold': threshold,
+                    'optimized_threshold': optimal_threshold,
+                    'threshold_improvement': improvement,
+                },
+            )
+
+        return filter_candidate
+
+    # ==================== End Phase 3: Advanced Condition Building ====================

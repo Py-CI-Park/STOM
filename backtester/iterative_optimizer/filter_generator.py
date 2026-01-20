@@ -503,3 +503,357 @@ class FilterGenerator:
             return False, f"문법 오류: {e}"
 
         return True, ""
+
+    # ==================== Phase 3: Advanced Filter Generation ====================
+
+    def _remove_correlated_filters(
+        self,
+        candidates: List[FilterCandidate],
+        correlation_threshold: float = 0.7,
+    ) -> List[FilterCandidate]:
+        """상관관계 기반 중복 필터 제거.
+
+        Phase 3 Enhancement: 동일 컬럼 기반 필터 간 상관성 분석으로 중복 제거
+
+        Args:
+            candidates: 필터 후보 목록
+            correlation_threshold: 상관계수 임계값 (이상이면 중복으로 간주)
+
+        Returns:
+            중복 제거된 필터 목록
+        """
+        if len(candidates) <= 1:
+            return candidates
+
+        # 컬럼별 필터 그룹화
+        column_groups: Dict[str, List[FilterCandidate]] = {}
+        for candidate in candidates:
+            col = candidate.metadata.get('column', 'unknown')
+            if col not in column_groups:
+                column_groups[col] = []
+            column_groups[col].append(candidate)
+
+        filtered_candidates: List[FilterCandidate] = []
+
+        for col, group in column_groups.items():
+            if len(group) == 1:
+                filtered_candidates.extend(group)
+                continue
+
+            # 같은 컬럼의 필터 중 최고 점수 필터 선택
+            # 또는 서로 다른 방향의 필터는 유지 (예: 미만 제외 vs 이상 제외)
+            direction_groups: Dict[str, List[FilterCandidate]] = {}
+            for c in group:
+                direction = c.metadata.get('direction', 'unknown')
+                pattern_type = c.metadata.get('pattern_type', 'unknown')
+                key = f"{direction}_{pattern_type}"
+                if key not in direction_groups:
+                    direction_groups[key] = []
+                direction_groups[key].append(c)
+
+            # 각 방향에서 최고 임팩트 필터 선택
+            for direction_key, dir_group in direction_groups.items():
+                best = max(dir_group, key=lambda x: x.expected_impact)
+                filtered_candidates.append(best)
+
+        # 유사 임계값 필터 추가 제거
+        final_candidates = self._remove_similar_thresholds(filtered_candidates, correlation_threshold)
+
+        return final_candidates
+
+    def _remove_similar_thresholds(
+        self,
+        candidates: List[FilterCandidate],
+        similarity_threshold: float = 0.7,
+    ) -> List[FilterCandidate]:
+        """유사한 임계값을 가진 필터 제거."""
+        if len(candidates) <= 1:
+            return candidates
+
+        kept_candidates: List[FilterCandidate] = []
+
+        for candidate in sorted(candidates, key=lambda x: x.expected_impact, reverse=True):
+            threshold = candidate.metadata.get('threshold')
+            col = candidate.metadata.get('column', '')
+            direction = candidate.metadata.get('direction', '')
+
+            if threshold is None:
+                kept_candidates.append(candidate)
+                continue
+
+            # 이미 유지된 필터와 임계값 유사성 비교
+            is_similar = False
+            for kept in kept_candidates:
+                kept_threshold = kept.metadata.get('threshold')
+                kept_col = kept.metadata.get('column', '')
+                kept_direction = kept.metadata.get('direction', '')
+
+                if kept_threshold is None:
+                    continue
+
+                # 같은 컬럼, 같은 방향일 때만 비교
+                if col == kept_col and direction == kept_direction:
+                    # 임계값 유사성 계산 (상대적 차이)
+                    if kept_threshold != 0:
+                        similarity = 1 - abs(threshold - kept_threshold) / abs(kept_threshold)
+                        if similarity >= similarity_threshold:
+                            is_similar = True
+                            break
+
+            if not is_similar:
+                kept_candidates.append(candidate)
+
+        return kept_candidates
+
+    def _analyze_filter_synergy(
+        self,
+        candidates: List[FilterCandidate],
+        analysis: AnalysisResult,
+    ) -> Dict[Tuple[int, int], float]:
+        """필터 조합의 시너지 효과 분석.
+
+        Phase 3 Enhancement: 필터 조합 시 예상되는 시너지 효과 계산
+
+        Args:
+            candidates: 필터 후보 목록
+            analysis: 분석 결과
+
+        Returns:
+            {(필터1 인덱스, 필터2 인덱스): 시너지 점수} 딕셔너리
+        """
+        synergy_scores: Dict[Tuple[int, int], float] = {}
+
+        for i in range(len(candidates)):
+            for j in range(i + 1, len(candidates)):
+                synergy = self._calculate_synergy(candidates[i], candidates[j], analysis)
+                synergy_scores[(i, j)] = synergy
+
+        return synergy_scores
+
+    def _calculate_synergy(
+        self,
+        filter1: FilterCandidate,
+        filter2: FilterCandidate,
+        analysis: AnalysisResult,
+    ) -> float:
+        """두 필터 간 시너지 점수 계산.
+
+        시너지가 높을수록 함께 적용 시 효과가 좋음
+        시너지가 낮거나 음수면 상충되는 필터
+
+        Args:
+            filter1: 첫 번째 필터
+            filter2: 두 번째 필터
+            analysis: 분석 결과
+
+        Returns:
+            시너지 점수 (-1.0 ~ 1.0)
+        """
+        col1 = filter1.metadata.get('column', '')
+        col2 = filter2.metadata.get('column', '')
+
+        # 같은 컬럼 기반 필터는 시너지가 낮음 (중복 가능성)
+        if col1 == col2:
+            return -0.5
+
+        # 보완적 컬럼 조합은 시너지가 높음
+        complementary_pairs = [
+            ('매수시', '등락율'),      # 시간 + 가격
+            ('매수시', '체결강도'),    # 시간 + 체결강도
+            ('시가총액', '당일거래대금'),  # 시가총액 + 거래량
+            ('등락율', '체결강도'),    # 가격 + 체결강도
+            ('전일비', '체결강도'),    # 거래량 + 체결강도
+        ]
+
+        for pair in complementary_pairs:
+            if (col1 in pair[0] or pair[0] in col1) and (col2 in pair[1] or pair[1] in col2):
+                return 0.8
+            if (col2 in pair[0] or pair[0] in col2) and (col1 in pair[1] or pair[1] in col1):
+                return 0.8
+
+        # 서로 다른 분석 유형의 필터는 중간 시너지
+        type1 = filter1.metadata.get('analysis_type', '')
+        type2 = filter2.metadata.get('analysis_type', '')
+
+        if type1 != type2 and type1 and type2:
+            return 0.5
+
+        # 기본 시너지
+        return 0.2
+
+    def _select_by_priority(
+        self,
+        candidates: List[FilterCandidate],
+        max_count: int,
+    ) -> List[FilterCandidate]:
+        """우선순위 기반 필터 선택.
+
+        Phase 3 Enhancement: CRITICAL > HIGH > MEDIUM > LOW 순으로 선택
+
+        Args:
+            candidates: 필터 후보 목록
+            max_count: 최대 선택 개수
+
+        Returns:
+            선택된 필터 목록
+        """
+        # 우선순위별 분류
+        priority_buckets: Dict[FilterPriority, List[FilterCandidate]] = {
+            FilterPriority.CRITICAL: [],
+            FilterPriority.HIGH: [],
+            FilterPriority.MEDIUM: [],
+            FilterPriority.LOW: [],
+            FilterPriority.EXPERIMENTAL: [],
+        }
+
+        for candidate in candidates:
+            priority = self._determine_priority(candidate)
+            priority_buckets[priority].append(candidate)
+
+        # 각 버킷 내에서 점수순 정렬
+        for priority in priority_buckets:
+            priority_buckets[priority].sort(key=lambda x: x.expected_impact, reverse=True)
+
+        # 우선순위 순으로 선택
+        selected: List[FilterCandidate] = []
+        for priority in FilterPriority:
+            if len(selected) >= max_count:
+                break
+            for candidate in priority_buckets[priority]:
+                if len(selected) >= max_count:
+                    break
+                selected.append(candidate)
+
+        return selected
+
+    def generate_advanced(
+        self,
+        analysis: AnalysisResult,
+        max_filters: Optional[int] = None,
+        use_synergy: bool = True,
+        remove_correlated: bool = True,
+    ) -> List[FilterCandidate]:
+        """고급 필터 생성 (Phase 3).
+
+        상관관계 제거, 시너지 분석, 우선순위 기반 선택을 적용한 필터 생성
+
+        Args:
+            analysis: 분석 결과
+            max_filters: 최대 생성 필터 수
+            use_synergy: 시너지 분석 사용 여부
+            remove_correlated: 상관 필터 제거 여부
+
+        Returns:
+            필터 후보 목록
+        """
+        if not analysis.loss_patterns:
+            return []
+
+        max_count = max_filters or self.config.filter_generation.max_filters_per_iteration
+
+        # 1. 기본 필터 생성
+        candidates = self._generate_from_patterns(analysis.loss_patterns)
+
+        # 2. 강화 분석 결과 추가
+        if analysis.filter_candidates:
+            candidates.extend(self._generate_from_enhanced(analysis.filter_candidates))
+
+        # 3. 기본 중복 제거
+        candidates = self._deduplicate(candidates)
+
+        # 4. Phase 3: 상관관계 기반 중복 제거
+        if remove_correlated:
+            before_count = len(candidates)
+            candidates = self._remove_correlated_filters(candidates)
+            if self.config.verbose:
+                print(f"[ICOS FilterGen] 상관 필터 제거: {before_count} → {len(candidates)}개")
+
+        # 5. 점수 계산
+        for candidate in candidates:
+            score = self._calculate_score(candidate, analysis)
+            candidate.metadata['total_score'] = score.total_score
+
+        # 6. Phase 3: 시너지 분석
+        if use_synergy and len(candidates) >= 2:
+            synergy_scores = self._analyze_filter_synergy(candidates, analysis)
+            # 시너지 정보를 메타데이터에 추가
+            for (i, j), synergy in synergy_scores.items():
+                if synergy >= 0.5:  # 높은 시너지만 기록
+                    if i < len(candidates):
+                        existing = candidates[i].metadata.get('synergies', [])
+                        existing.append({'partner_idx': j, 'score': synergy})
+                        candidates[i].metadata['synergies'] = existing
+
+        # 7. Phase 3: 우선순위 기반 선택
+        selected = self._select_by_priority(candidates, max_count)
+
+        if self.config.verbose:
+            print(f"[ICOS FilterGen] 최종 선택: {len(selected)}개 필터")
+            for i, c in enumerate(selected):
+                priority = self._determine_priority(c)
+                print(f"  [{i+1}] {priority.name}: {c.description[:50]}...")
+
+        return selected
+
+    def generate_synergistic_combination(
+        self,
+        candidates: List[FilterCandidate],
+        analysis: AnalysisResult,
+        max_combine: int = 3,
+    ) -> Optional[FilterCandidate]:
+        """시너지 기반 복합 필터 생성.
+
+        Phase 3 Enhancement: 시너지 점수가 높은 필터들을 조합
+
+        Args:
+            candidates: 조합할 필터 후보 목록
+            analysis: 분석 결과
+            max_combine: 최대 조합 수
+
+        Returns:
+            최적 복합 필터
+        """
+        if len(candidates) < 2:
+            return self.generate_combined_filter(candidates, max_combine)
+
+        # 시너지 분석
+        synergy_scores = self._analyze_filter_synergy(candidates, analysis)
+
+        # 최고 시너지 조합 찾기
+        best_combination: List[int] = []
+        best_total_synergy = -float('inf')
+
+        # 2개 조합
+        for (i, j), synergy in synergy_scores.items():
+            if synergy > best_total_synergy:
+                best_total_synergy = synergy
+                best_combination = [i, j]
+
+        # 3개 조합 (선택적)
+        if max_combine >= 3 and len(candidates) >= 3:
+            for i in range(len(candidates)):
+                for j in range(i + 1, len(candidates)):
+                    for k in range(j + 1, len(candidates)):
+                        total_synergy = (
+                            synergy_scores.get((i, j), 0) +
+                            synergy_scores.get((i, k), 0) +
+                            synergy_scores.get((j, k), 0)
+                        ) / 3
+                        if total_synergy > best_total_synergy:
+                            best_total_synergy = total_synergy
+                            best_combination = [i, j, k]
+
+        if not best_combination:
+            return self.generate_combined_filter(candidates[:max_combine], max_combine)
+
+        # 최적 조합으로 복합 필터 생성
+        selected_candidates = [candidates[i] for i in best_combination if i < len(candidates)]
+        combined = self.generate_combined_filter(selected_candidates, len(selected_candidates))
+
+        if combined:
+            combined.metadata['synergy_score'] = best_total_synergy
+            combined.metadata['combination_indices'] = best_combination
+
+        return combined
+
+    # ==================== End Phase 3: Advanced Filter Generation ====================
