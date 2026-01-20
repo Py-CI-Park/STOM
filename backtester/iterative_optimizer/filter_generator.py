@@ -503,9 +503,27 @@ class FilterGenerator:
     def _column_to_variable(self, column: str) -> str:
         """DataFrame 컬럼명을 buystg 변수명으로 변환.
 
-        대부분의 경우 동일하지만, 일부 매핑이 필요할 수 있음.
+        df_tsg의 컬럼명에는 '매수' 접두사가 붙어 있지만,
+        실제 전략 조건식에서는 접두사 없이 사용합니다.
+
+        특수 케이스:
+        - '매수매수총잔량' → '매수총잔량'
+        - '매수매도총잔량' → '매도매수총잔량'
+        - '매수등락율' → '등락율'
+        - '매수체결강도' → '체결강도'
         """
-        # 매수 시점 스냅샷 컬럼은 '매수' 접두사 제거
+        # 특수 케이스 매핑 (df_tsg 컬럼 → buystg 변수)
+        special_mappings = {
+            '매수매수총잔량': '매수총잔량',
+            '매수매도총잔량': '매도매수총잔량',
+            '매수호가잔량비': '호가잔량비',
+            '매수스프레드': '매수스프레드',
+        }
+
+        if column in special_mappings:
+            return special_mappings[column]
+
+        # 일반 규칙: 매수 시점 스냅샷 컬럼은 '매수' 접두사 제거
         if column.startswith('매수') and column != '매수시':
             # 매수등락율 -> 등락율, 매수체결강도 -> 체결강도
             var_name = column[2:]  # '매수' 제거
