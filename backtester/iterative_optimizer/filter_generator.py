@@ -156,26 +156,123 @@ class FilterGenerator:
             return self._create_range_filter(pattern)
         elif pattern.pattern_type == LossPatternType.RANGE_OUTSIDE:
             return self._create_range_filter(pattern)
+        elif pattern.pattern_type == LossPatternType.SEGMENT:
+            return self._create_segment_filter(pattern)
 
         return None
 
-    def _create_time_filter(self, pattern: LossPattern) -> FilterCandidate:
-        """시간대 필터 생성."""
-        hour = pattern.metadata.get('hour', 0)
+    def _create_segment_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """세그먼트(복합) 패턴 필터 생성."""
+        analysis_type = pattern.metadata.get('analysis_type', '')
 
-        # 필터 조건: 해당 시간대 제외
-        # buystg에서 사용할 수 있는 변수명으로 변환
-        condition = f"(매수시 != {hour})"
+        if analysis_type == 'time_price_compound':
+            # 시간 + 등락율 복합 패턴
+            hour = pattern.metadata.get('hour', 0)
+            price_range = pattern.metadata.get('price_range', '')
+
+            # 등락율 조건 파싱
+            if '급등' in price_range:
+                price_cond = "(등락율 < 20)"
+            elif '상승' in price_range:
+                price_cond = "not ((등락율 >= 10) and (등락율 < 20))"
+            elif '하락' in price_range:
+                price_cond = "(등락율 >= -5)"
+            else:
+                price_cond = "True"
+
+            condition = f"not ((시분초 // 10000 == {hour}) and not {price_cond})"
+            description = f"{hour}시 + {price_range} 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif analysis_type == 'volume_strength_compound':
+            # 거래량 + 체결강도 복합 패턴은 조건이 이미 pattern.condition에 있음
+            # 이를 런타임 변수로 변환 필요
+            combination = pattern.metadata.get('combination', '')
+            # 복잡한 복합 조건은 건너뜀 (런타임 변수 매핑 어려움)
+            return None
+
+        elif analysis_type == 'cap_volume_compound':
+            # 시가총액 + 거래량 복합 패턴
+            # 복잡한 복합 조건은 건너뜀
+            return None
+
+        else:
+            return None
 
         return FilterCandidate(
             condition=condition,
-            description=f"시간대 {hour}시 제외 (손실률 {pattern.loss_ratio:.1%})",
+            description=description,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'analysis_type': analysis_type,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _create_time_filter(self, pattern: LossPattern) -> FilterCandidate:
+        """시간대 필터 생성.
+
+        다양한 시간 패턴 유형 처리:
+        - 시간대 (hour): 매수시 != hour
+        - 5분 단위 (5min_interval): (매수시 != hour) or (매수분 < minute_start) or (매수분 >= minute_end)
+        - 세션 (market_session): 시간 범위 제외
+        - 요일 (weekday): 요일 제외 (런타임 지원 필요)
+        """
+        analysis_type = pattern.metadata.get('analysis_type', 'hour')
+
+        if analysis_type == '5min_interval':
+            # 5분 단위 시간대 제외
+            hour = pattern.metadata.get('hour', 0)
+            minute_start = pattern.metadata.get('minute_start', 0)
+            minute_end = pattern.metadata.get('minute_end', 5)
+
+            # 해당 5분 구간 제외 조건 (구간 밖이면 True)
+            # not ((매수시 == hour) and (매수분 >= minute_start) and (매수분 < minute_end))
+            condition = f"not ((시분초 // 10000 == {hour}) and ((시분초 // 100) % 100 >= {minute_start}) and ((시분초 // 100) % 100 < {minute_end}))"
+            description = f"시간대 {hour}:{minute_start:02d}~{minute_end:02d} 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif analysis_type == 'market_session':
+            # 세션 시간대 제외
+            start_time = pattern.metadata.get('start_time', '09:00')
+            end_time = pattern.metadata.get('end_time', '09:30')
+            session_name = pattern.metadata.get('session_name', '세션')
+
+            # 시간을 분 단위로 변환
+            start_parts = start_time.split(':')
+            end_parts = end_time.split(':')
+            start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
+            end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
+
+            # 시분초에서 분 단위로 변환하여 비교
+            # 시분초 = HHMMSS 형식 (ex: 93015 = 09:30:15)
+            condition = f"not (((시분초 // 10000) * 60 + ((시분초 // 100) % 100) >= {start_mins}) and ((시분초 // 10000) * 60 + ((시분초 // 100) % 100) < {end_mins}))"
+            description = f"세션 {session_name} 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif analysis_type == 'weekday':
+            # 요일 제외 - 런타임에서 매수일자로 요일 계산 필요
+            # 현재는 건너뜀 (런타임 지원 필요)
+            weekday = pattern.metadata.get('weekday', 0)
+            weekday_name = pattern.metadata.get('weekday_name', '')
+            # 직접 적용 불가 - 런타임에서 요일 계산 필요하므로 기본 필터로 처리하지 않음
+            return None
+
+        else:
+            # 기본 시간대 (hour 단위)
+            hour = pattern.metadata.get('hour', 0)
+            condition = f"(시분초 // 10000 != {hour})"
+            description = f"시간대 {hour}시 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        return FilterCandidate(
+            condition=condition,
+            description=description,
             source="loss_pattern",
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': pattern.column,
-                'hour': hour,
+                'analysis_type': analysis_type,
                 'loss_count': pattern.loss_count,
                 'total_loss': pattern.total_loss,
             },

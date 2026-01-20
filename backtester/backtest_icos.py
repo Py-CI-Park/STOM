@@ -560,6 +560,17 @@ class ICOSBackTest:
                 self.converged = True
                 break
 
+            # 필터 후보 디버그 로그
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [ICOS] 필터 후보 {len(filter_candidates)}개 생성됨</font>'
+            ))
+            for i, fc in enumerate(filter_candidates[:3], 1):
+                self.wq.put((
+                    ui_num[f'{self.ui_gubun}백테스트'],
+                    f'<font color=#888888>    #{i}: {fc.description[:50]}...</font>'
+                ))
+
             # === 2.4 조건식 개선 ===
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
@@ -572,10 +583,24 @@ class ICOSBackTest:
             applied_filters = build_result.applied_filters
 
             if not applied_filters:
+                # 빌드 실패 원인 출력
+                error_msg = build_result.error_message or "알 수 없음"
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    '<font color=#ffa500>[ICOS] ⚠️ 적용할 필터 없음 - 수렴</font>'
+                    f'<font color=#ffa500>[ICOS] ⚠️ 적용할 필터 없음 - {error_msg}</font>'
                 ))
+                # 첫 번째 필터 조건 검증 테스트
+                if filter_candidates:
+                    first_cond = filter_candidates[0].condition
+                    is_valid, err = self.condition_builder.validate_condition(first_cond)
+                    self.wq.put((
+                        ui_num[f'{self.ui_gubun}백테스트'],
+                        f'<font color=#888888>  [DEBUG] 첫 필터 검증: valid={is_valid}, err={err}</font>'
+                    ))
+                    self.wq.put((
+                        ui_num[f'{self.ui_gubun}백테스트'],
+                        f'<font color=#888888>  [DEBUG] 조건: {first_cond[:80]}...</font>'
+                    ))
                 self.converged = True
                 break
 
