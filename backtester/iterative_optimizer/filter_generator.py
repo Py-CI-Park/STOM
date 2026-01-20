@@ -162,39 +162,140 @@ class FilterGenerator:
         return None
 
     def _create_segment_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
-        """세그먼트(복합) 패턴 필터 생성."""
+        """세그먼트(복합) 패턴 필터 생성.
+
+        Phase 3 Enhancement: 복합 조건 패턴을 실제 조건식 필터로 변환
+
+        지원 패턴:
+        - time_price_compound: 시간 + 등락율 복합
+        - volume_strength_compound: 거래량 + 체결강도 복합
+        - cap_volume_compound: 시가총액 + 거래대금 복합
+        """
         analysis_type = pattern.metadata.get('analysis_type', '')
 
         if analysis_type == 'time_price_compound':
-            # 시간 + 등락율 복합 패턴
-            hour = pattern.metadata.get('hour', 0)
-            price_range = pattern.metadata.get('price_range', '')
-
-            # 등락율 조건 파싱
-            if '급등' in price_range:
-                price_cond = "(등락율 < 20)"
-            elif '상승' in price_range:
-                price_cond = "not ((등락율 >= 10) and (등락율 < 20))"
-            elif '하락' in price_range:
-                price_cond = "(등락율 >= -5)"
-            else:
-                price_cond = "True"
-
-            condition = f"not ((시분초 // 10000 == {hour}) and not {price_cond})"
-            description = f"{hour}시 + {price_range} 제외 (손실률 {pattern.loss_ratio:.1%})"
+            return self._create_time_price_compound_filter(pattern)
 
         elif analysis_type == 'volume_strength_compound':
-            # 거래량 + 체결강도 복합 패턴은 조건이 이미 pattern.condition에 있음
-            # 이를 런타임 변수로 변환 필요
-            combination = pattern.metadata.get('combination', '')
-            # 복잡한 복합 조건은 건너뜀 (런타임 변수 매핑 어려움)
-            return None
+            return self._create_volume_strength_compound_filter(pattern)
 
         elif analysis_type == 'cap_volume_compound':
-            # 시가총액 + 거래량 복합 패턴
-            # 복잡한 복합 조건은 건너뜀
+            return self._create_cap_volume_compound_filter(pattern)
+
+        else:
             return None
 
+    def _create_time_price_compound_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """시간 + 등락율 복합 패턴 필터 생성."""
+        hour = pattern.metadata.get('hour', 0)
+        price_range = pattern.metadata.get('price_range', '')
+
+        # 등락율 조건 파싱 (해당 조건 제외 = not 조건)
+        if '급등' in price_range:
+            # 급등(20%↑) 제외 -> 20% 미만만 허용
+            price_cond = "(등락율 < 20)"
+        elif '상승' in price_range:
+            # 상승(10~20%) 제외 -> 10% 미만 또는 20% 이상만 허용
+            price_cond = "((등락율 < 10) or (등락율 >= 20))"
+        elif '하락' in price_range:
+            # 하락(~-5%) 제외 -> -5% 이상만 허용
+            price_cond = "(등락율 >= -5)"
+        else:
+            return None
+
+        # 해당 시간대 + 해당 가격조건일 때 제외
+        # not (시간조건 and 가격조건) = 시간조건이 아니거나 가격조건이 아님
+        condition = f"not ((시분초 // 10000 == {hour}) and not {price_cond})"
+        description = f"{hour}시 + {price_range} 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        return FilterCandidate(
+            condition=condition,
+            description=description,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'analysis_type': 'time_price_compound',
+                'hour': hour,
+                'price_range': price_range,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _create_volume_strength_compound_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """거래량 + 체결강도 복합 패턴 필터 생성.
+
+        패턴 메타데이터에서 조건 정보를 추출하여 필터로 변환
+        """
+        combination = pattern.metadata.get('combination', '')
+
+        if not combination:
+            return None
+
+        # 복합 조건 생성
+        # analyzer.py에서 생성된 pattern.condition을 파싱하여 런타임 변수로 변환
+        # pattern.condition 형식: "(df_tsg['컬럼1'] < 값1) & (df_tsg['컬럼2'] < 값2)"
+
+        # 조합별 필터 조건 생성
+        if combination == '저거래량_저체결':
+            # 저거래량 + 저체결강도 제외 -> 둘 중 하나라도 높으면 허용
+            # 전일비 하위 33%, 체결강도 하위 33% 제외
+            condition = "not ((전일비 < 전일비_q33) and (체결강도 < 체결강도_q33))"
+            description = f"저거래량+저체결강도 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif combination == '고거래량_저체결':
+            # 고거래량 + 저체결강도 제외
+            condition = "not ((전일비 > 전일비_q67) and (체결강도 < 체결강도_q33))"
+            description = f"고거래량+저체결강도 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif combination == '저거래량_고체결':
+            # 저거래량 + 고체결강도 제외
+            condition = "not ((전일비 < 전일비_q33) and (체결강도 > 체결강도_q67))"
+            description = f"저거래량+고체결강도 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        else:
+            # 알 수 없는 조합은 건너뜀
+            return None
+
+        return FilterCandidate(
+            condition=condition,
+            description=description,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'analysis_type': 'volume_strength_compound',
+                'combination': combination,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+                'requires_quantile': True,  # 분위수 계산이 필요함을 표시
+            },
+        )
+
+    def _create_cap_volume_compound_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """시가총액 + 거래대금 복합 패턴 필터 생성."""
+        cap_range = pattern.metadata.get('cap_range', '')
+
+        if not cap_range:
+            return None
+
+        # 시가총액 구간별 조건 생성
+        if cap_range == '소형':
+            cap_cond = "(시가총액 < 5000)"
+        elif cap_range == '중형':
+            cap_cond = "((시가총액 >= 5000) and (시가총액 < 30000))"
+        elif cap_range == '대형':
+            cap_cond = "(시가총액 >= 30000)"
+        else:
+            return None
+
+        # 해당 시가총액 구간 + 저거래대금 제외
+        # pattern.description에서 '저거래대금' 확인
+        if '저거래대금' in pattern.description:
+            # 해당 시총 구간에서 거래대금 중앙값 미만 제외
+            condition = f"not ({cap_cond} and (당일거래대금 < 당일거래대금_median))"
+            description = f"{cap_range}주 + 저거래대금 제외 (손실률 {pattern.loss_ratio:.1%})"
         else:
             return None
 
@@ -205,9 +306,11 @@ class FilterGenerator:
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
-                'analysis_type': analysis_type,
+                'analysis_type': 'cap_volume_compound',
+                'cap_range': cap_range,
                 'loss_count': pattern.loss_count,
                 'total_loss': pattern.total_loss,
+                'requires_median': True,  # 중앙값 계산이 필요함을 표시
             },
         )
 

@@ -415,6 +415,11 @@ class IterativeOptimizer:
                     color = UI_COLOR_SUCCESS if is_improved else UI_COLOR_WARNING
                     self._log(f"  ▷ 변화: {comparison_str}", color)
 
+                # 과적합 경고 체크 (기본 루프에도 추가)
+                overfitting_warning = self._check_overfitting_warning(iteration_result)
+                if overfitting_warning:
+                    self._log(f"  ⚠️ {overfitting_warning}", UI_COLOR_WARNING)
+
                 # 반복 결과 저장
                 if self._storage:
                     self._storage.save_iteration(
@@ -863,6 +868,83 @@ class IterativeOptimizer:
     def get_logs(self) -> List[str]:
         """실행 로그 반환."""
         return self._logs.copy()
+
+    def _check_overfitting_warning(self, iteration_result: IterationResult) -> Optional[str]:
+        """과적합 경고 체크 (기본 루프용).
+
+        간단한 휴리스틱 기반 과적합 경고를 생성합니다.
+        Enhanced 버전의 OverfittingGuard보다 가볍지만 기본 경고 제공.
+
+        Args:
+            iteration_result: 현재 반복 결과
+
+        Returns:
+            경고 메시지 (None이면 과적합 징후 없음)
+        """
+        warnings: List[str] = []
+
+        # 1. 조건식 복잡도 증가 체크
+        if len(self.반복결과목록) >= 2:
+            prev_result = self.반복결과목록[-2]
+            curr_buystg_len = len(iteration_result.buystg)
+            prev_buystg_len = len(prev_result.buystg)
+
+            # 조건식 길이가 급격히 증가한 경우 (50% 이상)
+            if prev_buystg_len > 0:
+                increase_ratio = (curr_buystg_len - prev_buystg_len) / prev_buystg_len
+                if increase_ratio > 0.5:
+                    warnings.append(f"조건식 복잡도 급증 ({increase_ratio:.0%})")
+
+        # 2. 거래 수 급감 체크 (초기 대비)
+        if len(self.반복결과목록) >= 1:
+            initial_trades = self.반복결과목록[0].metrics.get('trade_count', 0)
+            current_trades = iteration_result.metrics.get('trade_count', 0)
+
+            if initial_trades > 0:
+                reduction_ratio = 1 - (current_trades / initial_trades)
+                # 거래 수가 80% 이상 감소한 경우
+                if reduction_ratio > 0.8:
+                    warnings.append(f"거래 수 급감 ({reduction_ratio:.0%} 감소)")
+                # 거래 수가 50% 이상 감소한 경우 경고
+                elif reduction_ratio > 0.5:
+                    warnings.append(f"거래 수 과도 감소 ({reduction_ratio:.0%})")
+
+        # 3. 필터 수 누적 체크
+        total_filters = sum(
+            len(r.applied_filters) for r in self.반복결과목록
+        )
+        if total_filters > 10:
+            warnings.append(f"필터 과다 적용 (총 {total_filters}개)")
+
+        # 4. 수익률 vs 거래수 비대칭 체크
+        if len(self.반복결과목록) >= 2:
+            initial_profit = self.반복결과목록[0].metrics.get('total_profit', 0)
+            current_profit = iteration_result.metrics.get('total_profit', 0)
+            initial_trades = self.반복결과목록[0].metrics.get('trade_count', 1)
+            current_trades = iteration_result.metrics.get('trade_count', 1)
+
+            # 수익 증가 but 거래당 수익 감소
+            if current_profit > initial_profit and current_trades > 0 and initial_trades > 0:
+                initial_per_trade = initial_profit / initial_trades
+                current_per_trade = current_profit / current_trades
+
+                if current_per_trade < initial_per_trade * 0.7:
+                    warnings.append("거래당 수익 감소 (효율성 저하)")
+
+        # 5. 연속 악화 체크
+        if len(self.반복결과목록) >= 3:
+            recent_profits = [
+                r.metrics.get('total_profit', 0)
+                for r in self.반복결과목록[-3:]
+            ]
+            # 연속 2회 악화
+            if recent_profits[2] < recent_profits[1] < recent_profits[0]:
+                warnings.append("연속 2회 성과 악화")
+
+        if warnings:
+            return "과적합 가능성: " + ", ".join(warnings)
+
+        return None
 
 
 # ============================================================================
