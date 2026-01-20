@@ -256,14 +256,29 @@ class ICOSTotal:
             'mdd_': mdd_,
         }
 
-        # 반복 정보 로그
+        # 반복 정보 로그 - 상세 결과 출력 (최종 백테스트와 동일한 형식)
         iter_text = (
             f"반복 {self.iteration_info['current'] + 1}/{self.iteration_info['max']}"
         )
         self.wq.put((
             ui_num[f'{self.ui_gubun}백테스트'],
-            f'<font color=#45cdf7>[ICOS] {iter_text} 완료 - '
-            f'거래 {tc}회, 승률 {wr:.1f}%, 수익금 {tsg:,}원</font>'
+            f'<font color=#45cdf7>[ICOS] ━━━ {iter_text} 완료 ━━━</font>'
+        ))
+        # 상세 결과 1줄: 자금 및 거래 정보
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            f'<font color=#cccccc>종목당 배팅금액 {self.betting:,.0f}원, '
+            f'필요자금 {seed:,.0f}원, 거래횟수 {tc}회, '
+            f'일평균거래횟수 {atc:.1f}회, 적정최대보유종목수 {mhct}개, '
+            f'평균보유기간 {ah:.2f}초</font>'
+        ))
+        # 상세 결과 2줄: 성과 지표
+        self.wq.put((
+            ui_num[f'{self.ui_gubun}백테스트'],
+            f'<font color=#cccccc>익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, '
+            f'평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '
+            f'최대낙폭률 {mdd_:.2f}%, 수익금합계 {tsg:,}원, '
+            f'매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%</font>'
         ))
 
         # 결과 전달
@@ -496,13 +511,40 @@ class ICOSBackTest:
                 f'<font color=#888888>  [2.2] 결과 분석 중...</font>'
             ))
             analysis = self.analyzer.analyze(df_tsg)
+
+            # 분석 결과 상세 로그
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [ICOS] 분석 결과: 총 거래 {analysis.total_trades}건, '
+                f'손실 거래 {analysis.loss_trades}건, 승률 {analysis.win_rate:.1f}%</font>'
+            ))
+
             if not analysis.loss_patterns:
+                # 디버그: 왜 패턴이 없는지 확인
+                available_cols = [c for c in self.analyzer.ANALYSIS_COLUMNS if c in df_tsg.columns]
+                self.wq.put((
+                    ui_num[f'{self.ui_gubun}백테스트'],
+                    f'<font color=#888888>  [DEBUG] df_tsg 컬럼 수: {len(df_tsg.columns)}, '
+                    f'분석 가능 컬럼: {len(available_cols)}개</font>'
+                ))
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
                     '<font color=#ffa500>[ICOS] ⚠️ 분석할 손실 패턴 없음 - 수렴</font>'
                 ))
                 self.converged = True
                 break
+            else:
+                # 발견된 패턴 요약
+                top_patterns = analysis.get_top_patterns(3)
+                self.wq.put((
+                    ui_num[f'{self.ui_gubun}백테스트'],
+                    f'<font color=#888888>  [ICOS] 발견된 손실 패턴: {len(analysis.loss_patterns)}개</font>'
+                ))
+                for i, p in enumerate(top_patterns[:2], 1):
+                    self.wq.put((
+                        ui_num[f'{self.ui_gubun}백테스트'],
+                        f'<font color=#888888>  - #{i}: {p.description} (손실률 {p.loss_ratio:.1%})</font>'
+                    ))
 
             # === 2.3 필터 생성 ===
             self.wq.put((

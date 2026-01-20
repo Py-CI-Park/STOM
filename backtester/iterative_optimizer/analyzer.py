@@ -204,21 +204,26 @@ class ResultAnalyzer:
     """
 
     # 분석 대상 컬럼 (룩어헤드 없는 매수 시점 정보)
+    # 주의: columns_bt (utility/setting.py)에 정의된 컬럼명과 일치해야 함
     ANALYSIS_COLUMNS = [
-        # 가격/등락
+        # 가격/등락 (columns_bt에 존재)
         '매수등락율', '매수시가등락율', '매수고저평균대비등락율',
-        # 거래량/대금
+        # 거래량/대금 (columns_bt에 존재)
         '매수당일거래대금', '매수전일비', '매수회전율', '매수전일동시간비',
-        # 체결 강도
+        '당일거래대금_전틱분봉_비율', '당일거래대금_5틱분봉평균_비율',
+        # 체결 강도 (columns_bt에 존재)
         '매수체결강도',
-        # 호가
+        # 호가 (columns_bt에 존재)
         '매수호가잔량비', '매수스프레드',
-        # 시가총액
+        '매수매도총잔량', '매수매수총잔량',
+        # 시가총액 (columns_bt에 존재)
         '시가총액',
-        # 파생 지표
-        '모멘텀점수', '거래품질점수', '위험도점수',
-        # 틱 데이터
+        # 고가/저가 (columns_bt에 존재)
+        '매수고가', '매수저가',
+        # 틱 데이터 (columns_bt에 존재)
         '매수초당매수수량', '매수초당매도수량', '매수초당거래대금',
+        # 시간 관련
+        '매수일자',
     ]
 
     # 시간대 컬럼
@@ -338,18 +343,42 @@ class ResultAnalyzer:
         if total_loss_count == 0:
             return patterns
 
+        # 디버그: 분석 가능한 컬럼 확인
+        available_cols = [c for c in self.ANALYSIS_COLUMNS if c in df_tsg.columns]
+        available_time_cols = [c for c in self.TIME_COLUMNS if c in df_tsg.columns]
+
+        # verbose 모드에서 디버그 정보 출력
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 총 거래: {len(df_tsg)}, 손실 거래: {total_loss_count}")
+            print(f"[ICOS Analyzer] 분석 가능 컬럼: {len(available_cols)}/{len(self.ANALYSIS_COLUMNS)}")
+            print(f"[ICOS Analyzer] 시간 컬럼: {available_time_cols}")
+
         # 1. 시간대별 손실 패턴
-        patterns.extend(self._analyze_time_patterns(df_tsg, loss_mask, total_loss_count))
+        time_patterns = self._analyze_time_patterns(df_tsg, loss_mask, total_loss_count)
+        patterns.extend(time_patterns)
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 시간대 패턴: {len(time_patterns)}개 발견")
 
         # 2. 임계값 기반 손실 패턴
-        patterns.extend(self._analyze_threshold_patterns(df_tsg, loss_mask, total_loss_count))
+        threshold_patterns = self._analyze_threshold_patterns(df_tsg, loss_mask, total_loss_count)
+        patterns.extend(threshold_patterns)
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 임계값 패턴: {len(threshold_patterns)}개 발견")
 
         # 3. 범위 기반 손실 패턴 (시가총액 등)
-        patterns.extend(self._analyze_range_patterns(df_tsg, loss_mask, total_loss_count))
+        range_patterns = self._analyze_range_patterns(df_tsg, loss_mask, total_loss_count)
+        patterns.extend(range_patterns)
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 범위 패턴: {len(range_patterns)}개 발견")
 
         # 신뢰도 기준 필터링 및 정렬
-        min_confidence = 0.3
+        # 최소 신뢰도를 0.2로 낮춤 (기존 0.3) - 더 많은 패턴 발견 허용
+        min_confidence = 0.2
+        before_filter = len(patterns)
         patterns = [p for p in patterns if p.confidence >= min_confidence]
+        if self.config.verbose:
+            print(f"[ICOS Analyzer] 신뢰도 필터링: {before_filter} → {len(patterns)}개")
+
         patterns.sort(key=lambda p: abs(p.total_loss), reverse=True)
 
         return patterns
