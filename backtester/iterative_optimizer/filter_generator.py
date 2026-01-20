@@ -392,14 +392,18 @@ class FilterGenerator:
         # 필터 조건: 미만 제외 -> 이상만 허용
         condition = f"({var_name} >= {threshold:.4f})"
 
+        # description에도 변환된 변수명 사용 (로그 가시성 향상)
+        display_name = var_name if var_name != col else col
+
         return FilterCandidate(
             condition=condition,
-            description=f"{col} {threshold:.2f} 미만 제외",
+            description=f"{display_name} {threshold:,.0f} 미만 제외",
             source="loss_pattern",
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': col,
+                'variable': var_name,  # 실제 사용되는 변수명 기록
                 'threshold': threshold,
                 'direction': 'below',
                 'loss_count': pattern.loss_count,
@@ -412,19 +416,24 @@ class FilterGenerator:
         threshold = pattern.metadata.get('threshold', 0)
         col = pattern.column
 
+        # 변수명 변환 (df_tsg 컬럼명 -> buystg 변수명)
         var_name = self._column_to_variable(col)
 
         # 필터 조건: 이상 제외 -> 미만만 허용
         condition = f"({var_name} < {threshold:.4f})"
 
+        # description에도 변환된 변수명 사용 (로그 가시성 향상)
+        display_name = var_name if var_name != col else col
+
         return FilterCandidate(
             condition=condition,
-            description=f"{col} {threshold:.2f} 이상 제외",
+            description=f"{display_name} {threshold:,.0f} 이상 제외",
             source="loss_pattern",
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': col,
+                'variable': var_name,  # 실제 사용되는 변수명 기록
                 'threshold': threshold,
                 'direction': 'above',
                 'loss_count': pattern.loss_count,
@@ -438,7 +447,11 @@ class FilterGenerator:
         lower, upper = range_tuple
         col = pattern.column
 
+        # 변수명 변환 (df_tsg 컬럼명 -> buystg 변수명)
         var_name = self._column_to_variable(col)
+
+        # description에도 변환된 변수명 사용
+        display_name = var_name if var_name != col else col
 
         if pattern.pattern_type == LossPatternType.RANGE_INSIDE:
             # 범위 내 제외 -> 범위 밖만 허용
@@ -446,11 +459,11 @@ class FilterGenerator:
                 condition = f"({var_name} < {lower:.0f})"
             else:
                 condition = f"(({var_name} < {lower:.0f}) or ({var_name} >= {upper:.0f}))"
-            desc = f"{col} {lower:.0f}~{upper:.0f} 범위 제외"
+            desc = f"{display_name} {lower:,.0f}~{upper:,.0f} 범위 제외"
         else:
             # 범위 밖 제외 -> 범위 내만 허용
             condition = f"(({var_name} >= {lower:.0f}) and ({var_name} < {upper:.0f}))"
-            desc = f"{col} {lower:.0f}~{upper:.0f} 범위만 허용"
+            desc = f"{display_name} {lower:,.0f}~{upper:,.0f} 범위만 허용"
 
         return FilterCandidate(
             condition=condition,
@@ -460,6 +473,7 @@ class FilterGenerator:
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': col,
+                'variable': var_name,  # 실제 사용되는 변수명 기록
                 'range': range_tuple,
                 'loss_count': pattern.loss_count,
                 'total_loss': pattern.total_loss,
@@ -513,11 +527,28 @@ class FilterGenerator:
         - '매수체결강도' → '체결강도'
         """
         # 특수 케이스 매핑 (df_tsg 컬럼 → buystg 변수)
+        # 주의: 이 매핑은 일반 규칙(매수 접두사 제거)보다 우선 적용됨
         special_mappings = {
+            # 호가 관련
             '매수매수총잔량': '매수총잔량',
             '매수매도총잔량': '매도매수총잔량',
             '매수호가잔량비': '호가잔량비',
             '매수스프레드': '매수스프레드',
+            # 가격 관련 (런타임에서는 '매수' 접두사 없음)
+            '매수저가': '저가',
+            '매수고가': '고가',
+            '매수시가': '시가',
+            # 호가 데이터 (런타임에서는 '매수' 접두사 없이 사용)
+            '매수매도호가1': '매도호가1',
+            '매수매도호가2': '매도호가2',
+            '매수매도호가3': '매도호가3',
+            '매수매도호가4': '매도호가4',
+            '매수매도호가5': '매도호가5',
+            '매수매수호가1': '매수호가1',
+            '매수매수호가2': '매수호가2',
+            '매수매수호가3': '매수호가3',
+            '매수매수호가4': '매수호가4',
+            '매수매수호가5': '매수호가5',
         }
 
         if column in special_mappings:
