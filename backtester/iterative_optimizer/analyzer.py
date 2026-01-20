@@ -462,6 +462,10 @@ class ResultAnalyzer:
             if df_tsg[col].isna().all():
                 continue
 
+            # 수치형 컬럼만 처리 (문자열 컬럼 제외)
+            if not pd.api.types.is_numeric_dtype(df_tsg[col]):
+                continue
+
             # 손실 거래와 이익 거래의 분포 비교
             loss_values = df_tsg.loc[loss_mask, col].dropna()
             profit_values = df_tsg.loc[~loss_mask, col].dropna()
@@ -469,12 +473,16 @@ class ResultAnalyzer:
             if len(loss_values) < 10 or len(profit_values) < 10:
                 continue
 
-            loss_mean = loss_values.mean()
-            profit_mean = profit_values.mean()
+            try:
+                loss_mean = loss_values.mean()
+                profit_mean = profit_values.mean()
 
-            # 평균 차이가 유의미한 경우
-            combined_std = df_tsg[col].std()
-            if combined_std == 0:
+                # 평균 차이가 유의미한 경우
+                combined_std = df_tsg[col].std()
+                if combined_std == 0 or pd.isna(combined_std):
+                    continue
+            except (TypeError, ValueError):
+                # 수치 연산 실패 시 건너뛰기
                 continue
 
             separation = (loss_mean - profit_mean) / combined_std
@@ -651,23 +659,31 @@ class ResultAnalyzer:
             if df_tsg[col].isna().all():
                 continue
 
+            # 수치형 컬럼만 처리 (문자열 컬럼 제외)
+            if not pd.api.types.is_numeric_dtype(df_tsg[col]):
+                continue
+
             loss_values = df_tsg.loc[loss_mask, col].dropna()
             profit_values = df_tsg.loc[~loss_mask, col].dropna()
 
             if len(loss_values) < 10 or len(profit_values) < 10:
                 continue
 
-            loss_mean = loss_values.mean()
-            profit_mean = profit_values.mean()
+            try:
+                loss_mean = loss_values.mean()
+                profit_mean = profit_values.mean()
 
-            # 분리도 계산 (Cohen's d와 유사)
-            pooled_std = np.sqrt(
-                (loss_values.var() * (len(loss_values) - 1) +
-                 profit_values.var() * (len(profit_values) - 1)) /
-                (len(loss_values) + len(profit_values) - 2)
-            )
+                # 분리도 계산 (Cohen's d와 유사)
+                pooled_std = np.sqrt(
+                    (loss_values.var() * (len(loss_values) - 1) +
+                     profit_values.var() * (len(profit_values) - 1)) /
+                    (len(loss_values) + len(profit_values) - 2)
+                )
 
-            if pooled_std == 0:
+                if pooled_std == 0 or pd.isna(pooled_std):
+                    continue
+            except (TypeError, ValueError):
+                # 수치 연산 실패 시 건너뛰기
                 continue
 
             separation = (loss_mean - profit_mean) / pooled_std
