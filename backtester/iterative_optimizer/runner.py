@@ -711,6 +711,15 @@ class IterativeOptimizer:
             self._log("    (df_tsg가 비어있음 - 분석 스킵)")
             return self._analyzer._empty_result()
 
+        # ========== 상세 로그: 분석 대상 데이터 요약 ==========
+        total_trades = len(df_tsg)
+        loss_trades = (df_tsg['수익금'] <= 0).sum() if '수익금' in df_tsg.columns else 0
+        loss_ratio = loss_trades / total_trades if total_trades > 0 else 0
+        self._log(
+            f"    [상세] 분석 대상: 거래 {total_trades}건, 손실 {loss_trades}건 ({loss_ratio:.1%})",
+            UI_COLOR_GRAY
+        )
+
         # ResultAnalyzer를 사용하여 분석 수행
         use_enhanced = self.config.filter_generation.use_segment_analysis
         analysis = self._analyzer.analyze(
@@ -719,14 +728,38 @@ class IterativeOptimizer:
             use_ml=False,  # ML은 Phase 5에서 활성화
         )
 
-        # 분석 결과 로그
+        # ========== 상세 로그: 분석 결과 요약 ==========
         self._log(f"    분석 완료: 손실패턴 {len(analysis.loss_patterns)}개, "
                   f"특징 {len(analysis.feature_importances)}개")
 
+        # 상위 손실 패턴 상세 로그
         if analysis.loss_patterns:
-            top_pattern = analysis.get_top_patterns(1)[0]
-            self._log(f"    상위 손실패턴: {top_pattern.description} "
-                      f"(손실 {top_pattern.total_loss:,.0f}원)")
+            self._log("    [상세] 상위 손실 패턴 TOP 3:", UI_COLOR_GRAY)
+            for i, pattern in enumerate(analysis.get_top_patterns(3)):
+                pattern_type = pattern.pattern_type.value
+                self._log(
+                    f"      TOP{i+1}. [{pattern_type}] {pattern.description}",
+                    UI_COLOR_GRAY
+                )
+                self._log(
+                    f"             컬럼: {pattern.column}, 손실 {pattern.loss_count}건, "
+                    f"{pattern.total_loss:,.0f}원, 신뢰도 {pattern.confidence:.2f}",
+                    UI_COLOR_GRAY
+                )
+
+        # 특징 중요도 상세 로그
+        if analysis.feature_importances:
+            self._log("    [상세] 특징 중요도 TOP 5:", UI_COLOR_GRAY)
+            sorted_features = sorted(
+                analysis.feature_importances,
+                key=lambda x: x.importance,
+                reverse=True
+            )[:5]
+            for feat in sorted_features:
+                self._log(
+                    f"      - {feat.feature_name}: {feat.importance:.3f} ({feat.category})",
+                    UI_COLOR_GRAY
+                )
 
         return analysis
 
@@ -750,22 +783,77 @@ class IterativeOptimizer:
             self._log("    (손실 패턴 없음 - 필터 생성 스킵)")
             return []
 
+        # ========== 상세 로그: 손실 패턴 목록 ==========
+        self._log(f"    [상세] 발견된 손실 패턴 {len(analysis.loss_patterns)}개:", UI_COLOR_GRAY)
+        for i, pattern in enumerate(analysis.loss_patterns[:10]):  # 상위 10개까지
+            pattern_type = pattern.pattern_type.value
+            self._log(
+                f"      P{i+1}. [{pattern_type}] {pattern.description} "
+                f"(손실률 {pattern.loss_ratio:.1%}, 신뢰도 {pattern.confidence:.2f})",
+                UI_COLOR_GRAY
+            )
+
         # FilterGenerator를 사용하여 필터 후보 생성
         filters = self._generator.generate(analysis)
 
+        # ========== 상세 로그: 생성된 필터 목록 ==========
+        self._log(f"    [상세] 생성된 필터 후보 {len(filters)}개:", UI_COLOR_GRAY)
+        for i, f in enumerate(filters):
+            self._log(
+                f"      F{i+1}. {f.description} (조건: {f.condition[:60]}...)"
+                if len(f.condition) > 60 else f"      F{i+1}. {f.description} (조건: {f.condition})",
+                UI_COLOR_GRAY
+            )
+
         # 필터 유효성 검증
         valid_filters: List[FilterCandidate] = []
+        rejected_filters: List[Tuple[FilterCandidate, str]] = []
+
         for f in filters:
-            is_valid, error_msg = self._generator.validate_filter(f)
+            is_valid, error_msg = self._builder.validate_condition(f.condition)
             if is_valid:
                 valid_filters.append(f)
             else:
-                self._log(f"    필터 검증 실패: {f.description} - {error_msg}")
+                rejected_filters.append((f, error_msg))
+                # 검증 실패 상세 로그
+                self._log(
+                    f"    ✗ 필터 검증 실패: {f.description}",
+                    UI_COLOR_WARNING
+                )
+                self._log(
+                    f"      사유: {error_msg}",
+                    UI_COLOR_WARNING
+                )
+                self._log(
+                    f"      조건: {f.condition}",
+                    UI_COLOR_GRAY
+                )
+
+        # ========== 상세 로그: 변환 결과 요약 ==========
+        pattern_count = len(analysis.loss_patterns)
+        filter_count = len(filters)
+        valid_count = len(valid_filters)
+        rejected_count = len(rejected_filters)
+
+        self._log(
+            f"    [요약] 패턴 {pattern_count}개 → 필터 {filter_count}개 생성 → "
+            f"검증 통과 {valid_count}개, 실패 {rejected_count}개",
+            UI_COLOR_INFO if valid_count > 0 else UI_COLOR_WARNING
+        )
+
+        # 패턴이 필터로 변환되지 않은 경우 원인 분석
+        if pattern_count > filter_count:
+            unconverted = pattern_count - filter_count
+            self._log(
+                f"    ⚠ {unconverted}개 패턴이 필터로 변환되지 않음 "
+                f"(변환 불가 패턴 또는 중복 제거)",
+                UI_COLOR_WARNING
+            )
 
         # 결과 로그
         self._log(f"    필터 생성 완료: {len(valid_filters)}개")
-        for i, f in enumerate(valid_filters[:3]):  # 상위 3개만 로그
-            self._log(f"      [{i+1}] {f.description} (영향도 {f.expected_impact:.2f})")
+        for i, f in enumerate(valid_filters[:5]):  # 상위 5개 로그
+            self._log(f"      ✓ [{i+1}] {f.description} (영향도 {f.expected_impact:.2f})")
 
         return valid_filters
 
@@ -787,18 +875,51 @@ class IterativeOptimizer:
             (새 조건식, 실제 적용된 필터 목록)
         """
         if not filters:
+            self._log("    (적용할 필터 없음 - 빌드 스킵)", UI_COLOR_WARNING)
             return buystg, []
+
+        # ========== 상세 로그: 빌드 대상 필터 ==========
+        self._log(f"    [상세] 빌드 대상 필터 {len(filters)}개:", UI_COLOR_GRAY)
+        for i, f in enumerate(filters):
+            self._log(f"      B{i+1}. {f.description}", UI_COLOR_GRAY)
+            self._log(f"          조건: {f.condition}", UI_COLOR_GRAY)
 
         # ConditionBuilder를 사용하여 조건식 빌드
         build_result = self._builder.build(buystg, filters)
 
         if build_result.success:
-            self._log(f"    조건식 빌드 성공: {len(build_result.applied_filters)}개 필터 적용")
+            applied_count = len(build_result.applied_filters)
+            skipped_count = len(filters) - applied_count
+
+            self._log(
+                f"    조건식 빌드 성공: {applied_count}개 적용, {skipped_count}개 스킵",
+                UI_COLOR_SUCCESS
+            )
+
+            # ========== 상세 로그: 적용된 필터 ==========
+            if build_result.applied_filters:
+                self._log("    [상세] 적용된 필터:", UI_COLOR_GRAY)
+                for i, f in enumerate(build_result.applied_filters):
+                    self._log(f"      ✓ [{i+1}] {f.description}", UI_COLOR_SUCCESS)
+
             if build_result.used_variables:
-                self._log(f"    사용된 변수: {', '.join(sorted(build_result.used_variables))}")
+                self._log(
+                    f"    [상세] 사용된 변수: {', '.join(sorted(build_result.used_variables))}",
+                    UI_COLOR_GRAY
+                )
+
+            # 조건식 길이 변화
+            orig_len = len(buystg)
+            new_len = len(build_result.new_buystg)
+            diff = new_len - orig_len
+            self._log(
+                f"    [상세] 조건식 길이: {orig_len} → {new_len} ({'+' if diff >= 0 else ''}{diff})",
+                UI_COLOR_GRAY
+            )
+
             return build_result.new_buystg, build_result.applied_filters
         else:
-            self._log(f"    조건식 빌드 실패: {build_result.error_message}")
+            self._log(f"    조건식 빌드 실패: {build_result.error_message}", UI_COLOR_ERROR)
             return buystg, []
 
     def _check_convergence(self) -> bool:
