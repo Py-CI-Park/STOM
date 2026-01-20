@@ -568,7 +568,7 @@ class ICOSBackTest:
             build_result = self.condition_builder.build(
                 self.current_buystg, filter_candidates
             )
-            new_buystg = build_result.new_condition
+            new_buystg = build_result.new_buystg
             applied_filters = build_result.applied_filters
 
             if not applied_filters:
