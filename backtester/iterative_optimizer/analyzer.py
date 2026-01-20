@@ -442,7 +442,11 @@ class ResultAnalyzer:
                 loss_ratio=hour_loss_ratio,
                 coverage=coverage,
                 confidence=confidence,
-                metadata={'hour': hour, 'hour_trades': hour_trades},
+                metadata={
+                    'hour': hour,
+                    'hour_trades': hour_trades,
+                    'analysis_type': 'hour'  # 명시적 분석 유형 지정
+                },
             ))
 
         return patterns

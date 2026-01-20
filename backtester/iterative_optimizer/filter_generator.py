@@ -567,9 +567,25 @@ class FilterGenerator:
         """필터 코드 정규화.
 
         기존 분석 도구의 코드 형식을 ICOS 형식으로 변환합니다.
+
+        변환 내용:
+        1. df_tsg['컬럼명'] → 런타임 변수명
+        2. 괄호 감싸기
         """
-        # 이미 괄호로 감싸져 있으면 그대로
         code = code.strip()
+
+        # df_tsg['컬럼명'] 패턴을 런타임 변수명으로 변환
+        # 패턴: df_tsg['매수매수총잔량'] 또는 df_tsg["매수매수총잔량"]
+        df_tsg_pattern = r"df_tsg\[(['\"])([^'\"]+)\1\]"
+        matches = re.findall(df_tsg_pattern, code)
+
+        for quote, col_name in matches:
+            var_name = self._column_to_variable(col_name)
+            # df_tsg['컬럼명'] → 변수명으로 치환
+            old_pattern = f"df_tsg[{quote}{col_name}{quote}]"
+            code = code.replace(old_pattern, var_name)
+
+        # 이미 괄호로 감싸져 있으면 그대로
         if not code.startswith('('):
             code = f"({code})"
 
