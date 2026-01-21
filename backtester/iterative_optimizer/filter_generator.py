@@ -156,26 +156,226 @@ class FilterGenerator:
             return self._create_range_filter(pattern)
         elif pattern.pattern_type == LossPatternType.RANGE_OUTSIDE:
             return self._create_range_filter(pattern)
+        elif pattern.pattern_type == LossPatternType.SEGMENT:
+            return self._create_segment_filter(pattern)
 
         return None
 
-    def _create_time_filter(self, pattern: LossPattern) -> FilterCandidate:
-        """시간대 필터 생성."""
-        hour = pattern.metadata.get('hour', 0)
+    def _create_segment_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """세그먼트(복합) 패턴 필터 생성.
 
-        # 필터 조건: 해당 시간대 제외
-        # buystg에서 사용할 수 있는 변수명으로 변환
-        condition = f"(매수시 != {hour})"
+        Phase 3 Enhancement: 복합 조건 패턴을 실제 조건식 필터로 변환
+
+        지원 패턴:
+        - time_price_compound: 시간 + 등락율 복합
+        - volume_strength_compound: 거래량 + 체결강도 복합
+        - cap_volume_compound: 시가총액 + 거래대금 복합
+        """
+        analysis_type = pattern.metadata.get('analysis_type', '')
+
+        if analysis_type == 'time_price_compound':
+            return self._create_time_price_compound_filter(pattern)
+
+        elif analysis_type == 'volume_strength_compound':
+            return self._create_volume_strength_compound_filter(pattern)
+
+        elif analysis_type == 'cap_volume_compound':
+            return self._create_cap_volume_compound_filter(pattern)
+
+        else:
+            return None
+
+    def _create_time_price_compound_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """시간 + 등락율 복합 패턴 필터 생성."""
+        hour = pattern.metadata.get('hour', 0)
+        price_range = pattern.metadata.get('price_range', '')
+
+        # 등락율 조건 파싱 (해당 조건 제외 = not 조건)
+        if '급등' in price_range:
+            # 급등(20%↑) 제외 -> 20% 미만만 허용
+            price_cond = "(등락율 < 20)"
+        elif '상승' in price_range:
+            # 상승(10~20%) 제외 -> 10% 미만 또는 20% 이상만 허용
+            price_cond = "((등락율 < 10) or (등락율 >= 20))"
+        elif '하락' in price_range:
+            # 하락(~-5%) 제외 -> -5% 이상만 허용
+            price_cond = "(등락율 >= -5)"
+        else:
+            return None
+
+        # 해당 시간대 + 해당 가격조건일 때 제외
+        # not (시간조건 and 가격조건) = 시간조건이 아니거나 가격조건이 아님
+        condition = f"not ((시분초 // 10000 == {hour}) and not {price_cond})"
+        description = f"{hour}시 + {price_range} 제외 (손실률 {pattern.loss_ratio:.1%})"
 
         return FilterCandidate(
             condition=condition,
-            description=f"시간대 {hour}시 제외 (손실률 {pattern.loss_ratio:.1%})",
+            description=description,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'analysis_type': 'time_price_compound',
+                'hour': hour,
+                'price_range': price_range,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+            },
+        )
+
+    def _create_volume_strength_compound_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """거래량 + 체결강도 복합 패턴 필터 생성.
+
+        패턴 메타데이터에서 조건 정보를 추출하여 필터로 변환
+        """
+        combination = pattern.metadata.get('combination', '')
+
+        if not combination:
+            return None
+
+        # 복합 조건 생성
+        # analyzer.py에서 생성된 pattern.condition을 파싱하여 런타임 변수로 변환
+        # pattern.condition 형식: "(df_tsg['컬럼1'] < 값1) & (df_tsg['컬럼2'] < 값2)"
+
+        # 조합별 필터 조건 생성
+        if combination == '저거래량_저체결':
+            # 저거래량 + 저체결강도 제외 -> 둘 중 하나라도 높으면 허용
+            # 전일비 하위 33%, 체결강도 하위 33% 제외
+            condition = "not ((전일비 < 전일비_q33) and (체결강도 < 체결강도_q33))"
+            description = f"저거래량+저체결강도 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif combination == '고거래량_저체결':
+            # 고거래량 + 저체결강도 제외
+            condition = "not ((전일비 > 전일비_q67) and (체결강도 < 체결강도_q33))"
+            description = f"고거래량+저체결강도 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif combination == '저거래량_고체결':
+            # 저거래량 + 고체결강도 제외
+            condition = "not ((전일비 < 전일비_q33) and (체결강도 > 체결강도_q67))"
+            description = f"저거래량+고체결강도 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        else:
+            # 알 수 없는 조합은 건너뜀
+            return None
+
+        return FilterCandidate(
+            condition=condition,
+            description=description,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'analysis_type': 'volume_strength_compound',
+                'combination': combination,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+                'requires_quantile': True,  # 분위수 계산이 필요함을 표시
+            },
+        )
+
+    def _create_cap_volume_compound_filter(self, pattern: LossPattern) -> Optional[FilterCandidate]:
+        """시가총액 + 거래대금 복합 패턴 필터 생성."""
+        cap_range = pattern.metadata.get('cap_range', '')
+
+        if not cap_range:
+            return None
+
+        # 시가총액 구간별 조건 생성
+        if cap_range == '소형':
+            cap_cond = "(시가총액 < 5000)"
+        elif cap_range == '중형':
+            cap_cond = "((시가총액 >= 5000) and (시가총액 < 30000))"
+        elif cap_range == '대형':
+            cap_cond = "(시가총액 >= 30000)"
+        else:
+            return None
+
+        # 해당 시가총액 구간 + 저거래대금 제외
+        # pattern.description에서 '저거래대금' 확인
+        if '저거래대금' in pattern.description:
+            # 해당 시총 구간에서 거래대금 중앙값 미만 제외
+            condition = f"not ({cap_cond} and (당일거래대금 < 당일거래대금_median))"
+            description = f"{cap_range}주 + 저거래대금 제외 (손실률 {pattern.loss_ratio:.1%})"
+        else:
+            return None
+
+        return FilterCandidate(
+            condition=condition,
+            description=description,
+            source="loss_pattern",
+            expected_impact=pattern.confidence,
+            metadata={
+                'pattern_type': pattern.pattern_type.value,
+                'analysis_type': 'cap_volume_compound',
+                'cap_range': cap_range,
+                'loss_count': pattern.loss_count,
+                'total_loss': pattern.total_loss,
+                'requires_median': True,  # 중앙값 계산이 필요함을 표시
+            },
+        )
+
+    def _create_time_filter(self, pattern: LossPattern) -> FilterCandidate:
+        """시간대 필터 생성.
+
+        다양한 시간 패턴 유형 처리:
+        - 시간대 (hour): 매수시 != hour
+        - 5분 단위 (5min_interval): (매수시 != hour) or (매수분 < minute_start) or (매수분 >= minute_end)
+        - 세션 (market_session): 시간 범위 제외
+        - 요일 (weekday): 요일 제외 (런타임 지원 필요)
+        """
+        analysis_type = pattern.metadata.get('analysis_type', 'hour')
+
+        if analysis_type == '5min_interval':
+            # 5분 단위 시간대 제외
+            hour = pattern.metadata.get('hour', 0)
+            minute_start = pattern.metadata.get('minute_start', 0)
+            minute_end = pattern.metadata.get('minute_end', 5)
+
+            # 해당 5분 구간 제외 조건 (구간 밖이면 True)
+            # not ((매수시 == hour) and (매수분 >= minute_start) and (매수분 < minute_end))
+            condition = f"not ((시분초 // 10000 == {hour}) and ((시분초 // 100) % 100 >= {minute_start}) and ((시분초 // 100) % 100 < {minute_end}))"
+            description = f"시간대 {hour}:{minute_start:02d}~{minute_end:02d} 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif analysis_type == 'market_session':
+            # 세션 시간대 제외
+            start_time = pattern.metadata.get('start_time', '09:00')
+            end_time = pattern.metadata.get('end_time', '09:30')
+            session_name = pattern.metadata.get('session_name', '세션')
+
+            # 시간을 분 단위로 변환
+            start_parts = start_time.split(':')
+            end_parts = end_time.split(':')
+            start_mins = int(start_parts[0]) * 60 + int(start_parts[1])
+            end_mins = int(end_parts[0]) * 60 + int(end_parts[1])
+
+            # 시분초에서 분 단위로 변환하여 비교
+            # 시분초 = HHMMSS 형식 (ex: 93015 = 09:30:15)
+            condition = f"not (((시분초 // 10000) * 60 + ((시분초 // 100) % 100) >= {start_mins}) and ((시분초 // 10000) * 60 + ((시분초 // 100) % 100) < {end_mins}))"
+            description = f"세션 {session_name} 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        elif analysis_type == 'weekday':
+            # 요일 제외 - 런타임에서 매수일자로 요일 계산 필요
+            # 현재는 건너뜀 (런타임 지원 필요)
+            weekday = pattern.metadata.get('weekday', 0)
+            weekday_name = pattern.metadata.get('weekday_name', '')
+            # 직접 적용 불가 - 런타임에서 요일 계산 필요하므로 기본 필터로 처리하지 않음
+            return None
+
+        else:
+            # 기본 시간대 (hour 단위)
+            hour = pattern.metadata.get('hour', 0)
+            condition = f"(시분초 // 10000 != {hour})"
+            description = f"시간대 {hour}시 제외 (손실률 {pattern.loss_ratio:.1%})"
+
+        return FilterCandidate(
+            condition=condition,
+            description=description,
             source="loss_pattern",
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': pattern.column,
-                'hour': hour,
+                'analysis_type': analysis_type,
                 'loss_count': pattern.loss_count,
                 'total_loss': pattern.total_loss,
             },
@@ -192,14 +392,18 @@ class FilterGenerator:
         # 필터 조건: 미만 제외 -> 이상만 허용
         condition = f"({var_name} >= {threshold:.4f})"
 
+        # description에도 변환된 변수명 사용 (로그 가시성 향상)
+        display_name = var_name if var_name != col else col
+
         return FilterCandidate(
             condition=condition,
-            description=f"{col} {threshold:.2f} 미만 제외",
+            description=f"{display_name} {threshold:,.0f} 미만 제외",
             source="loss_pattern",
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': col,
+                'variable': var_name,  # 실제 사용되는 변수명 기록
                 'threshold': threshold,
                 'direction': 'below',
                 'loss_count': pattern.loss_count,
@@ -212,19 +416,24 @@ class FilterGenerator:
         threshold = pattern.metadata.get('threshold', 0)
         col = pattern.column
 
+        # 변수명 변환 (df_tsg 컬럼명 -> buystg 변수명)
         var_name = self._column_to_variable(col)
 
         # 필터 조건: 이상 제외 -> 미만만 허용
         condition = f"({var_name} < {threshold:.4f})"
 
+        # description에도 변환된 변수명 사용 (로그 가시성 향상)
+        display_name = var_name if var_name != col else col
+
         return FilterCandidate(
             condition=condition,
-            description=f"{col} {threshold:.2f} 이상 제외",
+            description=f"{display_name} {threshold:,.0f} 이상 제외",
             source="loss_pattern",
             expected_impact=pattern.confidence,
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': col,
+                'variable': var_name,  # 실제 사용되는 변수명 기록
                 'threshold': threshold,
                 'direction': 'above',
                 'loss_count': pattern.loss_count,
@@ -238,7 +447,11 @@ class FilterGenerator:
         lower, upper = range_tuple
         col = pattern.column
 
+        # 변수명 변환 (df_tsg 컬럼명 -> buystg 변수명)
         var_name = self._column_to_variable(col)
+
+        # description에도 변환된 변수명 사용
+        display_name = var_name if var_name != col else col
 
         if pattern.pattern_type == LossPatternType.RANGE_INSIDE:
             # 범위 내 제외 -> 범위 밖만 허용
@@ -246,11 +459,11 @@ class FilterGenerator:
                 condition = f"({var_name} < {lower:.0f})"
             else:
                 condition = f"(({var_name} < {lower:.0f}) or ({var_name} >= {upper:.0f}))"
-            desc = f"{col} {lower:.0f}~{upper:.0f} 범위 제외"
+            desc = f"{display_name} {lower:,.0f}~{upper:,.0f} 범위 제외"
         else:
             # 범위 밖 제외 -> 범위 내만 허용
             condition = f"(({var_name} >= {lower:.0f}) and ({var_name} < {upper:.0f}))"
-            desc = f"{col} {lower:.0f}~{upper:.0f} 범위만 허용"
+            desc = f"{display_name} {lower:,.0f}~{upper:,.0f} 범위만 허용"
 
         return FilterCandidate(
             condition=condition,
@@ -260,6 +473,7 @@ class FilterGenerator:
             metadata={
                 'pattern_type': pattern.pattern_type.value,
                 'column': col,
+                'variable': var_name,  # 실제 사용되는 변수명 기록
                 'range': range_tuple,
                 'loss_count': pattern.loss_count,
                 'total_loss': pattern.total_loss,
@@ -303,9 +517,44 @@ class FilterGenerator:
     def _column_to_variable(self, column: str) -> str:
         """DataFrame 컬럼명을 buystg 변수명으로 변환.
 
-        대부분의 경우 동일하지만, 일부 매핑이 필요할 수 있음.
+        df_tsg의 컬럼명에는 '매수' 접두사가 붙어 있지만,
+        실제 전략 조건식에서는 접두사 없이 사용합니다.
+
+        특수 케이스:
+        - '매수매수총잔량' → '매수총잔량'
+        - '매수매도총잔량' → '매도매수총잔량'
+        - '매수등락율' → '등락율'
+        - '매수체결강도' → '체결강도'
         """
-        # 매수 시점 스냅샷 컬럼은 '매수' 접두사 제거
+        # 특수 케이스 매핑 (df_tsg 컬럼 → buystg 변수)
+        # 주의: 이 매핑은 일반 규칙(매수 접두사 제거)보다 우선 적용됨
+        special_mappings = {
+            # 호가 관련
+            '매수매수총잔량': '매수총잔량',
+            '매수매도총잔량': '매도매수총잔량',
+            '매수호가잔량비': '호가잔량비',
+            '매수스프레드': '매수스프레드',
+            # 가격 관련 (런타임에서는 '매수' 접두사 없음)
+            '매수저가': '저가',
+            '매수고가': '고가',
+            '매수시가': '시가',
+            # 호가 데이터 (런타임에서는 '매수' 접두사 없이 사용)
+            '매수매도호가1': '매도호가1',
+            '매수매도호가2': '매도호가2',
+            '매수매도호가3': '매도호가3',
+            '매수매도호가4': '매도호가4',
+            '매수매도호가5': '매도호가5',
+            '매수매수호가1': '매수호가1',
+            '매수매수호가2': '매수호가2',
+            '매수매수호가3': '매수호가3',
+            '매수매수호가4': '매수호가4',
+            '매수매수호가5': '매수호가5',
+        }
+
+        if column in special_mappings:
+            return special_mappings[column]
+
+        # 일반 규칙: 매수 시점 스냅샷 컬럼은 '매수' 접두사 제거
         if column.startswith('매수') and column != '매수시':
             # 매수등락율 -> 등락율, 매수체결강도 -> 체결강도
             var_name = column[2:]  # '매수' 제거
@@ -318,9 +567,25 @@ class FilterGenerator:
         """필터 코드 정규화.
 
         기존 분석 도구의 코드 형식을 ICOS 형식으로 변환합니다.
+
+        변환 내용:
+        1. df_tsg['컬럼명'] → 런타임 변수명
+        2. 괄호 감싸기
         """
-        # 이미 괄호로 감싸져 있으면 그대로
         code = code.strip()
+
+        # df_tsg['컬럼명'] 패턴을 런타임 변수명으로 변환
+        # 패턴: df_tsg['매수매수총잔량'] 또는 df_tsg["매수매수총잔량"]
+        df_tsg_pattern = r"df_tsg\[(['\"])([^'\"]+)\1\]"
+        matches = re.findall(df_tsg_pattern, code)
+
+        for quote, col_name in matches:
+            var_name = self._column_to_variable(col_name)
+            # df_tsg['컬럼명'] → 변수명으로 치환
+            old_pattern = f"df_tsg[{quote}{col_name}{quote}]"
+            code = code.replace(old_pattern, var_name)
+
+        # 이미 괄호로 감싸져 있으면 그대로
         if not code.startswith('('):
             code = f"({code})"
 
@@ -503,3 +768,357 @@ class FilterGenerator:
             return False, f"문법 오류: {e}"
 
         return True, ""
+
+    # ==================== Phase 3: Advanced Filter Generation ====================
+
+    def _remove_correlated_filters(
+        self,
+        candidates: List[FilterCandidate],
+        correlation_threshold: float = 0.7,
+    ) -> List[FilterCandidate]:
+        """상관관계 기반 중복 필터 제거.
+
+        Phase 3 Enhancement: 동일 컬럼 기반 필터 간 상관성 분석으로 중복 제거
+
+        Args:
+            candidates: 필터 후보 목록
+            correlation_threshold: 상관계수 임계값 (이상이면 중복으로 간주)
+
+        Returns:
+            중복 제거된 필터 목록
+        """
+        if len(candidates) <= 1:
+            return candidates
+
+        # 컬럼별 필터 그룹화
+        column_groups: Dict[str, List[FilterCandidate]] = {}
+        for candidate in candidates:
+            col = candidate.metadata.get('column', 'unknown')
+            if col not in column_groups:
+                column_groups[col] = []
+            column_groups[col].append(candidate)
+
+        filtered_candidates: List[FilterCandidate] = []
+
+        for col, group in column_groups.items():
+            if len(group) == 1:
+                filtered_candidates.extend(group)
+                continue
+
+            # 같은 컬럼의 필터 중 최고 점수 필터 선택
+            # 또는 서로 다른 방향의 필터는 유지 (예: 미만 제외 vs 이상 제외)
+            direction_groups: Dict[str, List[FilterCandidate]] = {}
+            for c in group:
+                direction = c.metadata.get('direction', 'unknown')
+                pattern_type = c.metadata.get('pattern_type', 'unknown')
+                key = f"{direction}_{pattern_type}"
+                if key not in direction_groups:
+                    direction_groups[key] = []
+                direction_groups[key].append(c)
+
+            # 각 방향에서 최고 임팩트 필터 선택
+            for direction_key, dir_group in direction_groups.items():
+                best = max(dir_group, key=lambda x: x.expected_impact)
+                filtered_candidates.append(best)
+
+        # 유사 임계값 필터 추가 제거
+        final_candidates = self._remove_similar_thresholds(filtered_candidates, correlation_threshold)
+
+        return final_candidates
+
+    def _remove_similar_thresholds(
+        self,
+        candidates: List[FilterCandidate],
+        similarity_threshold: float = 0.7,
+    ) -> List[FilterCandidate]:
+        """유사한 임계값을 가진 필터 제거."""
+        if len(candidates) <= 1:
+            return candidates
+
+        kept_candidates: List[FilterCandidate] = []
+
+        for candidate in sorted(candidates, key=lambda x: x.expected_impact, reverse=True):
+            threshold = candidate.metadata.get('threshold')
+            col = candidate.metadata.get('column', '')
+            direction = candidate.metadata.get('direction', '')
+
+            if threshold is None:
+                kept_candidates.append(candidate)
+                continue
+
+            # 이미 유지된 필터와 임계값 유사성 비교
+            is_similar = False
+            for kept in kept_candidates:
+                kept_threshold = kept.metadata.get('threshold')
+                kept_col = kept.metadata.get('column', '')
+                kept_direction = kept.metadata.get('direction', '')
+
+                if kept_threshold is None:
+                    continue
+
+                # 같은 컬럼, 같은 방향일 때만 비교
+                if col == kept_col and direction == kept_direction:
+                    # 임계값 유사성 계산 (상대적 차이)
+                    if kept_threshold != 0:
+                        similarity = 1 - abs(threshold - kept_threshold) / abs(kept_threshold)
+                        if similarity >= similarity_threshold:
+                            is_similar = True
+                            break
+
+            if not is_similar:
+                kept_candidates.append(candidate)
+
+        return kept_candidates
+
+    def _analyze_filter_synergy(
+        self,
+        candidates: List[FilterCandidate],
+        analysis: AnalysisResult,
+    ) -> Dict[Tuple[int, int], float]:
+        """필터 조합의 시너지 효과 분석.
+
+        Phase 3 Enhancement: 필터 조합 시 예상되는 시너지 효과 계산
+
+        Args:
+            candidates: 필터 후보 목록
+            analysis: 분석 결과
+
+        Returns:
+            {(필터1 인덱스, 필터2 인덱스): 시너지 점수} 딕셔너리
+        """
+        synergy_scores: Dict[Tuple[int, int], float] = {}
+
+        for i in range(len(candidates)):
+            for j in range(i + 1, len(candidates)):
+                synergy = self._calculate_synergy(candidates[i], candidates[j], analysis)
+                synergy_scores[(i, j)] = synergy
+
+        return synergy_scores
+
+    def _calculate_synergy(
+        self,
+        filter1: FilterCandidate,
+        filter2: FilterCandidate,
+        analysis: AnalysisResult,
+    ) -> float:
+        """두 필터 간 시너지 점수 계산.
+
+        시너지가 높을수록 함께 적용 시 효과가 좋음
+        시너지가 낮거나 음수면 상충되는 필터
+
+        Args:
+            filter1: 첫 번째 필터
+            filter2: 두 번째 필터
+            analysis: 분석 결과
+
+        Returns:
+            시너지 점수 (-1.0 ~ 1.0)
+        """
+        col1 = filter1.metadata.get('column', '')
+        col2 = filter2.metadata.get('column', '')
+
+        # 같은 컬럼 기반 필터는 시너지가 낮음 (중복 가능성)
+        if col1 == col2:
+            return -0.5
+
+        # 보완적 컬럼 조합은 시너지가 높음
+        complementary_pairs = [
+            ('매수시', '등락율'),      # 시간 + 가격
+            ('매수시', '체결강도'),    # 시간 + 체결강도
+            ('시가총액', '당일거래대금'),  # 시가총액 + 거래량
+            ('등락율', '체결강도'),    # 가격 + 체결강도
+            ('전일비', '체결강도'),    # 거래량 + 체결강도
+        ]
+
+        for pair in complementary_pairs:
+            if (col1 in pair[0] or pair[0] in col1) and (col2 in pair[1] or pair[1] in col2):
+                return 0.8
+            if (col2 in pair[0] or pair[0] in col2) and (col1 in pair[1] or pair[1] in col1):
+                return 0.8
+
+        # 서로 다른 분석 유형의 필터는 중간 시너지
+        type1 = filter1.metadata.get('analysis_type', '')
+        type2 = filter2.metadata.get('analysis_type', '')
+
+        if type1 != type2 and type1 and type2:
+            return 0.5
+
+        # 기본 시너지
+        return 0.2
+
+    def _select_by_priority(
+        self,
+        candidates: List[FilterCandidate],
+        max_count: int,
+    ) -> List[FilterCandidate]:
+        """우선순위 기반 필터 선택.
+
+        Phase 3 Enhancement: CRITICAL > HIGH > MEDIUM > LOW 순으로 선택
+
+        Args:
+            candidates: 필터 후보 목록
+            max_count: 최대 선택 개수
+
+        Returns:
+            선택된 필터 목록
+        """
+        # 우선순위별 분류
+        priority_buckets: Dict[FilterPriority, List[FilterCandidate]] = {
+            FilterPriority.CRITICAL: [],
+            FilterPriority.HIGH: [],
+            FilterPriority.MEDIUM: [],
+            FilterPriority.LOW: [],
+            FilterPriority.EXPERIMENTAL: [],
+        }
+
+        for candidate in candidates:
+            priority = self._determine_priority(candidate)
+            priority_buckets[priority].append(candidate)
+
+        # 각 버킷 내에서 점수순 정렬
+        for priority in priority_buckets:
+            priority_buckets[priority].sort(key=lambda x: x.expected_impact, reverse=True)
+
+        # 우선순위 순으로 선택
+        selected: List[FilterCandidate] = []
+        for priority in FilterPriority:
+            if len(selected) >= max_count:
+                break
+            for candidate in priority_buckets[priority]:
+                if len(selected) >= max_count:
+                    break
+                selected.append(candidate)
+
+        return selected
+
+    def generate_advanced(
+        self,
+        analysis: AnalysisResult,
+        max_filters: Optional[int] = None,
+        use_synergy: bool = True,
+        remove_correlated: bool = True,
+    ) -> List[FilterCandidate]:
+        """고급 필터 생성 (Phase 3).
+
+        상관관계 제거, 시너지 분석, 우선순위 기반 선택을 적용한 필터 생성
+
+        Args:
+            analysis: 분석 결과
+            max_filters: 최대 생성 필터 수
+            use_synergy: 시너지 분석 사용 여부
+            remove_correlated: 상관 필터 제거 여부
+
+        Returns:
+            필터 후보 목록
+        """
+        if not analysis.loss_patterns:
+            return []
+
+        max_count = max_filters or self.config.filter_generation.max_filters_per_iteration
+
+        # 1. 기본 필터 생성
+        candidates = self._generate_from_patterns(analysis.loss_patterns)
+
+        # 2. 강화 분석 결과 추가
+        if analysis.filter_candidates:
+            candidates.extend(self._generate_from_enhanced(analysis.filter_candidates))
+
+        # 3. 기본 중복 제거
+        candidates = self._deduplicate(candidates)
+
+        # 4. Phase 3: 상관관계 기반 중복 제거
+        if remove_correlated:
+            before_count = len(candidates)
+            candidates = self._remove_correlated_filters(candidates)
+            if self.config.verbose:
+                print(f"[ICOS FilterGen] 상관 필터 제거: {before_count} → {len(candidates)}개")
+
+        # 5. 점수 계산
+        for candidate in candidates:
+            score = self._calculate_score(candidate, analysis)
+            candidate.metadata['total_score'] = score.total_score
+
+        # 6. Phase 3: 시너지 분석
+        if use_synergy and len(candidates) >= 2:
+            synergy_scores = self._analyze_filter_synergy(candidates, analysis)
+            # 시너지 정보를 메타데이터에 추가
+            for (i, j), synergy in synergy_scores.items():
+                if synergy >= 0.5:  # 높은 시너지만 기록
+                    if i < len(candidates):
+                        existing = candidates[i].metadata.get('synergies', [])
+                        existing.append({'partner_idx': j, 'score': synergy})
+                        candidates[i].metadata['synergies'] = existing
+
+        # 7. Phase 3: 우선순위 기반 선택
+        selected = self._select_by_priority(candidates, max_count)
+
+        if self.config.verbose:
+            print(f"[ICOS FilterGen] 최종 선택: {len(selected)}개 필터")
+            for i, c in enumerate(selected):
+                priority = self._determine_priority(c)
+                print(f"  [{i+1}] {priority.name}: {c.description[:50]}...")
+
+        return selected
+
+    def generate_synergistic_combination(
+        self,
+        candidates: List[FilterCandidate],
+        analysis: AnalysisResult,
+        max_combine: int = 3,
+    ) -> Optional[FilterCandidate]:
+        """시너지 기반 복합 필터 생성.
+
+        Phase 3 Enhancement: 시너지 점수가 높은 필터들을 조합
+
+        Args:
+            candidates: 조합할 필터 후보 목록
+            analysis: 분석 결과
+            max_combine: 최대 조합 수
+
+        Returns:
+            최적 복합 필터
+        """
+        if len(candidates) < 2:
+            return self.generate_combined_filter(candidates, max_combine)
+
+        # 시너지 분석
+        synergy_scores = self._analyze_filter_synergy(candidates, analysis)
+
+        # 최고 시너지 조합 찾기
+        best_combination: List[int] = []
+        best_total_synergy = -float('inf')
+
+        # 2개 조합
+        for (i, j), synergy in synergy_scores.items():
+            if synergy > best_total_synergy:
+                best_total_synergy = synergy
+                best_combination = [i, j]
+
+        # 3개 조합 (선택적)
+        if max_combine >= 3 and len(candidates) >= 3:
+            for i in range(len(candidates)):
+                for j in range(i + 1, len(candidates)):
+                    for k in range(j + 1, len(candidates)):
+                        total_synergy = (
+                            synergy_scores.get((i, j), 0) +
+                            synergy_scores.get((i, k), 0) +
+                            synergy_scores.get((j, k), 0)
+                        ) / 3
+                        if total_synergy > best_total_synergy:
+                            best_total_synergy = total_synergy
+                            best_combination = [i, j, k]
+
+        if not best_combination:
+            return self.generate_combined_filter(candidates[:max_combine], max_combine)
+
+        # 최적 조합으로 복합 필터 생성
+        selected_candidates = [candidates[i] for i in best_combination if i < len(candidates)]
+        combined = self.generate_combined_filter(selected_candidates, len(selected_candidates))
+
+        if combined:
+            combined.metadata['synergy_score'] = best_total_synergy
+            combined.metadata['combination_indices'] = best_combination
+
+        return combined
+
+    # ==================== End Phase 3: Advanced Filter Generation ====================

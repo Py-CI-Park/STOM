@@ -264,18 +264,18 @@ class ICOSTotal:
             ui_num[f'{self.ui_gubun}백테스트'],
             f'<font color=#45cdf7>[ICOS] ━━━ {iter_text} 완료 ━━━</font>'
         ))
-        # 상세 결과 1줄: 자금 및 거래 정보
+        # 상세 결과 1줄: 자금 및 거래 정보 (초록색 - 기본 백테스트와 동일)
         self.wq.put((
             ui_num[f'{self.ui_gubun}백테스트'],
-            f'<font color=#cccccc>종목당 배팅금액 {self.betting:,.0f}원, '
+            f'<font color=#00ff00>종목당 배팅금액 {self.betting:,.0f}원, '
             f'필요자금 {seed:,.0f}원, 거래횟수 {tc}회, '
             f'일평균거래횟수 {atc:.1f}회, 적정최대보유종목수 {mhct}개, '
             f'평균보유기간 {ah:.2f}초</font>'
         ))
-        # 상세 결과 2줄: 성과 지표
+        # 상세 결과 2줄: 성과 지표 (초록색 - 기본 백테스트와 동일)
         self.wq.put((
             ui_num[f'{self.ui_gubun}백테스트'],
-            f'<font color=#cccccc>익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, '
+            f'<font color=#00ff00>익절 {pc}회, 손절 {mc}회, 승률 {wr:.2f}%, '
             f'평균수익률 {app:.2f}%, 수익률합계 {tpp:.2f}%, '
             f'최대낙폭률 {mdd_:.2f}%, 수익금합계 {tsg:,}원, '
             f'매매성능지수 {tpi:.2f}, 연간예상수익률 {cagr:.2f}%</font>'
@@ -510,12 +510,29 @@ class ICOSBackTest:
                 ui_num[f'{self.ui_gubun}백테스트'],
                 f'<font color=#888888>  [2.2] 결과 분석 중...</font>'
             ))
+
+            # 분석 프로세스 설명 로그
+            available_cols = [c for c in self.analyzer.ANALYSIS_COLUMNS if c in df_tsg.columns]
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [ICOS] 분석 프로세스: df_tsg {len(df_tsg)}행 x {len(df_tsg.columns)}열 데이터 분석</font>'
+            ))
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [ICOS] 분석 대상 지표: {len(available_cols)}개 '
+                f'(등락율, 체결강도, 거래대금, 시가총액, 호가잔량 등)</font>'
+            ))
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [ICOS] 분석 방법: 시간대별/임계값별/범위별 손실 패턴 탐지 + 통계적 유의성 검정</font>'
+            ))
+
             analysis = self.analyzer.analyze(df_tsg)
 
             # 분석 결과 상세 로그
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
-                f'<font color=#888888>  [ICOS] 분석 결과: 총 거래 {analysis.total_trades}건, '
+                f'<font color=#00ff00>  [ICOS] 분석 완료: 총 거래 {analysis.total_trades}건, '
                 f'손실 거래 {analysis.loss_trades}건, 승률 {analysis.win_rate:.1f}%</font>'
             ))
 
@@ -560,6 +577,17 @@ class ICOSBackTest:
                 self.converged = True
                 break
 
+            # 필터 후보 디버그 로그
+            self.wq.put((
+                ui_num[f'{self.ui_gubun}백테스트'],
+                f'<font color=#888888>  [ICOS] 필터 후보 {len(filter_candidates)}개 생성됨</font>'
+            ))
+            for i, fc in enumerate(filter_candidates[:3], 1):
+                self.wq.put((
+                    ui_num[f'{self.ui_gubun}백테스트'],
+                    f'<font color=#888888>    #{i}: {fc.description[:50]}...</font>'
+                ))
+
             # === 2.4 조건식 개선 ===
             self.wq.put((
                 ui_num[f'{self.ui_gubun}백테스트'],
@@ -568,14 +596,28 @@ class ICOSBackTest:
             build_result = self.condition_builder.build(
                 self.current_buystg, filter_candidates
             )
-            new_buystg = build_result.new_condition
+            new_buystg = build_result.new_buystg
             applied_filters = build_result.applied_filters
 
             if not applied_filters:
+                # 빌드 실패 원인 출력
+                error_msg = build_result.error_message or "알 수 없음"
                 self.wq.put((
                     ui_num[f'{self.ui_gubun}백테스트'],
-                    '<font color=#ffa500>[ICOS] ⚠️ 적용할 필터 없음 - 수렴</font>'
+                    f'<font color=#ffa500>[ICOS] ⚠️ 적용할 필터 없음 - {error_msg}</font>'
                 ))
+                # 첫 번째 필터 조건 검증 테스트
+                if filter_candidates:
+                    first_cond = filter_candidates[0].condition
+                    is_valid, err = self.condition_builder.validate_condition(first_cond)
+                    self.wq.put((
+                        ui_num[f'{self.ui_gubun}백테스트'],
+                        f'<font color=#888888>  [DEBUG] 첫 필터 검증: valid={is_valid}, err={err}</font>'
+                    ))
+                    self.wq.put((
+                        ui_num[f'{self.ui_gubun}백테스트'],
+                        f'<font color=#888888>  [DEBUG] 조건: {first_cond[:80]}...</font>'
+                    ))
                 self.converged = True
                 break
 
