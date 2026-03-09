@@ -1,0 +1,117 @@
+========================================
+STOM V1 시작 (가상환경 모드)
+========================================
+64-bit Python: C:\SYSTEM~2\STOM\STOM_V1\venv_64bit\Scripts\python.exe
+
+[1/2] 데이터베이스 검증 중...
+시스템 명령 실행 알림 - 암호화키 확인 완료
+시스템 명령 실행 알림 - 데이터베이스 확인 완료
+[완료] 데이터베이스 정상
+
+[2/2] STOM V1 실행 중...
+표준시간 동기화 완 ... 현재 표준시간과의 차이는 [0.030512]초입니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+스톰 라이브 서버 연결이 해제되었습니다. 10초 후 재연결합니다.
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1351: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout(rect=[0, 0.02, 1, 0.97])
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 48516 (\N{HANGUL SYLLABLE BUN}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49437 (\N{HANGUL SYLLABLE SEOG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50836 (\N{HANGUL SYLLABLE YO}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50557 (\N{HANGUL SYLLABLE YAG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 52509 (\N{HANGUL SYLLABLE CONG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44144 (\N{HANGUL SYLLABLE GEO}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 47000 (\N{HANGUL SYLLABLE RAE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49688 (\N{HANGUL SYLLABLE SU}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51061 (\N{HANGUL SYLLABLE IG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44552 (\N{HANGUL SYLLABLE GEUM}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50896 (\N{HANGUL SYLLABLE WEON}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49849 (\N{HANGUL SYLLABLE SEUNG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 47456 (\N{HANGUL SYLLABLE RYUL}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 54217 (\N{HANGUL SYLLABLE PYEONG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44512 (\N{HANGUL SYLLABLE GYUN}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51452 (\N{HANGUL SYLLABLE JU}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 48156 (\N{HANGUL SYLLABLE BAL}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44204 (\N{HANGUL SYLLABLE GYEON}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 52572 (\N{HANGUL SYLLABLE COE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51201 (\N{HANGUL SYLLABLE JEOG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 54596 (\N{HANGUL SYLLABLE PIL}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 53552 (\N{HANGUL SYLLABLE TEO}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50948 (\N{HANGUL SYLLABLE WI}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 54744 (\N{HANGUL SYLLABLE HEOM}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 46020 (\N{HANGUL SYLLABLE DO}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51216 (\N{HANGUL SYLLABLE JEOM}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51060 (\N{HANGUL SYLLABLE I}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49345 (\N{HANGUL SYLLABLE SANG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51228 (\N{HANGUL SYLLABLE JE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50808 (\N{HANGUL SYLLABLE OE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50696 (\N{HANGUL SYLLABLE YE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44060 (\N{HANGUL SYLLABLE GAE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49440 (\N{HANGUL SYLLABLE SEON}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 53685 (\N{HANGUL SYLLABLE TONG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44228 (\N{HANGUL SYLLABLE GYE}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 50976 (\N{HANGUL SYLLABLE YU}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51032 (\N{HANGUL SYLLABLE YI}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49457 (\N{HANGUL SYLLABLE SEONG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44032 (\N{HANGUL SYLLABLE GA}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51109 (\N{HANGUL SYLLABLE JANG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 51473 (\N{HANGUL SYLLABLE JUNG}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 54620 (\N{HANGUL SYLLABLE HAN}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 48320 (\N{HANGUL SYLLABLE BYEON}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 48372 (\N{HANGUL SYLLABLE BO}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 49884 (\N{HANGUL SYLLABLE SI}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
+C:\SYSTEM~2\STOM\STOM_V1\backtester\back_analysis_enhanced.py:1353: UserWarning: Glyph 44036 (\N{HANGUL SYLLABLE GAN}) missing from font(s) DejaVu Sans Mono.
+  plt.savefig(analysis_path, dpi=120, bbox_inches='tight', facecolor='white')
