@@ -603,7 +603,7 @@ class MainWindow(QMainWindow):
             else:
                 break
 
-        subprocess.Popen(f'python ./stock/kiwoom_manager.py {port_num}')
+        subprocess.Popen(f'python32 ./stock/kiwoom_manager.py {port_num}')
 
         self.update_textedit    = UpdateTextedit(self)
         self.update_tablewidget = UpdateTablewidget(self)

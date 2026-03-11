@@ -229,24 +229,24 @@ class KiwoomManager:
         return result
 
     def StockVersionUp(self):
-        subprocess.Popen(f'python {LOGIN_PATH}/versionupdater.py')
+        subprocess.Popen(f'python32 {LOGIN_PATH}/versionupdater.py')
         while not self.OpenapiLoginWait():
             qtest_qwait(0.1)
-            subprocess.Popen(f'python {LOGIN_PATH}/versionupdater.py')
+            subprocess.Popen(f'python32 {LOGIN_PATH}/versionupdater.py')
         qtest_qwait(10)
 
     def StockAutoLogin1(self):
-        subprocess.Popen(f'python {LOGIN_PATH}/autologin1.py')
+        subprocess.Popen(f'python32 {LOGIN_PATH}/autologin1.py')
         while not self.OpenapiLoginWait():
             qtest_qwait(0.1)
-            subprocess.Popen(f'python {LOGIN_PATH}/autologin1.py')
+            subprocess.Popen(f'python32 {LOGIN_PATH}/autologin1.py')
         qtest_qwait(5)
 
     def StockAutoLogin2(self):
-        subprocess.Popen(f'python {LOGIN_PATH}/autologin2.py')
+        subprocess.Popen(f'python32 {LOGIN_PATH}/autologin2.py')
         while not self.OpenapiLoginWait():
             qtest_qwait(0.1)
-            subprocess.Popen(f'python {LOGIN_PATH}/autologin2.py')
+            subprocess.Popen(f'python32 {LOGIN_PATH}/autologin2.py')
         qtest_qwait(5)
 
     def StockReceiverStart(self):
