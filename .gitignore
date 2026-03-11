@@ -1,2 +1,6 @@
 venv_32bit/
 venv_64bit/
+_database/
+_log/
+__pycache__/
+*.pyc
