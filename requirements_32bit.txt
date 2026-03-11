@@ -1,0 +1,14 @@
+# STOM 32-bit virtual environment dependencies
+# Kiwoom/OpenAPI support environment
+
+numpy==1.26.4
+pandas==2.0.3
+python-telegram-bot==13.15
+psutil
+pyqt5
+pyzmq
+pywin32
+cryptography==36.0.0
+
+# TA-Lib is installed separately from the local wheel:
+# utility/TA_Lib-0.4.27-cp311-cp311-win32.whl

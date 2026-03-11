@@ -1,0 +1,29 @@
+# STOM 64-bit virtual environment dependencies
+# Main UI, analytics, coin trading, and optimization environment
+
+numpy==1.26.4
+pandas==2.0.3
+numba
+python-telegram-bot==13.15
+websockets==10.4
+cryptography==36.0.0
+BeautifulSoup4
+psutil
+pyqt5
+PyQtWebEngine
+optuna
+optuna-dashboard
+cmaes
+lxml
+squarify
+matplotlib
+pyqtgraph
+pyupbit
+ntplib
+python-dateutil
+python-binance
+pyzmq
+pyttsx3
+
+# TA-Lib is installed separately from the local wheel:
+# utility/TA_Lib-0.4.25-cp311-cp311-win_amd64.whl
