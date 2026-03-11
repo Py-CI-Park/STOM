@@ -3,6 +3,7 @@
 
 numpy==1.26.4
 pandas==2.0.3
+python-dateutil
 python-telegram-bot==13.15
 psutil
 pyqt5
