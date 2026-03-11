@@ -14,8 +14,12 @@ if not exist "%PYTHON_64BIT%" (
     exit /b 1
 )
 
-set HAS_PYTHON_32BIT=0
-if exist "%PYTHON_32BIT%" set HAS_PYTHON_32BIT=1
+if not exist "%PYTHON_32BIT%" (
+    echo [ERROR] 32-bit virtual environment is missing.
+    echo [INFO] STOM requires venv_32bit. Run setup_stom.bat first.
+    pause
+    exit /b 1
+)
 
 >nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
 if '%errorlevel%' NEQ '0' (
@@ -44,15 +48,12 @@ if '%errorlevel%' NEQ '0' (
         exit /b 1
     )
 
-    if "%HAS_PYTHON_32BIT%"=="1" (
-        "%PYTHON_32BIT%" -c "import PyQt5, zmq, win32api, cryptography, talib" >nul 2>&1
-        if %errorlevel% neq 0 (
-            echo [WARN] 32-bit virtual environment exists but verification failed.
-            echo [WARN] Stock functions may not work until setup_stom.bat succeeds.
-        )
-    ) else (
-        echo [WARN] 32-bit virtual environment is missing.
-        echo [WARN] Coin mode can still run, but stock functions will remain unavailable.
+    "%PYTHON_32BIT%" -c "import PyQt5, zmq, win32api, cryptography, talib" >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [ERROR] 32-bit virtual environment is incomplete.
+        echo [INFO] Run setup_stom.bat again.
+        pause
+        exit /b 1
     )
 
     "%PYTHON_64BIT%" ./utility/database_check.py

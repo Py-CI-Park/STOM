@@ -38,12 +38,12 @@ if not exist "%PYTHON64_CMD%" (
 "%PYTHON64_CMD%" --version
 
 if not exist "%PYTHON32_CMD%" (
-    echo [WARN] 32-bit Python not found:
-    echo        %PYTHON32_CMD%
-    echo        32-bit venv creation will be skipped.
-) else (
-    "%PYTHON32_CMD%" --version
+    echo [ERROR] Missing required 32-bit Python:
+    echo         %PYTHON32_CMD%
+    pause
+    exit /b 1
 )
+"%PYTHON32_CMD%" --version
 echo.
 
 echo [2/7] Creating virtual environments...
@@ -54,15 +54,20 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if exist "%PYTHON32_CMD%" (
-    "%PYTHON32_CMD%" -m venv "%~dp0venv_32bit" --clear
-    if %errorlevel% neq 0 (
-        echo [WARN] Failed to create venv_32bit.
-    )
+"%PYTHON32_CMD%" -m venv "%~dp0venv_32bit" --clear
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to create venv_32bit.
+    pause
+    exit /b 1
 )
 
 if not exist "%~dp0venv_64bit\Scripts\python.exe" (
     echo [ERROR] venv_64bit was not created correctly.
+    pause
+    exit /b 1
+)
+if not exist "%~dp0venv_32bit\Scripts\python32.exe" (
+    echo [ERROR] venv_32bit was not created correctly.
     pause
     exit /b 1
 )
@@ -82,43 +87,37 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if exist "%~dp0venv_32bit\Scripts\python32.exe" (
-    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install --upgrade pip wheel
-    if %errorlevel% neq 0 (
-        echo [ERROR] Failed to upgrade 32-bit pip tooling.
-        pause
-        exit /b 1
-    )
-    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install "setuptools<80"
-    if %errorlevel% neq 0 (
-        echo [ERROR] Failed to install 32-bit setuptools.
-        pause
-        exit /b 1
-    )
+"%~dp0venv_32bit\Scripts\python32.exe" -m pip install --upgrade pip wheel
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to upgrade 32-bit pip tooling.
+    pause
+    exit /b 1
+)
+"%~dp0venv_32bit\Scripts\python32.exe" -m pip install "setuptools<80"
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install 32-bit setuptools.
+    pause
+    exit /b 1
 )
 echo.
 
-if exist "%~dp0venv_32bit\Scripts\python32.exe" (
-    echo [4/7] Installing 32-bit requirements...
-    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install -r "%~dp0requirements_32bit.txt"
-    if %errorlevel% neq 0 (
-        echo [ERROR] Failed to install requirements_32bit.txt.
-        pause
-        exit /b 1
-    )
-    if not exist "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl" (
-        echo [ERROR] Missing 32-bit TA-Lib wheel.
-        pause
-        exit /b 1
-    )
-    "%~dp0venv_32bit\Scripts\python32.exe" -m pip install "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl"
-    if %errorlevel% neq 0 (
-        echo [ERROR] Failed to install 32-bit TA-Lib wheel.
-        pause
-        exit /b 1
-    )
-) else (
-    echo [4/7] Skipping 32-bit requirements because venv_32bit is unavailable.
+echo [4/7] Installing 32-bit requirements...
+"%~dp0venv_32bit\Scripts\python32.exe" -m pip install -r "%~dp0requirements_32bit.txt"
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install requirements_32bit.txt.
+    pause
+    exit /b 1
+)
+if not exist "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl" (
+    echo [ERROR] Missing 32-bit TA-Lib wheel.
+    pause
+    exit /b 1
+)
+"%~dp0venv_32bit\Scripts\python32.exe" -m pip install "%~dp0utility\TA_Lib-0.4.27-cp311-cp311-win32.whl"
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to install 32-bit TA-Lib wheel.
+    pause
+    exit /b 1
 )
 echo.
 
@@ -150,22 +149,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if exist "%~dp0venv_32bit\Scripts\python32.exe" (
-    "%~dp0venv_32bit\Scripts\python32.exe" -c "import numpy, pandas, PyQt5, zmq, win32api, cryptography, talib; print('32-bit environment OK')" 2>nul
-    if %errorlevel% neq 0 (
-        echo [ERROR] 32-bit environment import verification failed.
-        pause
-        exit /b 1
-    )
+"%~dp0venv_32bit\Scripts\python32.exe" -c "import numpy, pandas, PyQt5, zmq, win32api, cryptography, talib; print('32-bit environment OK')" 2>nul
+if %errorlevel% neq 0 (
+    echo [ERROR] 32-bit environment import verification failed.
+    pause
+    exit /b 1
 )
 echo.
 
 echo [7/7] Summary
-if exist "%~dp0venv_32bit\Scripts\python32.exe" (
-    echo   - 32-bit venv ready: venv_32bit
-) else (
-    echo   - 32-bit venv not available
-)
+echo   - 32-bit venv ready: venv_32bit
 if exist "%~dp0venv_64bit\Scripts\python.exe" (
     echo   - 64-bit venv ready: venv_64bit
 )
