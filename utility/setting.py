@@ -1,9 +1,20 @@
+import os
 import sys
 import sqlite3
 import pandas as pd
 from traceback import print_exc
 from cryptography import fernet
 from utility.static import read_key, de_text
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VENV_MODE = os.path.exists(os.path.join(PROJECT_ROOT, 'venv_64bit'))
+
+if VENV_MODE:
+    PYTHON_32BIT = os.path.join(PROJECT_ROOT, 'venv_32bit', 'Scripts', 'python32.exe')
+    PYTHON_64BIT = os.path.join(PROJECT_ROOT, 'venv_64bit', 'Scripts', 'python.exe')
+else:
+    PYTHON_32BIT = 'python32'
+    PYTHON_64BIT = 'python'
 
 OPENAPI_PATH       = 'C:/OpenAPI'
 ICON_PATH          = './icon'
