@@ -41,11 +41,11 @@ if '%errorlevel%' NEQ '0' (
     CD /D "%~dp0"
     cls
     echo ============================================
-    echo   _____ _______ ____  __  __
-    echo   / ____/__   __/ __ \/  \/  \
-    echo  / /       / / / / / / /\  / /
-    echo / /___    / / / /_/ / / / / /
-    echo \____/   /_/  \____/_/ /_/ /
+    echo   SSSSS  TTTTT  OOOOO  M   M
+    echo  SS       T    OO   OO MM MM
+    echo   SSS     T    OO   OO M M M
+    echo     SS    T    OO   OO M   M
+    echo  SSSSS    T     OOOOO  M   M
     echo ============================================
     echo   STOM Default Launcher
     echo ============================================
