@@ -39,6 +39,18 @@ if '%errorlevel%' NEQ '0' (
 :gotAdmin
     pushd "%CD%"
     CD /D "%~dp0"
+    cls
+    echo ============================================
+    echo   _____ _______ ____  __  __
+    echo  / ____|__   __/ __ \|  \/  |
+    echo ^| (___    ^| ^| ^| ^|  ^| ^| \  / ^|
+    echo  \___ \   ^| ^| ^| ^|  ^| ^| ^|\/^| ^|
+    echo  ____) ^|  ^| ^| ^| ^|__^| ^| ^|  ^| ^|
+    echo ^|_____/   ^|_^|  \____/ ^|_^|  ^|_^|
+    echo ============================================
+    echo   STOM Default Launcher
+    echo ============================================
+    echo.
 
     "%PYTHON_64BIT%" -c "import PyQt5, PyQt5.QtWebEngineWidgets, zmq, pyttsx3, websockets, cryptography, talib" >nul 2>&1
     if %errorlevel% neq 0 (

@@ -24,6 +24,18 @@ if '%errorlevel%' NEQ '0' (
 
 pushd "%CD%"
 CD /D "%~dp0"
+cls
+echo ============================================
+echo   _____ _______ ____  __  __
+echo  / ____|__   __/ __ \|  \/  |
+echo ^| (___    ^| ^| ^| ^|  ^| ^| \  / ^|
+echo  \___ \   ^| ^| ^| ^|  ^| ^| ^|\/^| ^|
+echo  ____) ^|  ^| ^| ^| ^|__^| ^| ^|  ^| ^|
+echo ^|_____/   ^|_^|  \____/ ^|_^|  ^|_^|
+echo ============================================
+echo   STOM Setup Launcher
+echo ============================================
+echo.
 
 set PYTHON32_CMD=C:\Python\32\Python3119\python32.exe
 set PYTHON64_CMD=C:\Python\64\Python3119\python.exe
