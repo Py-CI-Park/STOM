@@ -27,10 +27,10 @@ CD /D "%~dp0"
 cls
 echo ============================================
 echo   SSSSS  TTTTT  OOOOO  M   M
-echo  SS       T    OO   OO MM MM
-echo   SSS     T    OO   OO M M M
-echo     SS    T    OO   OO M   M
-echo  SSSSS    T     OOOOO  M   M
+echo  SS        T   OO   OO MM MM
+echo   SSS      T   OO   OO M M M
+echo     SS     T   OO   OO M   M
+echo  SSSSS     T    OOOOO  M   M
 echo ============================================
 echo   STOM Setup Launcher
 echo ============================================

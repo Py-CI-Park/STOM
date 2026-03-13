@@ -42,10 +42,10 @@ if '%errorlevel%' NEQ '0' (
     cls
     echo ============================================
     echo   SSSSS  TTTTT  OOOOO  M   M
-    echo  SS       T    OO   OO MM MM
-    echo   SSS     T    OO   OO M M M
-    echo     SS    T    OO   OO M   M
-    echo  SSSSS    T     OOOOO  M   M
+    echo  SS        T   OO   OO MM MM
+    echo   SSS      T   OO   OO M M M
+    echo     SS     T   OO   OO M   M
+    echo  SSSSS     T    OOOOO  M   M
     echo ============================================
     echo   STOM Default Launcher
     echo ============================================
