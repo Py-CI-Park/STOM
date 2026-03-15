@@ -20,7 +20,6 @@ if '%errorlevel%' NEQ '0' (
     pushd "%CD%"
     CD /D "%~dp0"
     python32 -m pip install --upgrade pip
-    python32 -m pip install numpy==1.26.4 pandas==2.0.3 python-telegram-bot==13.15
-    python32 -m pip install psutil pyqt5 pyzmq pywin32 cryptography
+    python32 -m pip install -r .\requirements_32bit.txt
     python32 -m pip install ./utility/TA_Lib-0.4.27-cp311-cp311-win32.whl
     pause

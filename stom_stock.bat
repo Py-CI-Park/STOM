@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul
+chcp 949 >nul
 title STOM Stock (Virtual Environment)
 
 set VENV_32BIT=%~dp0venv_32bit

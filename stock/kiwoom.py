@@ -16,6 +16,28 @@ sn_oper = 1003
 sn_gsjm = 2000
 
 
+def fix_kiwoom_text(text):
+    if type(text) is not str:
+        return text
+
+    if any('\uAC00' <= ch <= '\uD7A3' for ch in text):
+        return text
+
+    if not any('\u00A1' <= ch <= '\u00FF' for ch in text):
+        return text
+
+    for source_encoding in ('latin1', 'cp1252'):
+        try:
+            restored_text = text.encode(source_encoding).decode('cp949')
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            continue
+
+        if any('\uAC00' <= ch <= '\uD7A3' for ch in restored_text):
+            return restored_text
+
+    return text
+
+
 def parseDat(trcode):
     enc   = zipfile.ZipFile(f'{OPENAPI_PATH}/data/{trcode}.enc')
     lines = enc.read(trcode.upper() + '.dat').decode('cp949')
@@ -75,7 +97,7 @@ class Kiwoom:
             pythoncom.PumpWaitingMessages()
 
     def GetConditionNamelist(self):
-        data = self.ocx.dynamicCall('GetConditionNameList()')
+        data = fix_kiwoom_text(self.ocx.dynamicCall('GetConditionNameList()'))
         conditions = data.split(';')[:-1]
         list_cond = [[int(condition.split('^')[0]), condition.split('^')[1]] for condition in conditions]
         return list_cond
@@ -143,14 +165,14 @@ class Kiwoom:
             row_data = []
             for item in items:
                 data = self.ocx.dynamicCall('GetCommData(QString, QString, int, QString)', trcode, rqname, row, item)
-                row_data.append(data.strip())
+                row_data.append(fix_kiwoom_text(data).strip())
             df2.append(row_data)
         df = pd.DataFrame(df2, columns=items)
         self.tr_df = df
         self.dict_bool['TR수신'] = True
 
     def GetAccountNumber(self):
-        return self.ocx.dynamicCall('GetLoginInfo(QString)', 'ACCNO').split(';')[0]
+        return fix_kiwoom_text(self.ocx.dynamicCall('GetLoginInfo(QString)', 'ACCNO')).split(';')[0]
 
     def SetRealReg(self, rreg):
         self.ocx.dynamicCall('SetRealReg(QString, QString, QString, QString)', rreg)
@@ -167,16 +189,16 @@ class Kiwoom:
         return tokens
 
     def GetMasterCodeName(self, code):
-        return self.ocx.dynamicCall('GetMasterCodeName(QString)', code)
+        return fix_kiwoom_text(self.ocx.dynamicCall('GetMasterCodeName(QString)', code))
 
     def GetMasterLastPrice(self, code):
         return int(self.ocx.dynamicCall('GetMasterLastPrice(QString)', code))
 
     def GetCommRealData(self, code, fid):
-        return self.ocx.dynamicCall('GetCommRealData(QString, int)', code, fid)
+        return fix_kiwoom_text(self.ocx.dynamicCall('GetCommRealData(QString, int)', code, fid))
 
     def GetChejanData(self, fid):
-        return self.ocx.dynamicCall('GetChejanData(int)', fid)
+        return fix_kiwoom_text(self.ocx.dynamicCall('GetChejanData(int)', fid))
 
     def SendOrder(self, order):
         return self.ocx.dynamicCall('SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)', order)

@@ -564,6 +564,7 @@ class KiwoomTrader:
 
     # noinspection PyUnusedLocal
     def OnReceiveMsg(self, sScrNo, sRQName, sTrCode, sMsg):
+        sMsg = fix_kiwoom_text(sMsg)
         print(f'[{now()}]{sMsg}')
         self.kwzservQ.put(('window', (ui_num['S오더텍스트'], f'{sMsg}')))
         if '매수증거금' in sMsg:
